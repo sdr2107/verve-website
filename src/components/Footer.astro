@@ -1,0 +1,37 @@
+---
+/**
+ * Footer — shared across every page. Was previously duplicated inline in
+ * index.astro and science.astro (already drifting: only one had a "Home"
+ * link) — extracted here so a change only ever needs to happen once.
+ */
+interface Props {
+  /** Show the "Home" link — omit on the homepage itself. */
+  showHome?: boolean;
+  /** Show the "Science" link — omit on the Science page itself. */
+  showScience?: boolean;
+}
+const { showHome = true, showScience = true } = Astro.props;
+
+const X_URL = "https://x.com/RoplekarSudeep";
+const SUBSTACK_URL = "https://substack.com/@roplekarsudeep?r=596iu&utm_campaign=profile&utm_medium=profile-page";
+---
+
+<footer class="border-t border-white/7 px-6 py-12 sm:px-10">
+  <div class="mx-auto flex max-w-6xl flex-col items-center gap-6 text-center sm:flex-row sm:justify-between sm:text-left">
+    <div class="flex items-center gap-2.5">
+      <img src="/app-icon.png" alt="" class="h-6 w-6 rounded-md" />
+      <span class="text-sm font-medium text-text-secondary">&copy; {new Date().getFullYear()} Verve</span>
+    </div>
+    <nav class="flex flex-wrap justify-center gap-6 text-sm text-text-secondary">
+      {showHome && <a href="/" class="hover:text-text-primary">Home</a>}
+      {showScience && <a href="/science" class="hover:text-text-primary">Science</a>}
+      <a href={X_URL} target="_blank" rel="noopener noreferrer" class="hover:text-text-primary">
+        X
+      </a>
+      <a href={SUBSTACK_URL} target="_blank" rel="noopener noreferrer" class="hover:text-text-primary">
+        Substack
+      </a>
+      <a href="https://sdr2107.github.io/verve-privacy/" class="hover:text-text-primary">Privacy Policy</a>
+    </nav>
+  </div>
+</footer>

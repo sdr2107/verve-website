@@ -3,6 +3,7 @@ import Layout from "../layouts/Layout.astro";
 import ContourTexture from "../components/ContourTexture.astro";
 import StatCallout from "../components/StatCallout.astro";
 import PillarCard from "../components/PillarCard.astro";
+import Footer from "../components/Footer.astro";
 
 const APP_STORE_URL = "https://apps.apple.com/app/id6760022278";
 
@@ -198,17 +199,5 @@ const pillars = [
     </div>
   </section>
 
-  <!-- ── Footer ──────────────────────────────────────────────────────── -->
-  <footer class="border-t border-white/7 px-6 py-12 sm:px-10">
-    <div class="mx-auto flex max-w-6xl flex-col items-center gap-6 text-center sm:flex-row sm:justify-between sm:text-left">
-      <div class="flex items-center gap-2.5">
-        <img src="/app-icon.png" alt="" class="h-6 w-6 rounded-md" />
-        <span class="text-sm font-medium text-text-secondary">&copy; {new Date().getFullYear()} Verve</span>
-      </div>
-      <nav class="flex gap-6 text-sm text-text-secondary">
-        <a href="https://sdr2107.github.io/verve-privacy/" class="hover:text-text-primary">Privacy Policy</a>
-        <a href={APP_STORE_URL} class="hover:text-text-primary">Get the app</a>
-      </nav>
-    </div>
-  </footer>
+  <Footer showHome={false} />
 </Layout>

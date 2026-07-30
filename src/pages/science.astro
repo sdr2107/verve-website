@@ -2,6 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import CitationCard from "../components/CitationCard.astro";
 import VideoSlot from "../components/VideoSlot.astro";
+import Footer from "../components/Footer.astro";
 import MetsVsMetHours from "../components/science/MetsVsMetHours.astro";
 import MovementBalance from "../components/science/MovementBalance.astro";
 import {
@@ -187,16 +188,5 @@ const nav = [
     </section>
   </main>
 
-  <footer class="border-t border-white/7 px-6 py-12 sm:px-10">
-    <div class="mx-auto flex max-w-6xl flex-col items-center gap-6 text-center sm:flex-row sm:justify-between sm:text-left">
-      <div class="flex items-center gap-2.5">
-        <img src="/app-icon.png" alt="" class="h-6 w-6 rounded-md" />
-        <span class="text-sm font-medium text-text-secondary">&copy; {new Date().getFullYear()} Verve</span>
-      </div>
-      <nav class="flex gap-6 text-sm text-text-secondary">
-        <a href="/" class="hover:text-text-primary">Home</a>
-        <a href="https://sdr2107.github.io/verve-privacy/" class="hover:text-text-primary">Privacy Policy</a>
-      </nav>
-    </div>
-  </footer>
+  <Footer showScience={false} />
 </Layout>
