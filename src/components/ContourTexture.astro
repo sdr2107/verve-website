@@ -1,0 +1,28 @@
+---
+/**
+ * ContourTexture — Verve's signature topographic contour lines, ported
+ * directly from components/ContourTexture.tsx in the app (same path data,
+ * same restraint rule: hero surfaces only, ~5% opacity, never decoration).
+ */
+interface Props {
+  opacity?: number;
+  class?: string;
+}
+const { opacity = 0.06, class: className = "" } = Astro.props;
+---
+
+<svg
+  class={`pointer-events-none absolute inset-0 h-full w-full ${className}`}
+  viewBox="0 0 320 180"
+  preserveAspectRatio="xMaxYMin slice"
+>
+  <g stroke="#FFFFFF" stroke-width="1" fill="none" opacity={opacity}>
+    <path d="M266,14 C268,4 284,-2 296,2 C310,7 318,16 314,27 C310,38 296,42 284,38 C272,34 264,25 266,14 Z" />
+    <path d="M250,18 C250,2 270,-12 292,-8 C316,-3 330,12 326,30 C322,49 302,58 282,52 C262,46 250,35 250,18 Z" />
+    <path d="M232,22 C230,-2 258,-24 290,-20 C324,-15 344,6 340,32 C336,60 306,74 276,66 C248,58 234,45 232,22 Z" />
+    <path d="M212,28 C208,-8 246,-38 290,-34 C336,-29 362,0 356,38 C350,78 310,94 268,84 C230,74 216,58 212,28 Z" />
+    <path d="M190,34 C184,-14 234,-52 290,-48 C348,-43 382,-6 374,44 C366,96 314,116 260,102 C214,90 196,72 190,34 Z" />
+    <path d="M-8,158 C-6,146 6,140 18,144 C30,148 36,158 32,168 C28,178 14,182 4,176 C-4,171 -10,167 -8,158 Z" />
+    <path d="M-24,154 C-22,134 0,122 22,128 C44,134 54,152 48,168 C42,186 18,192 0,184 C-16,177 -26,168 -24,154 Z" />
+  </g>
+</svg>

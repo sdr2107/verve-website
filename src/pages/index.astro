@@ -1,17 +1,204 @@
 ---
+import Layout from "../layouts/Layout.astro";
+import ContourTexture from "../components/ContourTexture.astro";
+import StatCallout from "../components/StatCallout.astro";
+import PillarCard from "../components/PillarCard.astro";
 
+const APP_STORE_URL = "https://apps.apple.com/app/id6760022278";
+
+const pillars = [
+  {
+    eyebrow: "The Ascent",
+    title: "Your week, drawn as a climb",
+    description:
+      "Moderate-to-vigorous minutes climb against WHO, personal, and AHA altitude lines — a flag plants the moment you cross each one. No ring, no streak to break.",
+    accent: "var(--color-cyan)",
+  },
+  {
+    eyebrow: "Cardiorespiratory Fitness",
+    title: "6 validated test methods",
+    description:
+      "Cooper, 1.5-mile run, Rockport walk, CPET and more — classified against ACSM/Cooper norms under 40, Cleveland Clinic treadmill data (Mandsager 2018) at 40 and over.",
+    accent: "var(--color-met-hero)",
+  },
+  {
+    eyebrow: "Zone 2 Training",
+    title: "Your own heart-rate band, not a guess",
+    description:
+      "Karvonen heart-rate-reserve zones computed from your age, resting HR, and fitness — not a fixed 220-minus-age formula.",
+    accent: "var(--color-accent)",
+  },
+  {
+    eyebrow: "Heart Health",
+    title: "ApoB · LDL-C · Lp(a) · hs-CRP",
+    description:
+      "Screening bands from ESC/EAS, NCEP ATP III, and AHA/CDC guidelines — every threshold traced to its source, none of it a treatment target.",
+    accent: "var(--color-danger)",
+  },
+  {
+    eyebrow: "Body Phenotyping",
+    title: "Metabolic health + the Functional Combine",
+    description:
+      "Metabolic syndrome screening (Alberti 2009) alongside a 6-test functional battery — grip, balance, chair stand, gait speed, and SPPB.",
+    accent: "var(--color-violet)",
+  },
+  {
+    eyebrow: "The Grade",
+    title: "This week vs. your own usual",
+    description:
+      "Two bars, one sentence — no percentage, no black-box score, no comparison to anyone but you.",
+    accent: "var(--color-success)",
+  },
+];
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<Layout
+  title="Verve — Fitness tracking built on what predicts how long you live"
+  description="Verve tracks MET-hours and cardiorespiratory fitness — the metrics linked to mortality risk in peer-reviewed research — with every threshold traced to a cited source."
+>
+  <!-- ── Nav ─────────────────────────────────────────────────────────── -->
+  <header class="mx-auto flex max-w-6xl items-center justify-between px-6 py-6 sm:px-10">
+    <div class="flex items-center gap-2.5">
+      <img src="/app-icon.png" alt="" class="h-8 w-8 rounded-lg" />
+      <span class="text-lg font-semibold tracking-tight text-text-primary">Verve</span>
+    </div>
+    <a
+      href={APP_STORE_URL}
+      class="rounded-full border border-white/14 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-white/25"
+    >
+      Get the app
+    </a>
+  </header>
+
+  <!-- ── Hero ────────────────────────────────────────────────────────── -->
+  <section class="vrv-glow relative overflow-hidden px-6 pt-16 pb-24 sm:px-10 sm:pt-24 sm:pb-32">
+    <div class="relative mx-auto max-w-3xl text-center">
+      <span class="font-mono text-xs font-semibold uppercase tracking-widest text-accent-light">
+        Evidence-based fitness tracking
+      </span>
+      <h1 class="mt-5 text-4xl font-bold tracking-tight text-text-primary sm:text-6xl">
+        Track the number that predicts<br class="hidden sm:block" /> how long you live.
+      </h1>
+      <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-text-secondary">
+        Verve measures MET-hours and cardiorespiratory fitness — the same metrics
+        used to assess mortality risk in peer-reviewed research — with every
+        threshold in the app traced to a cited source.
+      </p>
+      <div class="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+        <a
+          href={APP_STORE_URL}
+          class="rounded-full bg-text-primary px-7 py-3.5 text-sm font-semibold text-canvas transition-opacity hover:opacity-90"
+        >
+          Download on the App Store
+        </a>
+        <a
+          href="#pillars"
+          class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
+        >
+          See what it tracks ↓
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Trust stats ─────────────────────────────────────────────────── -->
+  <section class="border-y border-white/7 px-6 py-14 sm:px-10">
+    <div class="mx-auto grid max-w-4xl grid-cols-1 gap-10 sm:grid-cols-3 sm:gap-6">
+      <StatCallout
+        value="13%"
+        label="lower all-cause mortality per +1 MET improvement"
+        source="Kodama et al, JAMA 2009"
+      />
+      <StatCallout
+        value="5×"
+        label="mortality difference, Low to Elite fitness"
+        source="Mandsager et al, Cleveland Clinic 2018"
+      />
+      <StatCallout
+        value="23"
+        label="peer-reviewed studies behind the app's thresholds"
+        source="Verve Science page"
+      />
+    </div>
+  </section>
+
+  <!-- ── Pillars ─────────────────────────────────────────────────────── -->
+  <section id="pillars" class="px-6 py-20 sm:px-10 sm:py-28">
+    <div class="mx-auto max-w-5xl">
+      <div class="mx-auto max-w-2xl text-center">
+        <h2 class="text-3xl font-bold tracking-tight text-text-primary sm:text-4xl">
+          What Verve actually tracks
+        </h2>
+        <p class="mt-4 text-base leading-relaxed text-text-secondary">
+          Six pillars, each backed by named, checkable research — not a proprietary
+          score nobody can audit.
+        </p>
+      </div>
+      <div class="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {pillars.map((p) => (
+          <PillarCard eyebrow={p.eyebrow} title={p.title} description={p.description} accent={p.accent} />
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Every number, cited ─────────────────────────────────────────── -->
+  <section class="px-6 py-20 sm:px-10 sm:py-28">
+    <div class="relative mx-auto max-w-5xl overflow-hidden rounded-3xl border border-white/8 bg-white/4 px-8 py-12 sm:px-14 sm:py-16">
+      <ContourTexture />
+      <div class="relative grid grid-cols-1 items-center gap-10 lg:grid-cols-2">
+        <div>
+          <span class="font-mono text-xs font-semibold uppercase tracking-widest text-accent-light">
+            No unciteable numbers
+          </span>
+          <h2 class="mt-4 text-3xl font-bold tracking-tight text-text-primary">
+            Every threshold, traced to its source.
+          </h2>
+          <p class="mt-4 text-base leading-relaxed text-text-secondary">
+            No proprietary "recovery" or "strain" score you can't check the math
+            on. Open the Science page in the app and every number links to the
+            paper it came from.
+          </p>
+        </div>
+        <div class="rounded-2xl border border-white/8 bg-canvas-2/60 p-6">
+          <div class="flex items-center justify-between border-b border-white/7 pb-4">
+            <span class="text-sm font-semibold text-text-primary">ApoB</span>
+            <span class="font-mono text-xs text-text-tertiary">mg/dL</span>
+          </div>
+          <div class="mt-4 space-y-2 text-sm">
+            <div class="flex justify-between">
+              <span class="text-text-secondary">Optimal</span>
+              <span class="font-mono text-text-primary">&le; 79</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-text-secondary">Borderline</span>
+              <span class="font-mono text-text-primary">80&ndash;99</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-text-secondary">Elevated</span>
+              <span class="font-mono text-text-primary">&ge; 100</span>
+            </div>
+          </div>
+          <p class="mt-4 border-t border-white/7 pt-4 text-xs leading-relaxed text-text-muted">
+            ESC/EAS 2019 Guidelines for the Management of Dyslipidaemias &mdash;
+            Mach F et al, Eur Heart J 2020;41:111&ndash;188.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ──────────────────────────────────────────────────────── -->
+  <footer class="border-t border-white/7 px-6 py-12 sm:px-10">
+    <div class="mx-auto flex max-w-6xl flex-col items-center gap-6 text-center sm:flex-row sm:justify-between sm:text-left">
+      <div class="flex items-center gap-2.5">
+        <img src="/app-icon.png" alt="" class="h-6 w-6 rounded-md" />
+        <span class="text-sm font-medium text-text-secondary">&copy; {new Date().getFullYear()} Verve</span>
+      </div>
+      <nav class="flex gap-6 text-sm text-text-secondary">
+        <a href="https://sdr2107.github.io/verve-privacy/" class="hover:text-text-primary">Privacy Policy</a>
+        <a href={APP_STORE_URL} class="hover:text-text-primary">Get the app</a>
+      </nav>
+    </div>
+  </footer>
+</Layout>

@@ -1,1 +1,68 @@
 @import "tailwindcss";
+@import "@fontsource/hanken-grotesk/400.css";
+@import "@fontsource/hanken-grotesk/500.css";
+@import "@fontsource/hanken-grotesk/600.css";
+@import "@fontsource/hanken-grotesk/700.css";
+@import "@fontsource/hanken-grotesk/800.css";
+@import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/jetbrains-mono/600.css";
+@import "@fontsource/jetbrains-mono/700.css";
+
+/*
+ * Verve's web palette — carried over verbatim from lib/theme.ts's darkColors
+ * (the app's flagship look: the splash screen, the app icon background, and
+ * ScreenBackground.tsx's own comment all treat dark as the primary canvas,
+ * light as the secondary). The website commits to dark only, deliberately —
+ * matching the app's own hierarchy rather than hedging with both themes.
+ */
+@theme {
+  --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-canvas:     #0D0D1C; /* lib/theme.ts darkColors.screenBg */
+  --color-canvas-2:   #0c0c15; /* ScreenBackground gradient midpoint */
+  --color-canvas-3:   #090910; /* ScreenBackground gradient base */
+
+  --color-text-primary:   #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-tertiary:  #64748b;
+  --color-text-muted:     #475569;
+
+  --color-accent:       #818cf8; /* darkColors.accent */
+  --color-accent-light: #a5b4fc; /* darkColors.accentText */
+  --color-glow:         #8B7CF0; /* ScreenBackground.tsx AccentGlow color */
+
+  --color-success: #34d399;
+  --color-warning: #FBBF24;
+  --color-danger:  #f87171;
+
+  --color-met-hero: #f97316; /* metHeroColor — the MET-hours hero number */
+  --color-cyan:     #06B6D4; /* "goal met" achievement colour, dashboard */
+  --color-violet:   #8B5CF6; /* "AHA optimal" achievement colour, dashboard */
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+}
+
+/* ScreenBackground.tsx's exact gradient: "178deg, #15151f 0%, #0c0c15 56%, #090910 100%" */
+.vrv-canvas {
+  background: linear-gradient(178deg, #15151f 0%, var(--color-canvas-2) 56%, var(--color-canvas-3) 100%);
+}
+
+/* AccentGlow — the indigo top glow from the app's hero cards, centred above
+   the fold so the light source feels off-screen, exactly as in the app. */
+.vrv-glow::before {
+  content: "";
+  position: absolute;
+  top: -18rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 56rem;
+  height: 56rem;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(139, 124, 240, 0.16) 0%, rgba(139, 124, 240, 0) 68%);
+  pointer-events: none;
+}
