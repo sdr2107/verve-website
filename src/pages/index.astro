@@ -62,12 +62,17 @@ const pillars = [
       <img src="/app-icon.png" alt="" class="h-8 w-8 rounded-lg" />
       <span class="text-lg font-semibold tracking-tight text-text-primary">Verve</span>
     </div>
-    <a
-      href={APP_STORE_URL}
-      class="rounded-full border border-white/14 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-white/25"
-    >
-      Get the app
-    </a>
+    <div class="flex items-center gap-6">
+      <a href="/science" class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary">
+        Science
+      </a>
+      <a
+        href={APP_STORE_URL}
+        class="rounded-full border border-white/14 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-white/25"
+      >
+        Get the app
+      </a>
+    </div>
   </header>
 
   <!-- ── Hero ────────────────────────────────────────────────────────── -->
@@ -156,9 +161,14 @@ const pillars = [
           </h2>
           <p class="mt-4 text-base leading-relaxed text-text-secondary">
             No proprietary "recovery" or "strain" score you can't check the math
-            on. Open the Science page in the app and every number links to the
-            paper it came from.
+            on &mdash; every threshold links to the paper it came from.
           </p>
+          <a
+            href="/science"
+            class="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-accent-light hover:text-text-primary"
+          >
+            Read the full evidence base &rarr;
+          </a>
         </div>
         <div class="rounded-2xl border border-white/8 bg-canvas-2/60 p-6">
           <div class="flex items-center justify-between border-b border-white/7 pb-4">

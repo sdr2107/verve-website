@@ -1,0 +1,67 @@
+---
+const hourlyRule: [string, string][] = [
+  ["≥ 50 steps", "Active"],
+  ["< 50 steps", "Sedentary"],
+  ["Before 7am / after 10pm", "Sleep (not counted)"],
+];
+---
+
+<div class="space-y-6">
+  <div class="flex gap-3">
+    <span class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[#f97316]"></span>
+    <div>
+      <h4 class="font-semibold text-text-primary">Sedentary Hours</h4>
+      <p class="mt-1 text-sm leading-relaxed text-text-secondary">
+        Verve divides your day into one-hour slots from
+        <strong class="text-text-primary">7am to 10pm</strong>. For each slot it reads
+        your step count from Apple Health.
+      </p>
+      <div class="mt-3 space-y-1.5">
+        {hourlyRule.map(([steps, label]) => (
+          <div class="flex justify-between text-sm">
+            <span class="text-text-tertiary">{steps}</span>
+            <span class="font-semibold text-text-secondary">{label}</span>
+          </div>
+        ))}
+      </div>
+      <p class="mt-3 text-sm leading-relaxed text-text-tertiary">
+        The 50-step threshold is intentionally low — even a short walk to the
+        kitchen clears the hour. Apple Watch batches step data and syncs
+        periodically, so today's count may dip and recover as earlier hours are
+        updated.
+      </p>
+      <p class="mt-2 text-sm leading-relaxed text-text-tertiary">
+        <strong class="text-text-secondary">Why hourly, not per-minute?</strong>
+        Per-minute queries require HealthKit to process months of raw pedometer
+        data at once — on most devices that query hangs indefinitely. Hourly data
+        is pre-aggregated by iOS and returns instantly.
+      </p>
+    </div>
+  </div>
+
+  <div class="flex gap-3">
+    <span class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[#10b981]"></span>
+    <div>
+      <h4 class="font-semibold text-text-primary">
+        Standing Minutes <span class="text-sm font-normal text-text-tertiary">&middot; Apple Watch only</span>
+      </h4>
+      <p class="mt-1 text-sm leading-relaxed text-text-secondary">
+        Apple Watch continuously monitors posture using its accelerometer and
+        gyroscope. Verve reads <strong class="text-text-primary">Apple Stand Time</strong> —
+        the raw cumulative minutes the Watch classified you as upright and moving.
+      </p>
+      <p class="mt-2 text-sm leading-relaxed text-text-tertiary">
+        This is <strong class="text-text-secondary">not</strong> the green Stand ring. The
+        ring counts hours where you stood for &ge;1 minute (max 12/day). Standing
+        Minutes counts the actual total — so 46 minutes across the day appears as
+        46, even if no single hour crossed the ring threshold.
+      </p>
+    </div>
+  </div>
+
+  <p class="border-t border-white/7 pt-4 text-sm italic leading-relaxed text-text-tertiary">
+    Research shows total sedentary time and standing time are independent
+    predictors of health outcomes — even for people who exercise regularly.
+    Verve tracks both so you get the full picture beyond just workout minutes.
+  </p>
+</div>

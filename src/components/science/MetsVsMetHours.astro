@@ -1,0 +1,84 @@
+---
+const intensityBands: [string, string][] = [
+  ["< 3.0 METs", "Light"],
+  ["3.0 – 5.99 METs", "Moderate"],
+  ["≥ 6.0 METs", "Vigorous"],
+];
+const doseTable: [string, string][] = [
+  ["150 min moderate @ 3.0 METs", "7.5 MET-h/week"],
+  ["150 min moderate @ 4.0 METs", "10 MET-h/week"],
+  ["75 min vigorous @ 6.0 METs", "7.5 MET-h/week"],
+  ["75 min vigorous @ 8.0 METs", "10 MET-h/week"],
+];
+---
+
+<div class="space-y-6">
+  <div class="flex gap-3">
+    <span class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[#0284c7]"></span>
+    <div>
+      <h4 class="font-semibold text-text-primary">METs — how hard</h4>
+      <p class="mt-1 text-sm leading-relaxed text-text-secondary">
+        A Metabolic Equivalent of Task (MET) is the energy your body uses per kg of
+        body weight per minute, relative to rest. <strong class="text-text-primary">1 MET</strong>
+        &nbsp;= sitting quietly, using 3.5 mL of O&#8322;/kg/min. Every activity — walking,
+        running, lifting — gets a METs value showing how many times harder it is
+        than sitting still.
+      </p>
+      <div class="mt-3 space-y-1.5">
+        {doseTable.length && intensityBands.map(([range, label]) => (
+          <div class="flex justify-between text-sm">
+            <span class="text-text-tertiary">{range}</span>
+            <span class="font-semibold text-text-secondary">{label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+
+  <div class="flex gap-3">
+    <span class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[#7e22ce]"></span>
+    <div>
+      <h4 class="font-semibold text-text-primary">MET-h — how much</h4>
+      <p class="mt-1 text-sm leading-relaxed text-text-secondary">
+        MET-hours (MET-h) multiply intensity by time:
+        <strong class="text-text-primary">METs &times; hours</strong>. It's the session's
+        training volume, not its intensity. 1 MET-h &asymp; 1 kcal burned per kg of
+        body weight (the energy cost of one hour at rest, scaled by your weight) —
+        so MET-h isn't the same number for everyone at the same intensity.
+      </p>
+    </div>
+  </div>
+
+  <div class="rounded-xl border border-white/8 bg-white/4 p-4">
+    <p class="text-sm font-semibold text-text-primary">Worked example</p>
+    <p class="mt-1.5 text-sm leading-relaxed text-text-secondary">
+      A 36-minute strength session averaging <strong class="text-text-primary">3.4 METs</strong>
+      is classified <strong class="text-text-primary">moderate</strong> intensity (it's the
+      METs value that sets the label). Its volume is 3.4 &times; 0.6 hours (36 min) =
+      <strong class="text-text-primary">2.0 MET-h</strong> — a completely separate number
+      answering "how much," not "how hard."
+    </p>
+  </div>
+
+  <div>
+    <p class="text-sm font-semibold text-text-primary">Same minutes, different MET-h</p>
+    <p class="mt-1 text-sm leading-relaxed text-text-secondary">
+      WHO/AHA define weekly dose in minutes — but two people hitting the same
+      minutes at different intensities log very different volume:
+    </p>
+    <div class="mt-3 space-y-1.5">
+      {doseTable.map(([desc, meth]) => (
+        <div class="flex justify-between text-sm">
+          <span class="text-text-tertiary">{desc}</span>
+          <span class="font-semibold text-text-secondary">{meth}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <p class="border-t border-white/7 pt-4 text-sm italic leading-relaxed text-text-tertiary">
+    METs tells you how intense an activity is; MET-h tells you how much of it you
+    did. Verve computes both for every logged and background activity — METs
+    decides its light/moderate/vigorous label, MET-h is its training volume.
+  </p>
+</div>

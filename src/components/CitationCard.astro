@@ -1,0 +1,39 @@
+---
+import type { Citation } from "../data/science";
+
+interface Props extends Citation {}
+const { title, summary, url, color, isCommentary } = Astro.props;
+---
+
+<a
+  href={url}
+  target="_blank"
+  rel="noopener noreferrer"
+  class="block rounded-2xl border border-white/8 bg-white/4 p-5 transition-colors hover:border-white/16"
+>
+  <div class="h-1 -mx-5 -mt-5 mb-4 rounded-t-2xl" style={{ backgroundColor: color }}></div>
+  <div class="flex items-center gap-2">
+    <span class="h-2 w-2 rounded-full" style={{ backgroundColor: color }}></span>
+    <span class="text-sm font-bold" style={{ color }}>{title}</span>
+    {isCommentary && (
+      <span class="rounded-md bg-amber-400/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
+        Commentary
+      </span>
+    )}
+    <svg
+      width="14"
+      height="14"
+      class="ml-auto shrink-0 text-text-tertiary"
+      style="width: 14px; height: 14px;"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+    >
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <path d="M15 3h6v6" />
+      <path d="M10 14 21 3" />
+    </svg>
+  </div>
+  <p class="mt-2 text-sm leading-relaxed text-text-secondary">{summary}</p>
+</a>

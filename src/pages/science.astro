@@ -1,0 +1,202 @@
+---
+import Layout from "../layouts/Layout.astro";
+import CitationCard from "../components/CitationCard.astro";
+import VideoSlot from "../components/VideoSlot.astro";
+import MetsVsMetHours from "../components/science/MetsVsMetHours.astro";
+import MovementBalance from "../components/science/MovementBalance.astro";
+import {
+  CRF_SECTION,
+  MOVEMENT_BALANCE_SECTION,
+  STEPS_SECTION,
+  ZONE2_SECTION,
+  ZONE2_HR_SECTION,
+  BODY_PHENOTYPING_SECTION,
+  HEART_HEALTH_SECTION,
+  MUSCLE_HEALTH_SECTION,
+} from "../data/science";
+
+const nav = [
+  { slug: "mets-vs-met-h", label: "METs vs MET-h" },
+  { slug: "crf", label: "Cardiorespiratory Fitness" },
+  { slug: "movement-balance", label: "Movement Balance" },
+  { slug: "steps", label: "Steps & Cadence" },
+  { slug: "zone-2", label: "Zone 2 Training" },
+  { slug: "heart-health", label: "Heart Health" },
+  { slug: "body-phenotyping", label: "Body Phenotyping" },
+  { slug: "muscle-health", label: "Muscle Health" },
+];
+---
+
+<Layout
+  title="The Science Behind Verve"
+  description="Every threshold in Verve, traced to its source — CRF, Zone 2, Heart Health, Body Phenotyping, and more, each backed by named, checkable research."
+>
+  <header class="mx-auto flex max-w-6xl items-center justify-between px-6 py-6 sm:px-10">
+    <a href="/" class="flex items-center gap-2.5">
+      <img src="/app-icon.png" alt="" class="h-8 w-8 rounded-lg" />
+      <span class="text-lg font-semibold tracking-tight text-text-primary">Verve</span>
+    </a>
+    <a
+      href="https://apps.apple.com/app/id6760022278"
+      class="rounded-full border border-white/14 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-white/25"
+    >
+      Get the app
+    </a>
+  </header>
+
+  <section class="px-6 pt-8 pb-14 sm:px-10">
+    <div class="mx-auto max-w-3xl text-center">
+      <span class="font-mono text-xs font-semibold uppercase tracking-widest text-accent-light">
+        The evidence base
+      </span>
+      <h1 class="mt-4 text-4xl font-bold tracking-tight text-text-primary sm:text-5xl">
+        Every threshold, traced to its source.
+      </h1>
+      <p class="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-secondary">
+        28 citations across 8 topics. No proprietary score you can't check the
+        math on — every number below is the same one used inside the app, and
+        every number links to where it came from.
+      </p>
+    </div>
+
+    <!-- In-page nav -->
+    <nav class="mx-auto mt-10 flex max-w-4xl flex-wrap justify-center gap-2">
+      {nav.map((n) => (
+        <a
+          href={`#${n.slug}`}
+          class="rounded-full border border-white/8 bg-white/4 px-4 py-2 text-xs font-medium text-text-secondary transition-colors hover:border-white/16 hover:text-text-primary"
+        >
+          {n.label}
+        </a>
+      ))}
+    </nav>
+  </section>
+
+  <main class="mx-auto max-w-4xl space-y-20 px-6 pb-28 sm:px-10">
+    <!-- ── METs vs MET-h ─────────────────────────────────────────────── -->
+    <section id="mets-vs-met-h" class="scroll-mt-8">
+      <h2 class="text-2xl font-bold text-text-primary">METs vs MET-h</h2>
+      <p class="mt-2 text-sm text-text-tertiary">Methodology &mdash; not a citation, this is how Verve computes it</p>
+      <div class="mt-6"><VideoSlot topic="METs vs MET-h" /></div>
+      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+        <MetsVsMetHours />
+      </div>
+    </section>
+
+    <!-- ── Cardiorespiratory Fitness ─────────────────────────────────── -->
+    <section id="crf" class="scroll-mt-8">
+      <h2 class="text-2xl font-bold text-text-primary">Cardiorespiratory Fitness &amp; MET</h2>
+      <p class="mt-2 text-sm text-text-tertiary">Why Verve treats CRF as the headline metric, VO&#8322;Max as secondary</p>
+      <div class="mt-6"><VideoSlot topic="Cardiorespiratory Fitness" /></div>
+      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+        <p class="text-sm leading-relaxed text-text-secondary">
+          <strong class="text-text-primary">Ages 18&ndash;39:</strong> ACSM / Cooper
+          Institute adult VO&#8322;Max norms (1997), converted to METs.
+          <strong class="ml-1 text-text-primary">Ages 40+:</strong> Cleveland Clinic
+          treadmill data (Mandsager 2018, 122,007 patients). Both use the same
+          5-tier system (Low &rarr; Elite) &mdash; Verve automatically selects the
+          correct source based on your profile age.
+        </p>
+      </div>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        {CRF_SECTION.map((c) => <CitationCard {...c} />)}
+      </div>
+    </section>
+
+    <!-- ── Movement Balance ──────────────────────────────────────────── -->
+    <section id="movement-balance" class="scroll-mt-8">
+      <h2 class="text-2xl font-bold text-text-primary">Sedentary Behavior &amp; Movement Balance</h2>
+      <p class="mt-2 text-sm text-text-tertiary">How Verve reads your day beyond workout minutes</p>
+      <div class="mt-6"><VideoSlot topic="Movement Balance" /></div>
+      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+        <MovementBalance />
+      </div>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        {MOVEMENT_BALANCE_SECTION.map((c) => <CitationCard {...c} />)}
+      </div>
+    </section>
+
+    <!-- ── Steps & Cadence ───────────────────────────────────────────── -->
+    <section id="steps" class="scroll-mt-8">
+      <h2 class="text-2xl font-bold text-text-primary">Step Count &amp; Daily Movement</h2>
+      <p class="mt-2 text-sm text-text-tertiary">Daily step tiers and cadence zones</p>
+      <div class="mt-6"><VideoSlot topic="Steps & Cadence" /></div>
+      <div class="mt-6 grid gap-4 sm:grid-cols-2">
+        {STEPS_SECTION.map((c) => <CitationCard {...c} />)}
+      </div>
+    </section>
+
+    <!-- ── Zone 2 (volume + HR method together) ──────────────────────── -->
+    <section id="zone-2" class="scroll-mt-8">
+      <h2 class="text-2xl font-bold text-text-primary">Zone 2 Training</h2>
+      <p class="mt-2 text-sm text-text-tertiary">The weekly target, and the personal heart-rate band behind it</p>
+      <div class="mt-6"><VideoSlot topic="Zone 2 Training" /></div>
+      <div class="mt-6 grid gap-4 sm:grid-cols-2">
+        {ZONE2_SECTION.map((c) => <CitationCard {...c} />)}
+      </div>
+      <h3 class="mt-10 text-lg font-semibold text-text-primary">Heart-rate method: Karvonen HRR</h3>
+      <p class="mt-2 text-sm leading-relaxed text-text-secondary">
+        "Zone 2" is a training label applied to the 40&ndash;60% Heart Rate Reserve
+        band &mdash; different models (Seiler polarised, Maffetone 180-minus-age,
+        San Mill&aacute;n VT1-based) draw the upper boundary slightly differently, but
+        all target the same physiological space just below the first ventilatory
+        threshold.
+      </p>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        {ZONE2_HR_SECTION.map((c) => <CitationCard {...c} />)}
+      </div>
+    </section>
+
+    <!-- ── Heart Health ──────────────────────────────────────────────── -->
+    <section id="heart-health" class="scroll-mt-8">
+      <h2 class="text-2xl font-bold text-text-primary">Heart Health</h2>
+      <p class="mt-2 text-sm text-text-tertiary">ApoB &middot; LDL-C &middot; Lp(a) &middot; hs-CRP &mdash; screening bands, not treatment targets</p>
+      <div class="mt-6"><VideoSlot topic="Heart Health" /></div>
+      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+        <p class="text-sm leading-relaxed text-text-secondary">
+          For ApoB and LDL-C in particular, clinical targets are set by a
+          person's overall cardiovascular risk category &mdash; a value in the
+          "borderline" band may be perfectly appropriate for one person and a
+          treatment trigger for another. Verve classifies against population
+          screening bands and always defers to a clinician.
+        </p>
+      </div>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        {HEART_HEALTH_SECTION.map((c) => <CitationCard {...c} />)}
+      </div>
+    </section>
+
+    <!-- ── Body Phenotyping ──────────────────────────────────────────── -->
+    <section id="body-phenotyping" class="scroll-mt-8">
+      <h2 class="text-2xl font-bold text-text-primary">Body Phenotyping</h2>
+      <p class="mt-2 text-sm text-text-tertiary">Metabolic syndrome screening, beyond BMI</p>
+      <div class="mt-6"><VideoSlot topic="Body Phenotyping" /></div>
+      <div class="mt-6 grid gap-4 sm:grid-cols-2">
+        {BODY_PHENOTYPING_SECTION.map((c) => <CitationCard {...c} />)}
+      </div>
+    </section>
+
+    <!-- ── Muscle Health ─────────────────────────────────────────────── -->
+    <section id="muscle-health" class="scroll-mt-8">
+      <h2 class="text-2xl font-bold text-text-primary">Muscle Health &amp; Grip Strength</h2>
+      <p class="mt-2 text-sm text-text-tertiary">Why grip strength is in a fitness app at all</p>
+      <div class="mt-6"><VideoSlot topic="Muscle Health & Grip Strength" /></div>
+      <div class="mt-6 grid gap-4 sm:grid-cols-2">
+        {MUSCLE_HEALTH_SECTION.map((c) => <CitationCard {...c} />)}
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-white/7 px-6 py-12 sm:px-10">
+    <div class="mx-auto flex max-w-6xl flex-col items-center gap-6 text-center sm:flex-row sm:justify-between sm:text-left">
+      <div class="flex items-center gap-2.5">
+        <img src="/app-icon.png" alt="" class="h-6 w-6 rounded-md" />
+        <span class="text-sm font-medium text-text-secondary">&copy; {new Date().getFullYear()} Verve</span>
+      </div>
+      <nav class="flex gap-6 text-sm text-text-secondary">
+        <a href="/" class="hover:text-text-primary">Home</a>
+        <a href="https://sdr2107.github.io/verve-privacy/" class="hover:text-text-primary">Privacy Policy</a>
+      </nav>
+    </div>
+  </footer>
+</Layout>
