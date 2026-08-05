@@ -1,0 +1,60 @@
+# Builds the Astro site and publishes it to GitHub Pages on every push to main.
+#
+# One-time setup in the repo (cannot be done from a config file):
+#   Settings → Pages → Build and deployment → Source: "GitHub Actions"
+#
+# The custom domain comes from public/CNAME, which Astro copies into dist/ on
+# build. Setting it there rather than in the Pages UI keeps it in version
+# control — the UI setting is silently cleared by some deploy actions.
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  # Lets you re-run a deploy from the Actions tab without an empty commit.
+  workflow_dispatch:
+
+# Allow one concurrent deployment; skip superseded queued runs but never
+# cancel one mid-flight, which can leave Pages serving a half-written build.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` needs the lockfile to match package.json exactly. It is the
+      # right default for CI — it fails loudly on drift instead of silently
+      # resolving different versions than the ones tested locally.
+      - run: npm ci
+
+      - run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
