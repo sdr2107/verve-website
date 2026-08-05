@@ -1,0 +1,401 @@
+---
+/**
+ * /crf-map — interactive dendrogram of the AHA's CRF scientific statement.
+ *
+ * Built as positioned DOM nodes inside a single transformed wrapper, with an
+ * SVG layer underneath for the connectors. The obvious alternative — pure SVG
+ * with <text> — was rejected because the source has 226 nodes averaging 67
+ * characters (longest: 217), and SVG has no text wrapping: every label would
+ * need manual tspan splitting, and would rasterise soft at high zoom. DOM text
+ * wraps natively via CSS and stays crisp at any scale.
+ *
+ * No charting library. The site is self-contained by design, and a tidy-tree
+ * layout over a known-shape tree is ~40 lines.
+ */
+import Layout from "../layouts/Layout.astro";
+import Footer from "../components/Footer.astro";
+import tree from "../data/crf-dendrogram.json";
+
+const SOURCE_URL = "https://www.ahajournals.org/doi/10.1161/CIR.0000000000000461";
+const nodeCount = (function count(n: any): number {
+  return 1 + (n.children ?? []).reduce((s: number, c: any) => s + count(c), 0);
+})(tree);
+---
+
+<Layout
+  title="Cardiorespiratory Fitness — the whole picture, mapped"
+  description={`An interactive map of the American Heart Association's scientific statement on cardiorespiratory fitness — ${nodeCount} concepts, from what CRF measures to how to improve it. Pan, zoom, expand.`}
+  image="/og-crf-map.png"
+>
+  <header class="mx-auto flex max-w-6xl items-center justify-between px-6 py-5 sm:px-10">
+    <a href="/" class="flex items-center gap-2.5">
+      <img src="/app-icon.png" alt="" class="h-8 w-8 rounded-lg" />
+      <span class="text-lg font-semibold tracking-tight text-text-primary">Verve</span>
+    </a>
+    <a
+      href="/science"
+      class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
+    >
+      Science
+    </a>
+  </header>
+
+  <section class="mx-auto max-w-3xl px-6 pt-4 pb-7 sm:px-10">
+    <span class="font-mono text-xs font-semibold uppercase tracking-widest text-accent-light">
+      AHA Scientific Statement · Ross et al. 2016
+    </span>
+    <h1 class="mt-3 text-3xl font-bold tracking-tight text-text-primary sm:text-4xl">
+      Cardiorespiratory fitness, mapped end to end
+    </h1>
+    <p class="mt-4 text-base leading-relaxed text-text-secondary">
+      Every concept in the AHA's statement on CRF as a clinical vital sign —
+      what it measures, why it predicts mortality, how to test it, and what
+      actually raises it — laid out as one tree of {nodeCount} nodes.
+      <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer" class="text-accent-light underline decoration-white/25 underline-offset-2 hover:text-text-primary">
+        Read the source statement &rarr;
+      </a>
+    </p>
+  </section>
+
+  <!-- ── Map ─────────────────────────────────────────────────────────── -->
+  <section class="mx-auto max-w-[1400px] px-3 pb-14 sm:px-6">
+    <div class="overflow-hidden rounded-2xl border border-white/8 bg-white/[0.025]">
+
+      <!-- Controls -->
+      <div class="flex flex-wrap items-center gap-2 border-b border-white/8 px-3 py-2.5">
+        <button data-act="expand"   class="ctl">Expand all</button>
+        <button data-act="collapse" class="ctl">Collapse</button>
+        <span class="mx-1 hidden h-4 w-px bg-white/12 sm:block"></span>
+        <button data-act="out"  class="ctl ctl-icon" aria-label="Zoom out">&minus;</button>
+        <span id="zoomLabel" class="min-w-[3.2rem] text-center font-mono text-xs text-text-tertiary">100%</span>
+        <button data-act="in"   class="ctl ctl-icon" aria-label="Zoom in">+</button>
+        <button data-act="fit"  class="ctl">Fit</button>
+        <span class="ml-auto hidden font-mono text-[11px] text-text-muted sm:block">
+          drag to pan · scroll to zoom · click a node to fold
+        </span>
+      </div>
+
+      <!-- Viewport -->
+      <div id="viewport" class="relative h-[68vh] min-h-[440px] w-full cursor-grab overflow-hidden touch-none select-none">
+        <div id="stage" class="absolute left-0 top-0 origin-top-left will-change-transform">
+          <svg id="links" class="pointer-events-none absolute left-0 top-0 overflow-visible"></svg>
+          <div id="nodes" class="absolute left-0 top-0"></div>
+        </div>
+        <div id="loading" class="absolute inset-0 grid place-items-center font-mono text-xs uppercase tracking-widest text-text-muted">
+          Laying out the tree…
+        </div>
+      </div>
+    </div>
+
+    <p class="mt-3 px-1 font-mono text-[11px] text-text-muted sm:hidden">
+      Drag to pan · pinch to zoom · tap a node to fold
+    </p>
+  </section>
+
+  <Footer />
+</Layout>
+
+<style>
+  .ctl {
+    border-radius: 7px;
+    border: 1px solid rgb(255 255 255 / 0.10);
+    background: rgb(255 255 255 / 0.04);
+    padding: 0.3rem 0.7rem;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    transition: border-color .15s, color .15s, background-color .15s;
+  }
+  .ctl:hover { border-color: rgb(255 255 255 / 0.22); color: var(--color-text-primary); }
+  .ctl:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+  .ctl-icon { min-width: 2rem; font-size: 15px; line-height: 1; padding: 0.3rem 0; }
+
+  /* Node cards. Depth drives the accent so the eye can read level at a glance. */
+  :global(.dnode) {
+    position: absolute;
+    box-sizing: border-box;
+    border-radius: 9px;
+    border: 1px solid rgb(255 255 255 / 0.09);
+    background: #14141f;
+    padding: 7px 9px;
+    font-size: 11.5px;
+    line-height: 1.42;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: border-color .15s, background-color .15s;
+  }
+  :global(.dnode:hover) { border-color: rgb(255 255 255 / 0.28); background: #1a1a28; }
+  :global(.dnode.d0) {
+    border-color: rgb(129 140 248 / 0.55);
+    background: #191830;
+    color: var(--color-text-primary);
+    font-weight: 650;
+    font-size: 13px;
+  }
+  :global(.dnode.d1) { border-left: 3px solid var(--color-accent); color: var(--color-text-primary); font-weight: 560; }
+  :global(.dnode.d2) { border-left: 3px solid rgb(129 140 248 / 0.45); }
+  :global(.dnode.has-kids::after) {
+    content: attr(data-count);
+    position: absolute;
+    right: -7px;
+    top: 50%;
+    transform: translateY(-50%);
+    min-width: 17px;
+    height: 17px;
+    border-radius: 999px;
+    background: var(--color-accent);
+    color: #0d0d1c;
+    font-family: var(--font-mono, ui-monospace), monospace;
+    font-size: 9.5px;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+    padding: 0 4px;
+  }
+  :global(.dnode.open::after) { background: rgb(255 255 255 / 0.16); color: var(--color-text-tertiary); }
+</style>
+
+<script>
+  import treeData from "../data/crf-dendrogram.json";
+
+  type Raw = { name: string; children?: Raw[]; id?: string };
+  interface N {
+    name: string; depth: number; kids: N[]; parent: N | null;
+    collapsed: boolean; el: HTMLDivElement;
+    x: number; y: number; h: number; descendants: number;
+  }
+
+  const NODE_W = 232;   // fixed card width — lets CSS wrap the long labels
+  const H_GAP  = 58;    // horizontal space between levels (room for the count pip)
+  const V_GAP  = 9;
+
+  const viewport = document.getElementById("viewport") as HTMLDivElement;
+  const stage    = document.getElementById("stage") as HTMLDivElement;
+  const nodesEl  = document.getElementById("nodes") as HTMLDivElement;
+  const linksEl  = document.getElementById("links") as unknown as SVGSVGElement;
+  const loading  = document.getElementById("loading") as HTMLDivElement;
+  const zoomLbl  = document.getElementById("zoomLabel") as HTMLSpanElement;
+
+  // ── Build the node list, creating each card once ─────────────────────
+  const all: N[] = [];
+  function build(raw: Raw, depth: number, parent: N | null): N {
+    const el = document.createElement("div");
+    el.className = `dnode d${Math.min(depth, 2)}`;
+    el.style.width = NODE_W + "px";
+    el.textContent = raw.name;
+
+    const n: N = {
+      name: raw.name, depth, kids: [], parent, el,
+      // Open on the 11 top-level themes only. Showing two levels put ~40 cards
+      // on screen, and fitting them dropped the view to 21% — the shape was
+      // visible but nothing was readable, which defeats the point.
+      collapsed: depth >= 1,
+      x: 0, y: 0, h: 0, descendants: 0,
+    };
+    all.push(n);
+    nodesEl.appendChild(el);
+    for (const c of raw.children ?? []) n.kids.push(build(c, depth + 1, n));
+
+    n.descendants = n.kids.reduce((s, k) => s + 1 + k.descendants, 0);
+    if (n.kids.length) {
+      el.classList.add("has-kids");
+      el.dataset.count = String(n.descendants);
+      el.addEventListener("click", (e) => { e.stopPropagation(); toggle(n); });
+    }
+    return n;
+  }
+  const root = build(treeData as Raw, 0, null);
+
+  // ── Tidy-tree layout ─────────────────────────────────────────────────
+  // Leaves stack; parents centre on their children. The clamp handles the
+  // case where a parent card is taller than the span of its children, which
+  // would otherwise push it above the row it belongs to.
+  let extentW = 0, extentH = 0;
+  function layout() {
+    let cursor = 0;
+    extentW = 0;
+
+    const shift = (n: N, dy: number) => {
+      n.y += dy;
+      if (!n.collapsed) for (const k of n.kids) shift(k, dy);
+    };
+
+    (function walk(n: N) {
+      n.x = n.depth * (NODE_W + H_GAP);
+      extentW = Math.max(extentW, n.x + NODE_W);
+
+      const kids = n.collapsed ? [] : n.kids;
+      if (!kids.length) { n.y = cursor; cursor += n.h + V_GAP; return; }
+
+      const start = cursor;
+      for (const k of kids) walk(k);
+
+      const first = kids[0], last = kids[kids.length - 1];
+      let y = (first.y + (last.y + last.h)) / 2 - n.h / 2;
+      if (y < start) { const d = start - y; for (const k of kids) shift(k, d); y = start; cursor += d; }
+      n.y = y;
+      cursor = Math.max(cursor, n.y + n.h + V_GAP);
+    })(root);
+
+    extentH = cursor;
+
+    for (const n of all) {
+      const on = visible(n);
+      n.el.style.display = on ? "block" : "none";
+      if (!on) continue;
+      n.el.style.transform = `translate(${n.x}px, ${n.y}px)`;
+      n.el.classList.toggle("open", !n.collapsed && n.kids.length > 0);
+    }
+    drawLinks();
+  }
+
+  function visible(n: N): boolean {
+    for (let p = n.parent; p; p = p.parent) if (p.collapsed) return false;
+    return true;
+  }
+
+  function drawLinks() {
+    const parts: string[] = [];
+    for (const n of all) {
+      if (n.collapsed || !visible(n)) continue;
+      const x1 = n.x + NODE_W, y1 = n.y + n.h / 2;
+      for (const k of n.kids) {
+        const x2 = k.x, y2 = k.y + k.h / 2, mid = x1 + (x2 - x1) / 2;
+        parts.push(`M${x1},${y1} C${mid},${y1} ${mid},${y2} ${x2},${y2}`);
+      }
+    }
+    linksEl.setAttribute("width", String(extentW));
+    linksEl.setAttribute("height", String(extentH));
+    linksEl.innerHTML =
+      `<path d="${parts.join(" ")}" fill="none" stroke="rgba(255,255,255,0.16)" stroke-width="1.4" />`;
+  }
+
+  function toggle(n: N) { n.collapsed = !n.collapsed; layout(); }
+
+  // ── Pan & zoom ───────────────────────────────────────────────────────
+  let scale = 1, tx = 0, ty = 0;
+  // Fully expanded the tree is ~2260 x 7500px, so the floor has to go low
+  // enough that "Fit" genuinely fits it — at 0.12 it still overflowed and the
+  // button silently did nothing. Text is unreadable down there by definition;
+  // the point of that view is the silhouette.
+  const MIN = 0.05, MAX = 2.2;
+
+  function apply() {
+    stage.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+    zoomLbl.textContent = Math.round(scale * 100) + "%";
+  }
+  function zoomAt(cx: number, cy: number, factor: number) {
+    const next = Math.min(MAX, Math.max(MIN, scale * factor));
+    const k = next / scale;
+    tx = cx - (cx - tx) * k;
+    ty = cy - (cy - ty) * k;
+    scale = next;
+    apply();
+  }
+  function fit() {
+    const w = viewport.clientWidth, h = viewport.clientHeight, pad = 28;
+    scale = Math.min(MAX, Math.max(MIN, Math.min((w - pad * 2) / extentW, (h - pad * 2) / extentH)));
+    // Centre on both axes. Fully expanded the tree is far taller than it is
+    // wide, so fitting to height leaves most of the viewport empty — pinned
+    // left that reads as a rendering fault rather than a deliberate overview.
+    tx = Math.max(pad, (w - extentW * scale) / 2);
+    ty = Math.max(pad, (h - extentH * scale) / 2);
+    apply();
+  }
+
+  viewport.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const r = viewport.getBoundingClientRect();
+    zoomAt(e.clientX - r.left, e.clientY - r.top, e.deltaY < 0 ? 1.12 : 1 / 1.12);
+  }, { passive: false });
+
+  // Pointer events cover mouse and single-finger touch in one path.
+  const pts = new Map<number, { x: number; y: number }>();
+  let pinch = 0, moved = false;
+
+  viewport.addEventListener("pointerdown", (e) => {
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    moved = false;
+    viewport.style.cursor = "grabbing";
+  });
+  viewport.addEventListener("pointermove", (e) => {
+    const prev = pts.get(e.pointerId);
+    if (!prev) return;
+    const cur = { x: e.clientX, y: e.clientY };
+
+    if (pts.size === 2) {
+      pts.set(e.pointerId, cur);
+      const [a, b] = [...pts.values()];
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      if (pinch) {
+        const r = viewport.getBoundingClientRect();
+        zoomAt((a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top, dist / pinch);
+      }
+      pinch = dist;
+      return;
+    }
+
+    tx += cur.x - prev.x;
+    ty += cur.y - prev.y;
+    if (Math.abs(cur.x - prev.x) + Math.abs(cur.y - prev.y) > 2) moved = true;
+    pts.set(e.pointerId, cur);
+    apply();
+  });
+  const release = (e: PointerEvent) => {
+    pts.delete(e.pointerId);
+    if (pts.size < 2) pinch = 0;
+    viewport.style.cursor = "grab";
+  };
+  viewport.addEventListener("pointerup", release);
+  viewport.addEventListener("pointercancel", release);
+  // A drag that ends on a card must not also fold it.
+  nodesEl.addEventListener("click", (e) => { if (moved) e.stopPropagation(); }, true);
+
+  function wireControls() {
+    document.querySelectorAll<HTMLButtonElement>("[data-act]").forEach((b) => {
+      b.addEventListener("click", () => {
+        const r = viewport.getBoundingClientRect();
+        switch (b.dataset.act) {
+          case "in":  zoomAt(r.width / 2, r.height / 2, 1.25); break;
+          case "out": zoomAt(r.width / 2, r.height / 2, 1 / 1.25); break;
+          case "fit": fit(); break;
+          case "expand":   all.forEach((n) => (n.collapsed = false)); layout(); fit(); break;
+          case "collapse": all.forEach((n) => (n.collapsed = n.depth >= 1)); layout(); fit(); break;
+        }
+      });
+    });
+  }
+
+  // Measure only once the stylesheet and webfont have actually applied.
+  // Measuring earlier gave every card the wrong height, and read the viewport
+  // as 0 wide — which computed an initial scale of exactly 0 and rendered a
+  // blank canvas.
+  async function init() {
+    try { await (document as any).fonts?.ready; } catch { /* fonts API absent */ }
+    await new Promise(requestAnimationFrame);
+
+    for (const n of all) n.h = n.el.offsetHeight;
+    layout();
+
+    // Open at a readable scale rather than fitting: "Fit" shrinks to whatever
+    // the fully-expanded tree needs — right for that button, wrong for a first
+    // impression. Fit stays one click away.
+    const w = viewport.clientWidth  || 1000;
+    const h = viewport.clientHeight || 520;
+    scale = Math.max(MIN, Math.min(1, w / (extentW + 90)));
+    // Centre on the root, not on the tree's bounding box. The 11 branches are
+    // taller than any viewport at a readable scale, so centring the box pushes
+    // the root off-screen and the map opens on a middle branch with no trunk.
+    tx = 24;
+    ty = h / 2 - (root.y + root.h / 2) * scale;
+    apply();
+    loading.remove();
+
+    // Wired last: the buttons relayout the tree, and doing that before heights
+    // are measured lays it out against zero-height cards.
+    wireControls();
+    viewport.dataset.ready = "1";
+  }
+  init();
+</script>

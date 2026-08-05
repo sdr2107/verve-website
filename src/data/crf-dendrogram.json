@@ -1,0 +1,1245 @@
+{
+  "name": "Cardiorespiratory fitness (CRF)",
+  "children": [
+    {
+      "name": "CRF reflects the integrated ability to transport oxygen from the atmosphere to the mitochondria to perform physical work.",
+      "children": [
+        {
+          "name": "Quantifies the functional capacity of an individual",
+          "children": [
+            {
+              "name": "50% variance of CRF is hereditary",
+              "children": [
+                {
+                  "name": "50% of the change of CRF due to physical activity is also inherited",
+                  "children": [],
+                  "id": "node_msankagz_r8wy0ddc"
+                }
+              ],
+              "id": "node_ms9xtc2p_rh6yzodk"
+            },
+            {
+              "name": "Dependent on three systems",
+              "children": [
+                {
+                  "name": "The lungs that extract oxygen from air and transport it to the blood stream",
+                  "children": [],
+                  "id": "node_ms9xx7y5_f8nrt8og"
+                },
+                {
+                  "name": "The cardiovascular system that transports the oxygen to the muscles",
+                  "children": [],
+                  "id": "node_ms9xxapn_4s2a6bd5"
+                },
+                {
+                  "name": "The musculoskeletal system that extracts and uses the oxygen and nutrients from the blood and gives feedback to the cardiovascular control center",
+                  "children": [],
+                  "id": "node_ms9xxb8e_lhzc85l6"
+                }
+              ],
+              "id": "node_msankagz_rmsi5qbz"
+            }
+          ],
+          "id": "node_ms9xrf8a_72lq7i89"
+        }
+      ],
+      "id": "node_ms9mkn6o_bmingmdt"
+    },
+    {
+      "name": "Low CRF associated with a high risk of cardiovascular disease, increased risk of stroke, all-cause mortality and mortality rates attributable to various cancers, especially of the breast and colon/digestive tract",
+      "children": [
+        {
+          "name": "Potentially stronger predictor of mortality than established risk factors such as smoking, hypertension, high cholesterol, and type 2 diabetes mellitus (T2DM)",
+          "children": [
+            {
+              "name": "Should become a standard part of every clinical visit as a vital sign",
+              "children": [
+                {
+                  "name": "Currently CRF is not a part of any cardiovascular disease risk prediction models",
+                  "children": [
+                    {
+                      "name": "Possible reasons are lack of precise estimation and lack of evidence from randomized control trials which would need to include all age groups and both sexes and use hard end points such as CVD morbidity and mortality",
+                      "children": [],
+                      "id": "node_msabf42q_0zn0i8l8"
+                    },
+                    {
+                      "name": "Adding CRF to traditional risk factors improves reclassification risk for adverse health outcomes",
+                      "children": [],
+                      "id": "node_msabdqy2_l5ehsbqt"
+                    },
+                    {
+                      "name": "Future CVD risk prediction models should include CRF",
+                      "children": [],
+                      "id": "node_msabgeak_3ow0j2dp"
+                    }
+                  ],
+                  "id": "node_msabbvl7_n3v7w8ys"
+                }
+              ],
+              "id": "node_msa9vwnr_xkh0ncqw"
+            }
+          ],
+          "id": "node_ms9wr8bm_vkg03bli"
+        }
+      ],
+      "id": "node_ms9wp78o_iqvd1oqp"
+    },
+    {
+      "name": "Pre operative risk assessment of patients that undergo cardiac and non cardiac surgery",
+      "children": [
+        {
+          "name": "Predicts surgical complications and short term outcomes",
+          "children": [
+            {
+              "name": "Fit patients are better able to cope with the aerobic and myocardial demands caused by trauma of surgery",
+              "children": [],
+              "id": "node_msaa240o_4pjx71op"
+            },
+            {
+              "name": "Unfit patients with low CRF for age and gender are more dificult to operate on, have longer intubation times with increased risk of post operative complications",
+              "children": [],
+              "id": "node_msaa45ob_1jfsosj1"
+            }
+          ],
+          "id": "node_msa9zrok_uh71znef"
+        },
+        {
+          "name": "Optimizing CRF prior to surgery improves post surgical outcomes",
+          "children": [],
+          "id": "node_msab51d2_5pedtbqm"
+        }
+      ],
+      "id": "node_msa9z0kq_i5z22ta6"
+    },
+    {
+      "name": "Risk stratification of heart failure patients",
+      "children": [
+        {
+          "name": "Assess timing of heart transplanation in ambulatory patients with heart failure",
+          "children": [
+            {
+              "name": "CRF < 10 ml/kg/min results in poor survival compared to those with CRF > 14 ml/kg/min.",
+              "children": [],
+              "id": "node_msaa9sfu_afmczny6"
+            }
+          ],
+          "id": "node_msaa8ipj_7szaazbe"
+        },
+        {
+          "name": "Where CPET is not possible, use treadmill exercise time as a correlate for CRF (when EF < 40%).",
+          "children": [
+            {
+              "name": "Reduced treadmill exercise time even if CRF is > 14 ml/kg/min is associated with worse outcomes",
+              "children": [],
+              "id": "node_msaagt20_tgmq0qst"
+            }
+          ],
+          "id": "node_msaaejvf_le9sahqv"
+        },
+        {
+          "name": "Every 1 MET higher mid life CRF associated with 17% lower risk of heart failure hospitalization in later life.",
+          "children": [
+            {
+              "name": "CRF responds to physical activity",
+              "children": [
+                {
+                  "name": "Serial CRF measuremermts helpful in risk prediction of adverse events",
+                  "children": [],
+                  "id": "node_msb71i06_91ie0j2t"
+                }
+              ],
+              "id": "node_msb71i06_j0mi0p3j"
+            }
+          ],
+          "id": "node_msaaklgr_148o6njx"
+        }
+      ],
+      "id": "node_msaa77o4_wu6h0xhl"
+    },
+    {
+      "name": "Emerging role",
+      "children": [
+        {
+          "name": "Reduced risk of dementia and Alzheimer's disease",
+          "children": [],
+          "id": "node_msabqxon_q5jujs5c"
+        },
+        {
+          "name": "Lower levels of anxiety and depression",
+          "children": [],
+          "id": "node_msabrkns_p43m4ga3"
+        },
+        {
+          "name": "Reduced risk of prediabetes, metabolic syndrome and type 2 DM",
+          "children": [
+            {
+              "name": "Skeletal muscle consumes largest amount of glucose in the human body",
+              "children": [
+                {
+                  "name": "Exercise helps maintain blood glucose and insulin sensitivity",
+                  "children": [
+                    {
+                      "name": "Most benefit occurs in the least fit individuals",
+                      "children": [],
+                      "id": "node_msabye1d_4x5tx6o3"
+                    }
+                  ],
+                  "id": "node_msabve1o_o1l9b72g"
+                },
+                {
+                  "name": "Improved oxidative pathways of the mitochondria helps improve the cardiovascular and metabolic health",
+                  "children": [],
+                  "id": "node_msac46qk_etxz8ty3"
+                }
+              ],
+              "id": "node_msabub3i_bl7ggp62"
+            }
+          ],
+          "id": "node_msabtubc_x1kv6hnn"
+        }
+      ],
+      "id": "node_msabqinc_5n3m7okx"
+    },
+    {
+      "name": "Measuring CRF directly with CPET (cardiopulmonary exercise testing)",
+      "children": [
+        {
+          "name": "Measures VO2 (oxygen consumption), VCO2 (CO2 production) and VE (minute ventilation).",
+          "children": [
+            {
+              "name": "VO2",
+              "children": [
+                {
+                  "name": "Peak VO2 means no plateau in VO2 with increasing exercise workload",
+                  "children": [],
+                  "id": "node_msanz368_6l6wygjz"
+                },
+                {
+                  "name": "Maximal VO2 implies a plateau in VO2 with increased exercise workload, used in apparently healthy people",
+                  "children": [],
+                  "id": "node_msanzyi7_x2gieyjj"
+                },
+                {
+                  "name": "Peak/Maximal VO2 values vary widely and are influenced by age, sex, genetics, lifestyle/exercise training habits, and varied disease states",
+                  "children": [],
+                  "id": "node_msao3rg3_hp3m7ysz"
+                },
+                {
+                  "name": "FRIEND registry published VO2Max reference standards for adult men and women (20-79 years) obtained from CPET.",
+                  "children": [
+                    {
+                      "name": "Men have higher CRF than women for a given age",
+                      "children": [
+                        {
+                          "name": "Higher cardiac output, hemoglobin levels and skeletal muscle mass in males",
+                          "children": [],
+                          "id": "node_msc3t0yt_r9okpa2e"
+                        }
+                      ],
+                      "id": "node_msc3s4zx_muhx0g6m"
+                    },
+                    {
+                      "name": "CRF decreases with age",
+                      "children": [
+                        {
+                          "name": "3-6% per decade for 3rd-4th decade",
+                          "children": [],
+                          "id": "node_msc3uoxa_lbh4ki48"
+                        },
+                        {
+                          "name": "After 70 years CRF decreases by >20% per decade",
+                          "children": [],
+                          "id": "node_msc3vfhm_7p71gdcc"
+                        },
+                        {
+                          "name": "Decline in CRF starts at age 45",
+                          "children": [],
+                          "id": "node_msc3wu18_f8ul7xd4"
+                        }
+                      ],
+                      "id": "node_msc3u8k4_0ulmjrw5"
+                    },
+                    {
+                      "name": "CRF response to standardized physcial activity is not influenced by age and sex",
+                      "children": [],
+                      "id": "node_mse8gunq_jouhecv0"
+                    }
+                  ],
+                  "id": "node_msao57m2_thkkcjtn"
+                },
+                {
+                  "name": "Testing method affects VO2Max. Example: VO2Max is 10% to 20% lower when using a cycle ergometer compared with a treadmill in untrained individuals",
+                  "children": [],
+                  "id": "node_msao70ux_b47diceu"
+                }
+              ],
+              "id": "node_msaoaz2b_wmfm4u14"
+            },
+            {
+              "name": "Peak respiratory exchange ratio (i.e subjective effort) = VCO2/VO2",
+              "children": [
+                {
+                  "name": "≥ 1.10 is gold standard indictor of maximal effort",
+                  "children": [],
+                  "id": "node_msaoe7f3_t4f9gjx8"
+                },
+                {
+                  "name": "Better than estimated maximal HR (220-age) which is affected by large population standard deviation (+/- 12 bpm) and not ideal indicator of exercise effort",
+                  "children": [],
+                  "id": "node_msaogdbo_srt5cuff"
+                }
+              ],
+              "id": "node_msaoc3da_gnq9voa2"
+            },
+            {
+              "name": "VE/VCO2 slope indicates ventilatory efficiency",
+              "children": [
+                {
+                  "name": "Elevated in patients with cardiovascular and pulmonary diseases",
+                  "children": [],
+                  "id": "node_msaort69_ogfypshc"
+                }
+              ],
+              "id": "node_msaoqmdi_4ztxev9m"
+            },
+            {
+              "name": "CPET testing units also have PFT testing capability",
+              "children": [
+                {
+                  "name": "Can assess respiratory limitations to exercise at the same time (e.g exercise induced bronchospasm).",
+                  "children": [],
+                  "id": "node_msaovqwp_cj6inya4"
+                }
+              ],
+              "id": "node_msaouu6p_3lxx1wnb"
+            }
+          ],
+          "id": "node_msb8ukc4_s612mslg"
+        },
+        {
+          "name": "Pushes the body to absolute exhaustion to find peak capacity (maximal exercise test)",
+          "children": [],
+          "id": "node_msb8xz6u_t4jccpk7"
+        },
+        {
+          "name": "Most accurate and standardized quantification of CRF",
+          "children": [],
+          "id": "node_msb8y6fp_b1bw7n0h"
+        },
+        {
+          "name": "Considerations include cost and availability, now trained non physician health professionals can supervise the test",
+          "children": [],
+          "id": "node_msb8ukc4_1obxh5qp"
+        }
+      ],
+      "id": "node_msano0b1_hrf1r2gv"
+    },
+    {
+      "name": "Estimating CRF",
+      "children": [
+        {
+          "name": "Using Maximal exercise testing (maximal effort)",
+          "children": [
+            {
+              "name": "Using peak work rate achieved on treadmill or cycle ergometer e.g treadmill speed, grade and duration or cycle ergometer workload in Watts",
+              "children": [
+                {
+                  "name": "CRF estimated using prediction equations e.g Bruce, Balke, Modified Balke, Bruce ramp etc",
+                  "children": [
+                    {
+                      "name": "Easier to obtain and more commonly used measure of fitness in various studies",
+                      "children": [],
+                      "id": "node_msb7rf45_th6kscy4"
+                    },
+                    {
+                      "name": "Issues",
+                      "children": [
+                        {
+                          "name": "Protocol may be too agrressive for the patients fitness level and physiologic capacity (Bruce protocol for a heart failure patient)",
+                          "children": [
+                            {
+                              "name": "Select protocol that is tailored to patient's exercise or functional capacity",
+                              "children": [],
+                              "id": "node_msb9hsht_acvdl1k1"
+                            }
+                          ],
+                          "id": "node_msb7vjpp_xlooilr4"
+                        },
+                        {
+                          "name": "Allowing patients to hold hand-rails during the study extends the treadmill time to achieve higher work rate but introduces a prediction error",
+                          "children": [
+                            {
+                              "name": "Resting hands on the handrails without gripping may be acceptable",
+                              "children": [],
+                              "id": "node_msb81ai4_nszydyj0"
+                            }
+                          ],
+                          "id": "node_msb7ywlk_gvg3rq65"
+                        }
+                      ],
+                      "id": "node_msb7ulq9_crdybem1"
+                    }
+                  ],
+                  "id": "node_ms9yr9t8_zu215qsj"
+                }
+              ],
+              "id": "node_msb7odf6_aqqeon7y"
+            },
+            {
+              "name": "Field and clinic tests useful in fitness setting, requires minimal resources and can be self adminsistered",
+              "children": [
+                {
+                  "name": "Maximum distance covered in 12 minutes (Cooper test)",
+                  "children": [],
+                  "id": "node_msc1a992_7o7ayxu1"
+                },
+                {
+                  "name": "Time taken to complete 1.5 miles/2.4 km",
+                  "children": [],
+                  "id": "node_msc16sa0_2sn14tkw"
+                }
+              ],
+              "id": "node_msc14y80_i27zb3zj"
+            }
+          ],
+          "id": "node_msc0fr2g_76q70a1k"
+        },
+        {
+          "name": "Using submaximal exercise testing (limited intensity)",
+          "children": [
+            {
+              "name": "Performed on cycle ergometer or treadmill with two submaximal work rates",
+              "children": [
+                {
+                  "name": "Ideal heart rate should be > 110 bpm for each of the two work rates",
+                  "children": [
+                    {
+                      "name": "Regression equation estimates CRF from work rate and HR to predict maximal work rate corresponding to age-predicted maximal HR.",
+                      "children": [
+                        {
+                          "name": "Cannot be used for patients using medicines that modulate the heart rate e.g beta blockers",
+                          "children": [],
+                          "id": "node_msc0le1f_kkwkaqxe"
+                        },
+                        {
+                          "name": "Error rate is 10-15% due to high SEE (standard error of estimate) of age predicted maximal HR (+/- 10-15 bpm).",
+                          "children": [],
+                          "id": "node_msc0mt99_3v51gc22"
+                        },
+                        {
+                          "name": "Can be perfomed without medical supervision with little risk",
+                          "children": [],
+                          "id": "node_msc0pijy_cx7onkts"
+                        }
+                      ],
+                      "id": "node_msc0izuc_zuwybfhn"
+                    }
+                  ],
+                  "id": "node_msc0hqab_y1cv8wur"
+                }
+              ],
+              "id": "node_msc0etms_qaxaok5q"
+            },
+            {
+              "name": "Field and Clinic tests useful in clinic or fitness setting, require minimal resources and can be self administered",
+              "children": [
+                {
+                  "name": "1-mile walk test",
+                  "children": [],
+                  "id": "node_msc0ukmg_6pws3gp9"
+                }
+              ],
+              "id": "node_msc0qnqn_pra038dn"
+            },
+            {
+              "name": "In clinical situations like COPD and heart failure (deconditioned patients)",
+              "children": [
+                {
+                  "name": "6 minute walk test (6MWT)",
+                  "children": [
+                    {
+                      "name": "Useful in cardiac rehabilitation programs to assses differences attributable to therapy",
+                      "children": [],
+                      "id": "node_msc10af6_3c2tim4n"
+                    },
+                    {
+                      "name": "However not an accurate estimate of CRF (as it is a submaximal test in deconditioned patients).",
+                      "children": [],
+                      "id": "node_msc11agb_z5tmjvd3"
+                    }
+                  ],
+                  "id": "node_msc0zljb_sy2at992"
+                }
+              ],
+              "id": "node_msc0ybgu_mkj8kbr0"
+            }
+          ],
+          "id": "node_msc0etms_hwa3vytl"
+        },
+        {
+          "name": "Non exercise prediction equations without performing maximal or submaximal exercise test",
+          "children": [
+            {
+              "name": "Uses clinical variables like age, sex, body weight, physical activity, heart rate etc to estimate CRF using prediction equations",
+              "children": [
+                {
+                  "name": "13 equations with the R2 and SEEs ranging from 0.50 to 0.86 and 2.98 to 6.90 ml/kg/min respectively.",
+                  "children": [
+                    {
+                      "name": "Jurca et al (2005) and Nes et al (2011) models predict long term mortality",
+                      "children": [],
+                      "id": "node_msc3bj1q_z3iu5n6p"
+                    },
+                    {
+                      "name": "Similar in accuracy to submaximal exercise prediction models",
+                      "children": [],
+                      "id": "node_msc1lq00_gnfj1uw8"
+                    },
+                    {
+                      "name": "Underestimate CRF in highly fit individuals and overestimate CRF in unfit people",
+                      "children": [],
+                      "id": "node_msc1miz0_9rfecvuq"
+                    }
+                  ],
+                  "id": "node_msc1kxym_etr345qd"
+                }
+              ],
+              "id": "node_msc1ig6y_5r2z373s"
+            },
+            {
+              "name": "All adults should have CRF assessed this way during annual healthcare examination to assess fitness and not coronary artery disease",
+              "children": [],
+              "id": "node_mse8vbjz_4o84g448"
+            },
+            {
+              "name": "Useful alternative for assessing CRF in some at-risk patient populations",
+              "children": [
+                {
+                  "name": "Goal is to identify people with low CRF who are at increased risk of CVD",
+                  "children": [
+                    {
+                      "name": "Helps in counselling of patients regrading importance of physical activity",
+                      "children": [],
+                      "id": "node_msc3fppr_l2y3oc38"
+                    }
+                  ],
+                  "id": "node_msc3ahdv_4rpkpnr4"
+                }
+              ],
+              "id": "node_msc1ovbs_zwp3u2i2"
+            },
+            {
+              "name": "Should not be viewed as a replacement for objective assessment of CRF",
+              "children": [],
+              "id": "node_msc3ha9b_m4w57g8z"
+            }
+          ],
+          "id": "node_msc1ewm7_f1baxe47"
+        }
+      ],
+      "id": "node_msanpbrh_95eqbtfg"
+    },
+    {
+      "name": "CRF is expressed in METs.",
+      "children": [
+        {
+          "name": "A Metabolic Equivalent of Task (MET) is the energy your body uses per kg of body weight per minute, relative to rest. 1 MET = sitting quietly, using 3.5 mL of O₂/kg/min.",
+          "children": [
+            {
+              "name": "Every activity — walking, running, lifting — gets a METs value showing how many times harder it is than sitting still.",
+              "children": [
+                {
+                  "name": "METs tells you how intense an activity is",
+                  "children": [
+                    {
+                      "name": "< 3.0 METs Light physical activity",
+                      "children": [],
+                      "id": "node_ms9z0bcv_ap67el2i"
+                    },
+                    {
+                      "name": "3.0 – 5.99 METs Moderate intensity physical activity",
+                      "children": [],
+                      "id": "node_msa040mh_8ktm6ukz"
+                    },
+                    {
+                      "name": "≥ 6.0 METs Vigorous intensity physical activity",
+                      "children": [],
+                      "id": "node_msa08ra4_qpzqs9i9"
+                    }
+                  ],
+                  "id": "node_ms9zpugg_ny12qc3g"
+                }
+              ],
+              "id": "node_ms9z69fr_c8i6xepq"
+            },
+            {
+              "name": "WHO/AHA define weekly exercise dose in minutes",
+              "children": [
+                {
+                  "name": "150 minutes of moderate intensity physical activity",
+                  "children": [],
+                  "id": "node_msa8x71n_3kt7nejj"
+                },
+                {
+                  "name": "75 minutes of vigorous physical activity",
+                  "children": [],
+                  "id": "node_msa8yrgb_bj8ti4jh"
+                },
+                {
+                  "name": "Two people hitting the same minutes at different intensities log very different volumes:",
+                  "children": [
+                    {
+                      "name": "150 min moderate @ 3.0 METs 7.5 MET-h/week",
+                      "children": [],
+                      "id": "node_msa02jjq_zvs4ajmf"
+                    },
+                    {
+                      "name": "150 min moderate @ 4.0 METs 10 MET-h/week",
+                      "children": [],
+                      "id": "node_msa02jjq_a8ktq2vi"
+                    },
+                    {
+                      "name": "75 min vigorous @ 6.0 METs 7.5 MET-h/week",
+                      "children": [],
+                      "id": "node_msa02jjq_frb9pnjk"
+                    },
+                    {
+                      "name": "75 min vigorous @ 8.0 METs 10 MET-h/week",
+                      "children": [],
+                      "id": "node_msa02jjq_g1kgm4ox"
+                    }
+                  ],
+                  "id": "node_msa8wcnu_dzf2xe8s"
+                }
+              ],
+              "id": "node_msa02jjq_wccn0nxs"
+            },
+            {
+              "name": "1-MET improvement in exercise capacity is associated with 13% reduction in cardiovascular mortality and 15% reduction in all-cause mortality.",
+              "children": [
+                {
+                  "name": "Increased physical activity is cardioprotective",
+                  "children": [],
+                  "id": "node_msa94e21_7m28aed1"
+                },
+                {
+                  "name": "Higher autonomic tone reduces risk of arrhythmia",
+                  "children": [],
+                  "id": "node_msa95drg_6ydscp9w"
+                },
+                {
+                  "name": "Reduced risk of thrombotic events",
+                  "children": [],
+                  "id": "node_msa96y85_w3kaijba"
+                },
+                {
+                  "name": "Improved endothelial function",
+                  "children": [],
+                  "id": "node_msa97e95_4cw3chu1"
+                },
+                {
+                  "name": "Associated with reduced visceral adiposity, improved insulin sensitivity, lower inflammation, favourable lipid profile and lower blood pressure",
+                  "children": [],
+                  "id": "node_msa9b7np_k9xyijye"
+                }
+              ],
+              "id": "node_msa8vlrz_3qgan7o4"
+            }
+          ],
+          "id": "node_ms9z29lo_jfncinup"
+        },
+        {
+          "name": "MET-h is METs multiplied by intensity in hours",
+          "children": [
+            {
+              "name": "It's the session's training volume, not its intensity.",
+              "children": [
+                {
+                  "name": "1 MET-h ≈ 1 kcal burned per kg of body weight (the energy cost of one hour at rest, scaled by your weight)",
+                  "children": [
+                    {
+                      "name": "MET-h isn't the same number for everyone at the same intensity.",
+                      "children": [
+                        {
+                          "name": "A 36-minute strength session averaging 3.4 METs is classified moderate intensity.",
+                          "children": [
+                            {
+                              "name": "Its volume is 3.4 × 0.6 hours (36 min) =2.0 MET-h — a completely separate number answering \"how much (volume),\" not \"how hard (intensity)\"",
+                              "children": [],
+                              "id": "node_ms9z0bcv_chj6wue5"
+                            }
+                          ],
+                          "id": "node_ms9z0bcv_1v393e9g"
+                        }
+                      ],
+                      "id": "node_ms9ze31v_tzg71685"
+                    }
+                  ],
+                  "id": "node_ms9zdmfx_kv4hf02c"
+                }
+              ],
+              "id": "node_ms9z0bcv_jki773y2"
+            }
+          ],
+          "id": "node_ms9z0bcv_e68i18gz"
+        },
+        {
+          "name": "CRF < 5 METs has high risk of mortality while levels >8-10 METs are relatively protective",
+          "children": [
+            {
+              "name": "> 50%  reduction in all cause mortality  occurs by moving from least fit group (<5 METs) to the next fit group (5-7 METs).",
+              "children": [
+                {
+                  "name": "Everyone does not need to be an athlete.",
+                  "children": [
+                    {
+                      "name": "Some exercise is better than none, most beneficial for sedentary people",
+                      "children": [],
+                      "id": "node_msaceddv_0fpk0ql4"
+                    }
+                  ],
+                  "id": "node_msaceddv_huhap6h7"
+                }
+              ],
+              "id": "node_msaceddv_6vjfhtm1"
+            }
+          ],
+          "id": "node_msaceddv_h3lvichd"
+        }
+      ],
+      "id": "node_ms9z0bcv_vz78gnwv"
+    },
+    {
+      "name": "Exercise recommendations to increase CRF (each component interacts with the other)",
+      "children": [
+        {
+          "name": "Type",
+          "children": [
+            {
+              "name": "High benefit",
+              "children": [
+                {
+                  "name": "Exercise involving major muscle groups (legs, arms, trunk) + continous and rhythmic movement",
+                  "children": [
+                    {
+                      "name": "Brisk walking, jogging, running, cycling, swimming, rowing, cross-country skiing, climbing stairs, active dancing",
+                      "children": [],
+                      "id": "node_msadpi3n_r9bfz2op"
+                    }
+                  ],
+                  "id": "node_msado37w_kxvzo993"
+                }
+              ],
+              "id": "node_msadnppz_3xmf9a3u"
+            },
+            {
+              "name": "Limited benefit",
+              "children": [
+                {
+                  "name": "High resistance muscle strengthening activities",
+                  "children": [
+                    {
+                      "name": "Weight lifting, resistance bands",
+                      "children": [],
+                      "id": "node_msadsaw5_538ec35d"
+                    }
+                  ],
+                  "id": "node_msadr7xo_39g8f6l7"
+                }
+              ],
+              "id": "node_msadqv0l_gfu3y4cq"
+            }
+          ],
+          "id": "node_msadjqr5_o6zx3zhn"
+        },
+        {
+          "name": "Intensity",
+          "children": [
+            {
+              "name": "Moderate and/or vigorous intensity exercises (≥50% of heart rate reserve)",
+              "children": [
+                {
+                  "name": "For healthy adults, obese and overweight, patients of CVD after medical clearance",
+                  "children": [
+                    {
+                      "name": "Higher effort needed in highly fit to increase CRF",
+                      "children": [],
+                      "id": "node_mse82dpy_503y3031"
+                    }
+                  ],
+                  "id": "node_msaduet7_asfzzqf9"
+                }
+              ],
+              "id": "node_msadu5if_ha29yxoe"
+            },
+            {
+              "name": "Light to moderate intensity exercise",
+              "children": [
+                {
+                  "name": "Deconditioned or old people",
+                  "children": [],
+                  "id": "node_msady42v_p3p0455k"
+                }
+              ],
+              "id": "node_msadxqos_wru4eyzi"
+            },
+            {
+              "name": "High intensity Interval training (HIIT)",
+              "children": [
+                {
+                  "name": "Alternating higher and lower intensity bouts of exercise in a single session",
+                  "children": [
+                    {
+                      "name": "In healthy adults, HIIT induces greater increase in CRF than moderate intensity continous training (MICT) for the same energy spent in the session",
+                      "children": [
+                        {
+                          "name": "Added risk of musculoskeletal and cardiac complications",
+                          "children": [],
+                          "id": "node_mse87cn6_kmf9ej9h"
+                        }
+                      ],
+                      "id": "node_mse84em2_qdujrf4d"
+                    },
+                    {
+                      "name": "In patients with cardiovascular disease, HIIT maybe safe as MICT, however more data is needed",
+                      "children": [],
+                      "id": "node_mse87wj6_ss12tbh5"
+                    }
+                  ],
+                  "id": "node_mse83nn9_92g58lj2"
+                }
+              ],
+              "id": "node_mse82p97_b5tw6i4q"
+            }
+          ],
+          "id": "node_msadjzfq_gy5e0ws1"
+        },
+        {
+          "name": "Frequency",
+          "children": [
+            {
+              "name": "≥ 5 days/week of moderate exercise",
+              "children": [],
+              "id": "node_msae0k9j_5nsne2t8"
+            },
+            {
+              "name": "≥ 3 days/week of vigorous intensity exercise",
+              "children": [],
+              "id": "node_msae12h2_28zqmt1o"
+            },
+            {
+              "name": "combination of both for 3-5 days/week",
+              "children": [],
+              "id": "node_msae1wsp_2o4xaikd"
+            }
+          ],
+          "id": "node_msadk232_0955eqzp"
+        },
+        {
+          "name": "Time",
+          "children": [
+            {
+              "name": "Moderate intensity",
+              "children": [
+                {
+                  "name": "30-60 minutes/day or 150 minutes/week",
+                  "children": [],
+                  "id": "node_msae2yu8_mw0ne7hb"
+                }
+              ],
+              "id": "node_msae2r1i_gp8lgwa2"
+            },
+            {
+              "name": "Vigorous intensity",
+              "children": [
+                {
+                  "name": "20-60 minutes/day or 75 minutes/week",
+                  "children": [],
+                  "id": "node_msae3v9z_z0ebpq3q"
+                }
+              ],
+              "id": "node_msae3n0i_wax0q0cx"
+            },
+            {
+              "name": "Combination of both moderate and vigorous activities",
+              "children": [],
+              "id": "node_msae4g6w_iep4710l"
+            },
+            {
+              "name": "≥ 10 minutes/day but < 20 minutes/day in previously inactive people",
+              "children": [],
+              "id": "node_msae59av_jckczl0i"
+            }
+          ],
+          "id": "node_msadk8ut_m9c7pu6x"
+        },
+        {
+          "name": "Amount",
+          "children": [
+            {
+              "name": "Target",
+              "children": [
+                {
+                  "name": "500-1000 MET-min/week or 8.33–16.67 MET-h/week",
+                  "children": [],
+                  "id": "node_msae7htq_e84xk0oj"
+                },
+                {
+                  "name": "If unwilling to reach this amount of exercise or unable to exercise, benefits present even if target is not reached",
+                  "children": [],
+                  "id": "node_msae8yp6_udg2935l"
+                }
+              ],
+              "id": "node_msae7bvl_7jes5ycj"
+            }
+          ],
+          "id": "node_msadkeq6_vk1h131w"
+        },
+        {
+          "name": "Pattern (any one)",
+          "children": [
+            {
+              "name": "1 continous session per day",
+              "children": [],
+              "id": "node_msaecdmc_c8w18p6f"
+            },
+            {
+              "name": "Multiple sessions of ≥ 10 minutes to reach desired volume for the day",
+              "children": [],
+              "id": "node_msaectm7_sej9rdlj"
+            },
+            {
+              "name": "Exercise of ≤ 10 minutes useful in deconditioned people",
+              "children": [],
+              "id": "node_msaee27o_yrilvtd4"
+            },
+            {
+              "name": "If good exercise tolerance present, high intensity interval training (HIIT) can be useful",
+              "children": [],
+              "id": "node_msaeeoei_6xf8jwpl"
+            }
+          ],
+          "id": "node_msadkh1t_lvokuxfi"
+        },
+        {
+          "name": "Progression",
+          "children": [
+            {
+              "name": "Gradual increase in volume until goal is achieved by adjusting",
+              "children": [
+                {
+                  "name": "Time",
+                  "children": [],
+                  "id": "node_msaegjto_ft5qrtjx"
+                },
+                {
+                  "name": "Frequency",
+                  "children": [],
+                  "id": "node_msaeh1y9_7iigpvb6"
+                },
+                {
+                  "name": "And/or intensity",
+                  "children": [],
+                  "id": "node_msaehfz8_k0lcthkh"
+                }
+              ],
+              "id": "node_msaefksr_plj04gj2"
+            },
+            {
+              "name": "Reduces risk of musculoskeletal injury and advserse cardiovascular disease events",
+              "children": [],
+              "id": "node_msaejdwd_7hyrsmse"
+            }
+          ],
+          "id": "node_msadkpvg_26jg1mox"
+        },
+        {
+          "name": "Baseline CRF determines intensity of exercise regimen",
+          "children": [
+            {
+              "name": "Low (≤9 METs)",
+              "children": [
+                {
+                  "name": "Studies recommend brisk walking for at least 3-4 sessions per week for ≥ 30 minutes per session",
+                  "children": [
+                    {
+                      "name": "Approximately 10% improvement in CRF in previously sedentary individuals.",
+                      "children": [],
+                      "id": "node_msctp5fi_44mhsr4a"
+                    },
+                    {
+                      "name": "Increase amount or intensity of exercise further improves CRF",
+                      "children": [],
+                      "id": "node_msctrddr_z2jhzs7j"
+                    }
+                  ],
+                  "id": "node_msctmqbx_n5man2ys"
+                }
+              ],
+              "id": "node_msctjqnt_sh1odr2a"
+            },
+            {
+              "name": "Intermediate (9-14 METs)",
+              "children": [
+                {
+                  "name": "Studies of physical dose and CRF response conducted in generally healthy people",
+                  "children": [
+                    {
+                      "name": "Aerobic activities to increase CRF include (speed of activity guided by target HR)",
+                      "children": [
+                        {
+                          "name": "Brisk walk on a flat surface at >4 mph",
+                          "children": [],
+                          "id": "node_mscxnuhm_9ytkmeg6"
+                        },
+                        {
+                          "name": "Hiking 3 mph in hilly terrain",
+                          "children": [],
+                          "id": "node_mscxohbt_rxqy4z70"
+                        },
+                        {
+                          "name": "Slow jogging (5-6 mph)",
+                          "children": [],
+                          "id": "node_mscxoxo7_lxd0epwg"
+                        },
+                        {
+                          "name": "Road cycling (9-15 mph)",
+                          "children": [],
+                          "id": "node_mscxp9r8_7itwbran"
+                        },
+                        {
+                          "name": "Swimming (moderate effort)",
+                          "children": [],
+                          "id": "node_mscxpicw_1rho4tog"
+                        }
+                      ],
+                      "id": "node_mscxiack_i5zu1slj"
+                    }
+                  ],
+                  "id": "node_mscxce91_lkuez1n4"
+                }
+              ],
+              "id": "node_mscu5kgt_8un2ibzg"
+            },
+            {
+              "name": "High (≥14 METs)",
+              "children": [
+                {
+                  "name": "Studies of physical dose and CRF response conducted in physically active and fit people",
+                  "children": [
+                    {
+                      "name": "The primary goal for people with CRF ≥ 13 METs is related to improving performance than health",
+                      "children": [],
+                      "id": "node_mscxyr2k_1hkpuyna"
+                    }
+                  ],
+                  "id": "node_mscxvl1x_u6qbizmj"
+                }
+              ],
+              "id": "node_mscu639g_npuxfaie"
+            },
+            {
+              "name": "Endurance physical activity needs to be performed over weeks or months to produce CRF increase of ≥ 1 MET",
+              "children": [
+                {
+                  "name": "Increase in CRF more responsive to increase in intensity than time or frequency",
+                  "children": [],
+                  "id": "node_msctxbfi_i58bxrz2"
+                }
+              ],
+              "id": "node_msctx1ls_1zbhmtrj"
+            },
+            {
+              "name": "Higher the baseline CRF, more vigorous intensity needed to produce clinically significant increase in CRF (≥1 MET)",
+              "children": [
+                {
+                  "name": "CRF < 10 METs - training intensity of 50% HRR",
+                  "children": [],
+                  "id": "node_mscu2nbf_jyvqd6on"
+                },
+                {
+                  "name": "CRF 10-14 METs - training intensity of 65% - 85% HRR",
+                  "children": [],
+                  "id": "node_mscu3i7x_w9tkpr88"
+                },
+                {
+                  "name": "CRF > 14 METs - training intensity of >85% HRR",
+                  "children": [],
+                  "id": "node_mscu4g39_wutcm6q0"
+                },
+                {
+                  "name": "Most of the lower mortality risk asociated with high CRF occurs by the time a CRF of 10-12 METs is acheived",
+                  "children": [],
+                  "id": "node_mse8op0k_0tk616x9"
+                },
+                {
+                  "name": "Exercise increases CRF by at least 10% with further increase requiring increase in exercise intensity or amount",
+                  "children": [],
+                  "id": "node_mse8qhyz_wwxgkveu"
+                }
+              ],
+              "id": "node_mscu17w0_elpg8x4q"
+            }
+          ],
+          "id": "node_mscthf1q_0apvgul9"
+        }
+      ],
+      "id": "node_msadj73o_fuu26zoe"
+    },
+    {
+      "name": "Biologic adaptations by habitual endurance type exercise training that improve CRF assessed by Fick Equation",
+      "children": [
+        {
+          "name": "Fick equation VO2 (oxygen uptake) = cardiac output (COP) x Arteriovenous difference of oxygen (A-V 02)",
+          "children": [
+            {
+              "name": "COP = Heart rate x Stroke volume",
+              "children": [
+                {
+                  "name": "Heart rate Max is unchanged with exercise length or intensity",
+                  "children": [],
+                  "id": "node_mscsvikj_f4apovd6"
+                }
+              ],
+              "id": "node_mscsoqlj_y7qhbl9k"
+            },
+            {
+              "name": "Arterial O2 remains same as hemoglobin concentration remains stable or declines slightly",
+              "children": [],
+              "id": "node_mscsrp83_aqrzzh35"
+            }
+          ],
+          "id": "node_mscsm3x0_rgbv75v9"
+        },
+        {
+          "name": "Two majaor adapations with exercise that drive up CRF",
+          "children": [
+            {
+              "name": "Increase in maximal stroke volume via",
+              "children": [
+                {
+                  "name": "Increase in total blood volume",
+                  "children": [],
+                  "id": "node_msct0hil_fgqngc03"
+                },
+                {
+                  "name": "Increase in left ventricular end diastolic volume for the same LV filling pressures",
+                  "children": [],
+                  "id": "node_msct0sc7_luwa84uh"
+                },
+                {
+                  "name": "Improved diastolic function",
+                  "children": [],
+                  "id": "node_msct1qsb_x9ckuo9b"
+                },
+                {
+                  "name": "Decrease in end systolic volume with improved ventriculoarterial coupling likely from enhanced endothelial function",
+                  "children": [],
+                  "id": "node_msct2chd_1smtmi9n"
+                },
+                {
+                  "name": "Enlargement of right ventricle to facilitate left ventricular adaptations",
+                  "children": [],
+                  "id": "node_msct3nds_13u1g63j"
+                }
+              ],
+              "id": "node_mscsxp0j_4t8w5kj8"
+            },
+            {
+              "name": "Decrease in venous O2 content due to increased O2 extraction by trained muscles via",
+              "children": [
+                {
+                  "name": "Increased muscle capillary density which increases mean transit time for diffusion",
+                  "children": [],
+                  "id": "node_msct5e8s_7mez2nhy"
+                },
+                {
+                  "name": "Increase in size and number of skeletal muscle mitchondria and oxidative enzymes",
+                  "children": [],
+                  "id": "node_msct63qd_bcv17zjt"
+                },
+                {
+                  "name": "Regularly performing rhythmic contractions of large muscle groups continously for extended periods of time at moderate or vigorous intensity",
+                  "children": [],
+                  "id": "node_msct8var_0jt1jmhw"
+                },
+                {
+                  "name": "Recovery breaks at lower intensity if exercise approaches maximal effort",
+                  "children": [],
+                  "id": "node_msctb5nx_0t6fdy95"
+                }
+              ],
+              "id": "node_mscsy6ny_u88gxgrk"
+            }
+          ],
+          "id": "node_mscssv8s_cbndmdnl"
+        }
+      ],
+      "id": "node_mscsks6z_1g8gydjr"
+    },
+    {
+      "name": "Recommendations for testing CRF during routine clinical visits",
+      "children": [
+        {
+          "name": "Healthy (no coronary artery disease, peripheral artery disease, COPD and heart failure)",
+          "children": [
+            {
+              "name": "Non exercise estimate of CRF",
+              "children": [
+                {
+                  "name": "e.g. Nes et al equation",
+                  "children": [],
+                  "id": "node_mse90m4y_f3qb65v5"
+                }
+              ],
+              "id": "node_mse907p7_auksy00v"
+            },
+            {
+              "name": "Submaximal exercise test",
+              "children": [
+                {
+                  "name": "One-mile walk, 6MWT",
+                  "children": [],
+                  "id": "node_mse92nzi_4k5b4nfn"
+                }
+              ],
+              "id": "node_mse9198z_k6ldrux6"
+            },
+            {
+              "name": "Maximal exercise test without CPET (individualized or standadized ramp)",
+              "children": [],
+              "id": "node_mse938op_fbmfsckh"
+            },
+            {
+              "name": "Maximal exercise test with CPET (individualized or standadized ramp)",
+              "children": [],
+              "id": "node_mse93n6j_93mehz6i"
+            }
+          ],
+          "id": "node_mse8zgyp_u2avbep9"
+        },
+        {
+          "name": "Chronic disease",
+          "children": [
+            {
+              "name": "Maximal exercise test with CPET (individualized ramp)",
+              "children": [],
+              "id": "node_mse94cmi_q3v584ms"
+            }
+          ],
+          "id": "node_mse93x60_ziymh5yp"
+        }
+      ],
+      "id": "node_mse8yxgj_5l7pmpa1"
+    }
+  ],
+  "id": "node_ms9mkn6o_l7ym2dvw",
+  "attachments": {},
+  "finished": {},
+  "colors": {},
+  "legend": {
+    "labels": [],
+    "visible": false
+  },
+  "chat_history_id": ""
+}

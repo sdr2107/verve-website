@@ -60,6 +60,24 @@ const nav = [
       </p>
     </div>
 
+    <!-- The map is the same evidence in a different shape — one whole-picture
+         view of the AHA statement, versus this page's per-topic breakdown. -->
+    <a
+      href="/crf-map"
+      class="mx-auto mt-8 flex max-w-2xl items-center gap-4 rounded-2xl border border-white/10 bg-white/4 px-5 py-4 transition-colors hover:border-white/22"
+    >
+      <span class="font-mono text-2xl leading-none text-accent-light" aria-hidden="true">⌥</span>
+      <span class="flex-1">
+        <span class="block text-sm font-semibold text-text-primary">
+          See the whole AHA statement as one map
+        </span>
+        <span class="mt-0.5 block text-xs leading-relaxed text-text-secondary">
+          226 concepts on cardiorespiratory fitness — interactive, pan and zoom.
+        </span>
+      </span>
+      <span class="text-sm text-accent-light">&rarr;</span>
+    </a>
+
     <!-- In-page nav -->
     <nav class="mx-auto mt-10 flex max-w-4xl flex-wrap justify-center gap-2">
       {nav.map((n) => (
