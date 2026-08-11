@@ -152,6 +152,24 @@ export const ZONE2_SECTION: Citation[] = [
   },
 ];
 
+export const WEEKLY_VOLUME_SECTION: Citation[] = [
+  {
+    title: "Liang et al — BJSM 2026, device-measured activity and CVD",
+    summary:
+      "17,088 UK Biobank participants wearing accelerometers, mean age 57, followed for incident cardiovascular disease, with Mendelian randomisation used to test causal consistency. Meeting the familiar 150 min/week gave only an 8–9% risk reduction; reaching 560–610 min/week was associated with over 30% lower risk of myocardial infarction, stroke, heart failure and atrial fibrillation. People with lower cardiorespiratory fitness needed 30–50 min/week more than fitter people for the same benefit. Verve's summit line sits at 610, the upper bound of that range — the dose-response curve flattens around there, which is why nothing is drawn above it. Worth noting the cohort was 96% white and middle-aged, so the exact numbers may not transfer to every population.",
+    url: "https://doi.org/10.1136/bjsports-2025-111351",
+    color: "#0ea5e9",
+  },
+  {
+    title: "Why Verve counts minutes as measured",
+    summary:
+      "Public-health targets credit vigorous activity double — 150 moderate-equivalent minutes can be met with 75 vigorous ones. Those figures come from questionnaires. Verve counts what your device actually recorded, without doubling, which is the same way the study above measured activity. It is the more conservative reading: a vigorous week counts for less here than a guideline would allow, never more.",
+    url: "https://doi.org/10.1136/bjsports-2025-111351",
+    color: "#0284c7",
+    isCommentary: true,
+  },
+];
+
 export const ZONE2_HR_SECTION: Citation[] = [
   {
     title: "Garber et al — ACSM Position Stand 2011",
