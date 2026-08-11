@@ -10,6 +10,7 @@ import {
   MOVEMENT_BALANCE_SECTION,
   STEPS_SECTION,
   ZONE2_SECTION,
+  WEEKLY_VOLUME_SECTION,
   ZONE2_HR_SECTION,
   BODY_PHENOTYPING_SECTION,
   HEART_HEALTH_SECTION,
@@ -22,6 +23,7 @@ const nav = [
   { slug: "movement-balance", label: "Movement Balance" },
   { slug: "steps", label: "Steps & Cadence" },
   { slug: "zone-2", label: "Zone 2 Training" },
+  { slug: "weekly-volume", label: "Weekly Volume" },
   { slug: "heart-health", label: "Heart Health" },
   { slug: "body-phenotyping", label: "Body Phenotyping" },
   { slug: "muscle-health", label: "Muscle Health" },
@@ -54,7 +56,7 @@ const nav = [
         Every threshold, traced to its source.
       </h1>
       <p class="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-secondary">
-        28 citations across 8 topics. No proprietary score you can't check the
+        30 citations across 9 topics. No proprietary score you can't check the
         math on — every number below is the same one used inside the app, and
         every number links to where it came from.
       </p>
@@ -163,6 +165,23 @@ const nav = [
       </p>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
         {ZONE2_HR_SECTION.map((c) => <CitationCard {...c} />)}
+      </div>
+    </section>
+
+    <!-- ── Weekly Volume ─────────────────────────────────────────────── -->
+    <section id="weekly-volume" class="scroll-mt-8">
+      <h2 class="text-2xl font-bold text-text-primary">Weekly Activity Volume</h2>
+      <p class="mt-2 text-sm text-text-tertiary">How much per week &mdash; and why the summit sits well above 150 minutes</p>
+      <div class="mt-6"><VideoSlot topic="Weekly Activity Volume" /></div>
+      <p class="mt-6 text-sm leading-relaxed text-text-secondary">
+        The Weekly Ascent draws four altitude lines: base camp at 150 minutes,
+        your own goal, high camp at 300, and a summit at 610 that stays hidden
+        until you pass high camp. The first two numbers are the familiar
+        public-health doses. The third is newer, larger, and measured the same
+        way Verve measures you.
+      </p>
+      <div class="mt-6 grid gap-4 sm:grid-cols-2">
+        {WEEKLY_VOLUME_SECTION.map((c) => <CitationCard {...c} />)}
       </div>
     </section>
 
