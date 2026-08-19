@@ -15,6 +15,9 @@ import {
   BODY_PHENOTYPING_SECTION,
   HEART_HEALTH_SECTION,
   MUSCLE_HEALTH_SECTION,
+  SLEEP_RHYTHM_SECTION,
+  RESTING_HR_SECTION,
+  SITTING_SECTION,
 } from "../data/science";
 
 const nav = [
@@ -23,6 +26,9 @@ const nav = [
   { slug: "movement-balance", label: "Movement Balance" },
   { slug: "steps", label: "Steps & Cadence" },
   { slug: "zone-2", label: "Zone 2 Training" },
+  { slug: "sleep-rhythm", label: "Sleep Rhythm" },
+  { slug: "resting-heart-rate", label: "Resting Heart Rate" },
+  { slug: "longest-sit", label: "Longest Sit" },
   { slug: "weekly-volume", label: "Weekly Volume" },
   { slug: "heart-health", label: "Heart Health" },
   { slug: "body-phenotyping", label: "Body Phenotyping" },
@@ -56,7 +62,7 @@ const nav = [
         Every threshold, traced to its source.
       </h1>
       <p class="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-secondary">
-        30 citations across 9 topics. No proprietary score you can't check the
+        39 citations across 12 topics. No proprietary score you can't check the
         math on — every number below is the same one used inside the app, and
         every number links to where it came from.
       </p>
@@ -165,6 +171,74 @@ const nav = [
       </p>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
         {ZONE2_HR_SECTION.map((c) => <CitationCard {...c} />)}
+      </div>
+    </section>
+
+    <!-- ── Conditions: the three readings on the Activity card ───────────
+         Linked directly from the app — each tile's "The research behind
+         this" opens the matching anchor below, not the page root. -->
+
+    <!-- ── Sleep Rhythm ──────────────────────────────────────────────── -->
+    <section id="sleep-rhythm" class="scroll-mt-8">
+      <h2 class="text-2xl font-bold text-text-primary">Sleep Rhythm</h2>
+      <p class="mt-2 text-sm text-text-tertiary">Sleep Regularity Index &mdash; consistency of timing, not hours slept</p>
+      <div class="mt-6"><VideoSlot topic="Sleep Rhythm" /></div>
+      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+        <p class="text-sm leading-relaxed text-text-secondary">
+          The score is the probability of being in the same state &mdash; asleep or
+          awake &mdash; at any two clock times 24 hours apart, averaged across the
+          recording. 100 is a perfectly repeating pattern; 0 would be random.
+          It says nothing about how long you slept, and nothing about quality.
+          <strong class="text-text-primary">Above 87</strong> is steadier than most,
+          <strong class="text-text-primary">below 72</strong> is not, and
+          <strong class="text-text-primary">81</strong> is where the median person sits.
+        </p>
+      </div>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        {SLEEP_RHYTHM_SECTION.map((c) => <CitationCard {...c} />)}
+      </div>
+    </section>
+
+    <!-- ── Resting Heart Rate ────────────────────────────────────────── -->
+    <section id="resting-heart-rate" class="scroll-mt-8">
+      <h2 class="text-2xl font-bold text-text-primary">Resting Heart Rate</h2>
+      <p class="mt-2 text-sm text-text-tertiary">Measured against your own normal, not a population range</p>
+      <div class="mt-6"><VideoSlot topic="Resting Heart Rate" /></div>
+      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+        <p class="text-sm leading-relaxed text-text-secondary">
+          Verve compares today's resting heart rate with the median of your own
+          last 30 days. Within <strong class="text-text-primary">5 bpm</strong> is
+          ordinary day-to-day variation; around
+          <strong class="text-text-primary">5 bpm above</strong>, sustained for a few
+          days, is worth noticing; around
+          <strong class="text-text-primary">10 above</strong> is a clear departure.
+          The instrument shades only the high side, because a low resting rate is
+          not a finding &mdash; a rested morning and an adapted endurance athlete
+          both land there.
+        </p>
+      </div>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        {RESTING_HR_SECTION.map((c) => <CitationCard {...c} />)}
+      </div>
+    </section>
+
+    <!-- ── Longest Sit ───────────────────────────────────────────────── -->
+    <section id="longest-sit" class="scroll-mt-8">
+      <h2 class="text-2xl font-bold text-text-primary">Longest Sit</h2>
+      <p class="mt-2 text-sm text-text-tertiary">How sitting is accumulated, separately from how much of it there is</p>
+      <div class="mt-6"><VideoSlot topic="Longest Sit" /></div>
+      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+        <p class="text-sm leading-relaxed text-text-secondary">
+          Verve reports the longest unbroken stretch of your waking day, not the
+          daily total &mdash; the two are separate exposures, and the pattern
+          carries risk the total does not capture.
+          <strong class="text-text-primary">30 minutes</strong> is the conventional
+          line for a long stretch and the dashed mark on the meter. Sleep and
+          logged workouts are left out rather than counted as sitting.
+        </p>
+      </div>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        {SITTING_SECTION.map((c) => <CitationCard {...c} />)}
       </div>
     </section>
 
