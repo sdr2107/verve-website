@@ -204,7 +204,9 @@ export const RESTING_HR_SECTION: Citation[] = [
   },
 ];
 
-export const SITTING_SECTION: Citation[] = [
+// Sitting is shown on the Conditions card and on Movement Balance as one
+// number from one source, so its evidence lives in one section too.
+export const SEDENTARY_EXTRA: Citation[] = [
   {
     title: "Diaz et al — Patterns of sedentary behavior and mortality, Annals of Internal Medicine 2017",
     summary:
@@ -218,14 +220,6 @@ export const SITTING_SECTION: Citation[] = [
       "A randomised crossover trial in adults with type 2 diabetes. Breaking up prolonged sitting with brief, frequent activity — short bouts of light walking or simple resistance activities every 30 minutes — lowered postprandial glucose and insulin compared with sitting continuously. The consistent finding across this literature is the FREQUENCY of breaking, not the intensity of the break: a single hard session later does not substitute for standing up.",
     url: "https://doi.org/10.2337/dc15-2336",
     color: "#d97706",
-  },
-  {
-    title: "Why Verve's bout lengths are not comparable with the published ones",
-    summary:
-      "The research above used hip-worn accelerometers, where sedentary means under 100 counts per minute. Apple Health gives a third-party app 5-minute STEP buckets, so that is the instrument Verve has: a bucket carrying at least 40 steps ends the current stretch. That threshold is set to clear wrist noise while still catching a walk to another room, but it is a proxy for a different measurement. Your numbers are useful against your own other days, not against a figure from a paper. Sleep and logged workouts are excluded rather than counted — an unexcluded swim, with the phone in a locker, would otherwise become the stillest hour of your day. And on days with very few steps Verve declines to report at all, because a phone left in a drawer would otherwise read as 24 hours of perfect stillness.",
-    url: "https://doi.org/10.7326/M17-0212",
-    color: "#b45309",
-    isCommentary: true,
   },
 ];
 
