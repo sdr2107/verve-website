@@ -152,6 +152,83 @@ export const ZONE2_SECTION: Citation[] = [
   },
 ];
 
+export const SLEEP_RHYTHM_SECTION: Citation[] = [
+  {
+    title: "Windred et al — Sleep regularity vs sleep duration, SLEEP 2024",
+    summary:
+      "60,977 UK Biobank participants wearing accelerometers for a week, followed for around 7 years. The Sleep Regularity Index — the chance of being in the same state, asleep or awake, at any two clock times 24 hours apart — predicted all-cause mortality more strongly than sleep duration did. The four most regular quintiles carried 20–48% lower risk than the least regular. The sample median was 81.0, which is why Verve treats 81 as ordinary rather than as a shortfall, and the 25th and 75th percentiles (71.6 and 87.3) are the band edges the dial draws.",
+    url: "https://doi.org/10.1093/sleep/zsad253",
+    color: "#6366f1",
+  },
+  {
+    title: "Why your score is not comparable with anyone else's",
+    summary:
+      "Sleep Regularity Index is a method, not a standard. Independent evaluations have found widely used open-source implementations producing markedly different values from the SAME accelerometer data — and different downstream associations with mortality and disease — because they differ in epoch length, in how they treat naps and missing wear, and in what counts as asleep. Verve therefore states its own method: 1-minute epochs, sleep taken from Apple Health whichever device wrote it, naps included, everything outside a recorded sleep interval treated as awake, local clock times compared. Read your own trend; do not compare the number with a friend's.",
+    url: "https://doi.org/10.1093/sleep/zsad253",
+    color: "#4f46e5",
+    isCommentary: true,
+  },
+  {
+    title: "What Verve needs before it will show a score",
+    summary:
+      "8 nights of recorded sleep, for a 7-day score. The first and last day of any window are only partly covered — the night that would have supplied the first morning began before the window, and no night follows the last evening — so both are left out rather than counted as irregularity that never happened. Below 5 days Verve shows nothing at all. Any device that writes sleep to Apple Health qualifies, including Oura, Whoop and Garmin; an Apple Watch is not required.",
+    url: "https://doi.org/10.1093/sleep/zsad253",
+    color: "#4338ca",
+    isCommentary: true,
+  },
+];
+
+export const RESTING_HR_SECTION: Citation[] = [
+  {
+    title: "Radin et al — Wearable data and population health, Lancet Digital Health 2020",
+    summary:
+      "Analysis of resting heart rate and sleep from 47,249 wearable users across five US states. Deviation from an individual's OWN baseline — not from a population range — improved prediction of influenza-like illness at the population level. The principle Verve borrows is the comparison, not the diagnosis: several beats above your own normal, sustained across days, is a signal that any single reading inside 60–100 bpm can never be.",
+    url: "https://doi.org/10.1016/S2589-7500(19)30222-5",
+    color: "#e11d48",
+  },
+  {
+    title: "Why a personal baseline, and why the median",
+    summary:
+      "The usual healthy range spans roughly 60 to 100 bpm — wide enough that someone who normally rests at 52 can wake 11 beats up and still sit comfortably inside it. Verve compares you only with the middle of your own last 30 days. It uses the median rather than the mean so that one feverish night, one late flight or one heavy evening cannot drag the very line it is being judged against, and it excludes today's reading from its own baseline, which would otherwise shrink every deviation it is meant to reveal.",
+    url: "https://doi.org/10.1016/S2589-7500(19)30222-5",
+    color: "#be123c",
+    isCommentary: true,
+  },
+  {
+    title: "What an elevated reading does not mean",
+    summary:
+      "Alcohol, a late or heavy meal, a hot room, poor sleep, altitude, stress and hard training all raise resting heart rate, as does illness. Verve reports the size and direction of the change and stops there — it cannot distinguish between those causes and does not attempt to. A resting rate drifting DOWN over weeks is a well-recognised response to aerobic training, and that slow movement carries more meaning than any single morning.",
+    url: "https://doi.org/10.1016/S2589-7500(19)30222-5",
+    color: "#9f1239",
+    isCommentary: true,
+  },
+];
+
+export const SITTING_SECTION: Citation[] = [
+  {
+    title: "Diaz et al — Patterns of sedentary behavior and mortality, Annals of Internal Medicine 2017",
+    summary:
+      "7,985 adults aged 45 and over from the REGARDS cohort, wearing hip accelerometers, followed for a median of 4 years. Mortality was associated with the MEAN LENGTH of uninterrupted sedentary stretches independently of total sedentary time: people accumulating their sitting in bouts of 30 minutes or more carried the highest risk. Total volume and the pattern of accumulation are separate exposures — the same 8 hours broken every half hour is not the same 8 hours taken in blocks. 30 minutes is the mark Verve draws on the meter.",
+    url: "https://doi.org/10.7326/M17-0212",
+    color: "#f59e0b",
+  },
+  {
+    title: "Dempsey et al — Interrupting prolonged sitting, Diabetes Care 2016",
+    summary:
+      "A randomised crossover trial in adults with type 2 diabetes. Breaking up prolonged sitting with brief, frequent activity — short bouts of light walking or simple resistance activities every 30 minutes — lowered postprandial glucose and insulin compared with sitting continuously. The consistent finding across this literature is the FREQUENCY of breaking, not the intensity of the break: a single hard session later does not substitute for standing up.",
+    url: "https://doi.org/10.2337/dc15-2336",
+    color: "#d97706",
+  },
+  {
+    title: "Why Verve's bout lengths are not comparable with the published ones",
+    summary:
+      "The research above used hip-worn accelerometers, where sedentary means under 100 counts per minute. Apple Health gives a third-party app 5-minute STEP buckets, so that is the instrument Verve has: a bucket carrying at least 40 steps ends the current stretch. That threshold is set to clear wrist noise while still catching a walk to another room, but it is a proxy for a different measurement. Your numbers are useful against your own other days, not against a figure from a paper. Sleep and logged workouts are excluded rather than counted — an unexcluded swim, with the phone in a locker, would otherwise become the stillest hour of your day. And on days with very few steps Verve declines to report at all, because a phone left in a drawer would otherwise read as 24 hours of perfect stillness.",
+    url: "https://doi.org/10.7326/M17-0212",
+    color: "#b45309",
+    isCommentary: true,
+  },
+];
+
 export const WEEKLY_VOLUME_SECTION: Citation[] = [
   {
     title: "Liang et al — BJSM 2026, device-measured activity and CVD",
