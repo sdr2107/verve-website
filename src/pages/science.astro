@@ -26,7 +26,7 @@ const nav = [
   { slug: "movement-balance", label: "Movement Balance" },
   { slug: "steps", label: "Steps & Cadence" },
   { slug: "zone-2", label: "Zone 2 Training" },
-  { slug: "sleep-rhythm", label: "Sleep Regularity Index" },
+  { slug: "sleep-rhythm", label: "Sleep Timing" },
   { slug: "resting-heart-rate", label: "Resting Heart Rate" },
   { slug: "weekly-volume", label: "Weekly Volume" },
   { slug: "heart-health", label: "Heart Health" },
@@ -179,31 +179,32 @@ const nav = [
 
     <!-- ── Sleep Rhythm ──────────────────────────────────────────────── -->
     <section id="sleep-rhythm" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">Sleep Regularity Index</h2>
-      <p class="mt-2 text-sm text-text-tertiary">Consistency of sleep timing &mdash; a research index, and the minutes-of-spread measure heart guidelines name</p>
-      <div class="mt-6"><VideoSlot topic="Sleep Regularity Index" /></div>
+      <h2 class="text-2xl font-bold text-text-primary">Sleep Timing</h2>
+      <p class="mt-2 text-sm text-text-tertiary">How much your bedtime moves, and the research index behind it</p>
+      <div class="mt-6"><VideoSlot topic="Sleep Timing" /></div>
       <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
         <p class="text-sm leading-relaxed text-text-secondary">
-          The score is the probability of being in the same state &mdash; asleep or
-          awake &mdash; at any two clock times 24 hours apart, averaged across the
-          recording. 100 is a perfectly repeating pattern; 0 would be random.
-          It says nothing about how long you slept, and nothing about quality.
-          <strong class="text-text-primary">81</strong> was the median in the UK
-          Biobank sample it was measured in, with the middle half between 73.8
-          and 86.3 &mdash; those are percentiles of one cohort, not clinical
-          thresholds, and Verve's bands are drawn from them on that
-          understanding.
+          Verve leads with the <strong class="text-text-primary">spread of your
+          bedtime in minutes</strong>: how far it moves from one night to the
+          next. That is the measure the 2025 AHA scientific statement names for
+          regularity, it carries a real mark at
+          <strong class="text-text-primary">60 minutes</strong>, and it is in a
+          unit you can act on tonight. Clock times are treated as angles on a
+          24-hour circle &mdash; a plain average would place 23:50 and 00:10
+          nearly a full day apart and report the steadiest sleepers as the most
+          erratic.
         </p>
         <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          Beneath the score Verve also shows the spread of your bedtime in
-          minutes. That is the measure the
-          <strong class="text-text-primary">2025 AHA statement</strong> names for
-          regularity, with a mark at 60 minutes, and it is the more actionable of
-          the two: &ldquo;87&rdquo; means little on its own, where &ldquo;your
-          bedtime moves by 35 minutes&rdquo; is something you can do something
-          about tonight. Clock times are treated as angles on a 24-hour circle,
-          because a plain average would place 23:50 and 00:10 nearly a full day
-          apart and report the steadiest sleepers as the most erratic.
+          Behind it sits the <strong class="text-text-primary">Sleep Regularity
+          Index</strong>: the probability of being in the same state, asleep or
+          awake, at any two clock times 24 hours apart. It is the stronger
+          research metric &mdash; in UK Biobank it out-predicted sleep duration
+          for mortality &mdash; but it is a research metric, reported by no
+          consumer wearable and named by no guideline for individual care, and
+          two accepted calculators disagree on the same nights. So it is the
+          number underneath, not the headline. Its median of
+          <strong class="text-text-primary">81</strong> is a percentile of one
+          cohort, not a clinical threshold.
         </p>
       </div>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
