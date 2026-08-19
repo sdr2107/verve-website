@@ -8,6 +8,7 @@ import MovementBalance from "../components/science/MovementBalance.astro";
 import {
   CRF_SECTION,
   MOVEMENT_BALANCE_SECTION,
+  SEDENTARY_EXTRA,
   STEPS_SECTION,
   ZONE2_SECTION,
   WEEKLY_VOLUME_SECTION,
@@ -17,7 +18,6 @@ import {
   MUSCLE_HEALTH_SECTION,
   SLEEP_RHYTHM_SECTION,
   RESTING_HR_SECTION,
-  SITTING_SECTION,
 } from "../data/science";
 
 const nav = [
@@ -28,7 +28,6 @@ const nav = [
   { slug: "zone-2", label: "Zone 2 Training" },
   { slug: "sleep-rhythm", label: "Sleep Regularity Index" },
   { slug: "resting-heart-rate", label: "Resting Heart Rate" },
-  { slug: "longest-sit", label: "Sit Streak" },
   { slug: "weekly-volume", label: "Weekly Volume" },
   { slug: "heart-health", label: "Heart Health" },
   { slug: "body-phenotyping", label: "Body Phenotyping" },
@@ -62,7 +61,7 @@ const nav = [
         Every threshold, traced to its source.
       </h1>
       <p class="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-secondary">
-        39 citations across 12 topics. No proprietary score you can't check the
+        38 citations across 11 topics. No proprietary score you can't check the
         math on — every number below is the same one used inside the app, and
         every number links to where it came from.
       </p>
@@ -139,7 +138,7 @@ const nav = [
         <MovementBalance />
       </div>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
-        {MOVEMENT_BALANCE_SECTION.map((c) => <CitationCard {...c} />)}
+        {[...MOVEMENT_BALANCE_SECTION, ...SEDENTARY_EXTRA].map((c) => <CitationCard {...c} />)}
       </div>
     </section>
 
@@ -219,26 +218,6 @@ const nav = [
       </div>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
         {RESTING_HR_SECTION.map((c) => <CitationCard {...c} />)}
-      </div>
-    </section>
-
-    <!-- ── Longest Sit ───────────────────────────────────────────────── -->
-    <section id="longest-sit" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">Sit Streak</h2>
-      <p class="mt-2 text-sm text-text-tertiary">How sitting is accumulated, separately from how much of it there is</p>
-      <div class="mt-6"><VideoSlot topic="Sit Streak" /></div>
-      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
-        <p class="text-sm leading-relaxed text-text-secondary">
-          Verve reports the longest unbroken stretch of your waking day, not the
-          daily total &mdash; the two are separate exposures, and the pattern
-          carries risk the total does not capture.
-          <strong class="text-text-primary">30 minutes</strong> is the conventional
-          line for a long stretch and the dashed mark on the meter. Sleep and
-          logged workouts are left out rather than counted as sitting.
-        </p>
-      </div>
-      <div class="mt-4 grid gap-4 sm:grid-cols-2">
-        {SITTING_SECTION.map((c) => <CitationCard {...c} />)}
       </div>
     </section>
 
