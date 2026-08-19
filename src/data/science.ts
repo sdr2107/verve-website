@@ -161,19 +161,34 @@ export const SLEEP_RHYTHM_SECTION: Citation[] = [
     color: "#6366f1",
   },
   {
+    title: "AHA 2025 — Multidimensional Sleep Health scientific statement",
+    summary:
+      "The American Heart Association's scientific statement names regularity as one of the core dimensions of sleep health. Its suggested way of measuring it is NOT the Sleep Regularity Index — it is the night-to-night standard deviation of sleep timing, commonly with a mark at 60 minutes. That is the number Verve shows in minutes beneath the score, and it is the one a guideline actually stands behind. The statement presents regularity as a research and clinical concept, not tied to any commercial device.",
+    url: "https://doi.org/10.1161/hcq.0000000000000139",
+    color: "#4f46e5",
+  },
+  {
+    title: "Why Verve shows a number nothing else does",
+    summary:
+      "SRI is a research metric. As of 2026 no FDA-cleared device and no major consumer wearable — Oura, Fitbit, Apple Watch, Whoop — reports a Sleep Regularity Index by that name; they report duration, staging, and proprietary sleep or readiness composites. Published SRI values come from academic pipelines such as GGIR and sleepreg run on raw accelerometry. Verve is ahead of the field here, and that is a reason for more disclosure rather than less: no clinical guideline recommends SRI for individual patient management, and a 2025 systematic review, while finding the evidence on mortality and cardiometabolic outcomes consistent, called for regularity to become a public-health recommendation rather than describing existing clinical use.",
+    url: "https://doi.org/10.1093/sleep/zsad253",
+    color: "#4338ca",
+    isCommentary: true,
+  },
+  {
     title: "Why your score is not comparable with anyone else's",
     summary:
-      "Sleep Regularity Index is a method, not a standard. Independent evaluations have found widely used open-source implementations producing markedly different values from the SAME accelerometer data — and different downstream associations with mortality and disease — because they differ in epoch length, in how they treat naps and missing wear, and in what counts as asleep. Verve therefore states its own method: 1-minute epochs, sleep taken from Apple Health whichever device wrote it, naps included, everything outside a recorded sleep interval treated as awake, local clock times compared. Read your own trend; do not compare the number with a friend's.",
+      "The 2026 RIRI statement applied two accepted open-source SRI calculators, sleepreg and GGIR, to the same 73,794-adult accelerometer dataset. They produced meaningfully different SRI values — different enough to change how clinical outcome models read — and a 14-item reporting standard came out of it. So SRI is a method, not a standard. Verve states its own: 1-minute epochs, sleep taken from Apple Health whichever device wrote it, naps included, everything outside a recorded sleep interval treated as awake, local clock times compared, and both partial edge days of the window dropped. Read your own trend over weeks; do not compare the number with a friend's.",
     url: "https://doi.org/10.1093/sleep/zsad253",
-    color: "#4f46e5",
+    color: "#6366f1",
     isCommentary: true,
   },
   {
     title: "What Verve needs before it will show a score",
     summary:
-      "8 nights of recorded sleep, for a 7-day score. The first and last day of any window are only partly covered — the night that would have supplied the first morning began before the window, and no night follows the last evening — so both are left out rather than counted as irregularity that never happened. Below 5 days Verve shows nothing at all. Any device that writes sleep to Apple Health qualifies, including Oura, Whoop and Garmin; an Apple Watch is not required.",
+      "8 nights of recorded sleep for a 7-day score. The first and last day of any window are only partly covered — the night that would have supplied the first morning began before the window, and no night follows the last evening — so both are dropped rather than counted as irregularity that never happened. The minutes-of-spread measure needs only 5 bedtimes, so it appears first. Any device that writes sleep to Apple Health qualifies, including Oura, Whoop and Garmin; an Apple Watch is not required.",
     url: "https://doi.org/10.1093/sleep/zsad253",
-    color: "#4338ca",
+    color: "#818cf8",
     isCommentary: true,
   },
 ];

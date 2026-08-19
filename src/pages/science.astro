@@ -61,7 +61,7 @@ const nav = [
         Every threshold, traced to its source.
       </h1>
       <p class="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-secondary">
-        38 citations across 11 topics. No proprietary score you can't check the
+        40 citations across 11 topics. No proprietary score you can't check the
         math on — every number below is the same one used inside the app, and
         every number links to where it came from.
       </p>
@@ -180,7 +180,7 @@ const nav = [
     <!-- ── Sleep Rhythm ──────────────────────────────────────────────── -->
     <section id="sleep-rhythm" class="scroll-mt-8">
       <h2 class="text-2xl font-bold text-text-primary">Sleep Regularity Index</h2>
-      <p class="mt-2 text-sm text-text-tertiary">Sleep Regularity Index &mdash; consistency of timing, not hours slept</p>
+      <p class="mt-2 text-sm text-text-tertiary">Consistency of sleep timing &mdash; a research index, and the minutes-of-spread measure heart guidelines name</p>
       <div class="mt-6"><VideoSlot topic="Sleep Regularity Index" /></div>
       <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
         <p class="text-sm leading-relaxed text-text-secondary">
@@ -188,9 +188,22 @@ const nav = [
           awake &mdash; at any two clock times 24 hours apart, averaged across the
           recording. 100 is a perfectly repeating pattern; 0 would be random.
           It says nothing about how long you slept, and nothing about quality.
-          <strong class="text-text-primary">Above 87</strong> is steadier than most,
-          <strong class="text-text-primary">below 72</strong> is not, and
-          <strong class="text-text-primary">81</strong> is where the median person sits.
+          <strong class="text-text-primary">81</strong> was the median in the UK
+          Biobank sample it was measured in, with the middle half between 73.8
+          and 86.3 &mdash; those are percentiles of one cohort, not clinical
+          thresholds, and Verve's bands are drawn from them on that
+          understanding.
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          Beneath the score Verve also shows the spread of your bedtime in
+          minutes. That is the measure the
+          <strong class="text-text-primary">2025 AHA statement</strong> names for
+          regularity, with a mark at 60 minutes, and it is the more actionable of
+          the two: &ldquo;87&rdquo; means little on its own, where &ldquo;your
+          bedtime moves by 35 minutes&rdquo; is something you can do something
+          about tonight. Clock times are treated as angles on a 24-hour circle,
+          because a plain average would place 23:50 and 00:10 nearly a full day
+          apart and report the steadiest sleepers as the most erratic.
         </p>
       </div>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
