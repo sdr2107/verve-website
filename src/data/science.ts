@@ -182,7 +182,7 @@ export const RESTING_HR_SECTION: Citation[] = [
   {
     title: "Radin et al — Wearable data and population health, Lancet Digital Health 2020",
     summary:
-      "Analysis of resting heart rate and sleep from 47,249 wearable users across five US states. Deviation from an individual's OWN baseline — not from a population range — improved prediction of influenza-like illness at the population level. The principle Verve borrows is the comparison, not the diagnosis: several beats above your own normal, sustained across days, is a signal that any single reading inside 60–100 bpm can never be.",
+      "A population-based study using resting heart rate and sleep data from Fitbit wearers across several US states. Deviation from an individual's OWN baseline — not from a population range — improved real-time state-level prediction of influenza-like illness. The principle Verve borrows is the comparison, not the diagnosis: several beats above your own normal, sustained across days, is a signal that any single reading inside 60–100 bpm can never be.",
     url: "https://doi.org/10.1016/S2589-7500(19)30222-5",
     color: "#e11d48",
   },
