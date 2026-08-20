@@ -202,25 +202,38 @@ export const RESTING_HR_SECTION: Citation[] = [
     color: "#e11d48",
   },
   {
+    title: "ARIC — Heart rate change and mortality, JAMA Cardiology",
+    summary:
+      "The ARIC cohort showed that the DIRECTION of change matters on its own. Any increase in resting heart rate from a prior visit tracked progressively higher all-cause mortality and incident heart failure, while decreases — particularly over 12 bpm — were protective. The lowest-risk range sat at 50-60 bpm, with risk rising progressively above 60-66. This is why Verve leads with movement against your own baseline rather than a single number, and why it now also says where that number sits in absolute terms.",
+    url: "https://doi.org/10.1001/jamacardio.2017.4974",
+    color: "#f43f5e",
+  },
+  {
     title: "Why a personal baseline, and why the median",
     summary:
-      "The usual healthy range spans roughly 60 to 100 bpm — wide enough that someone who normally rests at 52 can wake 11 beats up and still sit comfortably inside it. Verve compares you only with the middle of your own last 30 days. It uses the median rather than the mean so that one feverish night, one late flight or one heavy evening cannot drag the very line it is being judged against, and it excludes today's reading from its own baseline, which would otherwise shrink every deviation it is meant to reveal.",
+      "The usual healthy range spans roughly 60 to 100 bpm — wide enough that someone who normally rests at 52 can wake 11 beats up and still sit comfortably inside it. Verve compares you with the middle of your own last 30 days. It uses the median rather than the mean so that one feverish night, one late flight or one heavy evening cannot drag the very line it is being judged against, and it excludes today's reading from its own baseline, which would otherwise shrink every deviation it is meant to reveal.",
     url: "https://doi.org/10.1016/S2589-7500(19)30222-5",
     color: "#be123c",
     isCommentary: true,
   },
   {
-    title: "What an elevated reading does not mean",
+    title: "Why the absolute number is shown as well",
     summary:
-      "Alcohol, a late or heavy meal, a hot room, poor sleep, altitude, stress and hard training all raise resting heart rate, as does illness. Verve reports the size and direction of the change and stops there — it cannot distinguish between those causes and does not attempt to. A resting rate drifting DOWN over weeks is a well-recognised response to aerobic training, and that slow movement carries more meaning than any single morning.",
-    url: "https://doi.org/10.1016/S2589-7500(19)30222-5",
+      "Deviation alone is not enough. The association between resting heart rate and all-cause mortality, cardiovascular mortality, myocardial infarction, heart failure and stroke is graded and near-linear, independent of traditional risk factors — above 75-80 bpm carries markedly higher relative risk than below 60, with the steepest gradient for sudden cardiac death. So someone steady at 82 bpm was reading 'at your normal' in green, which was true and beside the point. Verve now reports both. The bands are a reading aid for a continuous relationship: nothing changes at 75 that did not apply at 74, and no band is a diagnosis. Under 50 is left uncoloured — it is ordinary in trained endurance athletes, and flagging it would alarm the fittest readers.",
+    url: "https://doi.org/10.1001/jamacardio.2017.4974",
     color: "#9f1239",
+    isCommentary: true,
+  },
+  {
+    title: "What Verve reads, and what it cannot settle",
+    summary:
+      "Verve uses Apple Health's own daily resting heart rate, derived from heart rate during detected stillness and weighted toward sleep and early-morning quiet — not an average of raw samples, which would fold in activity, stress and digestion and sit well above true resting physiology. Apple, Fitbit, Garmin and Whoop each window differently, so absolute values are not comparable between brands; within-device trending for one person is the reliable part. An isolated elevated reading is not diagnostic. A tachyarrhythmia question needs a 12-lead ECG or ambulatory monitoring, and a seated manual reading after 5-10 minutes of rest remains the clinical reference. An elevated trend is also often not cardiac at all — infection, dehydration, anaemia, thyroid overactivity, medication effects, anxiety, pain, POTS or pregnancy, with motion artefact and device error to exclude first.",
+    url: "https://doi.org/10.1016/S2589-7500(19)30222-5",
+    color: "#881337",
     isCommentary: true,
   },
 ];
 
-// Sitting is shown on the Conditions card and on Movement Balance as one
-// number from one source, so its evidence lives in one section too.
 export const SEDENTARY_EXTRA: Citation[] = [
   {
     title: "Diaz et al — Patterns of sedentary behavior and mortality, Annals of Internal Medicine 2017",
