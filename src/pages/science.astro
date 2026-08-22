@@ -7,6 +7,7 @@ import MetsVsMetHours from "../components/science/MetsVsMetHours.astro";
 import MovementBalance from "../components/science/MovementBalance.astro";
 import {
   CRF_SECTION,
+  TEST_CRF_SECTION,
   MOVEMENT_BALANCE_SECTION,
   SEDENTARY_EXTRA,
   STEPS_SECTION,
@@ -23,6 +24,7 @@ import {
 const nav = [
   { slug: "mets-vs-met-h", label: "METs vs MET-h" },
   { slug: "crf", label: "Cardiorespiratory Fitness" },
+  { slug: "test-crf", label: "Test Your CRF" },
   { slug: "movement-balance", label: "Movement Balance" },
   { slug: "steps", label: "Steps & Cadence" },
   { slug: "zone-2", label: "Zone 2 Training" },
@@ -61,7 +63,7 @@ const nav = [
         Every threshold, traced to its source.
       </h1>
       <p class="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-secondary">
-        42 citations across 11 topics. No proprietary score you can't check the
+        49 citations across 12 topics. No proprietary score you can't check the
         math on — every number below is the same one used inside the app, and
         every number links to where it came from.
       </p>
@@ -126,6 +128,48 @@ const nav = [
       </div>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
         {CRF_SECTION.map((c) => <CitationCard {...c} />)}
+      </div>
+    </section>
+
+    <!-- ── Test Your CRF ─────────────────────────────────────────────── -->
+    <section id="test-crf" class="scroll-mt-8">
+      <h2 class="text-2xl font-bold text-text-primary">Test Your CRF</h2>
+      <p class="mt-2 text-sm text-text-tertiary">Which test, when to retest, and why your watch disagrees</p>
+      <div class="mt-6"><VideoSlot topic="Test Your CRF" /></div>
+
+      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+        <p class="text-sm leading-relaxed text-text-secondary">
+          Verve recommends a fitness test in two stages, and the order is the
+          whole design. <strong class="text-text-primary">Stage 1 is a safety
+          ceiling</strong> &mdash; three questions about medical supervision,
+          chest pain or dizziness during everyday activity, and any cardiac
+          event in the past six months. Any yes means talking to a doctor before
+          an all-out effort, and no amount of training history can lift that.
+          It is applied before anything else is looked at.
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          <strong class="text-text-primary">Stage 2 reads your recorded
+          training</strong>, and all five checks must pass before a maximal test
+          is recommended: trained within the window, 4 of 8 weeks carrying 3 or
+          more training days, at least 2 hard sessions a week, one hard session
+          in the last 14 days, and fewer than 2 consecutive quiet weeks. Where
+          all five pass, Verve prefers to repeat <em>your last test</em> &mdash;
+          comparing a 6-minute walk against a 12-minute run mixes method
+          variance into what you would read as a change in your fitness.
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          <strong class="text-text-primary">Retesting is every 8 weeks.</strong>
+          VO&#8322;Max adapts with a half-time of about 10&ndash;11 days and a
+          dependable change takes on the order of 21 sessions, so a test before
+          about 4 weeks usually returns your old number and teaches you only
+          that you tested early. Eight weeks is also the window Verve reads your
+          training over, so the two are the same span rather than two nearby
+          ones.
+        </p>
+      </div>
+
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        {TEST_CRF_SECTION.map((c) => <CitationCard {...c} />)}
       </div>
     </section>
 

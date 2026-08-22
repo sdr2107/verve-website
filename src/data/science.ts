@@ -251,6 +251,60 @@ export const SEDENTARY_EXTRA: Citation[] = [
   },
 ];
 
+export const TEST_CRF_SECTION: Citation[] = [
+  {
+    title: "Hickson et al — Time course of adaptive responses of aerobic power, MSSE 1981",
+    summary:
+      "The classic time-course study of aerobic adaptation. VO₂Max rises with a half-time of roughly 10-11 days, and a reliable, measurable change takes on the order of 21 training sessions. This is why Verve sets its retest interval at 8 weeks and says nothing useful is likely before about 4: under a month there is usually no change to find, and a test that returns your old number teaches you only that you tested too soon.",
+    url: "https://doi.org/10.1249/00005768-198101000-00012",
+    color: "#0ea5e9",
+  },
+  {
+    title: "Bacon et al — VO₂Max trainability and HIIT, PLoS One 2013",
+    summary:
+      "Meta-analysis of VO₂Max trainability. At least 3 days per week is the standard inclusion criterion across the trials showing genuine gains, which is the figure behind Verve's regular-training check: 4 of your last 8 weeks carrying 3 or more days of 30 minutes at moderate intensity or above.",
+    url: "https://doi.org/10.1371/journal.pone.0073182",
+    color: "#0284c7",
+  },
+  {
+    title: "Zheng et al — Short- and long-term detraining and VO₂Max, BioMed Research International 2022",
+    summary:
+      "Systematic review and meta-analysis of detraining. Roughly two hard sessions a week MAINTAINS VO₂Max; improving it requires more than that. Detraining is measurable after short-term cessation and plateaus somewhere between 30 and 90 days. Two findings, two uses: Verve asks for at least two hard sessions a week before recommending an all-out test, and drops back to the walk test after two consecutive weeks with no training — whatever your last result said.",
+    url: "https://doi.org/10.1155/2022/2130993",
+    color: "#0369a1",
+  },
+  {
+    title: "Garber et al — ACSM Position Stand on quantity and quality of exercise, MSSE 2011",
+    summary:
+      "The ACSM position stand on prescribing exercise. Its point about improvement is relative rather than absolute: raising fitness requires volume above the individual's OWN prior maintenance level, not above a population figure. So when Verve asks whether a retest is likely to show a change, it compares your last 8 weeks against the 8 before them, and never against anyone else.",
+    url: "https://doi.org/10.1249/mss.0b013e318213fefb",
+    color: "#075985",
+  },
+  {
+    title: "Zinner et al — Physiological responses to 9 weeks of incremental ramp testing, SJMSS 2023",
+    summary:
+      "Tracks the magnitude and time-course of physiological response across nine weeks of repeated testing — the window over which a retest can be expected to reflect something real rather than noise. Supports the 6-9 week span Verve's 8-week interval sits inside.",
+    url: "https://doi.org/10.1111/sms.14347",
+    color: "#1e40af",
+  },
+  {
+    title: "How Verve decides which test to recommend",
+    summary:
+      "Two stages, and the order matters. STAGE 1 is a safety ceiling: three questions about medical supervision, chest pain or dizziness during everyday activity, and any cardiac event in the past six months. Any yes means seeing a doctor before an all-out effort, and no amount of training history can lift that — it is applied before anything else is considered. Five further questions about diabetes, blood pressure, cholesterol, smoking and family history do NOT block anything; combined with age and sex they decide whether a maximal effort warrants clearance first. STAGE 2 reads your recorded training, and all five checks must pass before a maximal test is recommended: trained within the window, 4 of 8 weeks carrying 3+ training days, at least 2 hard sessions a week, one hard session within the last 14 days, and fewer than 2 consecutive quiet weeks. If all five pass, Verve prefers to repeat your LAST test — comparing a 6-minute walk against a 12-minute run mixes method variance into what you would read as a change in your fitness.",
+    url: "https://doi.org/10.1371/journal.pone.0073182",
+    color: "#4338ca",
+    isCommentary: true,
+  },
+  {
+    title: "The ten methods, and what each one costs you in accuracy",
+    summary:
+      "CPET (★★★★★) measures VO₂Max directly by gas analysis — the only method here that is not an estimate. Treadmill/ACSM and Bruce protocol (★★★★) estimate from workload under supervision. Cooper 12-minute and 1.5-mile runs (★★★★) are maximal field tests: all-out effort, no equipment. The 6-minute walk (★★★) is submaximal and correlates around r=0.4-0.6 with true VO₂Max, so it reads low for the already fit — but it needs no heart rate, which makes it the reliable choice on beta-blockers. The Rockport 1-mile walk (★★★) is submaximal and more accurate (r≈0.88, Kline 1987) but needs a finish heart rate, so beta-blockers rule it out. HR ratio (★★★) infers from resting and peak heart rate. Wearable VO₂Max (★★) carries 7-16% error and under-reads fit people while over-reading unfit ones. Manual entry records a result measured elsewhere. Every one of these remains available in the app; the recommendation simply picks the one that fits your safety answers and your training.",
+    url: "https://doi.org/10.1249/mss.0b013e318213fefb",
+    color: "#6366f1",
+    isCommentary: true,
+  },
+];
+
 export const WEEKLY_VOLUME_SECTION: Citation[] = [
   {
     title: "Liang et al — BJSM 2026, device-measured activity and CVD",
