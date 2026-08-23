@@ -296,6 +296,14 @@ export const TEST_CRF_SECTION: Citation[] = [
     isCommentary: true,
   },
   {
+    title: "Why Verve uses two different windows",
+    summary:
+      "The app reads your training over two spans, and they answer different questions. THREE MONTHS is ACSM's definition of being habitually active — at least 30 minutes of moderate activity on 3 or more days a week — and it exists to decide whether you should see a doctor before exercising vigorously. EIGHT WEEKS is about physiology, not clearance: Hickson 1981 puts the half-time of VO\u2082Max adaptation at roughly 10-11 days with a dependable change needing on the order of 21 sessions, which places a meaningful retest at 6-9 weeks. Neither number can do the other's job. Using the 3-month figure as a retest interval would borrow a screening threshold to answer a question about how fast fitness changes, and would mean telling someone whose VO\u2082Max has measurably improved at 8 weeks to wait another month before looking. So Verve keeps both: 12 weeks for whether a clinician comes first, 8 for whether the number will have moved.",
+    url: "https://doi.org/10.1249/00005768-198101000-00012",
+    color: "#0891b2",
+    isCommentary: true,
+  },
+  {
     title: "The ten methods, and what each one costs you in accuracy",
     summary:
       "CPET (★★★★★) measures VO₂Max directly by gas analysis — the only method here that is not an estimate. Treadmill/ACSM and Bruce protocol (★★★★) estimate from workload under supervision. Cooper 12-minute and 1.5-mile runs (★★★★) are maximal field tests: all-out effort, no equipment. The 6-minute walk (★★★) is submaximal and correlates around r=0.4-0.6 with true VO₂Max, so it reads low for the already fit — but it needs no heart rate, which makes it the reliable choice on beta-blockers. The Rockport 1-mile walk (★★★) is submaximal and more accurate (r≈0.88, Kline 1987) but needs a finish heart rate, so beta-blockers rule it out. HR ratio (★★★) infers from resting and peak heart rate. Wearable VO₂Max (★★) carries 7-16% error and under-reads fit people while over-reading unfit ones. Manual entry records a result measured elsewhere. Every one of these remains available in the app; the recommendation simply picks the one that fits your safety answers and your training.",
