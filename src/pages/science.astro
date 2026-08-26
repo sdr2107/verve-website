@@ -20,6 +20,7 @@ import {
   SLEEP_RHYTHM_SECTION,
   RESTING_HR_SECTION,
 } from "../data/science";
+import { BODY_MARKERS, BODY_MARKER_CONTEXT } from "../data/bodyMarkers";
 
 const nav = [
   { slug: "mets-vs-met-h", label: "METs vs MET-h" },
@@ -323,6 +324,62 @@ const nav = [
       <div class="mt-6 grid gap-4 sm:grid-cols-2">
         {BODY_PHENOTYPING_SECTION.map((c) => <CitationCard {...c} />)}
       </div>
+    </section>
+
+    <!-- ── Body markers ──────────────────────────────────────────────────
+         One entry per marker the Body page can record, anchored so the app
+         links straight to the parameter a reader is looking at.
+
+         GENERATED from lib/markers.ts in the app repo — the same definitions
+         the app classifies readings with. That is deliberate: a threshold
+         quoted here that no longer matches the one a reader was just shown on
+         their phone is worse than no page at all. ── -->
+    <section id="body-markers" class="scroll-mt-8">
+      <h2 class="text-2xl font-bold text-text-primary">Body markers</h2>
+      <p class="mt-2 text-sm text-text-tertiary">
+        What each measurement is, how to take it, and the ranges it is read against
+      </p>
+      <p class="mt-3 text-xs text-text-tertiary">{BODY_MARKER_CONTEXT}</p>
+
+      {["Metabolic", "Heart", "Muscle"].map((group) => (
+        <div class="mt-8">
+          <h3 class="text-xs font-semibold uppercase tracking-widest text-text-tertiary">{group}</h3>
+          <div class="mt-4 space-y-6">
+            {BODY_MARKERS.filter((m) => m.section === group).map((m) => (
+              <article id={m.slug} class="scroll-mt-8 rounded-xl border border-white/10 bg-white/[0.03] p-5">
+                <h4 class="text-lg font-bold text-text-primary">
+                  {m.label}
+                  {m.units.length > 0 && (
+                    <span class="ml-2 text-sm font-normal text-text-tertiary">{m.units.join(" · ")}</span>
+                  )}
+                </h4>
+                {m.purpose && <p class="mt-1 text-sm text-text-secondary">{m.purpose}</p>}
+                {m.note && <p class="mt-2 text-sm text-text-tertiary">{m.note}</p>}
+
+                {m.bands.length > 0 && (
+                  <div class="mt-4">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Ranges</p>
+                    <ul class="mt-2 space-y-1 text-sm text-text-secondary">
+                      {m.bands.map((b) => <li>{b}</li>)}
+                    </ul>
+                  </div>
+                )}
+
+                {m.howTo.length > 0 && (
+                  <div class="mt-4">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-text-tertiary">How to measure it</p>
+                    <ol class="mt-2 list-decimal space-y-1 pl-5 text-sm text-text-secondary">
+                      {m.howTo.map((h) => <li>{h}</li>)}
+                    </ol>
+                  </div>
+                )}
+
+                {m.citation && <p class="mt-4 text-xs text-text-tertiary">{m.citation}</p>}
+              </article>
+            ))}
+          </div>
+        </div>
+      ))}
     </section>
 
     <!-- ── Muscle Health ─────────────────────────────────────────────── -->
