@@ -332,6 +332,24 @@ const nav = [
       <h2 class="text-2xl font-bold text-text-primary">Body Phenotyping</h2>
       <p class="mt-2 text-sm text-text-tertiary">Metabolic syndrome screening, beyond BMI</p>
       <div class="mt-6"><VideoSlot topic="Body Phenotyping" /></div>
+
+      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6" id="health-picture">
+        <h3 class="text-base font-semibold text-text-primary">The Health Picture &mdash; weight &times; fitness</h3>
+        <p class="mt-3 text-sm leading-relaxed text-text-secondary">
+          The app&rsquo;s Health Picture grid crosses your BMI band with your
+          fitness tier, because the two together predict better than either
+          alone &mdash; and fitness is the half that responds to training
+          within weeks. What each square means:
+        </p>
+        <ul class="mt-4 space-y-3 text-sm leading-relaxed text-text-secondary">
+          <li><strong class="text-text-primary">Lean &amp; Active</strong> &mdash; both dimensions working in your favour. Strength training is the highest-value next add.</li>
+          <li><strong class="text-text-primary">Fit on the Outside</strong> &mdash; normal weight, low fitness. Normal-weight-unfit carries 2&ndash;3&times; the mortality of fit people across all BMI bands; fitness is the lever.</li>
+          <li><strong class="text-text-primary">Active &amp; Heavy</strong> &mdash; fitness substantially attenuates the risk of extra weight. Keep fitness high while addressing visceral fat.</li>
+          <li><strong class="text-text-primary">Weight &amp; Fitness Gap</strong> &mdash; improve fitness first: risk reduction begins before the scale moves.</li>
+          <li><strong class="text-text-primary">Strong Foundation</strong> &mdash; fitness substantially attenuates but does not fully eliminate cardiovascular risk at this BMI. Maintain fitness alongside gradual body-composition change.</li>
+          <li><strong class="text-text-primary">Time to Move</strong> &mdash; 1&ndash;2 METs gained from daily walking produces measurable mortality reduction; each 1 MET is roughly 13&ndash;14% lower risk.</li>
+        </ul>
+      </div>
       <div class="mt-6 grid gap-4 sm:grid-cols-2">
         {BODY_PHENOTYPING_SECTION.map((c) => <CitationCard {...c} />)}
       </div>
