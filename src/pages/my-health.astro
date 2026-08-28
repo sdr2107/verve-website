@@ -1,0 +1,379 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Footer from "../components/Footer.astro";
+---
+
+<!--
+  My health — the website's signed-in corner.
+
+  Same Supabase account as the app. Drop a lab-report PDF: it uploads to a
+  private per-user bucket, the report-parser edge function has Claude read
+  it, and the extracted values come back for REVIEW — nothing is saved until
+  the user confirms. Confirmed values become ordinary lab_readings rows,
+  which the app's existing pull-sync delivers on its next open. There is no
+  push; the sync that already ships is the delivery.
+-->
+
+<Layout
+  title="My health — Verve"
+  description="Sign in with your Verve account, drop old lab reports, and their values file themselves into your app."
+  cardType="summary"
+>
+  <header class="mx-auto flex max-w-6xl items-center justify-between px-6 py-6 sm:px-10">
+    <a href="/" class="flex items-center gap-2.5">
+      <img src="/app-icon.png" alt="" class="h-8 w-8 rounded-lg" />
+      <span class="text-lg font-semibold tracking-tight text-text-primary">Verve</span>
+    </a>
+    <div class="flex items-center gap-3">
+      <span id="who" class="hidden font-mono text-xs text-text-tertiary sm:inline"></span>
+      <button
+        id="signout"
+        class="hidden rounded-full border border-white/14 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-white/25"
+      >Sign out</button>
+    </div>
+  </header>
+
+  <main class="vrv-glow relative mx-auto max-w-3xl px-6 pb-24 sm:px-10">
+    <h1 class="text-3xl font-extrabold tracking-tight">My health</h1>
+    <p class="mt-2 text-sm leading-6 text-text-secondary">
+      Drop an old lab report — Verve reads the values, you check them, and they
+      appear in your app. Same account, no re-typing.
+    </p>
+
+    <!-- ── signed out ─────────────────────────────────────────────────── -->
+    <section id="auth" class="mt-10 hidden rounded-2xl border border-white/10 bg-white/[0.03] p-7">
+      <h2 class="text-lg font-bold">Sign in with your Verve account</h2>
+      <p class="mt-1 text-sm text-text-secondary">
+        The login you use in the app. Signed up with Apple? Use the email link below —
+        it goes to the address on your Apple ID.
+      </p>
+
+      <form id="pwform" class="mt-6 flex flex-col gap-3">
+        <input id="email" type="email" required placeholder="you@example.com" autocomplete="email"
+          class="rounded-xl border border-white/12 bg-white/[0.04] px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
+        <input id="password" type="password" placeholder="Password" autocomplete="current-password"
+          class="rounded-xl border border-white/12 bg-white/[0.04] px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
+        <button type="submit"
+          class="rounded-xl bg-accent px-4 py-3 text-sm font-bold text-canvas transition-opacity hover:opacity-90">
+          Sign in
+        </button>
+      </form>
+
+      <div class="mt-4 flex items-center gap-3">
+        <div class="h-px flex-1 bg-white/10"></div>
+        <span class="text-xs text-text-muted">or</span>
+        <div class="h-px flex-1 bg-white/10"></div>
+      </div>
+
+      <button id="magic"
+        class="mt-4 w-full rounded-xl border border-white/14 px-4 py-3 text-sm font-semibold text-text-primary transition-colors hover:border-white/25">
+        Email me a sign-in link
+      </button>
+
+      <p id="authmsg" class="mt-4 hidden text-sm"></p>
+    </section>
+
+    <!-- ── signed in ──────────────────────────────────────────────────── -->
+    <section id="home" class="mt-10 hidden">
+
+      <!-- drop zone -->
+      <label id="drop" for="file"
+        class="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-[1.5px] border-dashed border-accent/45 bg-accent/[0.05] px-6 py-10 transition-colors">
+        <svg class="h-8 w-8 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>
+        </svg>
+        <span class="text-sm font-bold">Drag a report here, or tap to choose</span>
+        <span class="text-xs text-text-tertiary">PDF · stays private to your account</span>
+        <input id="file" type="file" accept="application/pdf" class="hidden" />
+      </label>
+      <p id="upmsg" class="mt-3 hidden text-sm"></p>
+
+      <!-- the shelf -->
+      <div id="shelf" class="mt-6 hidden rounded-2xl border border-white/10 bg-white/[0.03] px-5">
+      </div>
+
+      <!-- the review-and-confirm panel -->
+      <div id="review" class="mt-6 hidden rounded-2xl border border-warning/40 bg-white/[0.03] p-6">
+        <div class="flex items-center gap-3">
+          <h2 id="rvtitle" class="text-base font-extrabold"></h2>
+          <span class="rounded-md bg-warning/15 px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wider text-warning">CHECK BEFORE FILING</span>
+        </div>
+        <p class="mt-1 text-xs text-text-tertiary">
+          Verve read these from your report — nothing is saved until you confirm. Fix anything it misread.
+        </p>
+
+        <div class="mt-4 flex items-center gap-3">
+          <span class="font-mono text-[10px] uppercase tracking-wider text-text-tertiary">Report date</span>
+          <input id="rvdate" type="date"
+            class="rounded-lg border border-white/12 bg-white/[0.04] px-3 py-1.5 text-sm text-text-primary focus:border-accent focus:outline-none" />
+        </div>
+
+        <div id="rvrows" class="mt-4 divide-y divide-white/[0.06]"></div>
+
+        <div id="rvskipped" class="mt-3 hidden text-xs leading-5 text-text-muted"></div>
+        <div id="rvconv" class="mt-2 hidden text-xs leading-5 text-warning/80"></div>
+
+        <div class="mt-6 flex flex-wrap items-center gap-3">
+          <button id="confirm"
+            class="rounded-xl bg-accent px-5 py-3 text-sm font-bold text-canvas transition-opacity hover:opacity-90"></button>
+          <button id="discard"
+            class="rounded-xl border border-white/14 px-4 py-3 text-sm font-semibold text-text-secondary transition-colors hover:border-white/25">
+            Discard
+          </button>
+          <span class="text-xs text-text-muted">Filed values appear in the app on its next open.</span>
+        </div>
+        <p id="rvmsg" class="mt-3 hidden text-sm"></p>
+      </div>
+
+      <p class="mt-8 text-xs leading-5 text-text-muted">
+        Wellness screening, not a diagnosis — parsing can misread a report, which is
+        why you confirm every value. Reports and values are private to your account.
+      </p>
+    </section>
+
+    <p id="loading" class="mt-10 text-sm text-text-tertiary">Checking your session…</p>
+  </main>
+
+  <Footer />
+</Layout>
+
+<script>
+  import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
+
+  // ── tiny DOM helpers ───────────────────────────────────────────────────
+  const $ = (id: string) => document.getElementById(id)!;
+  const show = (id: string, on: boolean) => $(id).classList.toggle("hidden", !on);
+  const msg = (id: string, text: string, bad = false) => {
+    const el = $(id);
+    el.textContent = text;
+    el.classList.toggle("hidden", !text);
+    el.classList.toggle("text-danger", bad);
+    el.classList.toggle("text-success", !bad);
+  };
+
+  // ── what the parser can return, keyed by lab_readings COLUMNS ─────────
+  // Section decides which row a value files into — the same split the app's
+  // capture sheets write.
+  const LABELS: Record<string, { label: string; unit: string; section: "metabolic" | "heart" | "sarcopenia" }> = {
+    glucose_mgdl:           { label: "Fasting glucose",   unit: "mg/dL",  section: "metabolic" },
+    hba1c_pct:              { label: "HbA1c",             unit: "%",      section: "metabolic" },
+    post_meal_glucose_mgdl: { label: "Post-meal glucose", unit: "mg/dL",  section: "metabolic" },
+    fasting_insulin_uiuml:  { label: "Fasting insulin",   unit: "uIU/mL", section: "metabolic" },
+    triglycerides_mgdl:     { label: "Triglycerides",     unit: "mg/dL",  section: "metabolic" },
+    hdl_mgdl:               { label: "HDL",               unit: "mg/dL",  section: "metabolic" },
+    waist_cm:               { label: "Waist",             unit: "cm",     section: "metabolic" },
+    sbp:                    { label: "Systolic BP",       unit: "mmHg",   section: "metabolic" },
+    dbp:                    { label: "Diastolic BP",      unit: "mmHg",   section: "metabolic" },
+    apo_b_mgdl:             { label: "ApoB",              unit: "mg/dL",  section: "heart" },
+    ldl_mgdl:               { label: "LDL",               unit: "mg/dL",  section: "heart" },
+    lpa_value:              { label: "Lp(a)",             unit: "",       section: "heart" },
+    hs_crp_mgl:             { label: "hs-CRP",            unit: "mg/L",   section: "heart" },
+    body_fat_pct:           { label: "Body fat",          unit: "%",      section: "sarcopenia" },
+    skel_musc_pct:          { label: "Skeletal muscle",   unit: "%",      section: "sarcopenia" },
+  };
+
+  let userId = "";
+  let parsed: { path: string; name: string; report_date: string | null; lpa_unit: string | null } | null = null;
+
+  // ── session ────────────────────────────────────────────────────────────
+  async function boot() {
+    const { data: { session } } = await supabase.auth.getSession();
+    show("loading", false);
+    if (session?.user) {
+      userId = session.user.id;
+      $("who").textContent = session.user.email ?? "";
+      show("who", true); show("signout", true); show("home", true); show("auth", false);
+      await renderShelf();
+    } else {
+      show("auth", true); show("home", false); show("who", false); show("signout", false);
+    }
+  }
+
+  $("pwform").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    msg("authmsg", "Signing in…");
+    const { error } = await supabase.auth.signInWithPassword({
+      email: ($("email") as HTMLInputElement).value.trim(),
+      password: ($("password") as HTMLInputElement).value,
+    });
+    if (error) msg("authmsg", error.message, true);
+    else { msg("authmsg", ""); boot(); }
+  });
+
+  $("magic").addEventListener("click", async () => {
+    const email = ($("email") as HTMLInputElement).value.trim();
+    if (!email) { msg("authmsg", "Type your email above first.", true); return; }
+    msg("authmsg", "Sending…");
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: false, emailRedirectTo: window.location.origin + "/my-health/" },
+    });
+    if (error) msg("authmsg", error.message, true);
+    else msg("authmsg", "Sent — open the link in that email and you'll land back here, signed in.");
+  });
+
+  $("signout").addEventListener("click", async () => {
+    await supabase.auth.signOut();
+    boot();
+  });
+
+  // ── the shelf ──────────────────────────────────────────────────────────
+  async function renderShelf() {
+    const { data } = await supabase.storage.from("reports").list(userId, {
+      sortBy: { column: "created_at", order: "desc" }, limit: 20,
+    });
+    const files = (data ?? []).filter((f) => f.name.toLowerCase().endsWith(".pdf"));
+    show("shelf", files.length > 0);
+    $("shelf").innerHTML = files.map((f) => `
+      <div class="flex items-center gap-3 border-b border-white/[0.06] py-3 last:border-b-0">
+        <div class="min-w-0 flex-1">
+          <div class="truncate text-sm font-semibold">${f.name.replace(/^\d+-/, "")}</div>
+          <div class="text-xs text-text-tertiary">${new Date(f.created_at ?? "").toLocaleDateString()}</div>
+        </div>
+        <button data-parse="${f.name}" class="rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-xs font-bold text-accent-light hover:bg-accent/20">Read values</button>
+        <button data-del="${f.name}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-tertiary hover:border-white/25">Delete</button>
+      </div>`).join("");
+
+    $("shelf").querySelectorAll("[data-parse]").forEach((b) =>
+      b.addEventListener("click", () => parseReport((b as HTMLElement).dataset.parse!)));
+    $("shelf").querySelectorAll("[data-del]").forEach((b) =>
+      b.addEventListener("click", async () => {
+        await supabase.storage.from("reports").remove([`${userId}/${(b as HTMLElement).dataset.del}`]);
+        renderShelf();
+      }));
+  }
+
+  // ── upload ─────────────────────────────────────────────────────────────
+  async function upload(file: File) {
+    if (file.type !== "application/pdf") { msg("upmsg", "PDFs only for now.", true); return; }
+    if (file.size > 15 * 1024 * 1024) { msg("upmsg", "That file is over 15 MB.", true); return; }
+    msg("upmsg", `Uploading ${file.name}…`);
+    const path = `${userId}/${Date.now()}-${file.name.replace(/[^\w.\-]+/g, "_")}`;
+    const { error } = await supabase.storage.from("reports").upload(path, file, { contentType: "application/pdf" });
+    if (error) { msg("upmsg", error.message, true); return; }
+    msg("upmsg", "Uploaded — reading the values…");
+    await renderShelf();
+    await parseReport(path.split("/")[1]);
+  }
+
+  $("file").addEventListener("change", () => {
+    const f = ($("file") as HTMLInputElement).files?.[0];
+    if (f) upload(f);
+  });
+  ["dragover", "dragenter"].forEach((ev) => $("drop").addEventListener(ev, (e) => {
+    e.preventDefault(); $("drop").classList.add("border-accent", "bg-accent/10");
+  }));
+  ["dragleave", "drop"].forEach((ev) => $("drop").addEventListener(ev, (e) => {
+    e.preventDefault(); $("drop").classList.remove("border-accent", "bg-accent/10");
+  }));
+  $("drop").addEventListener("drop", (e) => {
+    const f = (e as DragEvent).dataTransfer?.files?.[0];
+    if (f) upload(f);
+  });
+
+  // ── parse → review ─────────────────────────────────────────────────────
+  async function parseReport(name: string) {
+    msg("upmsg", "Reading the report — this takes a few seconds…");
+    show("review", false);
+    const { data: { session } } = await supabase.auth.getSession();
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/report-parser`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${session?.access_token}`,
+        apikey: SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ path: `${userId}/${name}` }),
+    });
+    const out = await resp.json().catch(() => ({ error: "Unreadable response" }));
+    if (!resp.ok || out.error) {
+      msg("upmsg", out.error === "not_a_lab_report"
+        ? "That file doesn't look like a lab report."
+        : `Could not read it: ${out.error ?? resp.status}`, true);
+      return;
+    }
+    msg("upmsg", "");
+    parsed = { path: `${userId}/${name}`, name, report_date: out.report_date ?? null, lpa_unit: out.lpa_unit ?? null };
+
+    $("rvtitle").textContent = name.replace(/^\d+-/, "");
+    ($("rvdate") as HTMLInputElement).value = out.report_date ?? new Date().toISOString().slice(0, 10);
+
+    const values = (out.values ?? []).filter((v: any) => LABELS[v.key] && Number.isFinite(v.value));
+    $("rvrows").innerHTML = values.map((v: any) => {
+      const meta = LABELS[v.key];
+      const unit = v.key === "lpa_value" ? (out.lpa_unit ?? v.unit ?? "") : meta.unit;
+      return `
+        <div class="flex items-center gap-3 py-2.5">
+          <span class="w-24 font-mono text-[10px] uppercase tracking-wider text-text-tertiary">${meta.section}</span>
+          <span class="flex-1 text-sm font-semibold">${meta.label}</span>
+          <input data-key="${v.key}" type="number" step="any" value="${v.value}"
+            class="w-28 rounded-lg border border-white/12 bg-white/[0.04] px-3 py-1.5 text-right font-mono text-sm text-text-primary focus:border-accent focus:outline-none" />
+          <span class="w-16 text-xs text-text-tertiary">${unit}</span>
+          <input data-drop="${v.key}" type="checkbox" checked title="Untick to leave this value out"
+            class="h-4 w-4 accent-[#818cf8]" />
+        </div>`;
+    }).join("");
+
+    const skipped = out.skipped ?? [];
+    show("rvskipped", skipped.length > 0);
+    $("rvskipped").textContent = skipped.length
+      ? `Not filed (no home in Verve yet, or ambiguous): ${skipped.join(" · ")}` : "";
+    const conv = out.conversions ?? [];
+    show("rvconv", conv.length > 0);
+    $("rvconv").textContent = conv.length ? `Converted on read: ${conv.join(" · ")}` : "";
+
+    $("confirm").textContent = `Confirm — file ${values.length} value${values.length === 1 ? "" : "s"}`;
+    msg("rvmsg", "");
+    show("review", values.length > 0);
+    if (values.length === 0) msg("upmsg", "The report was read, but none of Verve's markers were in it.", true);
+  }
+
+  // ── confirm → lab_readings rows, the app's own table ──────────────────
+  $("discard").addEventListener("click", () => { show("review", false); parsed = null; });
+
+  $("confirm").addEventListener("click", async () => {
+    if (!parsed) return;
+    const date = ($("rvdate") as HTMLInputElement).value;
+    if (!date) { msg("rvmsg", "Set the report date first.", true); return; }
+
+    const bySection: Record<string, Record<string, number | string>> = {};
+    $("rvrows").querySelectorAll("[data-key]").forEach((input) => {
+      const key = (input as HTMLElement).dataset.key!;
+      const keep = ($(`rvrows`).querySelector(`[data-drop="${key}"]`) as HTMLInputElement)?.checked;
+      const v = parseFloat((input as HTMLInputElement).value);
+      if (!keep || !Number.isFinite(v)) return;
+      const section = LABELS[key].section;
+      (bySection[section] ??= {})[key] = v;
+    });
+
+    // Lp(a) carries its reported unit; HOMA-IR derives exactly as the app
+    // derives it (lib/body.ts computeHomaIr — glucose × insulin / 405).
+    if (bySection.heart?.lpa_value != null && parsed.lpa_unit) {
+      bySection.heart.lpa_unit = parsed.lpa_unit;
+    }
+    const m = bySection.metabolic;
+    if (m && typeof m.glucose_mgdl === "number" && typeof m.fasting_insulin_uiuml === "number") {
+      m.homa_ir = Math.round((m.glucose_mgdl * m.fasting_insulin_uiuml) / 405 * 100) / 100;
+    }
+
+    const now = new Date().toISOString();
+    const measuredAt = new Date(date + "T09:00:00").toISOString();
+    const rows = Object.entries(bySection).map(([section, cols]) => ({
+      id: crypto.randomUUID(),
+      user_id: userId,
+      source: section,
+      measured_at: measuredAt,
+      updated_at: now,
+      ...cols,
+    }));
+    if (rows.length === 0) { msg("rvmsg", "Nothing ticked to file.", true); return; }
+
+    const { error } = await supabase.from("lab_readings").insert(rows);
+    if (error) { msg("rvmsg", `Could not file: ${error.message}`, true); return; }
+    msg("rvmsg", "Filed. Open the Verve app and these values will be there.");
+    setTimeout(() => { show("review", false); parsed = null; }, 2500);
+  });
+
+  boot();
+  supabase.auth.onAuthStateChange(() => boot());
+</script>
