@@ -59,7 +59,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     section: "Metabolic",
     label: "Blood pressure",
     purpose: "Systolic over diastolic, seated and rested",
-    note: "",
+    note: "Two major guidelines classify blood pressure, and they genuinely disagree between 120 and 139 mmHg systolic. Verve classifies by whichever you choose — a toggle on the Blood pressure card — so the app agrees with the system your own doctor uses. Home readings are the preferred basis for both: an office reading can run higher (the white-coat effect), which is why Verve lets you tag where a reading was taken. Verve also reads your cuff's own log from Apple Health, so the average reflects every measurement, not just the ones typed in.",
     units: ["mmHg"],
     howTo: [
       "Rest quietly for 5 minutes first — back supported, feet flat, legs uncrossed.",
@@ -69,10 +69,11 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
       "Use the same arm each time you measure.",
     ],
     bands: [
-      "In range: < 130 / 85",
-      "Elevated: ≥ 130 / 85",
+      "AHA/ACC 2017 — Normal: < 120 · Elevated: 120–129 · Stage 1 hypertension: 130–139 · Stage 2: ≥ 140",
+      "ESC 2024 — Non-elevated: < 120 · Elevated: 120–139 · Hypertension: ≥ 140",
+      "Metabolic-syndrome criterion (unchanged by the toggle): ≥ 130/85 counts toward the Alberti 2009 definition",
     ],
-    citation: "Alberti et al. 2009 — harmonised metabolic syndrome criteria.",
+    citation: "Whelton et al. 2017 (AHA/ACC) · McEvoy et al. 2024 (ESC) · Alberti et al. 2009.",
   },
   {
     slug: "tg",
