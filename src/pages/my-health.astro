@@ -275,6 +275,10 @@ import Footer from "../components/Footer.astro";
   async function parseReport(name: string) {
     msg("upmsg", "Reading the report — this takes a few seconds…");
     show("review", false);
+    // The button must LOOK busy — an identical error twice reads as a dead
+    // button when nothing visibly changes between the click and the result.
+    const btns = Array.from($("shelf").querySelectorAll("[data-parse]")) as HTMLButtonElement[];
+    btns.forEach((b) => { b.disabled = true; if (b.dataset.parse === name) b.textContent = "Reading…"; });
     const { data: { session } } = await supabase.auth.getSession();
     const resp = await fetch(`${SUPABASE_URL}/functions/v1/report-parser`, {
       method: "POST",
@@ -286,10 +290,13 @@ import Footer from "../components/Footer.astro";
       body: JSON.stringify({ path: `${userId}/${name}` }),
     });
     const out = await resp.json().catch(() => ({ error: "Unreadable response" }));
+    btns.forEach((b) => { b.disabled = false; if (b.dataset.parse === name) b.textContent = "Read values"; });
     if (!resp.ok || out.error) {
-      msg("upmsg", out.error === "not_a_lab_report"
-        ? "That file doesn't look like a lab report."
-        : `Could not read it: ${out.error ?? resp.status}`, true);
+      const friendly =
+        out.error === "not_a_lab_report" ? "That file doesn't look like a lab report." :
+        out.error === "report_too_dense" ? (out.detail ?? "The report is too long to read in one go.") :
+        `Could not read it${out.detail ? ` — ${out.detail}` : `: ${out.error ?? resp.status}`}`;
+      msg("upmsg", friendly, true);
       return;
     }
     msg("upmsg", "");
