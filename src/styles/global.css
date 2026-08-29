@@ -66,3 +66,9 @@ body {
   background: radial-gradient(circle, rgba(139, 124, 240, 0.16) 0%, rgba(139, 124, 240, 0) 68%);
   pointer-events: none;
 }
+
+/* Tailwind v4's preflight leaves buttons on the arrow cursor — every
+   enabled button on the site is clickable and should say so. */
+button:not(:disabled) {
+  cursor: pointer;
+}
