@@ -4,19 +4,23 @@ import Footer from "../components/Footer.astro";
 ---
 
 <!--
-  My health — the website's signed-in corner.
+  My health — the website's signed-in corner, in three tabs.
 
-  Drop a lab-report PDF: it uploads to a private per-user bucket and the
-  report-parser edge function reads it. TWO tiers come back:
-    · app-bound values (the markers Verve tracks) — reviewed, deduped
-      against what the app already holds, and sent on ONE tap; they become
-      lab_readings rows the app's own sync delivers.
-    · everything else — auto-saved to web_labs (the website's own archive,
-      with each lab's printed reference range) and charted on the dashboard
-      below, section-wise, sorted by report date.
-  Nothing read from a report is ever discarded, and the same analyte +
-  date + value is never stored or sent twice (a unique index backs the
-  client-side check). The original PDFs stay in the archive shelf.
+  · Overview — a greeting, the handful of findings worth a look, the latest
+    report, and a slim drop bar. The answer-at-a-glance page.
+  · Labs — every value from every report, section rail on the left, one
+    section at a time on the right. A row expands into the full chart:
+    band-shaded by each reading's OWN printed range, a diamond where a
+    different lab's range enters the series, and readings in a different
+    unit never share the line.
+  · Reports — the drop zone and the archive: one card per original PDF
+    with what came out of it. Review-and-send lives here too.
+
+  The standing rules: app-bound markers go to lab_readings only on the
+  user's explicit send, deduped; EVERYTHING parsed lands in web_labs with
+  the lab's own printed range (a unique index backs the dedup); analyte
+  names are canonicalised by lib/canon.js so "SGPT (ALT)" and "ALT" share
+  one trend line; nothing is ever discarded.
 -->
 
 <Layout
@@ -39,15 +43,15 @@ import Footer from "../components/Footer.astro";
   </header>
 
   <main class="vrv-glow relative mx-auto max-w-6xl px-6 pb-24 sm:px-10">
-    <h1 class="text-3xl font-extrabold tracking-tight">My health</h1>
-    <p class="mt-2 text-sm leading-6 text-text-secondary">
-      Drop an old lab report — Verve reads every value. The markers the app tracks
-      go to your app on one tap; everything else is kept and charted here.
-    </p>
 
     <!-- ── signed out ─────────────────────────────────────────────────── -->
-    <section id="auth" class="mt-10 hidden max-w-3xl rounded-2xl border border-white/10 bg-white/[0.03] p-7">
-      <h2 class="text-lg font-bold">Sign in with your Verve account</h2>
+    <section id="auth" class="mt-6 hidden max-w-3xl rounded-2xl border border-white/10 bg-white/[0.03] p-7">
+      <h1 class="text-2xl font-extrabold tracking-tight">My health</h1>
+      <p class="mt-2 text-sm leading-6 text-text-secondary">
+        Drop an old lab report — Verve reads every value. The markers the app tracks
+        go to your app on one tap; everything else is kept and charted here.
+      </p>
+      <h2 class="mt-6 text-lg font-bold">Sign in with your Verve account</h2>
       <p class="mt-1 text-sm text-text-secondary">
         The login you use in the app. Signed up with Apple? Use the email link below —
         it goes to the address on your Apple ID.
@@ -88,7 +92,7 @@ import Footer from "../components/Footer.astro";
     </section>
 
     <!-- ── set a new password (arrived from a reset email) ──────────────── -->
-    <section id="pwreset" class="mt-10 hidden max-w-3xl rounded-2xl border border-accent/40 bg-white/[0.03] p-7">
+    <section id="pwreset" class="mt-6 hidden max-w-3xl rounded-2xl border border-accent/40 bg-white/[0.03] p-7">
       <h2 class="text-lg font-bold">Set a new password</h2>
       <p class="mt-1 text-sm text-text-secondary">You followed a reset link — choose the password you'll use in the app and here.</p>
       <div class="relative mt-5">
@@ -106,83 +110,118 @@ import Footer from "../components/Footer.astro";
     </section>
 
     <!-- ── signed in ──────────────────────────────────────────────────── -->
-    <section id="home" class="mt-10 hidden">
+    <section id="home" class="mt-2 hidden">
 
-      <!-- drop zone -->
-      <label id="drop" for="file"
-        class="flex max-w-3xl cursor-pointer flex-col items-center gap-2 rounded-2xl border-[1.5px] border-dashed border-accent/45 bg-accent/[0.05] px-6 py-10 transition-colors">
-        <svg class="h-8 w-8 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>
-        </svg>
-        <span class="text-sm font-bold">Drag a report here, or tap to choose</span>
-        <span class="text-xs text-text-tertiary">PDF · the original stays in your private archive</span>
-        <input id="file" type="file" accept="application/pdf" class="hidden" />
-      </label>
+      <!-- tab pills -->
+      <nav id="tabbar" class="flex gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5 sm:w-fit">
+        <button data-tab="overview" class="flex-1 rounded-xl px-4 py-2 text-sm font-semibold sm:flex-none">Overview</button>
+        <button data-tab="labs" class="flex-1 rounded-xl px-4 py-2 text-sm font-semibold sm:flex-none">Labs</button>
+        <button data-tab="reports" class="flex-1 rounded-xl px-4 py-2 text-sm font-semibold sm:flex-none">Reports</button>
+      </nav>
       <p id="upmsg" class="mt-3 hidden text-sm"></p>
 
-      <!-- the archive shelf -->
-      <div id="shelf" class="mt-6 hidden max-w-3xl rounded-2xl border border-white/10 bg-white/[0.03] px-5"></div>
+      <!-- ═══ OVERVIEW ═══════════════════════════════════════════════════ -->
+      <div id="tab-overview" class="mt-6 hidden">
+        <h1 id="greet" class="text-2xl font-extrabold tracking-tight"></h1>
+        <p id="greetsub" class="mt-1 text-sm text-text-secondary"></p>
 
-      <!-- ── the review: two tiers ─────────────────────────────────────── -->
-      <div id="review" class="mt-6 hidden flex-col gap-4">
-        <div class="flex items-center gap-3">
-          <h2 id="rvtitle" class="text-base font-extrabold"></h2>
-          <span id="rvcount" class="rounded-md bg-warning/15 px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wider text-warning"></span>
-          <div class="ml-auto flex items-center gap-2">
-            <span class="font-mono text-[10px] uppercase tracking-wider text-text-tertiary">Report date</span>
-            <input id="rvdate" type="date"
-              class="rounded-lg border border-white/12 bg-white/[0.04] px-3 py-1.5 text-sm text-text-primary focus:border-accent focus:outline-none" />
-          </div>
+        <div id="worthwrap" class="mt-6 hidden">
+          <div class="font-mono text-[10px] font-semibold uppercase tracking-widest text-text-tertiary">Worth a look</div>
+          <div id="worth" class="mt-2 grid gap-3 sm:grid-cols-2"></div>
         </div>
 
-        <!-- tier 1: app-bound -->
-        <div class="rounded-2xl border border-accent/40 bg-white/[0.03] p-5">
-          <div class="flex items-baseline gap-3">
-            <span class="font-mono text-[10px] font-semibold tracking-widest text-accent-light">GOES TO YOUR APP</span>
-            <span class="text-xs text-text-tertiary">Metabolic · Heart · Muscle — check anything Verve misread</span>
-          </div>
-          <div id="rvapp" class="mt-2 divide-y divide-white/[0.06]"></div>
-          <div class="mt-4 flex flex-wrap items-center gap-3">
-            <button id="confirm"
-              class="rounded-xl bg-accent px-5 py-3 text-sm font-bold text-canvas transition-opacity hover:opacity-90 disabled:opacity-50"></button>
-            <span class="text-xs text-text-muted">
-              Duplicates — same marker, same date, same value — are never sent twice.
-            </span>
-          </div>
-          <p id="rvmsg" class="mt-3 hidden text-sm"></p>
-        </div>
+        <div id="latestcard" class="mt-6 hidden rounded-2xl border border-white/10 bg-white/[0.03] p-5"></div>
 
-        <!-- tier 2: website archive -->
-        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <div class="flex items-baseline gap-3">
-            <span class="font-mono text-[10px] font-semibold tracking-widest text-text-secondary">STAYS ON THE WEBSITE</span>
-            <span id="rvwebnote" class="text-xs text-text-tertiary"></span>
-          </div>
-          <div id="rvweb" class="mt-2"></div>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <button id="discard" class="rounded-xl border border-white/14 px-4 py-2.5 text-sm font-semibold text-text-secondary transition-colors hover:border-white/25">
-            Close review
-          </button>
-          <span class="text-xs text-text-muted">Everything above is already on your dashboard — closing loses nothing.</span>
-        </div>
+        <label for="file"
+          class="mt-6 flex max-w-3xl cursor-pointer items-center gap-3 rounded-2xl border-[1.5px] border-dashed border-accent/40 bg-accent/[0.04] px-5 py-4 transition-colors hover:border-accent/70">
+          <svg class="h-5 w-5 shrink-0 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>
+          </svg>
+          <span class="text-sm font-semibold">Drop a report anywhere on this page</span>
+          <span class="ml-auto hidden text-xs text-text-tertiary sm:inline">PDF · or tap to choose</span>
+        </label>
       </div>
 
-      <!-- ── the lab dashboard ─────────────────────────────────────────── -->
-      <div id="labs" class="mt-10 hidden">
+      <!-- ═══ LABS ═══════════════════════════════════════════════════════ -->
+      <div id="tab-labs" class="mt-6 hidden">
         <div class="flex items-baseline justify-between">
-          <h2 class="text-xl font-extrabold tracking-tight">Your labs</h2>
+          <h1 class="text-xl font-extrabold tracking-tight">Your labs</h1>
           <span id="labsspan" class="font-mono text-[10px] uppercase tracking-wider text-text-tertiary"></span>
         </div>
         <p class="mt-1 text-xs leading-5 text-text-tertiary">
-          Every value from every report — each dot is one report at its date, judged
-          against the lab's own printed range. Pick a section.
+          Every value from every report, sorted by report date. Tap a marker for its
+          chart — each dot is judged against the lab's own printed range, and a
+          <span class="text-accent-light">◆</span> marks where a different lab's range enters the series.
         </p>
-        <div class="mt-4 flex flex-col gap-4 md:flex-row">
-          <nav id="labsrail" class="flex flex-row flex-wrap gap-1.5 md:w-56 md:shrink-0 md:flex-col"></nav>
-          <div id="labspanel" class="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/[0.03] p-5"></div>
+        <div id="labsempty" class="mt-6 hidden rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-text-tertiary">
+          Nothing here yet — drop a report on the <button data-goto="reports" class="font-semibold text-accent-light hover:underline">Reports</button> tab and every value in it lands here.
         </div>
+        <div class="mt-4 flex flex-col gap-4 md:flex-row">
+          <nav id="labsrail" class="flex flex-col gap-1.5 md:w-56 md:shrink-0"></nav>
+          <div id="labspanel" class="hidden min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/[0.03] p-5 md:block"></div>
+        </div>
+      </div>
+
+      <!-- ═══ REPORTS ════════════════════════════════════════════════════ -->
+      <div id="tab-reports" class="mt-6 hidden">
+        <label id="drop" for="file"
+          class="flex max-w-3xl cursor-pointer flex-col items-center gap-2 rounded-2xl border-[1.5px] border-dashed border-accent/45 bg-accent/[0.05] px-6 py-10 transition-colors">
+          <svg class="h-8 w-8 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>
+          </svg>
+          <span class="text-sm font-bold">Drag a report here, or tap to choose</span>
+          <span class="text-xs text-text-tertiary">PDF · the original stays in your private archive</span>
+          <input id="file" type="file" accept="application/pdf" class="hidden" />
+        </label>
+
+        <!-- ── the review: two tiers ─────────────────────────────────────── -->
+        <div id="review" class="mt-6 hidden flex-col gap-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <h2 id="rvtitle" class="text-base font-extrabold"></h2>
+            <span id="rvcount" class="rounded-md bg-warning/15 px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wider text-warning"></span>
+            <div class="ml-auto flex items-center gap-2">
+              <span class="font-mono text-[10px] uppercase tracking-wider text-text-tertiary">Report date</span>
+              <input id="rvdate" type="date"
+                class="rounded-lg border border-white/12 bg-white/[0.04] px-3 py-1.5 text-sm text-text-primary focus:border-accent focus:outline-none" />
+            </div>
+          </div>
+
+          <!-- tier 1: app-bound -->
+          <div class="rounded-2xl border border-accent/40 bg-white/[0.03] p-5">
+            <div class="flex items-baseline gap-3">
+              <span class="font-mono text-[10px] font-semibold tracking-widest text-accent-light">GOES TO YOUR APP</span>
+              <span class="text-xs text-text-tertiary">Metabolic · Heart · Muscle — check anything Verve misread</span>
+            </div>
+            <div id="rvapp" class="mt-2 divide-y divide-white/[0.06]"></div>
+            <div class="mt-4 flex flex-wrap items-center gap-3">
+              <button id="confirm"
+                class="rounded-xl bg-accent px-5 py-3 text-sm font-bold text-canvas transition-opacity hover:opacity-90 disabled:opacity-50"></button>
+              <span class="text-xs text-text-muted">
+                Duplicates — same marker, same date, same value — are never sent twice.
+              </span>
+            </div>
+            <p id="rvmsg" class="mt-3 hidden text-sm"></p>
+          </div>
+
+          <!-- tier 2: website archive -->
+          <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+            <div class="flex items-baseline gap-3">
+              <span class="font-mono text-[10px] font-semibold tracking-widest text-text-secondary">STAYS ON THE WEBSITE</span>
+              <span id="rvwebnote" class="text-xs text-text-tertiary"></span>
+            </div>
+            <div id="rvweb" class="mt-2"></div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button id="discard" class="rounded-xl border border-white/14 px-4 py-2.5 text-sm font-semibold text-text-secondary transition-colors hover:border-white/25">
+              Close review
+            </button>
+            <span class="text-xs text-text-muted">Everything above is already on your Labs tab — closing loses nothing.</span>
+          </div>
+        </div>
+
+        <!-- ── the archive: one card per original PDF ────────────────────── -->
+        <div id="repcards" class="mt-6 grid max-w-3xl gap-3"></div>
       </div>
 
       <p class="mt-10 text-xs leading-5 text-text-muted">
@@ -199,6 +238,7 @@ import Footer from "../components/Footer.astro";
 
 <script>
   import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
+  import { canonName, unitKey } from "../lib/canon.js";
 
   // ── tiny DOM helpers ───────────────────────────────────────────────────
   const $ = (id: string) => document.getElementById(id)!;
@@ -211,6 +251,8 @@ import Footer from "../components/Footer.astro";
     el.classList.toggle("text-success", !bad);
   };
   const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
+  const fmtDay = (d: string) =>
+    new Date(d + "T00:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 
   // ── the app markers, keyed by lab_readings COLUMNS ─────────────────────
   const LABELS: Record<string, { label: string; unit: string; section: "metabolic" | "heart" | "sarcopenia" }> = {
@@ -240,7 +282,30 @@ import Footer from "../components/Footer.astro";
   const SECTION_ORDER = Object.keys(SECTIONS);
 
   let userId = "";
+  let userEmail = "";
   let parsed: { path: string; lpa_unit: string | null; dupKeys: Set<string> } | null = null;
+
+  // one fetch feeds Overview, Labs and the Reports cards
+  let allLabs: any[] = [];
+  let labSecs: Map<string, Map<string, any[]>> = new Map();
+  let labSection = "";
+  let expandedAnalyte = "";          // one chart open at a time
+  let mobileSectionOpen = false;     // phone: section list ⇄ section page
+
+  // ── tabs ───────────────────────────────────────────────────────────────
+  let activeTab = "overview";
+  function setTab(t: string) {
+    activeTab = t;
+    ["overview", "labs", "reports"].forEach((x) => show("tab-" + x, x === t));
+    $("tabbar").querySelectorAll("[data-tab]").forEach((b) => {
+      const on = (b as HTMLElement).dataset.tab === t;
+      b.className = `flex-1 rounded-xl px-4 py-2 text-sm font-semibold sm:flex-none transition-colors ${
+        on ? "bg-accent/20 text-text-primary" : "text-text-tertiary hover:text-text-primary"}`;
+    });
+    history.replaceState(null, "", "#" + t);
+  }
+  $("tabbar").querySelectorAll("[data-tab]").forEach((b) =>
+    b.addEventListener("click", () => setTab((b as HTMLElement).dataset.tab!)));
 
   // ── session ────────────────────────────────────────────────────────────
   async function boot() {
@@ -248,12 +313,27 @@ import Footer from "../components/Footer.astro";
     show("loading", false);
     if (session?.user) {
       userId = session.user.id;
-      $("who").textContent = session.user.email ?? "";
+      userEmail = session.user.email ?? "";
+      $("who").textContent = userEmail;
       show("who", true); show("signout", true); show("home", true); show("auth", false);
-      await Promise.all([renderShelf(), renderLabs()]);
+      const wanted = window.location.hash.replace("#", "");
+      setTab(["overview", "labs", "reports"].includes(wanted) ? wanted : "overview");
+      await refresh();
     } else {
       show("auth", true); show("home", false); show("who", false); show("signout", false);
     }
+  }
+
+  /** Refetch web_labs once; every surface renders from it. */
+  async function refresh() {
+    const { data: rows } = await supabase.from("web_labs")
+      .select("analyte, value, unit, ref_low, ref_high, ref_text, section, measured_on, report_path")
+      .eq("user_id", userId).order("measured_on", { ascending: true }).limit(4000);
+    allLabs = rows ?? [];
+    groupLabs();
+    renderOverview();
+    renderLabsRail(); renderLabsPanel();
+    await renderReports();
   }
 
   $("pwform").addEventListener("submit", async (e) => {
@@ -316,49 +396,378 @@ import Footer from "../components/Footer.astro";
     setTimeout(() => { show("pwreset", false); boot(); }, 1800);
   });
 
-  // ── the archive shelf — the originals are kept ─────────────────────────
-  async function renderShelf() {
-    const { data } = await supabase.storage.from("reports").list(userId, {
-      sortBy: { column: "created_at", order: "desc" }, limit: 30,
-    });
-    const files = (data ?? []).filter((f) => f.name.toLowerCase().endsWith(".pdf"));
-    show("shelf", files.length > 0);
-    $("shelf").innerHTML = files.map((f) => `
-      <div class="flex items-center gap-3 border-b border-white/[0.06] py-3 last:border-b-0">
-        <div class="min-w-0 flex-1">
-          <div class="truncate text-sm font-semibold">${esc(f.name.replace(/^\d+-/, ""))}</div>
-          <div class="text-xs text-text-tertiary">${new Date(f.created_at ?? "").toLocaleDateString()}</div>
-        </div>
-        <button data-parse="${esc(f.name)}" class="rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-xs font-bold text-accent-light hover:bg-accent/20">Read values</button>
-        <button data-view="${esc(f.name)}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary hover:border-white/25">View PDF</button>
-        <button data-del="${esc(f.name)}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-tertiary hover:border-white/25">Delete</button>
-      </div>`).join("");
+  // ── range helpers — every value against ITS OWN printed range ─────────
+  function inRange(v: { value: number; ref_low?: number | null; ref_high?: number | null }): boolean | null {
+    const lo = v.ref_low, hi = v.ref_high;
+    if (lo == null && hi == null) return null;
+    if (lo != null && v.value < lo) return false;
+    if (hi != null && v.value > hi) return false;
+    return true;
+  }
+  function rangeLabel(v: { ref_low?: number | null; ref_high?: number | null; ref_text?: string | null }): string {
+    if (v.ref_text) return v.ref_text;
+    if (v.ref_low != null && v.ref_high != null) return `${v.ref_low}–${v.ref_high}`;
+    if (v.ref_high != null) return `<${v.ref_high}`;
+    if (v.ref_low != null) return `>${v.ref_low}`;
+    return "";
+  }
 
-    $("shelf").querySelectorAll("[data-parse]").forEach((b) =>
-      b.addEventListener("click", () => parseReport((b as HTMLElement).dataset.parse!)));
-    $("shelf").querySelectorAll("[data-view]").forEach((b) =>
-      b.addEventListener("click", async () => {
-        const { data: signed } = await supabase.storage.from("reports")
-          .createSignedUrl(`${userId}/${(b as HTMLElement).dataset.view}`, 300);
-        if (signed?.signedUrl) window.open(signed.signedUrl, "_blank");
+  // ── grouping: section → canonical analyte → readings by date ──────────
+  function groupLabs() {
+    labSecs = new Map();
+    for (const r of allLabs) {
+      const s = SECTIONS[r.section] ? r.section : "other";
+      const sec = labSecs.get(s) ?? labSecs.set(s, new Map()).get(s)!;
+      const key = canonName(String(r.analyte));
+      (sec.get(key) ?? sec.set(key, []).get(key)!).push(r);
+    }
+    if (!labSecs.has(labSection)) labSection = SECTION_ORDER.find((s) => labSecs.has(s)) ?? "";
+  }
+
+  // ═══ OVERVIEW ═══════════════════════════════════════════════════════════
+  function renderOverview() {
+    const hour = new Date().getHours();
+    const tod = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+    const name = userEmail.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    $("greet").textContent = `${tod}, ${name}`;
+
+    const dates = [...new Set(allLabs.map((r) => r.measured_on))].sort();
+    if (dates.length === 0) {
+      $("greetsub").textContent = "Drop your first lab report and every value in it becomes a trend you keep.";
+      show("worthwrap", false); show("latestcard", false);
+      return;
+    }
+    const markers = [...labSecs.values()].reduce((n, m) => n + m.size, 0);
+    $("greetsub").textContent =
+      `${allLabs.length} values across ${dates.length} report date${dates.length === 1 ? "" : "s"} · ${markers} markers · ${fmtDay(dates[0])} → ${fmtDay(dates[dates.length - 1])}`;
+
+    // Worth a look — latest reading out of its own range, worst first
+    type Finding = { sec: string; name: string; latest: any; n: number; first: any; sev: number };
+    const findings: Finding[] = [];
+    let inCount = 0, judged = 0;
+    for (const [sec, m] of labSecs) for (const [name2, rs] of m) {
+      const latest = rs[rs.length - 1];
+      const ok = inRange(latest);
+      if (ok !== null) judged++;
+      if (ok === true) inCount++;
+      if (ok !== false) continue;
+      const lo = latest.ref_low, hi = latest.ref_high;
+      const width = lo != null && hi != null ? hi - lo : Math.abs(hi ?? lo ?? 1) || 1;
+      const dist = lo != null && latest.value < lo ? lo - latest.value : latest.value - (hi ?? 0);
+      findings.push({ sec, name: name2, latest, n: rs.length, first: rs[0], sev: dist / (width || 1) });
+    }
+    findings.sort((a, b) => b.sev - a.sev);
+    const top = findings.slice(0, 4);
+
+    show("worthwrap", true);
+    const cards = top.map((f) => {
+      const dir = f.latest.ref_low != null && f.latest.value < f.latest.ref_low ? "below" : "above";
+      const trend = f.n > 1 ? `${f.first.value} → ${f.latest.value} across ${f.n} reports` : `from ${fmtDay(f.latest.measured_on)}`;
+      return `
+        <button data-worth="${esc(f.sec)}|${esc(f.name)}" class="rounded-2xl border border-warning/30 bg-warning/[0.05] p-4 text-left transition-colors hover:border-warning/60">
+          <div class="flex items-baseline justify-between gap-2">
+            <span class="min-w-0 truncate text-sm font-bold">${esc(f.name)}</span>
+            <span class="shrink-0 font-mono text-[9px] uppercase tracking-wider text-text-tertiary">${esc(SECTIONS[f.sec])}</span>
+          </div>
+          <div class="mt-1 font-mono text-lg font-bold text-warning">${f.latest.value}${f.latest.unit ? ` <span class="text-xs font-semibold">${esc(f.latest.unit)}</span>` : ""}</div>
+          <div class="mt-0.5 text-xs text-text-tertiary">${dir} the lab's range ${esc(rangeLabel(f.latest))} · ${esc(trend)}</div>
+        </button>`;
+    });
+    if (judged > 0) cards.push(`
+      <button data-goto="labs" class="rounded-2xl border border-success/25 bg-success/[0.05] p-4 text-left transition-colors hover:border-success/50">
+        <div class="text-sm font-bold text-success">${inCount} of ${judged} markers in range</div>
+        <div class="mt-1 text-xs text-text-tertiary">Latest reading of every marker, each judged against its own lab's printed range. Open Labs for all of them.</div>
+      </button>`);
+    $("worth").innerHTML = cards.join("");
+    $("worth").querySelectorAll("[data-worth]").forEach((b) =>
+      b.addEventListener("click", () => {
+        const [sec, name3] = (b as HTMLElement).dataset.worth!.split("|");
+        openMarker(sec, name3);
       }));
-    $("shelf").querySelectorAll("[data-del]").forEach((b) =>
-      b.addEventListener("click", async () => {
-        await supabase.storage.from("reports").remove([`${userId}/${(b as HTMLElement).dataset.del}`]);
-        renderShelf();
+
+    // latest report card
+    const lastDate = dates[dates.length - 1];
+    const dayRows = allLabs.filter((r) => r.measured_on === lastDate);
+    const flaggedN = dayRows.filter((r) => inRange(r) === false).length;
+    const path = dayRows.map((r) => r.report_path).filter(Boolean).pop() ?? "";
+    const repName = path ? path.split("/").pop()!.replace(/^\d+-/, "") : "";
+    show("latestcard", true);
+    $("latestcard").innerHTML = `
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="min-w-0 flex-1">
+          <div class="font-mono text-[10px] font-semibold uppercase tracking-widest text-text-tertiary">Latest report</div>
+          <div class="mt-1 truncate text-sm font-bold">${esc(repName || fmtDay(lastDate))}</div>
+          <div class="mt-0.5 text-xs text-text-tertiary">${fmtDay(lastDate)} · ${dayRows.length} values · ${flaggedN ? `<span class="text-warning">${flaggedN} out of range</span>` : `<span class="text-success">all in range</span>`}</div>
+        </div>
+        <button data-goto="labs" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary hover:border-white/25">Open in Labs</button>
+        ${path ? `<button data-viewpath="${esc(path)}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary hover:border-white/25">View PDF</button>` : ""}
+      </div>`;
+    const vp = $("latestcard").querySelector("[data-viewpath]");
+    if (vp) vp.addEventListener("click", () => viewPdf((vp as HTMLElement).dataset.viewpath!));
+    wireGoto();
+  }
+
+  function wireGoto() {
+    document.querySelectorAll("[data-goto]").forEach((b) => {
+      const el = b as HTMLElement;
+      if (el.dataset.wired) return;
+      el.dataset.wired = "1";
+      el.addEventListener("click", () => setTab(el.dataset.goto!));
+    });
+  }
+
+  /** Jump from Overview straight to one marker's chart. */
+  function openMarker(sec: string, name: string) {
+    labSection = sec;
+    expandedAnalyte = name;
+    mobileSectionOpen = true;
+    setTab("labs");
+    renderLabsRail(); renderLabsPanel();
+  }
+
+  // ═══ LABS ═══════════════════════════════════════════════════════════════
+  function renderLabsRail() {
+    const empty = allLabs.length === 0;
+    show("labsempty", empty);
+    if (empty) { $("labsrail").innerHTML = ""; $("labspanel").innerHTML = ""; $("labsspan").textContent = ""; wireGoto(); return; }
+    const dates = [...new Set(allLabs.map((r) => r.measured_on))].sort();
+    const fmt = (d: string) => new Date(d + "T00:00:00").toLocaleDateString(undefined, { month: "short", year: "2-digit" });
+    $("labsspan").textContent = `${dates.length} REPORT DATE${dates.length === 1 ? "" : "S"} · ${fmt(dates[0])} → ${fmt(dates[dates.length - 1])}`;
+
+    // phone: the section list IS the page until a section opens
+    $("labsrail").className = `${mobileSectionOpen ? "hidden md:flex" : "flex"} flex-col gap-1.5 md:w-56 md:shrink-0`;
+    $("labspanel").className = `${mobileSectionOpen ? "" : "hidden md:block"} min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/[0.03] p-5`;
+
+    $("labsrail").innerHTML = SECTION_ORDER.filter((s) => labSecs.has(s)).map((s) => {
+      const analytes = [...labSecs.get(s)!.values()];
+      const flagged = analytes.filter((rs) => inRange(rs[rs.length - 1]) === false).length;
+      const on = s === labSection;
+      return `
+        <button data-sec="${s}" class="flex items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[13px] transition-colors ${on ? "bg-accent/15 font-bold text-text-primary" : "text-text-secondary hover:bg-white/[0.05]"}">
+          <span class="flex-1">${SECTIONS[s]}</span>
+          <span class="rounded-md ${flagged ? "bg-warning/15 text-warning" : "bg-white/[0.06] text-text-tertiary"} px-1.5 py-0.5 font-mono text-[9px] font-semibold tracking-wider">${analytes.length}${flagged ? ` · ${flagged}!` : ""}</span>
+          <span class="text-text-muted md:hidden">›</span>
+        </button>`;
+    }).join("");
+    $("labsrail").querySelectorAll("[data-sec]").forEach((b) =>
+      b.addEventListener("click", () => {
+        labSection = (b as HTMLElement).dataset.sec!;
+        expandedAnalyte = "";
+        mobileSectionOpen = true;
+        renderLabsRail(); renderLabsPanel();
       }));
   }
 
-  // ── upload ─────────────────────────────────────────────────────────────
+  function renderLabsPanel() {
+    const sec = labSecs.get(labSection);
+    if (!sec) { $("labspanel").innerHTML = ""; return; }
+    const analytes = [...sec.entries()];
+    const flagged = analytes.filter(([, rs]) => inRange(rs[rs.length - 1]) === false).length;
+    $("labspanel").innerHTML = `
+      <button id="labsback" class="mb-2 flex items-center gap-1 text-sm font-semibold text-accent-light md:hidden">‹ All sections</button>
+      <div class="flex flex-wrap items-baseline gap-3">
+        <h3 class="text-base font-extrabold">${SECTIONS[labSection]}</h3>
+        <span class="font-mono text-[10px] text-text-tertiary">${analytes.length} MARKER${analytes.length === 1 ? "" : "S"}</span>
+        ${flagged ? `<span class="rounded-md bg-warning/15 px-2 py-0.5 font-mono text-[9px] tracking-wider text-warning">${flagged} OUT OF RANGE</span>` : ""}
+      </div>
+      <div class="mt-2 divide-y divide-white/[0.05]">
+        ${analytes.map(([name, rs]) => labRow(name, rs)).join("")}
+      </div>`;
+    $("labsback")?.addEventListener("click", () => {
+      mobileSectionOpen = false;
+      renderLabsRail(); renderLabsPanel();
+    });
+    $("labspanel").querySelectorAll("[data-an]").forEach((b) =>
+      b.addEventListener("click", () => {
+        const n = (b as HTMLElement).dataset.an!;
+        expandedAnalyte = expandedAnalyte === n ? "" : n;
+        renderLabsPanel();
+        if (expandedAnalyte) $("labspanel").querySelector(`[data-an="${CSS.escape(n)}"]`)?.scrollIntoView({ block: "nearest" });
+      }));
+  }
+
+  /** One analyte row; tapping it opens the full chart underneath. */
+  function labRow(name: string, rs: any[]): string {
+    const latest = rs[rs.length - 1];
+    const ok = inRange(latest);
+    const vals = rs.map((r) => Number(r.value));
+    const lo = Math.min(...vals), hi = Math.max(...vals);
+    const y = (v: number) => hi === lo ? 14 : 24 - ((v - lo) / (hi - lo)) * 20;
+    const x = (i: number) => rs.length === 1 ? 60 : 6 + (i / (rs.length - 1)) * 108;
+    const pts = vals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+    const dots = vals.map((v, i) => {
+      const own = inRange(rs[i]);
+      return `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${i === vals.length - 1 ? 3.5 : 2.5}" fill="${own === false ? "#FBBF24" : "#818cf8"}"><title>${rs[i].measured_on}: ${v}</title></circle>`;
+    }).join("");
+    const valColor = ok === false ? "text-warning" : ok === true ? "text-success" : "text-text-primary";
+    const open = expandedAnalyte === name;
+    return `
+      <div>
+        <button data-an="${esc(name)}" class="flex w-full items-center gap-3 py-2 text-left">
+          <span class="min-w-0 flex-1 truncate text-[13px] font-semibold text-text-primary" title="${esc(name)}">${esc(name)}</span>
+          <svg class="hidden shrink-0 sm:block" width="120" height="28" viewBox="0 0 120 28">${rs.length > 1 ? `<polyline points="${pts}" fill="none" stroke="#818cf8" stroke-width="1.5" opacity="0.6"/>` : ""}${dots}</svg>
+          <span class="shrink-0 whitespace-nowrap text-right font-mono text-xs ${valColor}">${latest.value}${latest.unit ? ` ${esc(latest.unit)}` : ""}</span>
+          <span class="hidden w-24 shrink-0 truncate text-right font-mono text-[10px] text-text-muted sm:inline" title="${esc(rangeLabel(latest))}">${esc(rangeLabel(latest))}</span>
+          <span class="text-text-muted">${open ? "▾" : "▸"}</span>
+        </button>
+        ${open ? bigChart(name, rs) : ""}
+      </div>`;
+  }
+
+  /**
+   * The app-grade chart: every reading judged against ITS OWN printed range
+   * (the green band re-shades per report), a ◆ where a different lab's range
+   * enters the series, and the unit guard — readings in a different unit
+   * are listed, never mixed onto the line.
+   */
+  function bigChart(name: string, rsAll: any[]): string {
+    const latestUnit = unitKey(rsAll[rsAll.length - 1].unit);
+    const rs = rsAll.filter((r) => unitKey(r.unit) === latestUnit);
+    const offLine = rsAll.filter((r) => unitKey(r.unit) !== latestUnit);
+
+    const W = 640, H = 200, L = 46, R = 16, T = 20, B = 30;
+    const vals = rs.map((r) => Number(r.value));
+    const bounds = [...vals];
+    for (const r of rs) {
+      if (r.ref_low != null) bounds.push(Number(r.ref_low));
+      if (r.ref_high != null) bounds.push(Number(r.ref_high));
+    }
+    let lo = Math.min(...bounds), hi = Math.max(...bounds);
+    const pad = (hi - lo || Math.abs(hi) || 1) * 0.15;
+    lo -= pad; hi += pad;
+    const X = (i: number) => rs.length === 1 ? L + (W - L - R) / 2 : L + (i / (rs.length - 1)) * (W - L - R);
+    const Y = (v: number) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+    const midX = (i: number) => i < 0 ? L : i >= rs.length - 1 ? W - R : (X(i) + X(i + 1)) / 2;
+
+    // ① band segments — each reading's own range shades its neighbourhood
+    const bands = rs.map((r, i) => {
+      if (r.ref_low == null && r.ref_high == null) return "";
+      const yTop = Y(r.ref_high != null ? Number(r.ref_high) : hi);
+      const yBot = Y(r.ref_low != null ? Number(r.ref_low) : lo);
+      return `<rect x="${midX(i - 1).toFixed(1)}" y="${yTop.toFixed(1)}" width="${(midX(i) - midX(i - 1)).toFixed(1)}" height="${Math.max(0, yBot - yTop).toFixed(1)}" fill="#10B981" opacity="0.09"/>`;
+    }).join("");
+
+    // ② range-change diamonds
+    const rk = (r: any) => `${r.ref_low ?? ""}|${r.ref_high ?? ""}`;
+    let diamonds = "";
+    const changes: string[] = [];
+    for (let i = 1; i < rs.length; i++) {
+      if (rk(rs[i]) !== rk(rs[i - 1])) {
+        diamonds += `<g transform="translate(${X(i).toFixed(1)},${T - 8})"><rect x="-4.5" y="-4.5" width="9" height="9" transform="rotate(45)" fill="#818cf8"><title>Different lab range from ${fmtDay(rs[i].measured_on)}: ${rangeLabel(rs[i - 1]) || "none"} → ${rangeLabel(rs[i]) || "none"}</title></rect></g>`;
+        changes.push(`${rangeLabel(rs[i - 1]) || "no range"} → ${rangeLabel(rs[i]) || "no range"} from ${fmtDay(rs[i].measured_on)}`);
+      }
+    }
+
+    // ③ line, dots (own-range verdicts), axis
+    const line = rs.length > 1
+      ? `<polyline points="${vals.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ")}" fill="none" stroke="#818cf8" stroke-width="2"/>` : "";
+    const dots = rs.map((r, i) => {
+      const own = inRange(r);
+      const c = own === false ? "#FBBF24" : own === true ? "#34D399" : "#94A3B8";
+      return `<circle cx="${X(i).toFixed(1)}" cy="${Y(Number(r.value)).toFixed(1)}" r="4" fill="${c}" stroke="#0B0F1A" stroke-width="1.5"><title>${fmtDay(r.measured_on)}: ${r.value}${r.unit ? " " + r.unit : ""} (range ${rangeLabel(r) || "—"})</title></circle>`;
+    }).join("");
+    const step = Math.max(1, Math.ceil(rs.length / 6));
+    const xlabels = rs.map((r, i) => (i % step === 0 || i === rs.length - 1)
+      ? `<text x="${X(i).toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="9" fill="#64748B" font-family="ui-monospace,monospace">${new Date(r.measured_on + "T00:00:00").toLocaleDateString(undefined, { month: "short", year: "2-digit" })}</text>` : "").join("");
+    const ticks = [0.15, 0.5, 0.85].map((f) => {
+      const v = lo + (hi - lo) * (1 - f);
+      const yy = T + f * (H - T - B);
+      return `<line x1="${L}" y1="${yy}" x2="${W - R}" y2="${yy}" stroke="#FFFFFF" opacity="0.05"/><text x="${L - 6}" y="${yy + 3}" text-anchor="end" font-size="9" fill="#64748B" font-family="ui-monospace,monospace">${Number(v.toPrecision(3))}</text>`;
+    }).join("");
+
+    const unitLabel = rs[rs.length - 1].unit ? esc(String(rs[rs.length - 1].unit)) : "";
+    return `
+      <div class="mb-3 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+        <svg viewBox="0 0 ${W} ${H}" class="w-full">${ticks}${bands}${line}${dots}${diamonds}${xlabels}</svg>
+        <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-text-tertiary">
+          <span><span class="text-success">●</span> in its lab's range</span>
+          <span><span class="text-warning">●</span> outside</span>
+          <span class="opacity-80">▩ the printed range, per report${unitLabel ? ` · ${unitLabel}` : ""}</span>
+        </div>
+        ${changes.map((c) => `<div class="mt-1.5 text-[10px] font-semibold text-accent-light">◆ DIFFERENT LAB RANGE · ${esc(c)}</div>`).join("")}
+        ${offLine.length ? `
+          <div class="mt-1.5 text-[10px] font-semibold text-warning">⚠ UNIT CHANGED — ${offLine.length} earlier reading${offLine.length === 1 ? "" : "s"} in a different unit, listed below, not on this line</div>
+          ${offLine.map((r) => `<div class="mt-0.5 font-mono text-[10px] text-text-tertiary">${fmtDay(r.measured_on)} · ${r.value}${r.unit ? " " + esc(r.unit) : ""} (range ${esc(rangeLabel(r) || "—")})</div>`).join("")}` : ""}
+        <div class="mt-2 divide-y divide-white/[0.04]">
+          ${[...rs].reverse().map((r) => {
+            const own = inRange(r);
+            return `<div class="flex items-baseline gap-3 py-1">
+              <span class="w-24 font-mono text-[10px] text-text-tertiary">${fmtDay(r.measured_on)}</span>
+              <span class="flex-1 font-mono text-xs ${own === false ? "text-warning" : own === true ? "text-success" : "text-text-primary"}">${r.value}${r.unit ? ` ${esc(r.unit)}` : ""}</span>
+              <span class="font-mono text-[10px] text-text-muted">${esc(rangeLabel(r) || "no printed range")}</span>
+            </div>`;
+          }).join("")}
+        </div>
+      </div>`;
+  }
+
+  // ═══ REPORTS ═════════════════════════════════════════════════════════════
+  async function renderReports() {
+    const { data } = await supabase.storage.from("reports").list(userId, {
+      sortBy: { column: "created_at", order: "desc" }, limit: 50,
+    });
+    const files = (data ?? []).filter((f) => f.name.toLowerCase().endsWith(".pdf"));
+
+    // what each report yielded, from the one web_labs fetch
+    const outcomes = new Map<string, { date: string; n: number; flagged: number }>();
+    for (const r of allLabs) {
+      if (!r.report_path) continue;
+      const o = outcomes.get(r.report_path) ?? { date: r.measured_on, n: 0, flagged: 0 };
+      o.n++; if (inRange(r) === false) o.flagged++;
+      o.date = r.measured_on;
+      outcomes.set(r.report_path, o);
+    }
+
+    $("repcards").innerHTML = files.map((f) => {
+      const o = outcomes.get(`${userId}/${f.name}`);
+      const chips = o
+        ? `<span class="rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-text-secondary">${o.n} VALUES</span>
+           ${o.flagged ? `<span class="rounded-md bg-warning/15 px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-warning">${o.flagged} OUT OF RANGE</span>` : `<span class="rounded-md bg-success/15 px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-success">ALL IN RANGE</span>`}
+           <span class="font-mono text-[9px] tracking-wider text-text-tertiary">${fmtDay(o.date).toUpperCase()}</span>`
+        : `<span class="rounded-md bg-accent/15 px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-accent-light">NOT READ YET</span>`;
+      return `
+        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <div class="flex items-center gap-3">
+            <div class="min-w-0 flex-1">
+              <div class="truncate text-sm font-bold">${esc(f.name.replace(/^\d+-/, ""))}</div>
+              <div class="mt-1 flex flex-wrap items-center gap-1.5">${chips}</div>
+            </div>
+          </div>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button data-parse="${esc(f.name)}" class="rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-xs font-bold text-accent-light hover:bg-accent/20">${o ? "Read again" : "Read values"}</button>
+            <button data-view="${esc(f.name)}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary hover:border-white/25">View PDF</button>
+            <button data-del="${esc(f.name)}" class="ml-auto rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-tertiary hover:border-white/25">Delete</button>
+          </div>
+        </div>`;
+    }).join("");
+
+    $("repcards").querySelectorAll("[data-parse]").forEach((b) =>
+      b.addEventListener("click", () => parseReport((b as HTMLElement).dataset.parse!)));
+    $("repcards").querySelectorAll("[data-view]").forEach((b) =>
+      b.addEventListener("click", () => viewPdf(`${userId}/${(b as HTMLElement).dataset.view}`)));
+    $("repcards").querySelectorAll("[data-del]").forEach((b) =>
+      b.addEventListener("click", async () => {
+        await supabase.storage.from("reports").remove([`${userId}/${(b as HTMLElement).dataset.del}`]);
+        renderReports();
+      }));
+  }
+
+  async function viewPdf(path: string) {
+    const { data: signed } = await supabase.storage.from("reports").createSignedUrl(path, 300);
+    if (signed?.signedUrl) window.open(signed.signedUrl, "_blank");
+  }
+
+  // ── upload — the input feeds both drop bars, plus drop-anywhere ────────
   async function upload(file: File) {
     if (file.type !== "application/pdf") { msg("upmsg", "PDFs only for now.", true); return; }
     if (file.size > 15 * 1024 * 1024) { msg("upmsg", "That file is over 15 MB.", true); return; }
+    setTab("reports");
     msg("upmsg", `Uploading ${file.name}…`);
     const path = `${userId}/${Date.now()}-${file.name.replace(/[^\w.\-]+/g, "_")}`;
     const { error } = await supabase.storage.from("reports").upload(path, file, { contentType: "application/pdf" });
     if (error) { msg("upmsg", error.message, true); return; }
     msg("upmsg", "Uploaded — reading the values…");
-    await renderShelf();
+    await renderReports();
     await parseReport(path.split("/")[1]);
   }
 
@@ -366,22 +775,28 @@ import Footer from "../components/Footer.astro";
     const f = ($("file") as HTMLInputElement).files?.[0];
     if (f) upload(f);
   });
-  ["dragover", "dragenter"].forEach((ev) => $("drop").addEventListener(ev, (e) => {
-    e.preventDefault(); $("drop").classList.add("border-accent", "bg-accent/10");
+  ["dragover", "dragenter"].forEach((ev) => document.addEventListener(ev, (e) => {
+    if (!userId) return;
+    e.preventDefault();
+    $("drop").classList.add("border-accent", "bg-accent/10");
   }));
-  ["dragleave", "drop"].forEach((ev) => $("drop").addEventListener(ev, (e) => {
-    e.preventDefault(); $("drop").classList.remove("border-accent", "bg-accent/10");
+  ["dragleave", "drop"].forEach((ev) => document.addEventListener(ev, (e) => {
+    if (!userId) return;
+    e.preventDefault();
+    $("drop").classList.remove("border-accent", "bg-accent/10");
   }));
-  $("drop").addEventListener("drop", (e) => {
+  document.addEventListener("drop", (e) => {
+    if (!userId) return;
     const f = (e as DragEvent).dataTransfer?.files?.[0];
     if (f) upload(f);
   });
 
   // ── parse → archive everything → two-tier review ───────────────────────
   async function parseReport(name: string) {
+    setTab("reports");
     msg("upmsg", "Reading the report — this takes a few seconds…");
     show("review", false);
-    const btns = Array.from($("shelf").querySelectorAll("[data-parse]")) as HTMLButtonElement[];
+    const btns = Array.from($("repcards").querySelectorAll("[data-parse]")) as HTMLButtonElement[];
     btns.forEach((b) => { b.disabled = true; if (b.dataset.parse === name) b.textContent = "Reading…"; });
 
     const { data: { session } } = await supabase.auth.getSession();
@@ -405,15 +820,16 @@ import Footer from "../components/Footer.astro";
 
     const date = out.report_date ?? new Date().toISOString().slice(0, 10);
     const appValues = (out.values ?? []).filter((v: any) => LABELS[v.key] && Number.isFinite(v.value));
-    const allValues = (out.all_values ?? []).filter((v: any) =>
-      typeof v?.name === "string" && Number.isFinite(v?.value));
+    const allValues = (out.all_values ?? [])
+      .filter((v: any) => typeof v?.name === "string" && Number.isFinite(v?.value))
+      .map((v: any) => ({ ...v, name: canonName(v.name) }));
 
     // ① EVERYTHING → the website's own archive, deduped against what is
-    // already there (same analyte + date + value). The unique index in the
-    // database is the backstop; this check is what lets one bulk insert work.
+    // already there (same canonical analyte + date + value). The unique
+    // index in the database is the backstop.
     const { data: existing } = await supabase.from("web_labs")
       .select("analyte, value").eq("user_id", userId).eq("measured_on", date);
-    const have = new Set((existing ?? []).map((r) => `${String(r.analyte).toLowerCase()}|${r.value}`));
+    const have = new Set((existing ?? []).map((r) => `${canonName(String(r.analyte)).toLowerCase()}|${r.value}`));
     const fresh = allValues.filter((v: any) => !have.has(`${v.name.toLowerCase()}|${v.value}`));
     if (fresh.length > 0) {
       await supabase.from("web_labs").insert(fresh.map((v: any) => ({
@@ -489,23 +905,9 @@ import Footer from "../components/Footer.astro";
 
     show("review", true);
     $("review").classList.add("flex");
-    await renderLabs();
-  }
-
-  /** In the lab's own printed range? null when the range is unknowable. */
-  function inRange(v: { value: number; ref_low?: number | null; ref_high?: number | null }): boolean | null {
-    const lo = v.ref_low, hi = v.ref_high;
-    if (lo == null && hi == null) return null;
-    if (lo != null && v.value < lo) return false;
-    if (hi != null && v.value > hi) return false;
-    return true;
-  }
-  function rangeLabel(v: { ref_low?: number | null; ref_high?: number | null; ref_text?: string | null }): string {
-    if (v.ref_text) return v.ref_text;
-    if (v.ref_low != null && v.ref_high != null) return `${v.ref_low}–${v.ref_high}`;
-    if (v.ref_high != null) return `<${v.ref_high}`;
-    if (v.ref_low != null) return `>${v.ref_low}`;
-    return "";
+    await refresh();
+    show("review", true);   // refresh re-renders around it; keep it up
+    $("review").classList.add("flex");
   }
 
   // ── send the app tier → lab_readings, the app's own table ──────────────
@@ -546,92 +948,6 @@ import Footer from "../components/Footer.astro";
     ($("confirm") as HTMLButtonElement).disabled = true;
     $("confirm").textContent = "Sent to the app ✓";
   });
-
-  // ── the dashboard: a section rail, one section shown at a time ─────────
-  // All sections stacked was a kilometre of scroll on a real 90-analyte
-  // panel; the mock's rail-and-panel is the shape, on mobile as wrap chips.
-  let labSecs: Map<string, Map<string, any[]>> = new Map();
-  let labSection = "";
-
-  async function renderLabs() {
-    const { data: rows } = await supabase.from("web_labs")
-      .select("analyte, value, unit, ref_low, ref_high, ref_text, section, measured_on")
-      .eq("user_id", userId).order("measured_on", { ascending: true }).limit(2000);
-    const all = rows ?? [];
-    show("labs", all.length > 0);
-    if (all.length === 0) return;
-
-    const dates = [...new Set(all.map((r) => r.measured_on))].sort();
-    const fmt = (d: string) => new Date(d + "T00:00:00").toLocaleDateString(undefined, { month: "short", year: "2-digit" });
-    $("labsspan").textContent = `${dates.length} REPORT DATE${dates.length === 1 ? "" : "S"} · ${fmt(dates[0])} → ${fmt(dates[dates.length - 1])}`;
-
-    labSecs = new Map();
-    for (const r of all) {
-      const s = SECTIONS[r.section] ? r.section : "other";
-      const sec = labSecs.get(s) ?? labSecs.set(s, new Map()).get(s)!;
-      const key = String(r.analyte);
-      (sec.get(key) ?? sec.set(key, []).get(key)!).push(r);
-    }
-    if (!labSecs.has(labSection)) labSection = SECTION_ORDER.find((s) => labSecs.has(s)) ?? "";
-    renderLabsRail();
-    renderLabsPanel();
-  }
-
-  function renderLabsRail() {
-    $("labsrail").innerHTML = SECTION_ORDER.filter((s) => labSecs.has(s)).map((s) => {
-      const analytes = [...labSecs.get(s)!.values()];
-      const flagged = analytes.filter((rs) => inRange(rs[rs.length - 1]) === false).length;
-      const on = s === labSection;
-      return `
-        <button data-sec="${s}" class="flex items-center gap-2 rounded-xl px-3 py-2 text-left text-[13px] transition-colors ${on ? "bg-accent/15 font-bold text-text-primary" : "text-text-secondary hover:bg-white/[0.05]"}">
-          <span class="md:flex-1">${SECTIONS[s]}</span>
-          <span class="rounded-md ${flagged ? "bg-warning/15 text-warning" : "bg-white/[0.06] text-text-tertiary"} px-1.5 py-0.5 font-mono text-[9px] font-semibold tracking-wider">${analytes.length}${flagged ? ` · ${flagged}!` : ""}</span>
-        </button>`;
-    }).join("");
-    $("labsrail").querySelectorAll("[data-sec]").forEach((b) =>
-      b.addEventListener("click", () => {
-        labSection = (b as HTMLElement).dataset.sec!;
-        renderLabsRail(); renderLabsPanel();
-      }));
-  }
-
-  function renderLabsPanel() {
-    const sec = labSecs.get(labSection);
-    if (!sec) { $("labspanel").innerHTML = ""; return; }
-    const analytes = [...sec.entries()];
-    const flagged = analytes.filter(([, rs]) => inRange(rs[rs.length - 1]) === false).length;
-    $("labspanel").innerHTML = `
-      <div class="flex flex-wrap items-baseline gap-3">
-        <h3 class="text-base font-extrabold">${SECTIONS[labSection]}</h3>
-        <span class="font-mono text-[10px] text-text-tertiary">${analytes.length} MARKER${analytes.length === 1 ? "" : "S"}</span>
-        ${flagged ? `<span class="rounded-md bg-warning/15 px-2 py-0.5 font-mono text-[9px] tracking-wider text-warning">${flagged} OUT OF RANGE</span>` : ""}
-      </div>
-      <div class="mt-2 divide-y divide-white/[0.05]">
-        ${analytes.map(([name, rs]) => labRow(name, rs)).join("")}
-      </div>`;
-  }
-
-  /** One analyte: name · sparkline (sm+) · latest value · the lab's range. */
-  function labRow(name: string, rs: any[]): string {
-    const latest = rs[rs.length - 1];
-    const ok = inRange(latest);
-    const color = ok === false ? "#FBBF24" : "#818cf8";
-    const vals = rs.map((r) => Number(r.value));
-    const lo = Math.min(...vals), hi = Math.max(...vals);
-    const y = (v: number) => hi === lo ? 14 : 24 - ((v - lo) / (hi - lo)) * 20;
-    const x = (i: number) => rs.length === 1 ? 60 : 6 + (i / (rs.length - 1)) * 108;
-    const pts = vals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
-    const dots = vals.map((v, i) =>
-      `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${i === vals.length - 1 ? 3.5 : 2.5}" fill="${color}"><title>${rs[i].measured_on}: ${v}</title></circle>`).join("");
-    const valColor = ok === false ? "text-warning" : ok === true ? "text-success" : "text-text-primary";
-    return `
-      <div class="flex items-center gap-3 py-2">
-        <span class="min-w-0 flex-1 truncate text-[13px] font-semibold text-text-primary" title="${esc(name)}">${esc(name)}</span>
-        <svg class="hidden shrink-0 sm:block" width="120" height="28" viewBox="0 0 120 28">${rs.length > 1 ? `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.7"/>` : ""}${dots}</svg>
-        <span class="shrink-0 whitespace-nowrap text-right font-mono text-xs ${valColor}">${latest.value}${latest.unit ? ` ${esc(latest.unit)}` : ""}</span>
-        <span class="hidden w-24 shrink-0 truncate text-right font-mono text-[10px] text-text-muted sm:inline" title="${esc(rangeLabel(latest))}">${esc(rangeLabel(latest))}</span>
-      </div>`;
-  }
 
   boot();
   supabase.auth.onAuthStateChange((event) => {
