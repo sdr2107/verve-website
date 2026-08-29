@@ -34,7 +34,10 @@ import Footer from "../components/Footer.astro";
       <span class="text-lg font-semibold tracking-tight text-text-primary">Verve</span>
     </a>
     <div class="flex items-center gap-3">
-      <span id="who" class="hidden font-mono text-xs text-text-tertiary sm:inline"></span>
+      <!-- No email in the header — a greeting, the way the app does it.
+           (The old span carried sm:inline, which OVERRODE `hidden` at
+           desktop widths — the address stayed visible after sign-out.) -->
+      <span id="who" class="hidden text-sm font-semibold text-text-secondary"></span>
       <button
         id="signout"
         class="hidden rounded-full border border-white/14 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-white/25"
@@ -77,7 +80,7 @@ import Footer from "../components/Footer.astro";
         </button>
       </form>
 
-      <div class="mt-4 flex items-center gap-3">
+      <div id="ordiv" class="mt-4 flex items-center gap-3">
         <div class="h-px flex-1 bg-white/10"></div>
         <span class="text-xs text-text-muted">or</span>
         <div class="h-px flex-1 bg-white/10"></div>
@@ -321,14 +324,23 @@ import Footer from "../components/Footer.astro";
     if (session?.user) {
       userId = session.user.id;
       userEmail = session.user.email ?? "";
-      $("who").textContent = userEmail;
+      $("who").textContent = greeting();
       show("who", true); show("signout", true); show("home", true); show("auth", false);
       const wanted = window.location.hash.replace("#", "");
       setTab(["overview", "labs", "reports"].includes(wanted) ? wanted : "overview");
       await refresh();
     } else {
+      $("who").textContent = "";
       show("auth", true); show("home", false); show("who", false); show("signout", false);
     }
+  }
+
+  /** "Good evening, Sudeep" — the app's greeting, from the account's name part. */
+  function greeting(): string {
+    const hour = new Date().getHours();
+    const tod = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+    const name = userEmail.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    return `${tod}, ${name}`;
   }
 
   /** Refetch web_labs + imaging_reports once; every surface renders from them. */
@@ -364,6 +376,7 @@ import Footer from "../components/Footer.astro";
     ($("password") as HTMLInputElement).placeholder = m === "signin" ? "Password" : "Choose a password (8+ characters)";
     show("forgot", m === "signin");
     show("magic", m === "signin");
+    show("ordiv", m === "signin");
     msg("authmsg", "");
   }
   document.querySelectorAll("[data-mode]").forEach((b) =>
@@ -477,10 +490,7 @@ import Footer from "../components/Footer.astro";
 
   // ═══ OVERVIEW ═══════════════════════════════════════════════════════════
   function renderOverview() {
-    const hour = new Date().getHours();
-    const tod = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-    const name = userEmail.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-    $("greet").textContent = `${tod}, ${name}`;
+    $("greet").textContent = greeting();
 
     const dates = [...new Set(allLabs.map((r) => r.measured_on))].sort();
     if (dates.length === 0) {
@@ -983,6 +993,7 @@ import Footer from "../components/Footer.astro";
       throw new Error(
         out.error === "not_a_lab_report" || out.error === "not_a_medical_report" ? "That file doesn't look like a medical report." :
         out.error === "report_too_dense" ? (out.detail ?? "The report is too long to read in one go.") :
+        out.error === "subscription_required" ? (out.detail ?? "Your free reports are used — a subscription keeps the drop zone open.") :
         `Could not read it${out.detail ? ` — ${out.detail}` : `: ${out.error ?? resp.status}`}`);
     }
     return out;
@@ -1047,22 +1058,33 @@ import Footer from "../components/Footer.astro";
       })));
     }
 
-    // ② the app tier, deduped against lab_readings rows on the same date
-    const dayStart = new Date(date + "T00:00:00").toISOString();
-    const dayEnd = new Date(new Date(date + "T00:00:00").getTime() + 86400000).toISOString();
+    // ② the app tier. Same date + same value = a duplicate, never sent.
+    // Same value on a NEARBY date (±7 days) is the hand-entered-then-uploaded
+    // case — the row a user typed on Aug 1 from a Jul 31 report — so those
+    // start UNTICKED with a note, and the user decides.
+    const day0 = new Date(date + "T00:00:00").getTime();
+    const winStart = new Date(day0 - 7 * 86400000).toISOString();
+    const winEnd = new Date(day0 + 8 * 86400000).toISOString();
     const { data: appExisting } = await supabase.from("lab_readings")
-      .select("*").eq("user_id", userId).gte("measured_at", dayStart).lt("measured_at", dayEnd).is("deleted_at", null);
+      .select("*").eq("user_id", userId).gte("measured_at", winStart).lt("measured_at", winEnd).is("deleted_at", null);
     const dupKeys = new Set<string>();
+    const nearDays = new Map<string, number>();
     for (const v of appValues) {
-      if ((appExisting ?? []).some((r: any) => r[v.key] === v.value)) dupKeys.add(v.key);
+      for (const r of appExisting ?? []) {
+        if (Number(r[v.key]) !== v.value) continue;
+        const dd = Math.round((new Date(r.measured_at).getTime() - day0) / 86400000);
+        if (dd === 0) { dupKeys.add(v.key); nearDays.delete(v.key); break; }
+        const prev = nearDays.get(v.key);
+        if (prev == null || Math.abs(dd) < Math.abs(prev)) nearDays.set(v.key, dd);
+      }
     }
-    return { date, appValues, allValues, fresh, dupKeys };
+    return { date, appValues, allValues, fresh, dupKeys, nearDays };
   }
 
   /** The two-tier review — DOM only; `filed` comes from archiveLab. */
   async function renderLabReview(out: any, path: string, name: string,
-    filed: { date: string; appValues: any[]; allValues: any[]; fresh: any[]; dupKeys: Set<string> }) {
-    const { date, appValues, allValues, fresh, dupKeys } = filed;
+    filed: { date: string; appValues: any[]; allValues: any[]; fresh: any[]; dupKeys: Set<string>; nearDays: Map<string, number> }) {
+    const { date, appValues, allValues, fresh, dupKeys, nearDays } = filed;
     parsed = { path, lpa_unit: out.lpa_unit ?? null, dupKeys };
     $("rvtitle").textContent = name.replace(/^\d+-/, "");
     $("rvcount").textContent = `${allValues.length} VALUES READ`;
@@ -1078,20 +1100,27 @@ import Footer from "../components/Footer.astro";
           <span class="flex-1 text-sm font-semibold line-through">${esc(meta.label)} · ${v.value} ${esc(unit)}</span>
           <span class="rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[9px] tracking-wider text-text-tertiary">ALREADY IN YOUR APP</span>
         </div>`;
+      const near = nearDays.get(v.key);
+      const nearChip = near != null
+        ? `<span class="rounded-md bg-warning/15 px-2 py-0.5 font-mono text-[9px] tracking-wider text-warning" title="Your app already holds this exact value on a date ${Math.abs(near)} day${Math.abs(near) === 1 ? "" : "s"} ${near > 0 ? "after" : "before"} this report — likely the same lab, entered by hand. Tick to send anyway.">SAME VALUE ${Math.abs(near)}D AWAY</span>`
+        : "";
       return `
         <div class="flex items-center gap-3 py-2">
           <span class="w-20 font-mono text-[10px] uppercase tracking-wider text-text-tertiary">${meta.section}</span>
-          <span class="flex-1 text-sm font-semibold">${esc(meta.label)}</span>
+          <span class="min-w-0 flex-1 text-sm font-semibold">${esc(meta.label)} ${nearChip}</span>
           <input data-key="${v.key}" type="number" step="any" value="${v.value}"
             class="w-28 rounded-lg border border-white/12 bg-white/[0.04] px-3 py-1.5 text-right font-mono text-sm text-text-primary focus:border-accent focus:outline-none" />
           <span class="w-14 text-xs text-text-tertiary">${esc(unit)}</span>
-          <input data-drop="${v.key}" type="checkbox" checked title="Untick to leave this value out" class="h-4 w-4 accent-[#818cf8]" />
+          <input data-drop="${v.key}" type="checkbox" ${near != null ? "" : "checked"} title="${near != null ? "Unticked — the same value sits nearby in your app; tick to send anyway" : "Untick to leave this value out"}" class="h-4 w-4 accent-[#818cf8]" />
         </div>`;
     }).join("") || `<p class="py-2 text-sm text-text-tertiary">None of the app's markers were in this report.</p>`;
 
-    const sendable = appValues.filter((v: any) => !dupKeys.has(v.key)).length;
-    $("confirm").textContent = sendable > 0 ? `Send ${sendable} value${sendable === 1 ? "" : "s"} to the app →` : "Nothing new to send";
-    ($("confirm") as HTMLButtonElement).disabled = sendable === 0;
+    const sendable = appValues.filter((v: any) => !dupKeys.has(v.key) && nearDays.get(v.key) == null).length;
+    const nearOnly = sendable === 0 && [...nearDays.keys()].some((k) => !dupKeys.has(k));
+    $("confirm").textContent = sendable > 0
+      ? `Send ${sendable} value${sendable === 1 ? "" : "s"} to the app →`
+      : nearOnly ? "Send ticked values →" : "Nothing new to send";
+    ($("confirm") as HTMLButtonElement).disabled = sendable === 0 && !nearOnly;
 
     // tier 2 — grouped by section, each value against its lab's own range
     const webOnly = allValues.filter((v: any) => !["metabolic", "heart", "muscle"].includes(v.section));
@@ -1206,8 +1235,12 @@ import Footer from "../components/Footer.astro";
 
   $("confirm").addEventListener("click", async () => {
     if (!parsed) return;
+    const btn = $("confirm") as HTMLButtonElement;
+    if (btn.disabled) return;
+    btn.disabled = true;   // a double-click was how one report sent twice
+    const reEnable = () => { btn.disabled = false; };
     const date = ($("rvdate") as HTMLInputElement).value;
-    if (!date) { msg("rvmsg", "Set the report date first.", true); return; }
+    if (!date) { msg("rvmsg", "Set the report date first.", true); reEnable(); return; }
 
     const bySection: Record<string, Record<string, number | string>> = {};
     $("rvapp").querySelectorAll("[data-key]").forEach((input) => {
@@ -1225,16 +1258,31 @@ import Footer from "../components/Footer.astro";
       m.homa_ir = Math.round((m.glucose_mgdl * m.fasting_insulin_uiuml) / 405 * 100) / 100;
     }
 
+    if (Object.keys(bySection).length === 0) { msg("rvmsg", "Nothing ticked to send.", true); reEnable(); return; }
+
+    // Freshly re-check the app's same-date rows RIGHT before inserting —
+    // the parse-time check can be minutes stale by the time this is tapped.
+    const ckStart = new Date(date + "T00:00:00").toISOString();
+    const ckEnd = new Date(new Date(date + "T00:00:00").getTime() + 86400000).toISOString();
+    const { data: nowThere } = await supabase.from("lab_readings")
+      .select("*").eq("user_id", userId).gte("measured_at", ckStart).lt("measured_at", ckEnd).is("deleted_at", null);
+    for (const [section, cols] of Object.entries(bySection)) {
+      for (const [k, v] of Object.entries(cols)) {
+        if (typeof v === "number" && (nowThere ?? []).some((r: any) => Number(r[k]) === v)) delete cols[k];
+      }
+      if (Object.keys(cols).length === 0) delete bySection[section];
+    }
+
     const now = new Date().toISOString();
     const measuredAt = new Date(date + "T09:00:00").toISOString();
     const rows = Object.entries(bySection).map(([section, cols]) => ({
       id: crypto.randomUUID(), user_id: userId, source: section,
       measured_at: measuredAt, updated_at: now, ...cols,
     }));
-    if (rows.length === 0) { msg("rvmsg", "Nothing ticked to send.", true); return; }
+    if (rows.length === 0) { msg("rvmsg", "Nothing new to send — these values are already in your app.", true); reEnable(); return; }
 
     const { error } = await supabase.from("lab_readings").insert(rows);
-    if (error) { msg("rvmsg", `Could not send: ${error.message}`, true); return; }
+    if (error) { msg("rvmsg", `Could not send: ${error.message}`, true); reEnable(); return; }
     msg("rvmsg", "Sent. Open the Verve app and these values will be there.");
     ($("confirm") as HTMLButtonElement).disabled = true;
     $("confirm").textContent = "Sent to the app ✓";
