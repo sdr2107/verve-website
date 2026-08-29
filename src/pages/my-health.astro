@@ -56,11 +56,20 @@ import Footer from "../components/Footer.astro";
       <form id="pwform" class="mt-6 flex flex-col gap-3">
         <input id="email" type="email" required placeholder="you@example.com" autocomplete="email"
           class="rounded-xl border border-white/12 bg-white/[0.04] px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
-        <input id="password" type="password" placeholder="Password" autocomplete="current-password"
-          class="rounded-xl border border-white/12 bg-white/[0.04] px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
+        <div class="relative">
+          <input id="password" type="password" placeholder="Password" autocomplete="current-password"
+            class="w-full rounded-xl border border-white/12 bg-white/[0.04] px-4 py-3 pr-12 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
+          <button type="button" data-eye="password" aria-label="Show password"
+            class="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-text-tertiary hover:text-text-primary">
+            <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
         <button type="submit"
           class="rounded-xl bg-accent px-4 py-3 text-sm font-bold text-canvas transition-opacity hover:opacity-90">
           Sign in
+        </button>
+        <button type="button" id="forgot" class="self-end text-xs font-medium text-accent-light hover:underline">
+          Forgot password?
         </button>
       </form>
 
@@ -76,6 +85,24 @@ import Footer from "../components/Footer.astro";
       </button>
 
       <p id="authmsg" class="mt-4 hidden text-sm"></p>
+    </section>
+
+    <!-- ── set a new password (arrived from a reset email) ──────────────── -->
+    <section id="pwreset" class="mt-10 hidden max-w-3xl rounded-2xl border border-accent/40 bg-white/[0.03] p-7">
+      <h2 class="text-lg font-bold">Set a new password</h2>
+      <p class="mt-1 text-sm text-text-secondary">You followed a reset link — choose the password you'll use in the app and here.</p>
+      <div class="relative mt-5">
+        <input id="newpw" type="password" placeholder="New password (8+ characters)" autocomplete="new-password"
+          class="w-full rounded-xl border border-white/12 bg-white/[0.04] px-4 py-3 pr-12 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
+        <button type="button" data-eye="newpw" aria-label="Show password"
+          class="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-text-tertiary hover:text-text-primary">
+          <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+      <button id="savepw" class="mt-3 w-full rounded-xl bg-accent px-4 py-3 text-sm font-bold text-canvas transition-opacity hover:opacity-90">
+        Save password
+      </button>
+      <p id="pwmsg" class="mt-4 hidden text-sm"></p>
     </section>
 
     <!-- ── signed in ──────────────────────────────────────────────────── -->
@@ -255,6 +282,38 @@ import Footer from "../components/Footer.astro";
   $("signout").addEventListener("click", async () => {
     await supabase.auth.signOut();
     boot();
+  });
+
+  // ── show/hide password — the eye at the end of the bar ────────────────
+  document.querySelectorAll("[data-eye]").forEach((b) =>
+    b.addEventListener("click", () => {
+      const input = $((b as HTMLElement).dataset.eye!) as HTMLInputElement;
+      const showing = input.type === "text";
+      input.type = showing ? "password" : "text";
+      b.setAttribute("aria-label", showing ? "Show password" : "Hide password");
+      (b as HTMLElement).classList.toggle("text-accent-light", !showing);
+    }));
+
+  // ── forgot password → reset email → the set-a-new-password card ───────
+  $("forgot").addEventListener("click", async () => {
+    const email = ($("email") as HTMLInputElement).value.trim();
+    if (!email) { msg("authmsg", "Type your email above first.", true); return; }
+    msg("authmsg", "Sending a reset link…");
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + "/my-health/",
+    });
+    if (error) msg("authmsg", error.message, true);
+    else msg("authmsg", "Sent — the link in that email brings you back here to set a new password.");
+  });
+
+  $("savepw").addEventListener("click", async () => {
+    const pw = ($("newpw") as HTMLInputElement).value;
+    if (pw.length < 8) { msg("pwmsg", "At least 8 characters.", true); return; }
+    msg("pwmsg", "Saving…");
+    const { error } = await supabase.auth.updateUser({ password: pw });
+    if (error) { msg("pwmsg", error.message, true); return; }
+    msg("pwmsg", "Saved — this password now works in the app and here.");
+    setTimeout(() => { show("pwreset", false); boot(); }, 1800);
   });
 
   // ── the archive shelf — the originals are kept ─────────────────────────
@@ -575,5 +634,14 @@ import Footer from "../components/Footer.astro";
   }
 
   boot();
-  supabase.auth.onAuthStateChange(() => boot());
+  supabase.auth.onAuthStateChange((event) => {
+    // A reset link lands with a recovery session: show the new-password card
+    // instead of dropping the user on the dashboard mid-reset.
+    if (event === "PASSWORD_RECOVERY") {
+      show("loading", false); show("auth", false); show("home", false);
+      show("pwreset", true);
+      return;
+    }
+    boot();
+  });
 </script>
