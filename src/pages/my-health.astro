@@ -220,6 +220,9 @@ import Footer from "../components/Footer.astro";
           </div>
         </div>
 
+        <!-- ── echo review: numbers → Labs, the doctor's words kept apart ── -->
+        <div id="echoreview" class="mt-6 hidden rounded-2xl border border-accent/40 bg-white/[0.03] p-5"></div>
+
         <!-- ── the archive: one card per original PDF ────────────────────── -->
         <div id="repcards" class="mt-6 grid max-w-3xl gap-3"></div>
       </div>
@@ -277,7 +280,7 @@ import Footer from "../components/Footer.astro";
     metabolic: "Metabolic", heart: "Heart", muscle: "Muscle",
     haematology: "Haematology", lipids: "Lipids", liver: "Liver", kidney: "Kidney",
     thyroid: "Thyroid", vitamins_iron: "Vitamins & iron", hormones: "Hormones",
-    inflammation: "Inflammation", urine: "Urine", other: "Other",
+    inflammation: "Inflammation", urine: "Urine", imaging: "Imaging", other: "Other",
   };
   const SECTION_ORDER = Object.keys(SECTIONS);
 
@@ -287,6 +290,7 @@ import Footer from "../components/Footer.astro";
 
   // one fetch feeds Overview, Labs and the Reports cards
   let allLabs: any[] = [];
+  let allImaging: any[] = [];   // imaging_reports — the narrative half of a study
   let labSecs: Map<string, Map<string, any[]>> = new Map();
   let labSection = "";
   let expandedAnalyte = "";          // one chart open at a time
@@ -324,12 +328,18 @@ import Footer from "../components/Footer.astro";
     }
   }
 
-  /** Refetch web_labs once; every surface renders from it. */
+  /** Refetch web_labs + imaging_reports once; every surface renders from them. */
   async function refresh() {
-    const { data: rows } = await supabase.from("web_labs")
-      .select("analyte, value, unit, ref_low, ref_high, ref_text, section, measured_on, report_path")
-      .eq("user_id", userId).order("measured_on", { ascending: true }).limit(4000);
+    const [{ data: rows }, { data: imaging }] = await Promise.all([
+      supabase.from("web_labs")
+        .select("analyte, value, unit, ref_low, ref_high, ref_text, section, measured_on, report_path")
+        .eq("user_id", userId).order("measured_on", { ascending: true }).limit(4000),
+      supabase.from("imaging_reports")
+        .select("modality, report_date, report_path, impression, findings")
+        .eq("user_id", userId).order("report_date", { ascending: true }).limit(200),
+    ]);
     allLabs = rows ?? [];
+    allImaging = imaging ?? [];
     groupLabs();
     renderOverview();
     renderLabsRail(); renderLabsPanel();
@@ -572,7 +582,17 @@ import Footer from "../components/Footer.astro";
       </div>
       <div class="mt-2 divide-y divide-white/[0.05]">
         ${analytes.map(([name, rs]) => labRow(name, rs)).join("")}
-      </div>`;
+      </div>
+      ${labSection === "imaging" && allImaging.length ? `
+        <div class="mt-5 font-mono text-[10px] font-semibold uppercase tracking-widest text-text-tertiary">The reports' own conclusions</div>
+        ${[...allImaging].reverse().map((im) => `
+          <div class="mt-2 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+            <div class="flex items-center gap-2">
+              <span class="rounded-md bg-accent/15 px-1.5 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-accent-light">${esc(String(im.modality).toUpperCase())}</span>
+              <span class="font-mono text-[10px] text-text-tertiary">${fmtDay(im.report_date)}</span>
+            </div>
+            ${im.impression ? `<p class="mt-1.5 text-[13px] leading-5 text-text-secondary">${esc(im.impression)}</p>` : ""}
+          </div>`).join("")}` : ""}`;
     $("labsback")?.addEventListener("click", () => {
       mobileSectionOpen = false;
       renderLabsRail(); renderLabsPanel();
@@ -718,13 +738,16 @@ import Footer from "../components/Footer.astro";
       outcomes.set(r.report_path, o);
     }
 
+    const imagingByPath = new Map(allImaging.map((im) => [im.report_path, im]));
     $("repcards").innerHTML = files.map((f) => {
       const o = outcomes.get(`${userId}/${f.name}`);
-      const chips = o
+      const im = imagingByPath.get(`${userId}/${f.name}`);
+      const modChip = im ? `<span class="rounded-md bg-accent/15 px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-accent-light">${esc(String(im.modality).toUpperCase())}</span>` : "";
+      const chips = modChip + (o
         ? `<span class="rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-text-secondary">${o.n} VALUES</span>
            ${o.flagged ? `<span class="rounded-md bg-warning/15 px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-warning">${o.flagged} OUT OF RANGE</span>` : `<span class="rounded-md bg-success/15 px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-success">ALL IN RANGE</span>`}
            <span class="font-mono text-[9px] tracking-wider text-text-tertiary">${fmtDay(o.date).toUpperCase()}</span>`
-        : `<span class="rounded-md bg-accent/15 px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-accent-light">NOT READ YET</span>`;
+        : `<span class="rounded-md bg-accent/15 px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-accent-light">NOT READ YET</span>`);
       return `
         <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
           <div class="flex items-center gap-3">
@@ -795,7 +818,7 @@ import Footer from "../components/Footer.astro";
   async function parseReport(name: string) {
     setTab("reports");
     msg("upmsg", "Reading the report — this takes a few seconds…");
-    show("review", false);
+    show("review", false); show("echoreview", false);
     const btns = Array.from($("repcards").querySelectorAll("[data-parse]")) as HTMLButtonElement[];
     btns.forEach((b) => { b.disabled = true; if (b.dataset.parse === name) b.textContent = "Reading…"; });
 
@@ -810,13 +833,21 @@ import Footer from "../components/Footer.astro";
     btns.forEach((b) => { b.disabled = false; if (b.dataset.parse === name) b.textContent = "Read values"; });
     if (!resp.ok || out.error) {
       const friendly =
-        out.error === "not_a_lab_report" ? "That file doesn't look like a lab report." :
+        out.error === "not_a_lab_report" || out.error === "not_a_medical_report" ? "That file doesn't look like a medical report." :
         out.error === "report_too_dense" ? (out.detail ?? "The report is too long to read in one go.") :
         `Could not read it${out.detail ? ` — ${out.detail}` : `: ${out.error ?? resp.status}`}`;
       msg("upmsg", friendly, true);
       return;
     }
     msg("upmsg", "");
+
+    // ── the router's other branches: echo has its own review; "other"
+    // documents stay archived as PDFs until their modality is built.
+    if (out.doc_type === "echo") { await handleEcho(out, path, name); return; }
+    if (out.doc_type === "other") {
+      msg("upmsg", `Read as: ${out.kind ?? "a medical document"}. Verve files echo reports and lab panels today — this PDF stays safe in your archive, and its type is on the roadmap.`);
+      return;
+    }
 
     const date = out.report_date ?? new Date().toISOString().slice(0, 10);
     const appValues = (out.values ?? []).filter((v: any) => LABELS[v.key] && Number.isFinite(v.value));
@@ -908,6 +939,80 @@ import Footer from "../components/Footer.astro";
     await refresh();
     show("review", true);   // refresh re-renders around it; keep it up
     $("review").classList.add("flex");
+  }
+
+  /**
+   * An echo report: the numeric parameters become web_labs rows (section
+   * "imaging" — trendable like any analyte, judged ONLY against ranges the
+   * report itself printed), and the doctor's impression + per-structure
+   * findings go to imaging_reports VERBATIM. Numbers and prose never mix.
+   */
+  async function handleEcho(out: any, path: string, name: string) {
+    const date = out.report_date ?? new Date().toISOString().slice(0, 10);
+    const values = (out.echo_values ?? [])
+      .filter((v: any) => typeof v?.name === "string" && Number.isFinite(v?.value))
+      .map((v: any) => ({ ...v, name: canonName(v.name) }));
+
+    // dedup + archive, same contract as lab analytes
+    const { data: existing } = await supabase.from("web_labs")
+      .select("analyte, value").eq("user_id", userId).eq("measured_on", date);
+    const have = new Set((existing ?? []).map((r) => `${canonName(String(r.analyte)).toLowerCase()}|${r.value}`));
+    const fresh = values.filter((v: any) => !have.has(`${v.name.toLowerCase()}|${v.value}`));
+    if (fresh.length > 0) {
+      await supabase.from("web_labs").insert(fresh.map((v: any) => ({
+        id: crypto.randomUUID(), user_id: userId,
+        analyte: v.name, value: v.value, unit: v.unit ?? null,
+        ref_low: Number.isFinite(v.ref_low) ? v.ref_low : null,
+        ref_high: Number.isFinite(v.ref_high) ? v.ref_high : null,
+        ref_text: v.ref_text ?? null,
+        section: "imaging", measured_on: date, report_path: path,
+      })));
+    }
+
+    // one narrative row per PDF — re-reading replaces, never stacks
+    const { error: imgErr } = await supabase.from("imaging_reports").upsert({
+      id: crypto.randomUUID(), user_id: userId, modality: "echo",
+      report_date: date, report_path: path,
+      impression: out.impression ?? null, findings: out.findings ?? null,
+    }, { onConflict: "user_id,report_path" });
+    if (imgErr) { msg("upmsg", `Could not save the report's narrative: ${imgErr.message}`, true); }
+
+    const findings = Array.isArray(out.findings) ? out.findings : [];
+    $("echoreview").innerHTML = `
+      <div class="flex flex-wrap items-center gap-3">
+        <h2 class="text-base font-extrabold">${esc(name.replace(/^\d+-/, ""))}</h2>
+        <span class="rounded-md bg-accent/15 px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wider text-accent-light">ECHO REPORT</span>
+        <span class="font-mono text-[10px] tracking-wider text-text-tertiary">${fmtDay(date).toUpperCase()}</span>
+      </div>
+      ${values.length ? `
+        <div class="mt-3 font-mono text-[10px] font-semibold uppercase tracking-widest text-text-tertiary">Measurements → Labs · Imaging</div>
+        <div class="mt-1 divide-y divide-white/[0.05]">
+          ${values.map((v: any) => `
+            <div class="flex items-baseline gap-3 py-1.5">
+              <span class="flex-1 text-[13px] text-text-primary">${esc(v.name)}</span>
+              <span class="font-mono text-xs ${inRange(v) === false ? "text-warning" : inRange(v) === true ? "text-success" : "text-text-primary"}">${v.value}${v.unit ? ` ${esc(v.unit)}` : ""}</span>
+              <span class="w-24 text-right font-mono text-[10px] text-text-muted">${esc(rangeLabel(v))}</span>
+            </div>`).join("")}
+        </div>` : ""}
+      ${out.impression ? `
+        <div class="mt-4 font-mono text-[10px] font-semibold uppercase tracking-widest text-text-tertiary">Impression — the report's own words</div>
+        <p class="mt-1 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3 text-sm leading-6 text-text-secondary">${esc(out.impression)}</p>` : ""}
+      ${findings.length ? `
+        <div class="mt-4 font-mono text-[10px] font-semibold uppercase tracking-widest text-text-tertiary">Findings</div>
+        <div class="mt-1 divide-y divide-white/[0.05]">
+          ${findings.map((f: any) => `
+            <div class="flex gap-3 py-1.5 text-[13px]">
+              <span class="w-32 shrink-0 font-semibold text-text-primary">${esc(String(f.structure ?? ""))}</span>
+              <span class="text-text-secondary">${esc(String(f.statement ?? ""))}</span>
+            </div>`).join("")}
+        </div>` : ""}
+      <div class="mt-4 flex flex-wrap items-center gap-3">
+        <button id="echoclose" class="rounded-xl border border-white/14 px-4 py-2.5 text-sm font-semibold text-text-secondary transition-colors hover:border-white/25">Close</button>
+        <span class="text-xs text-text-muted">Numbers are read from the report's printed text — never measured from images. Ranges shown only when the report prints them.</span>
+      </div>`;
+    show("echoreview", true);
+    $("echoclose").addEventListener("click", () => show("echoreview", false));
+    await refresh();
   }
 
   // ── send the app tier → lab_readings, the app's own table ──────────────
