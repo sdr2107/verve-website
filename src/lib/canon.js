@@ -70,6 +70,19 @@ const ALIASES = {
   "egfr": "eGFR", "egfr by sr. creatinine": "eGFR", "e-gfr": "eGFR",
   "estimated glomerular filtration rate": "eGFR",
   // haematology
+  "neutrophils absolute": "Absolute Neutrophil Count", "absolute neutrophils count": "Absolute Neutrophil Count",
+  "absolute neutrophil count": "Absolute Neutrophil Count", "anc": "Absolute Neutrophil Count",
+  "lymphocytes absolute": "Absolute Lymphocyte Count", "absolute lymphocytes count": "Absolute Lymphocyte Count",
+  "absolute lymphocyte count": "Absolute Lymphocyte Count",
+  "monocytes absolute": "Absolute Monocyte Count", "absolute monocytes count": "Absolute Monocyte Count",
+  "absolute monocyte count": "Absolute Monocyte Count",
+  "eosinophils absolute": "Absolute Eosinophil Count", "absolute eosinophils count": "Absolute Eosinophil Count",
+  "absolute eosinophil count": "Absolute Eosinophil Count", "aec": "Absolute Eosinophil Count",
+  "basophils absolute": "Absolute Basophil Count", "absolute basophils count": "Absolute Basophil Count",
+  "absolute basophil count": "Absolute Basophil Count",
+  "rdw-cv": "RDW", "rdw cv": "RDW",   // RDW as commonly reported IS the CV form; RDW-SD stays its own marker
+  "transferrin saturation index": "Transferrin Saturation", "tsat": "Transferrin Saturation",
+  "total cholesterol/hdl ratio": "Cholesterol/HDL Ratio", "chol/hdl ratio": "Cholesterol/HDL Ratio",
   "haemoglobin (hb)": "Hemoglobin", "hemoglobin (hb)": "Hemoglobin",
   "hemoglobin": "Hemoglobin", "haemoglobin": "Hemoglobin", "hb": "Hemoglobin",
   "pcv": "Hematocrit", "pcv (packed cell volume)": "Hematocrit",
@@ -119,8 +132,27 @@ export function canonName(raw) {
   return n;
 }
 
-/** Normalised unit key — "mg/dL" and "MG/DL " are the same unit. */
+/**
+ * Normalised unit key — the unit guard splits a trend line when this differs.
+ * Two layers: character normalisation (case, spaces, µ→u, dots), then an
+ * EQUIVALENCE map for spellings of the numerically identical unit — "g/dL"
+ * vs "gm/dL", "IU/L" vs "U/L", platelets as "10³/µL" vs "10⁹/L" (the same
+ * number). Units that change the NUMBER (pg/mL vs pmol/L, 10⁹/L vs
+ * cells/cu.mm) are deliberately NOT equated — those must split the line.
+ */
+/** @type {Record<string, string>} */
+const UNIT_EQUIV = {
+  "gm/dl": "g/dl", "gms/dl": "g/dl", "gm%": "g/dl", "g%": "g/dl",
+  "iu/l": "u/l", "iu/ml": "u/ml",
+  "10^3/ul": "10^9/l", "10³/ul": "10^9/l", "thou/cumm": "10^9/l", "k/ul": "10^9/l", "x10^3/ul": "10^9/l",
+  "10^6/ul": "10^12/l", "mill/cumm": "10^12/l", "million/cumm": "10^12/l", "x10^6/ul": "10^12/l",
+  "cells/cumm": "/ul", "/cumm": "/ul", "cells/ul": "/ul",
+  "uiu/ml": "miu/l",
+};
+
 /** @param {string|null|undefined} u @returns {string} */
 export function unitKey(u) {
-  return String(u ?? "").trim().toLowerCase().replace(/\s+/g, "");
+  const k = String(u ?? "").trim().toLowerCase()
+    .replace(/\s+/g, "").replace(/[µμ]/g, "u").replace(/\./g, "");
+  return UNIT_EQUIV[k] ?? k;
 }
