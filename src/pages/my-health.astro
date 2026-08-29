@@ -51,13 +51,13 @@ import Footer from "../components/Footer.astro";
         Drop an old lab report — Verve reads every value. The markers the app tracks
         go to your app on one tap; everything else is kept and charted here.
       </p>
-      <h2 class="mt-6 text-lg font-bold">Sign in with your Verve account</h2>
-      <p class="mt-1 text-sm text-text-secondary">
-        The login you use in the app. Signed up with Apple? Use the email link below —
-        it goes to the address on your Apple ID.
-      </p>
+      <div class="mt-6 flex w-fit gap-1 rounded-full border border-white/10 bg-white/[0.04] p-1">
+        <button type="button" data-mode="signin" class="rounded-full px-4 py-1.5 text-[13px] font-bold">Sign in</button>
+        <button type="button" data-mode="signup" class="rounded-full px-4 py-1.5 text-[13px] font-semibold">Create account</button>
+      </div>
+      <p id="modenote" class="mt-3 text-sm text-text-secondary"></p>
 
-      <form id="pwform" class="mt-6 flex flex-col gap-3">
+      <form id="pwform" class="mt-4 flex flex-col gap-3">
         <input id="email" type="email" required placeholder="you@example.com" autocomplete="email"
           class="rounded-xl border border-white/12 bg-white/[0.04] px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
         <div class="relative">
@@ -68,7 +68,7 @@ import Footer from "../components/Footer.astro";
             <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
           </button>
         </div>
-        <button type="submit"
+        <button type="submit" id="authsubmit"
           class="rounded-xl bg-accent px-4 py-3 text-sm font-bold text-canvas transition-opacity hover:opacity-90">
           Sign in
         </button>
@@ -169,10 +169,13 @@ import Footer from "../components/Footer.astro";
           <svg class="h-8 w-8 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>
           </svg>
-          <span class="text-sm font-bold">Drag a report here, or tap to choose</span>
-          <span class="text-xs text-text-tertiary">PDF · the original stays in your private archive</span>
-          <input id="file" type="file" accept="application/pdf" class="hidden" />
+          <span class="text-sm font-bold">Drag reports here, or tap to choose</span>
+          <span class="text-xs text-text-tertiary">PDF · several at once is fine · originals stay in your private archive</span>
+          <input id="file" type="file" accept="application/pdf" multiple class="hidden" />
         </label>
+
+        <!-- the batch queue: one row per dropped file, each with its stage -->
+        <div id="upqueue" class="mt-6 hidden max-w-3xl flex-col gap-2"></div>
 
         <!-- ── the review: two tiers ─────────────────────────────────────── -->
         <div id="review" class="mt-6 hidden flex-col gap-4">
@@ -346,13 +349,51 @@ import Footer from "../components/Footer.astro";
     await renderReports();
   }
 
+  // ── two modes, one card: the same account works here and in the app ────
+  let authMode: "signin" | "signup" = "signin";
+  function setAuthMode(m: "signin" | "signup") {
+    authMode = m;
+    document.querySelectorAll("[data-mode]").forEach((b) => {
+      const on = (b as HTMLElement).dataset.mode === m;
+      b.className = `rounded-full px-4 py-1.5 text-[13px] ${on ? "bg-accent/20 font-bold text-text-primary" : "font-semibold text-text-tertiary hover:text-text-primary"}`;
+    });
+    $("modenote").textContent = m === "signin"
+      ? "The login you use in the app. Signed up with Apple? Use the email link below — it goes to the address on your Apple ID."
+      : "No app needed to start — this account works here today and signs into the Verve app whenever you get it.";
+    $("authsubmit").textContent = m === "signin" ? "Sign in" : "Create my account";
+    ($("password") as HTMLInputElement).placeholder = m === "signin" ? "Password" : "Choose a password (8+ characters)";
+    show("forgot", m === "signin");
+    show("magic", m === "signin");
+    msg("authmsg", "");
+  }
+  document.querySelectorAll("[data-mode]").forEach((b) =>
+    b.addEventListener("click", () => setAuthMode((b as HTMLElement).dataset.mode as any)));
+  setAuthMode("signin");
+
   $("pwform").addEventListener("submit", async (e) => {
     e.preventDefault();
+    const email = ($("email") as HTMLInputElement).value.trim();
+    const password = ($("password") as HTMLInputElement).value;
+    if (authMode === "signup") {
+      if (password.length < 8) { msg("authmsg", "Choose a password of at least 8 characters.", true); return; }
+      msg("authmsg", "Creating your account…");
+      const { data, error } = await supabase.auth.signUp({
+        email, password,
+        options: { emailRedirectTo: window.location.origin + "/my-health/" },
+      });
+      if (error) { msg("authmsg", error.message, true); return; }
+      // Supabase answers an existing address with a userless success — say so
+      // honestly instead of promising an email that will never come.
+      if (data.user && (data.user.identities?.length ?? 1) === 0) {
+        msg("authmsg", "That address already has a Verve account — switch to Sign in.", true);
+        return;
+      }
+      if (data.session) { msg("authmsg", ""); boot(); return; }
+      msg("authmsg", "Almost there — confirm from the email we just sent, and the link lands you back here, signed in.");
+      return;
+    }
     msg("authmsg", "Signing in…");
-    const { error } = await supabase.auth.signInWithPassword({
-      email: ($("email") as HTMLInputElement).value.trim(),
-      password: ($("password") as HTMLInputElement).value,
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) msg("authmsg", error.message, true);
     else { msg("authmsg", ""); boot(); }
   });
@@ -752,7 +793,12 @@ import Footer from "../components/Footer.astro";
         <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
           <div class="flex items-center gap-3">
             <div class="min-w-0 flex-1">
-              <div class="truncate text-sm font-bold">${esc(f.name.replace(/^\d+-/, ""))}</div>
+              <div class="flex items-center gap-2" data-namewrap>
+                <div class="truncate text-sm font-bold">${esc(f.name.replace(/^\d+-/, ""))}</div>
+                <button data-ren="${esc(f.name)}" title="Rename" aria-label="Rename report" class="shrink-0 text-text-muted transition-colors hover:text-text-primary">
+                  <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                </button>
+              </div>
               <div class="mt-1 flex flex-wrap items-center gap-1.5">${chips}</div>
             </div>
           </div>
@@ -773,6 +819,8 @@ import Footer from "../components/Footer.astro";
         await supabase.storage.from("reports").remove([`${userId}/${(b as HTMLElement).dataset.del}`]);
         renderReports();
       }));
+    $("repcards").querySelectorAll("[data-ren]").forEach((b) =>
+      b.addEventListener("click", () => renameUI(b as HTMLElement)));
   }
 
   async function viewPdf(path: string) {
@@ -780,23 +828,127 @@ import Footer from "../components/Footer.astro";
     if (signed?.signedUrl) window.open(signed.signedUrl, "_blank");
   }
 
-  // ── upload — the input feeds both drop bars, plus drop-anywhere ────────
-  async function upload(file: File) {
-    if (file.type !== "application/pdf") { msg("upmsg", "PDFs only for now.", true); return; }
-    if (file.size > 15 * 1024 * 1024) { msg("upmsg", "That file is over 15 MB.", true); return; }
+  /**
+   * Rename a report. The filename IS the name — no separate label table to
+   * drift out of sync — so a rename moves the stored PDF and re-points every
+   * web_labs and imaging_reports row at the new path. The upload-time stamp
+   * prefix is kept: it is what keeps two same-named uploads distinct.
+   */
+  async function renameReport(oldName: string, label: string) {
+    const stamp = (oldName.match(/^(\d+)-/) ?? [, String(Date.now())])[1];
+    const safe = label.trim().replace(/\.pdf$/i, "").replace(/[^\w.\- ]+/g, "").replace(/\s+/g, "_").slice(0, 80);
+    if (!safe) { msg("upmsg", "Give the report a name first.", true); return; }
+    const newName = `${stamp}-${safe}.pdf`;
+    if (newName === oldName) { await renderReports(); return; }
+    const oldPath = `${userId}/${oldName}`, newPath = `${userId}/${newName}`;
+    const { error } = await supabase.storage.from("reports").move(oldPath, newPath);
+    if (error) { msg("upmsg", `Could not rename: ${error.message}`, true); return; }
+    const [{ error: e1 }, { error: e2 }] = await Promise.all([
+      supabase.from("web_labs").update({ report_path: newPath }).eq("user_id", userId).eq("report_path", oldPath),
+      supabase.from("imaging_reports").update({ report_path: newPath }).eq("user_id", userId).eq("report_path", oldPath),
+    ]);
+    if (e1 || e2) msg("upmsg", `Renamed, but some values still point at the old name (${(e1 ?? e2)!.message}).`, true);
+    else msg("upmsg", "");
+    await refresh();
+  }
+
+  function renameUI(btn: HTMLElement) {
+    const name = btn.dataset.ren!;
+    const wrap = btn.closest("[data-namewrap]") as HTMLElement;
+    const current = name.replace(/^\d+-/, "").replace(/\.pdf$/i, "").replace(/_/g, " ");
+    wrap.innerHTML = `
+      <input data-reninput value="${esc(current)}" maxlength="80"
+        class="w-full min-w-0 flex-1 rounded-lg border border-accent/50 bg-white/[0.04] px-2.5 py-1 text-sm font-bold text-text-primary focus:outline-none" />
+      <button data-rensave class="shrink-0 rounded-lg bg-accent px-2.5 py-1 text-xs font-bold text-canvas">Save</button>
+      <button data-rencancel class="shrink-0 rounded-lg border border-white/12 px-2.5 py-1 text-xs font-semibold text-text-secondary">Cancel</button>`;
+    const input = wrap.querySelector("[data-reninput]") as HTMLInputElement;
+    input.focus(); input.select();
+    const save = () => renameReport(name, input.value);
+    wrap.querySelector("[data-rensave]")!.addEventListener("click", save);
+    wrap.querySelector("[data-rencancel]")!.addEventListener("click", () => renderReports());
+    input.addEventListener("keydown", (e) => {
+      if ((e as KeyboardEvent).key === "Enter") save();
+      if ((e as KeyboardEvent).key === "Escape") renderReports();
+    });
+  }
+
+  // ── upload — drop several at once; one visible queue, files read one
+  // after another so a failure in one never takes the others down ────────
+  function qset(i: number, chip: string, tone: "wait" | "busy" | "ok" | "bad", caption: string) {
+    const row = document.getElementById(`q-${i}`);
+    if (!row) return;
+    const tones = {
+      wait: "bg-white/[0.06] text-text-tertiary",
+      busy: "bg-accent/15 text-accent-light animate-pulse",
+      ok: "bg-success/15 text-success",
+      bad: "bg-danger/15 text-danger",
+    };
+    row.querySelector("[data-qchip]")!.className = `rounded-md px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider ${tones[tone]}`;
+    row.querySelector("[data-qchip]")!.textContent = chip;
+    row.querySelector("[data-qcap]")!.textContent = caption;
+  }
+
+  async function uploadBatch(files: File[]) {
+    if (files.length === 0) return;
     setTab("reports");
-    msg("upmsg", `Uploading ${file.name}…`);
-    const path = `${userId}/${Date.now()}-${file.name.replace(/[^\w.\-]+/g, "_")}`;
-    const { error } = await supabase.storage.from("reports").upload(path, file, { contentType: "application/pdf" });
-    if (error) { msg("upmsg", error.message, true); return; }
-    msg("upmsg", "Uploaded — reading the values…");
-    await renderReports();
-    await parseReport(path.split("/")[1]);
+    msg("upmsg", "");
+    show("review", false); show("echoreview", false);
+
+    show("upqueue", true);
+    $("upqueue").classList.add("flex");
+    $("upqueue").innerHTML = files.map((f, i) => `
+      <div id="q-${i}" class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+        <div class="min-w-0 flex-1">
+          <div class="truncate text-[13px] font-bold">${esc(f.name)}</div>
+          <div data-qcap class="mt-0.5 text-[11px] text-text-tertiary">Waiting its turn</div>
+        </div>
+        <span data-qchip class="rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-text-tertiary">QUEUED</span>
+      </div>`).join("");
+
+    let last: { name: string; out: any; path: string; filed: any } | null = null;
+    let filedN = 0;
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      if (f.type !== "application/pdf") { qset(i, "SKIPPED", "bad", "Not a PDF"); continue; }
+      if (f.size > 15 * 1024 * 1024) { qset(i, "SKIPPED", "bad", "Over 15 MB"); continue; }
+
+      qset(i, "UPLOADING…", "busy", "Saving the original to your private archive");
+      const path = `${userId}/${Date.now()}-${f.name.replace(/[^\w.\-]+/g, "_")}`;
+      const { error } = await supabase.storage.from("reports").upload(path, f, { contentType: "application/pdf" });
+      if (error) { qset(i, "FAILED", "bad", error.message); continue; }
+
+      qset(i, "READING…", "busy", "Verve is reading every value and its printed range — about 20 seconds");
+      let out: any;
+      try { out = await readReport(path.split("/")[1]); }
+      catch (e: any) { qset(i, "FAILED", "bad", e.message ?? "Could not read this report"); continue; }
+
+      if (out.doc_type === "echo") {
+        const filed = await archiveEcho(out, path);
+        qset(i, "FILED ✓", "ok", `Echo report · ${filed.values.length} measurements → Labs · Imaging`);
+        filedN++; last = { name: f.name, out, path, filed };
+      } else if (out.doc_type === "other") {
+        qset(i, "ARCHIVED", "ok", `Read as: ${out.kind ?? "a medical document"} — kept as a PDF; its type is on the roadmap`);
+      } else {
+        const filed = await archiveLab(out, path);
+        qset(i, "FILED ✓", "ok", `${filed.allValues.length} values → Labs · ${filed.fresh.length} new on your trends`);
+        filedN++; last = { name: f.name, out, path, filed };
+      }
+    }
+
+    await refresh();
+    // the review opens once, for the last report that filed — every other
+    // file's values are already on the Labs tab regardless
+    if (last) {
+      if (last.out.doc_type === "echo") renderEchoReview(last.out, last.path, last.name);
+      else await renderLabReview(last.out, last.path, last.name, last.filed);
+      if (files.length > 1) msg("upmsg", `${filedN} of ${files.length} reports filed — reviewing the last one below. Any card's "Read again" reopens its review.`);
+    }
   }
 
   $("file").addEventListener("change", () => {
-    const f = ($("file") as HTMLInputElement).files?.[0];
-    if (f) upload(f);
+    const fs = Array.from(($("file") as HTMLInputElement).files ?? []);
+    ($("file") as HTMLInputElement).value = "";
+    if (fs.length) uploadBatch(fs);
   });
   ["dragover", "dragenter"].forEach((ev) => document.addEventListener(ev, (e) => {
     if (!userId) return;
@@ -810,45 +962,66 @@ import Footer from "../components/Footer.astro";
   }));
   document.addEventListener("drop", (e) => {
     if (!userId) return;
-    const f = (e as DragEvent).dataTransfer?.files?.[0];
-    if (f) upload(f);
+    const fs = Array.from((e as DragEvent).dataTransfer?.files ?? []);
+    if (fs.length) uploadBatch(fs);
   });
 
-  // ── parse → archive everything → two-tier review ───────────────────────
+  // ── the pipeline: read (the edge function) → file (the archive writes)
+  // → review (DOM only). The batch queue and the Read values button share
+  // every stage instead of each doing it their own way. ──────────────────
+
+  /** Call the parser. Throws with a user-facing message on any failure. */
+  async function readReport(name: string): Promise<any> {
+    const { data: { session } } = await supabase.auth.getSession();
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/report-parser`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${session?.access_token}`, apikey: SUPABASE_ANON_KEY },
+      body: JSON.stringify({ path: `${userId}/${name}` }),
+    });
+    const out = await resp.json().catch(() => ({ error: "Unreadable response" }));
+    if (!resp.ok || out.error) {
+      throw new Error(
+        out.error === "not_a_lab_report" || out.error === "not_a_medical_report" ? "That file doesn't look like a medical report." :
+        out.error === "report_too_dense" ? (out.detail ?? "The report is too long to read in one go.") :
+        `Could not read it${out.detail ? ` — ${out.detail}` : `: ${out.error ?? resp.status}`}`);
+    }
+    return out;
+  }
+
+  /** Single-file path — the cards' Read values button. */
   async function parseReport(name: string) {
     setTab("reports");
     msg("upmsg", "Reading the report — this takes a few seconds…");
     show("review", false); show("echoreview", false);
     const btns = Array.from($("repcards").querySelectorAll("[data-parse]")) as HTMLButtonElement[];
     btns.forEach((b) => { b.disabled = true; if (b.dataset.parse === name) b.textContent = "Reading…"; });
-
-    const { data: { session } } = await supabase.auth.getSession();
-    const path = `${userId}/${name}`;
-    const resp = await fetch(`${SUPABASE_URL}/functions/v1/report-parser`, {
-      method: "POST",
-      headers: { "content-type": "application/json", authorization: `Bearer ${session?.access_token}`, apikey: SUPABASE_ANON_KEY },
-      body: JSON.stringify({ path }),
-    });
-    const out = await resp.json().catch(() => ({ error: "Unreadable response" }));
-    btns.forEach((b) => { b.disabled = false; if (b.dataset.parse === name) b.textContent = "Read values"; });
-    if (!resp.ok || out.error) {
-      const friendly =
-        out.error === "not_a_lab_report" || out.error === "not_a_medical_report" ? "That file doesn't look like a medical report." :
-        out.error === "report_too_dense" ? (out.detail ?? "The report is too long to read in one go.") :
-        `Could not read it${out.detail ? ` — ${out.detail}` : `: ${out.error ?? resp.status}`}`;
-      msg("upmsg", friendly, true);
+    let out: any;
+    try { out = await readReport(name); }
+    catch (e: any) {
+      btns.forEach((b) => { b.disabled = false; if (b.dataset.parse === name) b.textContent = "Read values"; });
+      msg("upmsg", e.message ?? "Could not read this report", true);
       return;
     }
+    btns.forEach((b) => { b.disabled = false; if (b.dataset.parse === name) b.textContent = "Read values"; });
     msg("upmsg", "");
-
-    // ── the router's other branches: echo has its own review; "other"
-    // documents stay archived as PDFs until their modality is built.
-    if (out.doc_type === "echo") { await handleEcho(out, path, name); return; }
+    const path = `${userId}/${name}`;
+    if (out.doc_type === "echo") {
+      await archiveEcho(out, path);
+      renderEchoReview(out, path, name);
+      await refresh();
+      return;
+    }
     if (out.doc_type === "other") {
       msg("upmsg", `Read as: ${out.kind ?? "a medical document"}. Verve files echo reports and lab panels today — this PDF stays safe in your archive, and its type is on the roadmap.`);
       return;
     }
+    const filed = await archiveLab(out, path);
+    await refresh();
+    await renderLabReview(out, path, name, filed);
+  }
 
+  /** Archive a lab report's values — the writes, no DOM. */
+  async function archiveLab(out: any, path: string) {
     const date = out.report_date ?? new Date().toISOString().slice(0, 10);
     const appValues = (out.values ?? []).filter((v: any) => LABELS[v.key] && Number.isFinite(v.value));
     const allValues = (out.all_values ?? [])
@@ -883,7 +1056,13 @@ import Footer from "../components/Footer.astro";
     for (const v of appValues) {
       if ((appExisting ?? []).some((r: any) => r[v.key] === v.value)) dupKeys.add(v.key);
     }
+    return { date, appValues, allValues, fresh, dupKeys };
+  }
 
+  /** The two-tier review — DOM only; `filed` comes from archiveLab. */
+  async function renderLabReview(out: any, path: string, name: string,
+    filed: { date: string; appValues: any[]; allValues: any[]; fresh: any[]; dupKeys: Set<string> }) {
+    const { date, appValues, allValues, fresh, dupKeys } = filed;
     parsed = { path, lpa_unit: out.lpa_unit ?? null, dupKeys };
     $("rvtitle").textContent = name.replace(/^\d+-/, "");
     $("rvcount").textContent = `${allValues.length} VALUES READ`;
@@ -936,9 +1115,6 @@ import Footer from "../components/Footer.astro";
 
     show("review", true);
     $("review").classList.add("flex");
-    await refresh();
-    show("review", true);   // refresh re-renders around it; keep it up
-    $("review").classList.add("flex");
   }
 
   /**
@@ -947,11 +1123,16 @@ import Footer from "../components/Footer.astro";
    * report itself printed), and the doctor's impression + per-structure
    * findings go to imaging_reports VERBATIM. Numbers and prose never mix.
    */
-  async function handleEcho(out: any, path: string, name: string) {
-    const date = out.report_date ?? new Date().toISOString().slice(0, 10);
-    const values = (out.echo_values ?? [])
+  /** An echo's numeric parameters, canonical-named — shared by both halves. */
+  function echoValues(out: any): any[] {
+    return (out.echo_values ?? [])
       .filter((v: any) => typeof v?.name === "string" && Number.isFinite(v?.value))
       .map((v: any) => ({ ...v, name: canonName(v.name) }));
+  }
+
+  async function archiveEcho(out: any, path: string) {
+    const date = out.report_date ?? new Date().toISOString().slice(0, 10);
+    const values = echoValues(out);
 
     // dedup + archive, same contract as lab analytes
     const { data: existing } = await supabase.from("web_labs")
@@ -976,7 +1157,13 @@ import Footer from "../components/Footer.astro";
       impression: out.impression ?? null, findings: out.findings ?? null,
     }, { onConflict: "user_id,report_path" });
     if (imgErr) { msg("upmsg", `Could not save the report's narrative: ${imgErr.message}`, true); }
+    return { date, values };
+  }
 
+  /** The echo review — DOM only; the writes happened in archiveEcho. */
+  function renderEchoReview(out: any, path: string, name: string) {
+    const date = out.report_date ?? new Date().toISOString().slice(0, 10);
+    const values = echoValues(out);
     const findings = Array.isArray(out.findings) ? out.findings : [];
     $("echoreview").innerHTML = `
       <div class="flex flex-wrap items-center gap-3">
@@ -1012,7 +1199,6 @@ import Footer from "../components/Footer.astro";
       </div>`;
     show("echoreview", true);
     $("echoclose").addEventListener("click", () => show("echoreview", false));
-    await refresh();
   }
 
   // ── send the app tier → lab_readings, the app's own table ──────────────
