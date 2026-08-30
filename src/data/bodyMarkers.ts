@@ -297,8 +297,8 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     slug: "ffmi",
     section: "Muscle",
     label: "FFMI",
-    purpose: "Lean mass indexed to your height, from a smart-scale reading",
-    note: "Whole-body fat-free mass ÷ height². A NUTRITION measure, not a sarcopenia one: EWGSOP2 and AWGS do not use FFMI at all — they use ALM and ALMI, which isolate limb muscle. Fat-free mass includes the trunk and its organs. Computed from your body fat %, weight and height — record a body fat reading and this follows.",
+    purpose: "Fat-free mass, indexed to your height",
+    note: "Whole-body fat-free mass ÷ height², computed from your body fat %, weight and height. A NUTRITION measure, not a sarcopenia one: EWGSOP2 and AWGS do not use FFMI at all — they use ALM and ALMI, which isolate limb muscle, while fat-free mass includes the trunk and its organs.",
     units: ["kg/m²"],
     howTo: [],
     bands: [
