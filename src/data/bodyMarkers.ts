@@ -6,7 +6,7 @@
  * thresholds printed here cannot drift from the ones a reader was just shown
  * on their phone. Edit the marker definition and regenerate.
  *
- * Ranges shown for a 50-year-old man; several move with sex, age or ancestry.
+ * Ranges shown for a 50-year-old man of 175 cm; several move with sex, age, height or ancestry.
  */
 
 export interface BodyMarkerExplainer {
@@ -22,7 +22,7 @@ export interface BodyMarkerExplainer {
   citation: string;
 }
 
-export const BODY_MARKER_CONTEXT = "Ranges shown for a 50-year-old man; several move with sex, age or ancestry.";
+export const BODY_MARKER_CONTEXT = "Ranges shown for a 50-year-old man of 175 cm; several move with sex, age, height or ancestry.";
 
 export const BODY_MARKERS: BodyMarkerExplainer[] = [
   {
@@ -117,8 +117,8 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
       "Don't hold your breath or pull your stomach in.",
     ],
     bands: [
-      "In range: < 102 cm",
-      "Elevated: ≥ 102 cm",
+      "In range: < 94 cm",
+      "Elevated: ≥ 94 cm",
     ],
     citation: "IDF 2006 ethnicity-adjusted cutoffs.",
   },
@@ -212,6 +212,24 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     citation: "AHA/CDC Scientific Statement on markers of inflammation and cardiovascular disease (Pearson TA et al, Circulation 2003;107:499-511). Relative cardiovascular risk bands: <1.0 mg/L low, 1.0-3.0 mg/L average, >3.0 mg/L high.",
   },
   {
+    slug: "alm",
+    section: "Muscle",
+    label: "Lean mass (ALM)",
+    purpose: "Muscle on your arms and legs, from a DXA scan",
+    note: "Arms + legs lean mass, read straight off a DXA report — not Apple Health's lean mass, which is whole-body and roughly twice this.",
+    units: ["kg"],
+    howTo: [
+      "Open your DXA report and find the appendicular or arms+legs lean mass.",
+      "It is the sum of the four limbs, in kilograms — not total lean mass.",
+      "Enter that figure; Verve divides it by your height squared to get ALMI.",
+    ],
+    bands: [
+      "In range: ≥ 21.4 kg",
+      "Low: < 21.4 kg",
+    ],
+    citation: "EWGSOP2 (Cruz-Jentoft 2019) · AWGS 2019 for Asian cut-offs.",
+  },
+  {
     slug: "handgrip",
     section: "Muscle",
     label: "Grip strength",
@@ -231,6 +249,20 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     citation: "EWGSOP2 (Cruz-Jentoft 2019) — sarcopenia case-finding.",
   },
   {
+    slug: "ffmi",
+    section: "Muscle",
+    label: "FFMI",
+    purpose: "Lean mass indexed to your height, from a smart-scale reading",
+    note: "The BIA counterpart of ALM: where a DXA report gives lean mass directly, a smart scale gives body fat and FFMI is derived from it. Computed from your body fat %, weight and height — record a body fat reading and this follows.",
+    units: ["kg/m²"],
+    howTo: [],
+    bands: [
+      "In range: ≥ 18 kg/m²",
+      "Low: < 18 kg/m²",
+    ],
+    citation: "EWGSOP2 (Cruz-Jentoft 2019) · AWGS 2019 for Asian cut-offs.",
+  },
+  {
     slug: "body-fat",
     section: "Muscle",
     label: "Body fat",
@@ -242,7 +274,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
       "In range: Below the age cut",
       "High: Above the age cut",
     ],
-    citation: "",
+    citation: "ESPEN/EASO 2022 — sarcopenic obesity; WHO thresholds below age 40.",
   },
   {
     slug: "skel-musc",
@@ -253,7 +285,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     units: ["%"],
     howTo: [],
     bands: [],
-    citation: "",
+    citation: "Janssen et al. 2000 (NHANES) with BIA population survey norms.",
   },
   {
     slug: "balance",
