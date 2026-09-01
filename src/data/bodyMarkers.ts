@@ -331,8 +331,10 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     units: ["%"],
     howTo: [],
     bands: [
-      "In range: Below the age cut",
-      "High: Above the age cut",
+      "In range: 8–24.9%",
+      "Borderline: 25–28.9%",
+      "Low: < 8%",
+      "Elevated: ≥ 29%",
     ],
     citation: "ESPEN/EASO 2022 — sarcopenic obesity; WHO thresholds below age 40.",
     detail: [],
