@@ -298,7 +298,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     section: "Muscle",
     label: "Body fat",
     purpose: "Share of body mass that is fat",
-    note: "From a DXA scan or a BIA smart scale.",
+    note: "Whole-body fat-free mass ÷ height², computed from your body fat %, weight and height. A NUTRITION measure, not a sarcopenia one: EWGSOP2 and AWGS do not use FFMI at all — they use ALM and ALMI, which isolate limb muscle, while fat-free mass includes the trunk and its organs.",
     units: ["%"],
     howTo: [],
     bands: [
@@ -308,8 +308,21 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
       "Elevated: ≥ 29%",
     ],
     citation: "ESPEN/EASO 2022 — sarcopenic obesity; WHO thresholds below age 40.",
-    detail: [],
-    references: [],
+    detail: [
+      "FFMI cut-offs exist within NUTRITION frameworks, not within the muscle-strength ones. ESPEN and GLIM both define them; EWGSOP2's sarcopenia algorithm does not use FFMI at all, relying on ALM and ALMI instead.",
+      "ESPEN 2015 consensus criteria for malnutrition (DXA-derived FFMI): low is <17 kg/m² in men and <15 kg/m² in women. FFMI is used only as an ALTERNATIVE to reduced BMI, and only once unintentional weight loss is present — more than 10% at any time, or more than 5% over three months. Neither FFMI nor BMI alone diagnoses malnutrition.",
+      "GLIM 2019 uses the same FFMI thresholds as its reduced-muscle-mass phenotypic criterion — <17 kg/m² men, <15 kg/m² women, equivalent to ALMI <7.0 and <5.5 per EWGSOP2. A diagnosis requires that phenotypic criterion PLUS at least one etiologic criterion: reduced intake or assimilation, or disease-related inflammation.",
+      "These cut-offs were validated by DXA in the SarcoPhAge cohort and were associated with increased mortality in malnourished older adults.",
+      "Separately, population screening studies using BIA-derived FFMI have proposed surrogate thresholds of 17.5–18 kg/m² in men and 14.4–15 kg/m² in women, correlating with DXA-defined low ALMI in Japanese cohorts, with one linking low FFMI to increased fall risk. These are research-derived and ethnicity-specific — not formal guideline cut-offs — so Verve classifies against ESPEN/GLIM and names them here rather than applying them silently.",
+    ],
+    references: [
+      "Cederholm T, Bosaeus I, Barazzoni R, et al. Diagnostic Criteria for Malnutrition — An ESPEN Consensus Statement. Clinical Nutrition. 2015.",
+      "Sanchez-Rodriguez D, Locquet M, Reginster JY, et al. Mortality in malnourished older adults diagnosed by ESPEN and GLIM criteria in the SarcoPhAge study. Journal of Cachexia, Sarcopenia and Muscle. 2020.",
+      "Cederholm T, Bosaeus I. Malnutrition in Adults. The New England Journal of Medicine. 2024.",
+      "Kawakami R, Tanisawa K, Ito T, et al. Fat-Free Mass Index as a Surrogate Marker of Appendicular Skeletal Muscle Mass Index for Low Muscle Mass Screening in Sarcopenia. JAMDA. 2022.",
+      "Takagi S, Maeda K, Satake S, et al. Fat-Free Mass Index Cutoff Values for Reduced Muscle Mass in Older Community-Dwelling Adults in Japan: A Descriptive Cohort Study. JPEN. 2025.",
+      "Yin L, Cao Y, Tang M, et al. Operationalizing the Global Leadership Initiative in Sarcopenia: Muscle-Specific Strength, Optimal Criteria and Clinical Relevance. Journal of Cachexia, Sarcopenia and Muscle. 2026.",
+    ],
   },
   {
     slug: "skel-musc",
