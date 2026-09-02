@@ -259,7 +259,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
   {
     slug: "alm",
     section: "Muscle",
-    label: "Lean Mass",
+    label: "Lean Mass (arms + legs)",
     purpose: "Muscle on your arms and legs, from a DXA scan",
     note: "Arms + legs lean mass, read straight off a DXA report — not Apple Health's lean mass, which is whole-body and roughly twice this. Judged as ALMI (ALM ÷ height²), the form EWGSOP2 writes its cut-offs against.",
     units: ["kg"],
