@@ -27,6 +27,7 @@ const nav = [
   { slug: "crf", label: "Cardiorespiratory Fitness" },
   { slug: "test-crf", label: "Test Your CRF" },
   { slug: "movement-balance", label: "Movement Balance" },
+  { slug: "activity-level", label: "Activity Level (PAL)" },
   { slug: "steps", label: "Steps & Cadence" },
   { slug: "zone-2", label: "Zone 2 Training" },
   { slug: "sleep-rhythm", label: "Sleep Timing" },
@@ -200,6 +201,61 @@ const nav = [
       </div>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
         {[...MOVEMENT_BALANCE_SECTION, ...SEDENTARY_EXTRA].map((c) => <CitationCard {...c} />)}
+      </div>
+    </section>
+
+    <!-- ── Activity Level (PAL) ──────────────────────────────────────── -->
+    <section id="activity-level" class="scroll-mt-8">
+      <h2 class="text-2xl font-bold text-text-primary">Activity Level (PAL)</h2>
+      <p class="mt-2 text-sm text-text-tertiary">How active your whole day is — and how much of that number to trust</p>
+
+      <div class="mt-6 space-y-4 text-sm leading-relaxed text-text-secondary">
+        <p>
+          <strong class="text-text-primary">Physical Activity Level</strong> measures how active your
+          entire day is, not just your workouts. It is your total daily energy expenditure divided by
+          your basal metabolic rate — the energy your body would use lying still. A PAL of 1.0 would
+          mean complete bed rest. Around 2.5 is elite-athlete territory. Verve reads it from Apple
+          Health's basal and active energy, averaged over seven days.
+        </p>
+
+        <h3 class="pt-2 text-lg font-semibold text-text-primary">The four levels</h3>
+        <p>
+          The tiers come from the Institute of Medicine's Dietary Reference Intakes, which defined
+          them to set energy requirements for populations: sedentary 1.00–1.39, low active 1.40–1.59,
+          active 1.60–1.89, very active 1.90–2.50.
+        </p>
+
+        <h3 class="pt-2 text-lg font-semibold text-text-primary">Read the trend, not the number</h3>
+        <p>
+          Both halves of this ratio are estimates, so the error compounds. Active calories come from
+          your wrist, where systematic reviews put energy-expenditure error above 30%, and they miss
+          effort that does not move your arm — cycling, rowing, lifting, carrying. Your resting figure
+          is not measured at all; it is predicted from your height, weight, age and sex. Every wearable
+          tested against doubly-labelled water <em>under</em>-estimates, for Apple Watch by roughly
+          394 kcal a day, and the bias grows at higher effort and higher body fat.
+        </p>
+        <p>
+          The practical consequence: a single PAL carries a band wide enough to straddle two tiers.
+          Whether it drifts up over months does not. That is why Verve shows this as a trend read
+          against the tier bands rather than as a figure to hit, and why the app's chart marks which
+          band each week or month fell in rather than asking you to read a slope off a noisy line.
+        </p>
+
+        <h3 class="pt-2 text-lg font-semibold text-text-primary">The one correction Verve makes</h3>
+        <p>
+          Apple reports basal and active energy but not the thermic effect of food — the energy spent
+          digesting, conventionally about 10% of total daily expenditure. Their sum is therefore not
+          total daily energy expenditure, so Verve divides by 0.9 to recover it. That correction is
+          definitional rather than a judgement call, and it is the only adjustment applied.
+        </p>
+        <p>
+          Two further adjustments were tried and removed: an additive correction for occupational
+          activity, and a rule that raised the tier when logged training contradicted a sedentary
+          label. Both were judgement calls stacked on a base with more than 30% error, and the
+          occupational one double-counted part of the very bias the thermic-effect correction already
+          approximates. Layers of inference do not rescue a noisy instrument; they only obscure how
+          noisy it is.
+        </p>
       </div>
     </section>
 
