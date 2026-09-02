@@ -120,8 +120,8 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
   {
     slug: "waist",
     section: "Metabolic",
-    label: "Waist circumference",
-    purpose: "Circumference at the navel",
+    label: "Waist",
+    purpose: "The tape, and the two ratios it produces",
     note: "A tape measure, used properly, captures cardiovascular risk that BMI misses. Verve leads with waist-to-height, because it needs only the waist and the height already on file.",
     units: ["cm"],
     howTo: [
