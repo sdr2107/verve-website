@@ -203,6 +203,41 @@ const nav = [
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
         {[...MOVEMENT_BALANCE_SECTION, ...SEDENTARY_EXTRA].map((c) => <CitationCard {...c} />)}
       </div>
+
+      <h3 class="mt-10 text-lg font-semibold text-text-primary">What each figure on the card means</h3>
+      <div class="mt-4 space-y-4 text-sm leading-relaxed text-text-secondary">
+        <p>
+          <strong class="text-text-primary">Sedentary hours.</strong> A waking hour with fewer than
+          50 steps in it counts as sedentary. Steps come from Apple Health, so nothing is typed in.
+          Waking hours are your measured sleep where Verve has it, and 7am to 10pm where it does
+          not — the card says which, because an assumed wake time counts somebody's actual lie-in
+          as sitting.
+        </p>
+        <p>
+          <strong class="text-text-primary">Unbroken sitting.</strong> The longest run of
+          consecutive sedentary hours, not the daily total. This is the figure the evidence is
+          actually about: risk tracks uninterrupted sitting rather than hours accumulated across a
+          day, and six hours broken every thirty minutes is a different day from six hours in one
+          block. A sleep hour or a workout ends a run — you were not sitting through either.
+        </p>
+        <p>
+          <strong class="text-text-primary">Standing minutes.</strong> Minutes Apple Watch detected
+          you upright and moving. More precise than the Stand ring, which credits a whole hour for
+          one minute on your feet: this counts the minutes themselves. Apple Watch only.
+        </p>
+        <p>
+          <strong class="text-text-primary">Napped.</strong> Daytime sleep, shown when there was
+          some. A nap is any sleep session that does not begin in the night (20:00 to 05:00),
+          however long it runs. It is drawn as rest on the terrain and excluded from sitting — you
+          were not sitting through it — and it is excluded from last night's sleep on the Sleep
+          card, because a nap is not a bedtime. The same rule decides both.
+        </p>
+        <p>
+          <strong class="text-text-primary">The 24-hour terrain.</strong> Height is steps per hour.
+          The strip beneath it is the hour's state: green active, orange sedentary, blue asleep
+          (naps included), grey an hour that has not happened yet.
+        </p>
+      </div>
     </section>
 
     <!-- ── Activity Level (PAL) ──────────────────────────────────────── -->
