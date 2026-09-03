@@ -26,6 +26,8 @@ const nav = [
   { slug: "mets-vs-met-h", label: "METs vs MET-h" },
   { slug: "crf", label: "Cardiorespiratory Fitness" },
   { slug: "test-crf", label: "Test Your CRF" },
+  { slug: "test-accuracy", label: "Test Accuracy" },
+  { slug: "run-protocols", label: "Run Protocols" },
   { slug: "movement-balance", label: "Movement Balance" },
   { slug: "activity-level", label: "Physical Activity Level" },
   { slug: "steps", label: "Steps & Cadence" },
@@ -187,8 +189,185 @@ const nav = [
         </p>
       </div>
 
+      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6" id="two-windows">
+        <h3 class="text-lg font-semibold text-text-primary">Why the app shows two windows</h3>
+        <p class="mt-3 text-sm leading-relaxed text-text-secondary">
+          The readiness card in the app carries one row measured over
+          <strong class="text-text-primary">three months</strong> and five
+          measured over <strong class="text-text-primary">eight weeks</strong>.
+          That is not an inconsistency. They answer different questions and
+          come from different places.
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          The three-month row is the exercise guideline&rsquo;s. ACSM defines
+          &ldquo;currently active&rdquo; as habitual activity over the past
+          three months, and that definition is used for one decision only:
+          whether you should speak to a doctor before an all-out effort. It is
+          a screening threshold, and screening thresholds are conservative on
+          purpose.
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          The eight-week rows are Verve&rsquo;s own, and they answer a
+          physiological question instead: which test suits the training you
+          have actually done. Eight weeks is chosen because that is roughly how
+          long fitness takes to move by an amount a field test can detect
+          (Hickson 1981). Neither number can stand in for the other. Borrowing
+          the screening threshold to answer the physiology question is how an
+          app ends up recommending a maximal run to someone who walked twice
+          last month.
+        </p>
+      </div>
+
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
         {TEST_CRF_SECTION.map((c) => <CitationCard {...c} />)}
+      </div>
+    </section>
+
+    <!-- ── How accurate each test is ─────────────────────── -->
+    <section id="test-accuracy" class="scroll-mt-8">
+      <h2 class="text-2xl font-bold text-text-primary">How Accurate Each Test Is</h2>
+      <p class="mt-2 text-sm text-text-tertiary">What r &asymp; 0.90 means, what the stars mean, and where these tests stop working</p>
+
+      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+        <h3 class="text-lg font-semibold text-text-primary">The r value</h3>
+        <p class="mt-3 text-sm leading-relaxed text-text-secondary">
+          Every test in Verve carries a small badge &mdash;
+          <code class="rounded bg-white/8 px-1.5 py-0.5 text-xs">r &asymp; 0.90</code>
+          on the Cooper run, for instance. <strong class="text-text-primary">r
+          is a correlation coefficient</strong>: how closely the test&rsquo;s
+          estimate tracks a true VO&#8322;Max measured in a laboratory with a
+          gas-analysis mask. It runs from 0 (no relationship at all) to 1 (a
+          perfect one).
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          An r of 0.90 means the test ranks people almost exactly as the lab
+          would. Someone it puts above you would almost certainly test above
+          you on a treadmill. What r does <em>not</em> tell you is how far off
+          any single number is &mdash; a test can rank a whole group perfectly
+          and still read a few points high for everyone in it. That is why the
+          honest use of a field test is
+          <strong class="text-text-primary">comparing you against yourself over
+          time</strong>, on the same test, rather than treating one result as a
+          laboratory measurement.
+        </p>
+
+        <div class="mt-6 overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead>
+              <tr class="border-b border-white/10 text-xs uppercase tracking-wide text-text-tertiary">
+                <th class="pb-2 pr-4 font-medium">Test</th>
+                <th class="pb-2 pr-4 font-medium">Effort</th>
+                <th class="pb-2 font-medium">Accuracy</th>
+              </tr>
+            </thead>
+            <tbody class="text-text-secondary">
+              <tr class="border-b border-white/5"><td class="py-2 pr-4">Bruce Protocol</td><td class="py-2 pr-4">Maximal, supervised</td><td class="py-2">&plusmn;3.5 mL/kg/min</td></tr>
+              <tr class="border-b border-white/5"><td class="py-2 pr-4">Cooper 12-Minute Run</td><td class="py-2 pr-4">Maximal</td><td class="py-2">r &asymp; 0.90</td></tr>
+              <tr class="border-b border-white/5"><td class="py-2 pr-4">1.5-Mile Run</td><td class="py-2 pr-4">Maximal</td><td class="py-2">r &asymp; 0.85</td></tr>
+              <tr class="border-b border-white/5"><td class="py-2 pr-4">1-Mile Walk Test</td><td class="py-2 pr-4">Submaximal</td><td class="py-2">r &asymp; 0.88</td></tr>
+              <tr><td class="py-2 pr-4">6-Minute Walk Test</td><td class="py-2 pr-4">Submaximal</td><td class="py-2">~13% MAPE</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="mt-4 text-xs leading-relaxed text-text-tertiary">
+          MAPE is mean absolute percentage error &mdash; the average size of the
+          miss, regardless of direction. It answers the question r cannot.
+        </p>
+      </div>
+
+      <div class="mt-4 rounded-2xl border border-white/8 bg-white/4 p-6">
+        <h3 class="text-lg font-semibold text-text-primary">The stars</h3>
+        <p class="mt-3 text-sm leading-relaxed text-text-secondary">
+          The star rating is Verve&rsquo;s own shorthand for how much weight a
+          result deserves, and it combines two things the r value keeps
+          separate: how well the method is validated, and how much of the
+          answer depends on you performing well on the day. Four stars are the
+          maximal tests, where the number is limited by your physiology. Three
+          stars are the submaximal ones, which estimate your capacity from how
+          your heart responds to easy work &mdash; safer, repeatable, and one
+          inference further from the thing being measured.
+        </p>
+      </div>
+
+      <div class="mt-4 rounded-2xl border border-white/8 bg-white/4 p-6">
+        <h3 class="text-lg font-semibold text-text-primary">Where these tests stop working</h3>
+        <p class="mt-3 text-sm leading-relaxed text-text-secondary">
+          Field-test estimates are most accurate for active-to-trained young and
+          middle-aged adults, because that is who the validation studies
+          recruited. They are less reliable at both edges: highly trained
+          athletes, whose results compress near the top of the scale, and very
+          sedentary people, who are under-represented in the original data and
+          whose pacing on an unfamiliar all-out effort is itself unpractised.
+          If you sit at either edge, the trend in your own numbers is worth more
+          than any single one of them.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── The run protocols in full ─────────────────────── -->
+    <section id="run-protocols" class="scroll-mt-8">
+      <h2 class="text-2xl font-bold text-text-primary">The Run Protocols In Full</h2>
+      <p class="mt-2 text-sm text-text-tertiary">What the app&rsquo;s checklist is short for</p>
+
+      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+        <p class="text-sm leading-relaxed text-text-secondary">
+          The app shows these as a short checklist on purpose. You read it
+          standing on a start line, and a paragraph of reasoning is the wrong
+          thing to hand someone in that moment. The reasoning is here.
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          <strong class="text-text-primary">No hard exercise for 24 hours.</strong>
+          A maximal test measures your ceiling, and residual fatigue lowers it.
+          Testing the day after a hard session reads as a fitness decline that
+          never happened &mdash; the most common way a person records a drop
+          they then try to explain.
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          <strong class="text-text-primary">Warm up for 10&ndash;15 minutes.</strong>
+          Beyond injury risk, an unwarmed start spends the first minutes of a
+          12-minute test on physiology a warm-up would already have handled, and
+          those minutes are a measurable part of the distance.
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          <strong class="text-text-primary">Start controlled, finish hard.</strong>
+          The Cooper test rewards even pacing. Going out too fast produces an
+          early slowdown that costs more distance than the fast start gained,
+          which is why first-time testers frequently under-read their own
+          fitness. On the 1.5-mile run the same logic applies to splits.
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          <strong class="text-text-primary">Walk if you need to, but keep
+          moving.</strong> The test is a distance in a fixed time (Cooper) or a
+          time over a fixed distance (1.5-mile). Stopping entirely ends the
+          test; walking is a slower pace, not a failure, and a walked finish is
+          still a valid result.
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          <strong class="text-text-primary">Why a large meal matters.</strong>
+          Digestion diverts blood flow a maximal effort is competing for. Two to
+          three hours is enough for a normal meal; the guidance is about comfort
+          and performance rather than safety.
+        </p>
+      </div>
+
+      <div class="mt-4 rounded-2xl border border-white/8 bg-white/4 p-6">
+        <h3 class="text-lg font-semibold text-text-primary">The stop signals, and why they are absolute</h3>
+        <p class="mt-3 text-sm leading-relaxed text-text-secondary">
+          Chest pain, dizziness, lightheadedness, nausea, leg cramps, or
+          breathlessness beyond hard breathing mean stop &mdash; not slow down.
+          Hard running is uncomfortable, and the difficulty is telling ordinary
+          maximal-effort discomfort from a symptom. The rule Verve uses is that
+          you should not have to make that judgement: if you meet any of these,
+          the test is over and the result does not matter.
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          The same symptoms in the hours after a test warrant medical attention.
+          Cardiac events associated with unaccustomed maximal exertion are rare,
+          and are concentrated in people doing an all-out effort they have not
+          trained for &mdash; which is precisely what the safety check and the
+          eight-week training window exist to catch before you reach the start
+          line.
+        </p>
       </div>
     </section>
 
