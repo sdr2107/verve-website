@@ -36,6 +36,7 @@ const nav = [
   { slug: "heart-health", label: "Heart Health" },
   { slug: "body-phenotyping", label: "Body Phenotyping" },
   { slug: "muscle-health", label: "Muscle Health" },
+  { slug: "intrinsic-capacity", label: "Intrinsic Capacity" },
 ];
 ---
 
@@ -496,6 +497,104 @@ const nav = [
       <div class="mt-6"><VideoSlot topic="Muscle Health & Grip Strength" /></div>
       <div class="mt-6 grid gap-4 sm:grid-cols-2">
         {MUSCLE_HEALTH_SECTION.map((c) => <CitationCard {...c} />)}
+      </div>
+    </section>
+
+    <!-- ── Intrinsic Capacity ────────────────────────────────────────── -->
+    <section id="intrinsic-capacity" class="scroll-mt-8">
+      <h2 class="text-2xl font-bold text-text-primary">Intrinsic Capacity</h2>
+      <p class="mt-2 text-sm text-text-tertiary">Why grip, walking speed, chair stand and SPPB belong in the same room — and which parts of the picture Verve does not measure</p>
+
+      <div class="mt-6 space-y-4 text-sm leading-relaxed text-text-secondary">
+        <p>
+          <strong class="text-text-primary">Intrinsic capacity</strong> is the World Health
+          Organization's name for everything a person's body and mind can do — their functional
+          reserve, taken as a whole rather than as a list of diseases. It was defined in the 2015
+          <em>World Report on Ageing and Health</em> as the centrepiece of a deliberate shift: away
+          from asking what conditions an older adult has, and toward asking what they are able to
+          do and whether that is changing.
+        </p>
+
+        <h3 class="pt-2 text-lg font-semibold text-text-primary">The five domains</h3>
+        <p>
+          The framework scores a person across five areas: <strong class="text-text-primary">locomotion</strong>
+          (strength and mobility), <strong class="text-text-primary">vitality</strong> (energy,
+          nutrition and resilience to physical stress), <strong class="text-text-primary">cognition</strong>,
+          <strong class="text-text-primary">sensory capacity</strong> (vision and hearing) and
+          <strong class="text-text-primary">psychological wellbeing</strong>. Many of the instruments
+          are ones geriatric medicine already uses: grip strength, usual-pace walking speed, the
+          five-times chair rise, and the Short Physical Performance Battery that scores balance,
+          gait and chair stand together.
+        </p>
+        <p>
+          Lower intrinsic capacity predicts disability and mortality in older adults, and in 2022 the
+          WHO added <em>ageing-associated decline in intrinsic capacity</em> to the eleventh revision
+          of the International Classification of Diseases. What researchers most want from it, though,
+          is not a single reading but a trajectory: a person followed over time, so that a decline is
+          seen early enough to do something about it — often while they are still robust and have no
+          diagnosis at all.
+        </p>
+
+        <h3 class="pt-2 text-lg font-semibold text-text-primary">What Verve measures, and what it does not</h3>
+        <div class="overflow-x-auto">
+          <table class="mt-2 w-full text-left text-sm">
+            <thead class="text-xs uppercase tracking-wider text-text-tertiary">
+              <tr><th class="py-2 pr-4">Domain</th><th class="py-2 pr-4">WHO's screening measures</th><th class="py-2">In Verve</th></tr>
+            </thead>
+            <tbody class="divide-y divide-white/[0.07]">
+              <tr><td class="py-2 pr-4 text-text-primary">Locomotion</td><td class="py-2 pr-4">chair rise, gait speed, SPPB, grip</td><td class="py-2">All four, with cited cut-offs</td></tr>
+              <tr><td class="py-2 pr-4 text-text-primary">Vitality</td><td class="py-2 pr-4">weight loss, appetite, muscle mass</td><td class="py-2">Lean mass, ALMI, FFMI, body fat, physical activity level</td></tr>
+              <tr><td class="py-2 pr-4 text-text-primary">Cognition</td><td class="py-2 pr-4">orientation, recall</td><td class="py-2 text-text-tertiary">Not measured</td></tr>
+              <tr><td class="py-2 pr-4 text-text-primary">Sensory</td><td class="py-2 pr-4">vision, hearing</td><td class="py-2 text-text-tertiary">Not measured</td></tr>
+              <tr><td class="py-2 pr-4 text-text-primary">Psychological</td><td class="py-2 pr-4">mood, depression screen</td><td class="py-2 text-text-tertiary">Not measured</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Two of the five domains, and those are the two whose instruments are objective rather
+          than questionnaires — the half of intrinsic capacity a phone and a tape measure can
+          honestly do. The other three are screened in clinic with validated tools, and Verve does
+          not attempt them: a reaction-time widget presented as a cognition score would be exactly
+          the kind of invented measure this app exists to avoid.
+        </p>
+
+        <h3 class="pt-2 text-lg font-semibold text-text-primary">The ceiling, and the measure that has none</h3>
+        <p>
+          The locomotion tests were designed to detect decline in people over about 65. In a healthy
+          40-year-old, SPPB reads 11 or 12 out of 12, chair stand is comfortably under the cut-off,
+          and gait speed is well above it — and that will stay true for a long time. Verve keeps
+          these tests because they are the right instruments for later, and because a baseline
+          recorded while a number is boring is what makes a later change visible. But they are not
+          where a younger user's signal lives.
+        </p>
+        <p>
+          The measure that varies across the whole lifespan and predicts mortality at every age is
+          <a href="#crf">cardiorespiratory fitness</a>. That is why METs are Verve's primary metric
+          rather than a functional battery: it is the one capacity that is already informative at 30,
+          and still informative at 80.
+        </p>
+
+        <h3 class="pt-2 text-lg font-semibold text-text-primary">What Verve deliberately does not do</h3>
+        <p>
+          Verve does not compute an intrinsic capacity score. The composite's value as a proxy for
+          healthy ageing is still being established — that is the explicit purpose of the current
+          research programmes — and a single number synthesised from two of five domains would be
+          an overclaim wearing the WHO's vocabulary. Each measure is shown on its own, against its
+          own cited range, with its own history. The trajectory is the point; the arithmetic can
+          wait for the evidence.
+        </p>
+
+        <h3 class="pt-2 text-lg font-semibold text-text-primary">References</h3>
+        <ol class="list-decimal space-y-1 pl-5 text-xs text-text-tertiary">
+          <li>World Health Organization. World Report on Ageing and Health. Geneva: WHO; 2015.</li>
+          <li>Beard JR, Officer A, de Carvalho IA, et al. The World report on ageing and health: a policy framework for healthy ageing. Lancet. 2016;387(10033):2145-2154.</li>
+          <li>World Health Organization. Integrated Care for Older People (ICOPE): Guidelines on community-level interventions to manage declines in intrinsic capacity. Geneva: WHO; 2017.</li>
+          <li>Cesari M, Araujo de Carvalho I, Amuthavalli Thiyagarajan J, et al. Evidence for the domains supporting the construct of intrinsic capacity. J Gerontol A Biol Sci Med Sci. 2018;73(12):1653-1660.</li>
+          <li>Beard JR, Si Y, Liu Z, Chenoweth L, Hanewald K. Intrinsic capacity: validation of a new WHO concept for healthy aging in a longitudinal Chinese study. J Gerontol A Biol Sci Med Sci. 2022;77(1):94-100.</li>
+          <li>World Health Organization. ICD-11 for Mortality and Morbidity Statistics, MG2A: Ageing associated decline in intrinsic capacity. 2022.</li>
+          <li>Guralnik JM, Simonsick EM, Ferrucci L, et al. A short physical performance battery assessing lower extremity function. J Gerontol. 1994;49(2):M85-94.</li>
+          <li>Mandsager K, Harb S, Cremer P, et al. Association of cardiorespiratory fitness with long-term mortality among adults undergoing exercise treadmill testing. JAMA Netw Open. 2018;1(6):e183605.</li>
+        </ol>
       </div>
     </section>
   </main>
