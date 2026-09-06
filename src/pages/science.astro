@@ -19,6 +19,7 @@ import {
   MUSCLE_HEALTH_SECTION,
   SLEEP_RHYTHM_SECTION,
   RESTING_HR_SECTION,
+  HEART_RATE_RECOVERY_SECTION,
 } from "../data/science";
 import { BODY_MARKERS, BODY_MARKER_CONTEXT } from "../data/bodyMarkers";
 
@@ -34,6 +35,7 @@ const nav = [
   { slug: "zone-2", label: "Zone 2 Training" },
   { slug: "sleep-rhythm", label: "Sleep Timing" },
   { slug: "resting-heart-rate", label: "Resting Heart Rate" },
+  { slug: "heart-rate-recovery", label: "Heart Rate Recovery" },
   { slug: "weekly-volume", label: "Weekly Volume" },
   { slug: "heart-health", label: "Heart Health" },
   { slug: "body-phenotyping", label: "Body Phenotyping" },
@@ -564,6 +566,70 @@ const nav = [
       </div>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
         {RESTING_HR_SECTION.map((c) => <CitationCard {...c} />)}
+      </div>
+    </section>
+
+    <!-- ── Heart Rate Recovery ───────────────────────────────────── -->
+    <section id="heart-rate-recovery" class="scroll-mt-8">
+      <h2 class="text-2xl font-bold text-text-primary">Heart Rate Recovery</h2>
+      <p class="mt-2 text-sm text-text-tertiary">How far your heart rate falls in the first minute after you stop &mdash; one cited line, and a trend against your own normal</p>
+
+      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+        <p class="text-sm leading-relaxed text-text-secondary">
+          Heart rate recovery is the drop from your peak exercising heart rate to
+          the rate a fixed time later &mdash; most often one minute. The early part
+          of that fall is driven mainly by the vagus nerve switching back on;
+          slower sympathetic withdrawal follows over the next few minutes. It is,
+          in effect, a read of how quickly your autonomic nervous system lets go
+          of effort &mdash; and it predicts mortality independently of how fit you
+          are or how much coronary disease you have.
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          <strong class="text-text-primary">The one line Verve draws is 12 bpm.</strong>
+          In the original study of 2,428 people, a fall of 12 beats or fewer in the
+          first minute carried roughly a four-fold higher mortality risk over six
+          years. The American Heart Association&rsquo;s exercise-testing statement
+          names it the most frequently used cut-point, and a 2025 cohort found the
+          same threshold associated with a hazard ratio of about 3.2 for death at
+          72 months. That is why the scale on the card is red up to 12 and marks
+          nothing else as a verdict.
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          <strong class="text-text-primary">Why there is no &ldquo;good&rdquo; number.</strong>
+          You will see 18&ndash;20 bpm quoted as a healthy recovery. It is a lay
+          benchmark, not a validated norm: published cut-points for one-minute
+          recovery run anywhere from 12 to 30 bpm depending on the study, the
+          population and the protocol. What the evidence does show is that the
+          relationship is not a switch. Risk falls steeply as recovery improves to
+          somewhere around 15&ndash;20 bpm, then the curve flattens &mdash; beyond
+          that range, extra recovery buys little further protection. Verve shades
+          the scale above 12 from amber towards green to say exactly that, and
+          deliberately draws no second line.
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          <strong class="text-text-primary">The number depends on what you do after you stop.</strong>
+          Recovery measured while walking slowly is different from recovery
+          measured sitting or lying down; passive recovery produces larger drops
+          and needs higher cut-points. The 12 bpm line was derived with an active
+          walking cool-down. Apple Watch measures recovery in whatever you happen
+          to do after ending a workout, which is one more reason the comparison
+          Verve leads with is <strong class="text-text-primary">you against your own
+          30-day median</strong> &mdash; the same rule as resting heart rate &mdash;
+          rather than you against a table. Your protocol is at least consistent
+          with itself. Recovery also declines with age and is higher in
+          adolescents, so a fixed adult line is not applied to younger users.
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          <strong class="text-text-primary">Where the number comes from.</strong>
+          Verve does not compute it. Apple Watch records one-minute heart rate
+          recovery after every workout and stores it in Apple Health; Verve reads
+          that value, adds the comparison to your own median, and places it on the
+          scale. Nothing is estimated.
+        </p>
+      </div>
+
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        {HEART_RATE_RECOVERY_SECTION.map((c) => <CitationCard {...c} />)}
       </div>
     </section>
 

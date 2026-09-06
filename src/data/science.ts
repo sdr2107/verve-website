@@ -251,6 +251,51 @@ export const SEDENTARY_EXTRA: Citation[] = [
   },
 ];
 
+export const HEART_RATE_RECOVERY_SECTION: Citation[] = [
+  {
+    title: "Cole et al — Heart-rate recovery immediately after exercise as a predictor of mortality, NEJM 1999",
+    summary:
+      "2,428 adults referred for exercise testing, followed for six years. A fall of 12 beats or fewer in the first minute after stopping was associated with roughly a four-fold higher risk of death, independent of workload and of changes on the ECG. This is the origin of the single line Verve draws — and the source of the risk curve that falls steeply to about 15–20 bpm and then flattens, which is why Verve shades above the line rather than drawing a second one.",
+    url: "https://www.nejm.org/doi/full/10.1056/nejm199910283411804",
+    color: "#e11d48",
+  },
+  {
+    title: "Fletcher et al — Exercise standards for testing and training, AHA Scientific Statement, Circulation 2013",
+    summary:
+      "The AHA statement names ≤12 bpm at one minute as the most frequently used abnormal cut-point, and spells out that the magnitude of recovery depends on the protocol: an upright active cool-down produces different values from stationary, seated or supine recovery, with higher cut-points for passive protocols. The original threshold was derived with active walking. It is the reason Verve reads your recovery against your own consistent protocol first.",
+    url: "https://www.ahajournals.org/doi/10.1161/CIR.0b013e31829b5b44",
+    color: "#f43f5e",
+  },
+  {
+    title: "Costa et al — Heart rate recovery and mortality in a 72-month survival analysis, Cadernos de Saúde Pública 2025",
+    summary:
+      "A recent cohort confirming the cut-point a quarter-century on: abnormal one-minute recovery (≤12 bpm) was associated with a hazard ratio of 3.16 for all-cause mortality at 72 months. Two independent populations landing on the same line is what earns it a place on the card.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/42090691",
+    color: "#be123c",
+  },
+  {
+    title: "Vivekananthan et al — Heart rate recovery predicts mortality independent of angiographic coronary disease, JACC 2003",
+    summary:
+      "Recovery predicted death even after accounting for how much coronary disease was visible on angiography. The autonomic signal is its own risk factor, not a proxy for blocked arteries — which is why it belongs beside resting heart rate rather than inside a heart-disease panel.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/12957428",
+    color: "#9f1239",
+  },
+  {
+    title: "Petek et al — Consumer wearable technology in cardiovascular medicine, JACC State-of-the-Art Review 2023",
+    summary:
+      "Reviews what consumer wearables can and cannot measure. On recovery it is blunt: there are no universally accepted normative values, published cut-points span 12–30 bpm at one minute and 22–42 at two, and a fixed 'good' threshold overstates the precision the evidence supports. The recommendation Verve follows — show recovery as a trend against the person's own baseline, and say which protocol was used — comes from here.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/37438010",
+    color: "#fb7185",
+  },
+  {
+    title: "Goldberger et al — Autonomic nervous system dysfunction, JACC Focus Seminar 2019",
+    summary:
+      "The physiology behind the number: early recovery is vagal reactivation, later recovery is sympathetic withdrawal. Also the source of the Jouven finding that one-minute recovery under 25 bpm roughly doubled sudden cardiac death risk against over 40 — a different dataset with different cut-points, underscoring that 12 is protocol- and population-specific rather than universal.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/30871703",
+    color: "#fda4af",
+  },
+];
+
 export const TEST_CRF_SECTION: Citation[] = [
   {
     title: "Hickson et al — Time course of adaptive responses of aerobic power, MSSE 1981",
