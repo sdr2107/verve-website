@@ -33,6 +33,7 @@ const nav = [
   { slug: "activity-level", label: "Physical Activity Level" },
   { slug: "steps", label: "Steps & Cadence" },
   { slug: "zone-2", label: "Zone 2 Training" },
+  { slug: "strength-training", label: "Strength Training" },
   { slug: "sleep-rhythm", label: "Sleep Timing" },
   { slug: "resting-heart-rate", label: "Resting Heart Rate" },
   { slug: "heart-rate-recovery", label: "Heart Rate Recovery" },
@@ -524,6 +525,43 @@ const nav = [
     <!-- ── Conditions: the three readings on the Activity card ───────────
          Linked directly from the app — each tile's "The research behind
          this" opens the matching anchor below, not the page root. -->
+
+    <!-- ── Strength Training ─────────────────────────────────────── -->
+    <section id="strength-training" class="scroll-mt-8">
+      <h2 class="text-2xl font-bold text-text-primary">Strength Training</h2>
+      <p class="mt-2 text-sm text-text-tertiary">Where the 60 minutes a week comes from &mdash; and why the app no longer draws it as a bar to clear</p>
+
+      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+        <p class="text-sm leading-relaxed text-text-secondary">
+          Verve treats strength as co-equal with aerobic training, not as an
+          add-on. In the UK Biobank analysis of over 70,000 adults, improving
+          cardiorespiratory fitness and muscle strength <em>together</em> was
+          associated with lower all-cause and cardiovascular mortality than
+          either alone &mdash; the two protect through different mechanisms, and
+          neither substitutes for the other.
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          <strong class="text-text-primary">The 60-minute figure.</strong> Public
+          guidance asks for muscle-strengthening activity on two or more days a
+          week; roughly an hour across those days is the volume the mortality
+          studies were built on, and is the number Verve cites. It is a figure
+          from population evidence, not a personal prescription. Someone starting
+          out will do less and gain a great deal; someone training seriously
+          will do far more, with the benefit curve flattening rather than
+          stopping.
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          <strong class="text-text-primary">Why the app stopped drawing it.</strong>
+          The Strength card used to show your minutes against 60 &mdash; a bar,
+          a &ldquo;to go&rdquo;, a &ldquo;target met&rdquo;. For a beginner that
+          reads as a bar they are under every week; for an athlete it is
+          meaningless. The card now reports the minutes and the sessions, and
+          the number lives here, where it can be explained. The same reasoning
+          removed the 150&ndash;300 minute band from the Zone 2 card &mdash; see
+          <a href="#zone-2">Zone 2 Training</a>.
+        </p>
+      </div>
+    </section>
 
     <!-- ── Sleep Rhythm ──────────────────────────────────────────────── -->
     <section id="sleep-rhythm" class="scroll-mt-8">
