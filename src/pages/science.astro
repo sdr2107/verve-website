@@ -418,6 +418,20 @@ const nav = [
           The strip beneath it is the hour's state: green active, orange sedentary, blue asleep
           (naps included), grey an hour that has not happened yet.
         </p>
+        <p>
+          <strong class="text-text-primary">Longest sit, and sits over 30 minutes.</strong>
+          Uninterrupted sitting, detected from five-minute step buckets rather than hours &mdash;
+          the resolution the evidence needs. Diaz found that mortality tracked not only total
+          sedentary time but how it accumulated: the excess sat with bouts of thirty minutes or
+          more, and was highest in people whose sitting came in blocks of an hour or longer. A bout
+          is closed by any movement, by a recorded workout (a swim registers no steps and would
+          otherwise read as the day&rsquo;s longest sit), and by sleep, naps included. Under the
+          terrain a thin row marks each one &mdash; amber to an hour, red past it &mdash; so the
+          figure above can be read off the day rather than trusted. Verve had this once on hourly
+          steps and removed it, because an hourly total cannot see a thirty-minute bout; it returned
+          only when the data could support it, and on a day without fine buckets it shows nothing
+          rather than zero.
+        </p>
       </div>
     </section>
 
@@ -644,6 +658,16 @@ const nav = [
         until you pass high camp. The first two numbers are the familiar
         public-health doses. The third is newer, larger, and measured the same
         way Verve measures you.
+      </p>
+      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+        <strong class="text-text-primary">The climb is drawn as two bands.</strong> The line is
+        the week&rsquo;s measured moderate-plus-vigorous minutes, exactly as before. Beneath it, the
+        area is split: moderate minutes fill from the ground up, and vigorous minutes sit on top of
+        them, in a darker green. Nothing is re-weighted &mdash; vigorous is not credited double the
+        way WHO&rsquo;s moderate-equivalent doses are, because the axis carries measured minutes and
+        one axis holds one unit. What the bands add is composition: intensity drives most of the
+        fitness benefit, and a 75-minute week that was all hard running now looks like what it is
+        rather than like half a target.
       </p>
       <div class="mt-6 grid gap-4 sm:grid-cols-2">
         {WEEKLY_VOLUME_SECTION.map((c) => <CitationCard {...c} />)}
