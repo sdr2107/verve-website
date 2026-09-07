@@ -673,10 +673,26 @@ const nav = [
         </p>
         <p class="mt-4 text-sm leading-relaxed text-text-secondary">
           <strong class="text-text-primary">Where the number comes from.</strong>
-          Verve does not compute it. Apple Watch records one-minute heart rate
-          recovery after every workout and stores it in Apple Health; Verve reads
-          that value, adds the comparison to your own median, and places it on the
-          scale. Nothing is estimated.
+          Two places, and the card says which. Apple Watch stores a one-minute
+          recovery for a workout when it sees an undisturbed minute after you tap
+          End; Verve reads that value as it is. But the watch keeps recording your
+          heart rate for about three minutes after every workout whether or not it
+          stores a recovery &mdash; a run followed straight by a walk gets none
+          &mdash; and the Fitness app draws that as &ldquo;Post-Workout Heart
+          Rate&rdquo;. For a recent workout with no stored reading, Verve takes the
+          same two points the Fitness app shows, the rate at the end of the workout
+          and the rate one minute later, and reports the difference, marked
+          <em>from workout HR</em>. Nothing is smoothed, fitted or assumed: two
+          readings, one subtraction.
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          <strong class="text-text-primary">&ldquo;Usual&rdquo;.</strong>
+          The comparison on the card &mdash; &ldquo;+3 vs usual&rdquo; &mdash; is
+          against the median of your own readings over the last 30 days, the same
+          rule the resting heart rate tile uses. It appears once five readings sit
+          inside that window; until then the card shows the reading alone rather
+          than a countdown. A recovery is one number per workout, not per day,
+          which is why the floor is a count of readings and not of days.
         </p>
       </div>
 
