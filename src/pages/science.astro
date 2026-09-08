@@ -20,6 +20,7 @@ import {
   SLEEP_RHYTHM_SECTION,
   RESTING_HR_SECTION,
   HEART_RATE_RECOVERY_SECTION,
+  SLEEP_TRAINING_SECTION,
 } from "../data/science";
 import { BODY_MARKERS, BODY_MARKER_CONTEXT } from "../data/bodyMarkers";
 
@@ -638,6 +639,42 @@ const nav = [
       </div>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
         {SLEEP_RHYTHM_SECTION.map((c) => <CitationCard {...c} />)}
+      </div>
+    </section>
+
+    <!-- ── Sleep and training ────────────────────────────────────────── -->
+    <section id="sleep-and-training" class="scroll-mt-8">
+      <h2 class="text-2xl font-bold text-text-primary">Sleep and Training, Read Together</h2>
+      <p class="mt-2 text-sm text-text-tertiary">What the Guide's SLEEP line is, and what it refuses to claim</p>
+      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+        <p class="text-sm leading-relaxed text-text-secondary">
+          The Guide compares two periods of your own record. Since sleep and
+          training now come from the same period summary, it can lay them
+          side by side: average night asleep, minutes awake in the night,
+          sleeping heart rate, bedtime drift and the regularity index, beside
+          MVPA, training minutes and strength days for the same two periods.
+          Sleep joins the list of movers too &mdash; judged against the adult
+          <strong class="text-text-primary">7&ndash;9 hour</strong> band rather
+          than a direction, so 6 to 7 hours is an improvement and 8 to 9&frac12;
+          is not, while less time awake in the night, a lower sleeping heart
+          rate, less bedtime drift and a higher regularity index count the way
+          you would expect.
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          <strong class="text-text-primary">What the SLEEP line says.</strong>
+          One sentence on what moved alongside what &mdash; &ldquo;training rose
+          40% and sleep fell 35 minutes, with sleeping heart rate up 3&rdquo;.
+          It describes co-movement in your data. It never says one caused the
+          other, because two periods of one person cannot show that: a hard
+          block can shorten sleep, short sleep can make a block feel harder,
+          and a work deadline can do both. The literature below is why the
+          pairing is worth reading at all &mdash; short sleep tracks injury and
+          worse endurance, and extended sleep has moved performance in small
+          trials &mdash; but the line reports, and you interpret.
+        </p>
+      </div>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        {SLEEP_TRAINING_SECTION.map((c) => <CitationCard {...c} />)}
       </div>
     </section>
 

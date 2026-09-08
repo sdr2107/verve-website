@@ -251,6 +251,37 @@ export const SEDENTARY_EXTRA: Citation[] = [
   },
 ];
 
+export const SLEEP_TRAINING_SECTION: Citation[] = [
+  {
+    title: "Hirshkowitz et al — National Sleep Foundation's sleep time duration recommendations, Sleep Health 2015",
+    summary:
+      "An expert panel's consensus on how much sleep is appropriate by age: 7–9 hours for adults 18–64, 7–8 for 65 and over. This is the band the Guide judges sleep against — a move toward it counts as an improvement, a move away as a slip, and a change from 8 to 9½ hours is neither a win nor a target. The AASM and Sleep Research Society's own 2015 consensus (Watson et al.) says the same thing from the other side: 7 or more hours on a regular basis for adults.",
+    url: "https://doi.org/10.1016/j.sleh.2014.12.010",
+    color: "#818cf8",
+  },
+  {
+    title: "Milewski et al — Chronic lack of sleep is associated with increased sports injuries in adolescent athletes, J Pediatr Orthop 2014",
+    summary:
+      "112 student athletes followed for 21 months. Those who slept under 8 hours a night had about 1.7 times the odds of injury of those who slept 8 or more — a larger effect than any training variable measured. Adolescents, not adults, and an association, not a mechanism; but it is the clearest single figure on why the Guide reads sleep and training load side by side rather than training alone.",
+    url: "https://doi.org/10.1097/BPO.0000000000000151",
+    color: "#a5b4fc",
+  },
+  {
+    title: "Mah et al — The effects of sleep extension on the athletic performance of collegiate basketball players, Sleep 2011",
+    summary:
+      "Eleven Stanford players extended their sleep toward 10 hours for 5–7 weeks. Sprint times fell, free-throw and three-point accuracy rose, and reaction time improved. Small and uncontrolled, but it is the experimental direction: performance moved when sleep moved. Verve does not prescribe 10 hours — it notes when sleep and training move together in your own record and leaves the interpretation honest.",
+    url: "https://doi.org/10.5665/SLEEP.1132",
+    color: "#c7d2fe",
+  },
+  {
+    title: "Fullagar et al — Sleep and athletic performance: the effects of sleep loss on exercise performance, and physiological and cognitive responses to exercise, Sports Medicine 2015",
+    summary:
+      "A systematic review of sleep loss and exercise. Restricted sleep worsens time-to-exhaustion, reaction time and mood more reliably than it worsens single maximal efforts, and it raises perceived effort at a given load — which is why a poor week of sleep can show up as harder-feeling sessions before it shows up in the numbers. The review also finds the reverse: hard training can disturb sleep. Neither direction is assumed in the Guide's sentence; it reports the co-movement and stops.",
+    url: "https://doi.org/10.1007/s40279-014-0260-0",
+    color: "#e0e7ff",
+  },
+];
+
 export const HEART_RATE_RECOVERY_SECTION: Citation[] = [
   {
     title: "Cole et al — Heart-rate recovery immediately after exercise as a predictor of mortality, NEJM 1999",
