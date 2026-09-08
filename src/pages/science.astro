@@ -592,6 +592,38 @@ const nav = [
           <strong class="text-text-primary">81</strong> is a percentile of one
           cohort, not a clinical threshold.
         </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          <strong class="text-text-primary">The three numbers on the Sleep page.</strong>
+          <em>Last night</em> is the summed asleep time of your most recent
+          overnight sleep &mdash; awake spells inside the night excluded, naps
+          excluded, the same definition Apple Health uses for &ldquo;time
+          asleep&rdquo;. <em>Bedtime drift</em> is the night-to-night spread of
+          the time you fell asleep, in minutes, over your recent nights; under
+          <strong class="text-text-primary">60</strong> is the mark the 2025 AHA
+          statement uses. The <em>regularity index</em> is the Sleep Regularity
+          Index, 0 to 100, with its bands printed on the bar where they fall:
+          below <strong class="text-text-primary">71.6</strong> irregular,
+          <strong class="text-text-primary">71.6&ndash;87.3</strong> moderately
+          irregular, above <strong class="text-text-primary">87.3</strong>
+          regular. Those cut-points are the 25th and 75th percentiles of the UK
+          Biobank sample, which is why they are printed to a decimal: they are
+          where a cohort fell, not lines a guideline drew.
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          <strong class="text-text-primary">What it needs, and what it leaves out.</strong>
+          The timing measures need a handful of recent recorded nights &mdash;
+          the page counts them up for you &mdash; and only recent nights count,
+          so a break from wearing the watch means the count starts again.
+          Anything that writes sleep to Apple Health works: Apple Watch, Oura,
+          Whoop, Garmin. Naps are left out of the timing measures, since a nap
+          is not a bedtime. Timing is not hours: a steady short night scores
+          better here than an erratic long one, and the two are complementary
+          risk markers rather than alternatives. Because accepted SRI
+          calculators disagree on the same nights, read your own trend rather
+          than comparing the number with anyone else's; and crossing time zones
+          registers as irregularity even when your rhythm is steady in local
+          time.
+        </p>
       </div>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
         {SLEEP_RHYTHM_SECTION.map((c) => <CitationCard {...c} />)}
