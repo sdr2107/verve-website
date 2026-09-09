@@ -542,6 +542,14 @@ const nav = [
           neither substitutes for the other.
         </p>
         <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          <strong class="text-text-primary">Sitting today, as the tile counts it.</strong>
+          An hour counts as sitting when fewer than 50 steps happened in it,
+          from 07:00 to now; it is the same number the Movement balance row
+          shows. Short, regular breaks help more than one long workout does.
+          The phone only knows you were not walking &mdash; not whether you sat
+          or stood &mdash; and a watch adds the standing minutes beside it.
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
           <strong class="text-text-primary">The 60-minute figure.</strong> Public
           guidance asks for muscle-strengthening activity on two or more days a
           week; roughly an hour across those days is the volume the mortality
@@ -637,6 +645,23 @@ const nav = [
           time.
         </p>
       </div>
+      <div id="connect-wearables" class="mt-4 scroll-mt-8 rounded-2xl border border-white/8 bg-white/4 p-6">
+        <p class="text-sm leading-relaxed text-text-secondary">
+          <strong class="text-text-primary">Connecting Oura, Whoop or Garmin.</strong>
+          Verve reads only Apple Health, so a third-party wearable reaches it
+          through its own app&rsquo;s Apple Health setting. <em>Oura</em>: the
+          Oura app &rarr; menu &rarr; Settings &rarr; Apple Health, and allow it
+          to write Sleep, Workouts, Heart Rate and Respiratory Rate.
+          <em>Whoop</em>: More &rarr; App Settings &rarr; Integrations &rarr;
+          Apple Health, and allow the same categories. <em>Garmin</em>: Garmin
+          Connect &rarr; More &rarr; Settings &rarr; Apple Health. Then in Verve,
+          Settings &rarr; Apple Health on. How far back an app writes when you
+          switch the integration on varies by app; from that day on every night
+          arrives. Stages appear when the app writes them; a plain asleep record
+          shows as one block. Steps and cadence come from the phone or an Apple
+          Watch, not from these.
+        </p>
+      </div>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
         {SLEEP_RHYTHM_SECTION.map((c) => <CitationCard {...c} />)}
       </div>
@@ -694,6 +719,19 @@ const nav = [
           The instrument shades only the high side, because a low resting rate is
           not a finding &mdash; a rested morning and an adapted endurance athlete
           both land there.
+        </p>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          <strong class="text-text-primary">The level, and what a reading cannot say.</strong>
+          Beside the comparison with your own normal, the level itself matters:
+          lowest risk sits around <strong class="text-text-primary">50&ndash;60
+          bpm</strong>, and above <strong class="text-text-primary">75&ndash;80</strong>
+          carries higher risk even when it never moves. Under 50 is common in
+          trained people and usually adaptation, worth raising only alongside
+          dizziness, fainting or breathlessness. The slow direction counts on its
+          own &mdash; a baseline falling over months tracks lower risk, a rising
+          one higher, whatever today says. Alcohol, heat, a late meal, poor
+          sleep, illness, dehydration, thyroid and some medicines all raise it;
+          a wearable reading is not diagnostic.
         </p>
       </div>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
