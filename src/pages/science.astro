@@ -30,6 +30,7 @@ const nav = [
   { slug: "test-crf", label: "Test Your CRF" },
   { slug: "test-accuracy", label: "Test Accuracy" },
   { slug: "run-protocols", label: "Run Protocols" },
+  { slug: "today-tiles", label: "The Morning Read" },
   { slug: "movement-balance", label: "Movement Balance" },
   { slug: "activity-level", label: "Physical Activity Level" },
   { slug: "steps", label: "Steps & Cadence" },
@@ -371,6 +372,62 @@ const nav = [
           trained for &mdash; which is precisely what the safety check and the
           eight-week training window exist to catch before you reach the start
           line.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── The Morning Read — the four Today tiles ─────────────────────── -->
+    <section id="today-tiles" class="scroll-mt-8">
+      <h2 class="text-2xl font-bold text-text-primary">The Morning Read</h2>
+      <p class="mt-2 text-sm text-text-tertiary">How the four Today tiles on the Activity page are coloured, and where each line comes from</p>
+      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+        <p class="text-sm leading-relaxed text-text-secondary">
+          Each tile takes its colour from the figure it shows. Green means the
+          reading is inside the range its evidence calls ordinary, amber that it
+          has crossed one line, red that it has crossed a second. A grey dash
+          means Verve has not measured it yet and will not guess. The rules,
+          one per tile:
+        </p>
+        <ul class="mt-4 space-y-3 text-sm leading-relaxed text-text-secondary">
+          <li>
+            <strong class="text-text-primary">Sleep</strong> &mdash; last night's hours
+            asleep against the <strong class="text-text-primary">7 to 9 hour</strong>
+            range. Amber under seven; ordinary text above nine, because a long
+            night is worth noticing but is not a warning. The drift and
+            regularity figures inside the tile's page keep their own scales.
+            <a href="#sleep-rhythm">Sleep timing &rarr;</a>
+          </li>
+          <li>
+            <strong class="text-text-primary">Resting HR</strong> &mdash; the worse of
+            two verdicts. Against your own 30-day median: amber around
+            <strong class="text-text-primary">5 bpm above</strong>, red around
+            <strong class="text-text-primary">10 above</strong>. Against the level
+            itself: amber from <strong class="text-text-primary">75</strong>, red
+            from <strong class="text-text-primary">80</strong>. Below your usual, and
+            under 50, stay green on purpose &mdash; a rested morning and an
+            endurance athlete both land there.
+            <a href="#resting-heart-rate">Resting heart rate &rarr;</a>
+          </li>
+          <li>
+            <strong class="text-text-primary">Recovery</strong> &mdash; how far your heart
+            rate fell in the first minute after the last workout. One cited line:
+            red at a fall of <strong class="text-text-primary">12 bpm or less</strong>,
+            green above it. There is no amber, because no second line has been
+            validated; the tile refuses to invent one.
+            <a href="#heart-rate-recovery">Heart rate recovery &rarr;</a>
+          </li>
+          <li>
+            <strong class="text-text-primary">Sitting</strong> &mdash; hours today with
+            almost no stepping. Amber from <strong class="text-text-primary">10.6
+            hours</strong>, red from <strong class="text-text-primary">12</strong>,
+            the same two ticks the Movement Balance bar draws.
+            <a href="#movement-balance">Movement balance &rarr;</a>
+          </li>
+        </ul>
+        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+          Every number above is read from one thresholds file inside the app,
+          the same file the tiles read, so this page and the tiles cannot
+          disagree about where a line sits.
         </p>
       </div>
     </section>
