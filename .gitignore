@@ -22,3 +22,7 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# Never commit account recovery codes
+github-recovery-codes.txt
+*recovery-codes*
