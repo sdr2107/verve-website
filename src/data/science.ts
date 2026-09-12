@@ -22,9 +22,9 @@ export interface ScienceSection {
 
 export const CRF_SECTION: Citation[] = [
   {
-    title: "Blair et al, JAMA 2009",
+    title: "Kodama et al, JAMA 2009",
     summary:
-      "33 studies, 102,980 participants. Each 1 MET improvement in CRF capacity is associated with a 13% reduction in all-cause mortality and 15% in cardiovascular mortality. Achieving 7.9 MET-hours/week is linked to substantially reduced cardiovascular mortality.",
+      "33 studies, 102,980 participants. Each 1 MET improvement in CRF capacity is associated with a 13% reduction in all-cause mortality and 15% in cardiovascular events. A maximal capacity of 7.9 METs or more carried substantially lower risk. That 7.9 is a fitness level, not a weekly volume; Verve's weekly milestones come from the WHO 2020 guidelines instead. (This card was attributed to Blair et al until September 2026; PMID 19454641 is Kodama.)",
     url: "https://pubmed.ncbi.nlm.nih.gov/19454641/",
     color: "#4338ca",
   },
