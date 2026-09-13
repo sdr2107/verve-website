@@ -142,7 +142,7 @@
           <div class="mrow">
             <div><div class="mname">Resting blood pressure</div><div class="mnote">Counts toward the five criteria at 130/85</div></div>
             <div class="mval">under 120 / 80 mmHg<br><span>130/85 is the criterion line</span></div>
-            <div class="mint">yearly under 120/80<span>3 to 6 months if above &middot; within a month from 140/90</span></div>
+            <div class="mint">yearly under 120/80<span>3 to 6 months if above &middot; a month from 140/90, our call</span></div>
             <div class="msrc">AHA/ACC 2017 &middot; ESC 2024 &middot; Alberti 2009<span>interval: AHA/ACC 2017</span></div>
           </div>
           <div class="mrow">
@@ -167,7 +167,7 @@
           <div class="mrow">
             <div><div class="mname">ApoB</div><div class="mnote">Counts the particles, not the cargo</div></div>
             <div class="mval">under 80 mg/dL<br><span>80&ndash;99 borderline</span></div>
-            <div class="mint">every 4 to 6 years<span>8 weeks after any change &middot; yearly once at target</span></div>
+            <div class="mint">every 4 to 6 years<span>4 to 6 weeks after starting or changing treatment</span></div>
             <div class="msrc">ESC/EAS 2019 dyslipidaemia guidelines<span>interval: AHA 2019 &middot; ESC/EAS 2019</span></div>
           </div>
           <div class="mrow">
@@ -274,8 +274,9 @@
       <div style="margin-top: 40px; border-radius: 16px; border: 1px solid rgba(251,191,36,0.3); background: rgba(251,191,36,0.05); padding: 20px 22px;">
         <div style="font-size: 14px; font-weight: 600; color: #FBBF24;">Seven of the nine intervals are a guideline's. Two are ours, and say so.</div>
         <p class="muted" style="margin-top: 8px; color: #94a3b8;">Every band on this page comes from the app's own thresholds file, which carries the study behind each one. The repeat column now does the same. Seven are lifted straight from a guideline: HbA1c and fasting glucose from the ADA's screening interval, blood pressure from AHA/ACC 2017, and ApoB, LDL, triglycerides and HDL from one lipid panel on the AHA's four-to-six-year screening cycle, tightened to eight weeks after a treatment change.</p>
-        <p class="muted" style="margin-top: 10px; color: #94a3b8;">Two have no guideline interval, and the page does not invent one. The Endocrine Society says a calculated insulin-resistance index belongs in research, not the clinic, so HOMA-IR carries no schedule and simply redraws when both of its inputs do. Neither European nor Asian sarcopenia group names a repeat interval for lean mass, so the six months shown is Verve's own, anchored to the six-month line EWGSOP2 draws between acute and chronic muscle loss. Both are labelled as ours in grey rather than dressed up as evidence.</p>
-        <p class="muted" style="margin-top: 10px; color: #94a3b8;">Next step is a <span class="mono" style="color: #cbd5e1;">retestIntervals</span> block in the thresholds file, one entry per marker carrying the interval, the condition that shortens it, and the source string every other entry already carries. Until it exists the website and the app can drift, which is the failure this file was built to prevent.</p>
+        <p class="muted" style="margin-top: 10px; color: #94a3b8;">Two have no guideline interval, and the page does not invent one. The Endocrine Society says a calculated insulin-resistance index belongs in research, not the clinic, so HOMA-IR carries no schedule at all and simply redraws when either of its inputs does. Neither European nor Asian sarcopenia group names a repeat interval for lean mass, so the six months shown is Verve's own, anchored to the six-month line EWGSOP2 draws between acute and chronic muscle loss. Both are labelled as ours in grey rather than dressed up as evidence.</p>
+        <p class="muted" style="margin-top: 10px; color: #94a3b8;">One value inside a sourced row is still ours. The blood pressure guideline writes its rechecking advice around normal, elevated and stage 1, and gives its one-month figure for someone who has just started treatment rather than for an untreated reading at 140/90. Rather than leave a reading that high on the three-month interval, Verve reuses the guideline's own shortest cadence and marks it as our call.</p>
+        <p class="muted" style="margin-top: 10px; color: #94a3b8;">These intervals now live in <span class="mono" style="color: #cbd5e1;">data/met-thresholds.json</span> under <span class="mono" style="color: #cbd5e1;">retestIntervals</span>, one entry per marker carrying the interval, the condition that shortens it, whether the number is a guideline's or ours, and the source string every other entry already carries. The days are indexed by the same severity function that paints the section dots, so a reading cannot colour one way and schedule another.</p>
       </div>
     </div>
   </div>
