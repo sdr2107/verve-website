@@ -1,0 +1,285 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Hanken Grotesk', ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #a5b4fc; text-decoration: none; } a:hover { color: #c7d2fe; }
+    .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+    .eyebrow { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #a5b4fc; }
+    .card { border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); }
+    h2 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: #f1f5f9; }
+    p { margin: 0; }
+    .body { font-size: 14.5px; line-height: 1.7; color: #94a3b8; }
+    .muted { font-size: 12.5px; line-height: 1.6; color: #64748b; }
+    .sub { font-size: 13px; color: #64748b; }
+    .rail { font-size: 13px; color: #64748b; padding: 7px 12px; border-radius: 8px; display: block; }
+    .rail.on { color: #f1f5f9; background: rgba(255,255,255,0.06); border-left: 2px solid #818cf8; }
+
+    /* the marker table */
+    .thead { display: grid; grid-template-columns: 1.55fr 1.5fr 1.15fr 1fr; gap: 14px; padding: 0 14px 9px; }
+    .th { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #475569; }
+    .mrow { display: grid; grid-template-columns: 1.55fr 1.5fr 1.15fr 1fr; gap: 14px; align-items: baseline; padding: 12px 14px; border-top: 1px solid rgba(255,255,255,0.06); }
+    .mname { font-size: 13.5px; font-weight: 600; color: #f1f5f9; }
+    .mnote { font-size: 11px; line-height: 1.45; color: #475569; margin-top: 3px; }
+    .mval  { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; line-height: 1.5; color: #6ee7b7; }
+    .mval span { color: #64748b; }
+    .mint  { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11.5px; line-height: 1.5; color: #6ee7b7; }
+    .mint span { display: block; margin-top: 4px; font-size: 10.5px; line-height: 1.45; color: #64748b; }
+    .msrc  { font-size: 11px; line-height: 1.45; color: #64748b; }
+    .msrc span { display: block; margin-top: 4px; color: #475569; }
+    .todo  { display: inline-block; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 9.5px; letter-spacing: 0.06em; color: #FBBF24; border: 1px dashed rgba(251,191,36,0.45); border-radius: 5px; padding: 2px 6px; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; background: linear-gradient(178deg, #15151f 0%, #0c0c15 56%, #090910 100%); box-sizing: border-box; padding-bottom: 64px;">
+
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; border-bottom: 1px solid rgba(255,255,255,0.06);">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span style="width: 30px; height: 30px; border-radius: 8px; background: #1e1b4b; border: 1px solid rgba(129,140,248,0.4); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; color: #818cf8;">V</span>
+      <span style="font-size: 17px; font-weight: 600; color: #f1f5f9;">Verve</span>
+      <span style="font-size: 14px; color: #475569; margin: 0 4px;">/</span>
+      <span style="font-size: 14px; color: #94a3b8;">Science</span>
+      <span style="font-size: 14px; color: #475569; margin: 0 4px;">/</span>
+      <span style="font-size: 14px; color: #f1f5f9; font-weight: 500;">Body</span>
+    </div>
+    <span style="border-radius: 999px; border: 1px solid rgba(255,255,255,0.14); padding: 7px 15px; font-size: 13px; font-weight: 500; color: #f1f5f9;">Get the app</span>
+  </div>
+
+  <div style="display: flex; max-width: 1200px; margin: 0 auto; padding: 0 40px; gap: 44px;">
+
+    <div style="width: 200px; flex-shrink: 0; padding-top: 42px;">
+      <div class="eyebrow" style="padding-left: 12px;">On this page</div>
+      <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 12px;">
+        <span class="rail on">Blood sugar &amp; insulin</span>
+        <span class="rail">Blood pressure</span>
+        <span class="rail">Lipids &amp; inflammation</span>
+        <span class="rail">Waist &amp; phenotype</span>
+        <span class="rail">Muscle health</span>
+        <span class="rail">Intrinsic capacity</span>
+      </div>
+      <div style="height: 1px; background: rgba(255,255,255,0.07); margin: 20px 12px;"></div>
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <span class="rail">&larr; Sleep &amp; heart</span>
+        <span class="rail">All subjects</span>
+      </div>
+    </div>
+
+    <div style="flex: 1; min-width: 0; padding-top: 42px;">
+      <span class="eyebrow">Subject 4 of 4</span>
+      <h1 style="margin: 12px 0 0; font-size: 40px; font-weight: 700; letter-spacing: -0.025em; color: #f1f5f9;">Body</h1>
+      <p class="body" style="margin-top: 12px; font-size: 16px; max-width: 660px;">The readings that come from a cuff, a tape measure and a blood draw, in the order the Body page shows them. Each one here carries the band Verve screens against and how often it is worth repeating.</p>
+
+      <div class="card" style="margin-top: 22px; padding: 16px 18px; border-color: rgba(129,140,248,0.25); background: rgba(129,140,248,0.05);">
+        <p class="muted" style="color: #94a3b8;">These are <strong style="color: #f1f5f9;">screening bands, not treatment targets</strong>. What counts as a good number for you depends on your overall risk, and that is a conversation with your doctor. Verve classifies against population bands and says which study drew each line.</p>
+      </div>
+
+      <!-- ── Blood sugar and insulin ── -->
+      <div style="margin-top: 34px; padding-top: 26px; border-top: 1px solid rgba(255,255,255,0.07);">
+        <h2>Blood sugar &amp; insulin</h2>
+        <p class="sub" style="margin-top: 6px;">Four markers, one of which counts toward the metabolic-syndrome criteria</p>
+
+        <div class="card" style="margin-top: 18px; padding: 16px 0 4px;">
+          <div class="thead">
+            <span class="th">Marker</span><span class="th">In range</span><span class="th">Repeat</span><span class="th">Line drawn by</span>
+          </div>
+          <div class="mrow">
+            <div><div class="mname">HbA1c</div><div class="mnote">Any time of day, no fasting</div></div>
+            <div class="mval">under 5.7 %<br><span>5.7&ndash;6.4 prediabetes</span><br><span>6.5 and over diabetes</span></div>
+            <div class="mint">every 3 years<span>yearly once 5.7 and over &middot; twice a year on treatment</span></div>
+            <div class="msrc">ADA Standards of Care 2026, §2<span>interval: same, §2 and §6</span></div>
+          </div>
+          <div class="mrow">
+            <div><div class="mname">Fasting glucose</div><div class="mnote">Counts toward the five criteria</div></div>
+            <div class="mval">under 100 mg/dL</div>
+            <div class="mint">every 3 years<span>yearly once 100 and over</span></div>
+            <div class="msrc">Alberti 2009 harmonised criteria<span>interval: ADA 2026, §2</span></div>
+          </div>
+          <div class="mrow">
+            <div><div class="mname">Post-meal glucose</div><div class="mnote">Home meter, 1 to 2 h after starting a meal</div></div>
+            <div class="mval">under 180 mg/dL</div>
+            <div class="mint">as you choose</div>
+            <div class="msrc">ADA Standards of Care 2026, §6</div>
+          </div>
+          <div class="mrow">
+            <div><div class="mname">HOMA-IR</div><div class="mnote">Worked out from fasting glucose and insulin</div></div>
+            <div class="mval">under 1.85 men<br><span>1.85 to 2.47 women, by age</span></div>
+            <div class="mint" style="color: #94a3b8;">no interval exists<span>redrawn whenever both its inputs are</span></div>
+            <div class="msrc">Gayoso-Diz 2013, n=2,459<span>no guideline schedules it</span></div>
+          </div>
+        </div>
+        <p class="muted" style="margin-top: 12px;">No single HOMA-IR cut-point is agreed. This one comes from a Spanish cohort, and some populations, South Asian among them, show insulin resistance at lower absolute values. Verve treats it as a signal, never a diagnosis.</p>
+      </div>
+
+      <!-- ── Blood pressure ── -->
+      <div style="margin-top: 34px; padding-top: 26px; border-top: 1px solid rgba(255,255,255,0.07);">
+        <h2>Blood pressure</h2>
+        <p class="sub" style="margin-top: 6px;">Read on an average, never on one cuff reading</p>
+
+        <div class="card" style="margin-top: 18px; display: flex; overflow: hidden;">
+          <div style="flex: 1; padding: 20px 22px;">
+            <div class="eyebrow" style="color: #64748b;">In the app</div>
+            <p class="body" style="margin-top: 9px;">The Body page leads with your widest average that has readings behind it: thirty days, else fourteen, else seven. A single reading is shown as a single reading and labelled one. A crisis value is the exception and is acted on from the reading itself.</p>
+          </div>
+          <div style="width: 250px; border-left: 1px solid rgba(255,255,255,0.07); background: rgba(0,0,0,0.2); padding: 18px;">
+            <div class="mono" style="font-size: 9px; letter-spacing: 0.1em; color: #64748b;">30-DAY AVERAGE</div>
+            <div style="display: flex; align-items: baseline; gap: 4px; margin-top: 7px;"><span style="font-size: 26px; font-weight: 800; color: #6ee7b7;">118</span><span style="font-size: 15px; font-weight: 700; color: #64748b;">/</span><span style="font-size: 26px; font-weight: 800; color: #6ee7b7;">74</span></div>
+            <div style="display: flex; height: 7px; border-radius: 4px; overflow: hidden; margin-top: 12px;"><span style="width: 34%; background: rgba(52,211,153,0.5);"></span><span style="width: 18%; background: rgba(251,191,36,0.45);"></span><span style="width: 24%; background: rgba(249,115,22,0.45);"></span><span style="width: 24%; background: rgba(244,63,94,0.45);"></span></div>
+            <div style="display: flex; justify-content: space-between; margin-top: 6px;"><span class="mono" style="font-size: 9px; color: #475569;">normal</span><span class="mono" style="font-size: 9px; color: #475569;">stage 2</span></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 14px; padding: 16px 0 4px;">
+          <div class="thead">
+            <span class="th">Marker</span><span class="th">In range</span><span class="th">Repeat</span><span class="th">Line drawn by</span>
+          </div>
+          <div class="mrow">
+            <div><div class="mname">Resting blood pressure</div><div class="mnote">Counts toward the five criteria at 130/85</div></div>
+            <div class="mval">under 120 / 80 mmHg<br><span>130/85 is the criterion line</span></div>
+            <div class="mint">yearly under 120/80<span>3 to 6 months if above &middot; within a month from 140/90</span></div>
+            <div class="msrc">AHA/ACC 2017 &middot; ESC 2024 &middot; Alberti 2009<span>interval: AHA/ACC 2017</span></div>
+          </div>
+          <div class="mrow">
+            <div><div class="mname">Hypertensive crisis</div><div class="mnote">Judged on the reading, not the average</div></div>
+            <div class="mval" style="color: #fca5a5;">180 / 120 mmHg or above</div>
+            <div class="mint" style="color: #fca5a5;">seek care now</div>
+            <div class="msrc">AHA/ACC 2017</div>
+          </div>
+        </div>
+        <p class="muted" style="margin-top: 12px;">You choose whether Verve reads you against the American ladder or the European one, because the categories genuinely differ and people follow the system their own doctor uses. The criterion line at 130/85 never moves with that choice: it belongs to a separate definition.</p>
+      </div>
+
+      <!-- ── Lipids and inflammation ── -->
+      <div style="margin-top: 34px; padding-top: 26px; border-top: 1px solid rgba(255,255,255,0.07);">
+        <h2>Lipids &amp; inflammation</h2>
+        <p class="sub" style="margin-top: 6px;">Tracked beside the criteria, not counted among them</p>
+
+        <div class="card" style="margin-top: 18px; padding: 16px 0 4px;">
+          <div class="thead">
+            <span class="th">Marker</span><span class="th">In range</span><span class="th">Repeat</span><span class="th">Line drawn by</span>
+          </div>
+          <div class="mrow">
+            <div><div class="mname">ApoB</div><div class="mnote">Counts the particles, not the cargo</div></div>
+            <div class="mval">under 80 mg/dL<br><span>80&ndash;99 borderline</span></div>
+            <div class="mint">every 4 to 6 years<span>8 weeks after any change &middot; yearly once at target</span></div>
+            <div class="msrc">ESC/EAS 2019 dyslipidaemia guidelines<span>interval: AHA 2019 &middot; ESC/EAS 2019</span></div>
+          </div>
+          <div class="mrow">
+            <div><div class="mname">LDL cholesterol</div><div class="mnote">The cholesterol those particles carry</div></div>
+            <div class="mval">under 100 mg/dL<br><span>100&ndash;129 near optimal</span></div>
+            <div class="mint">every 4 to 6 years<span>same draw as ApoB</span></div>
+            <div class="msrc">NCEP ATP III<span>interval: AHA 2019 &middot; ESC/EAS 2019</span></div>
+          </div>
+          <div class="mrow">
+            <div><div class="mname">Lp(a)</div><div class="mnote">About 90 percent set by your genes</div></div>
+            <div class="mval">under 75 nmol/L<br><span>75&ndash;125 intermediate &middot; 125+ high</span></div>
+            <div class="mint" style="color: #6ee7b7;">once is usually<br>enough</div>
+            <div class="msrc">EAS 2022 consensus statement</div>
+          </div>
+          <div class="mrow">
+            <div><div class="mname">hs-CRP</div><div class="mnote">Inflammation, not cholesterol</div></div>
+            <div class="mval">under 1.0 mg/L<br><span>1.0&ndash;3.0 average &middot; 3.0+ high</span></div>
+            <div class="mint" style="color: #6ee7b7;">repeat when well<br>if over 10</div>
+            <div class="msrc">AHA/CDC 2003 statement</div>
+          </div>
+          <div class="mrow">
+            <div><div class="mname">Triglycerides</div><div class="mnote">Counts toward the five criteria</div></div>
+            <div class="mval">under 150 mg/dL</div>
+            <div class="mint">every 4 to 6 years<span>same draw as ApoB</span></div>
+            <div class="msrc">Alberti 2009 harmonised criteria<span>interval: AHA 2019 &middot; ESC/EAS 2019</span></div>
+          </div>
+          <div class="mrow">
+            <div><div class="mname">HDL cholesterol</div><div class="mnote">Counts toward the five criteria</div></div>
+            <div class="mval">40+ mg/dL men<br><span>50+ mg/dL women</span></div>
+            <div class="mint">every 4 to 6 years<span>same draw as ApoB &middot; never a target on its own</span></div>
+            <div class="msrc">Alberti 2009 harmonised criteria<span>interval: AHA 2019 &middot; ESC/EAS 2019</span></div>
+          </div>
+        </div>
+        <p class="muted" style="margin-top: 12px;">Where ApoB and LDL disagree, ApoB is the better read: it counts every atherogenic particle, which is what LDL alone can miss in insulin resistance and high triglycerides. Lp(a) barely moves through life, so one measurement usually settles it.</p>
+      </div>
+
+      <!-- ── Waist ── -->
+      <div style="margin-top: 34px; padding-top: 26px; border-top: 1px solid rgba(255,255,255,0.07);">
+        <h2>Waist &amp; phenotype</h2>
+        <p class="sub" style="margin-top: 6px;">Where the fat sits, from a tape measure</p>
+        <div class="card" style="margin-top: 18px; padding: 16px 0 4px;">
+          <div class="thead">
+            <span class="th">Marker</span><span class="th">In range</span><span class="th">Repeat</span><span class="th">Line drawn by</span>
+          </div>
+          <div class="mrow">
+            <div><div class="mname">Waist circumference</div><div class="mnote">Cut-off differs by ethnicity</div></div>
+            <div class="mval">below your own cut-off<br><span>IDF, set by ethnicity and sex</span></div>
+            <div class="mint">whenever you<br>measure</div>
+            <div class="msrc">IDF 2006 &middot; Alberti 2009</div>
+          </div>
+          <div class="mrow">
+            <div><div class="mname">Waist to height</div><div class="mnote">One rule for everyone</div></div>
+            <div class="mval">under 0.5</div>
+            <div class="mint">whenever you<br>measure</div>
+            <div class="msrc">Ashwell 2012 meta-analysis</div>
+          </div>
+        </div>
+        <p class="muted" style="margin-top: 12px;">Only waist circumference has ethnicity-specific cut-offs. Waist to height and waist to hip do not, and inventing them would be worse than not offering them.</p>
+      </div>
+
+      <!-- ── Muscle ── -->
+      <div style="margin-top: 34px; padding-top: 26px; border-top: 1px solid rgba(255,255,255,0.07);">
+        <h2>Muscle health</h2>
+        <p class="sub" style="margin-top: 6px;">Strength and function first, mass second</p>
+        <div class="card" style="margin-top: 18px; padding: 16px 0 4px;">
+          <div class="thead">
+            <span class="th">Marker</span><span class="th">In range</span><span class="th">Repeat</span><span class="th">Line drawn by</span>
+          </div>
+          <div class="mrow">
+            <div><div class="mname">Grip strength</div><div class="mnote">A dynamometer, best of three</div></div>
+            <div class="mval">above your age and<br>sex band</div>
+            <div class="mint" style="color: #6ee7b7;">every 8 weeks</div>
+            <div class="msrc">Normative bands by age and sex</div>
+          </div>
+          <div class="mrow">
+            <div><div class="mname">Appendicular lean mass index</div><div class="mnote">Arms and legs, over height squared</div></div>
+            <div class="mval">7.0+ kg/m&sup2; men<br><span>5.4&ndash;5.7 women, by method</span></div>
+            <div class="mint" style="color: #94a3b8;">every 6 months<span>Verve's cadence &middot; neither group names one</span></div>
+            <div class="msrc">AWGS 2019 &middot; EWGSOP2<span>6 months is EWGSOP2's acute line, not an interval</span></div>
+          </div>
+          <div class="mrow">
+            <div><div class="mname">Gait speed</div><div class="mnote">Four metres, timed</div></div>
+            <div class="mval">above 0.8 m/s</div>
+            <div class="mint" style="color: #6ee7b7;">every 8 weeks</div>
+            <div class="msrc">SPPB scoring &middot; EWGSOP2</div>
+          </div>
+          <div class="mrow">
+            <div><div class="mname">Chair stands</div><div class="mnote">Five rises, timed</div></div>
+            <div class="mval">under 13.7 s<br><span>16.7 s and over scores lowest</span></div>
+            <div class="mint" style="color: #6ee7b7;">every 8 weeks</div>
+            <div class="msrc">SPPB scoring</div>
+          </div>
+        </div>
+        <p class="muted" style="margin-top: 12px;">The mass threshold depends on how it was measured. A DXA scan and a bioimpedance scale do not agree, so Verve keeps two thresholds and never swaps one for the other.</p>
+      </div>
+
+      <!-- Intrinsic capacity -->
+      <div style="margin-top: 34px; padding-top: 26px; border-top: 1px solid rgba(255,255,255,0.07);">
+        <h2>Intrinsic capacity</h2>
+        <p class="sub" style="margin-top: 6px;">The frame these readings sit inside, and the score Verve will not build</p>
+        <p class="body" style="margin-top: 16px;">The World Health Organization describes ageing well in five domains: moving, thinking, seeing and hearing, mood, and vitality. Verve measures two of them properly, movement and vitality, and says so. It will not add them into a single capacity score, because no such score is validated and a made-up total would bury the readings that are real.</p>
+      </div>
+
+      <div style="margin-top: 40px; border-radius: 16px; border: 1px solid rgba(251,191,36,0.3); background: rgba(251,191,36,0.05); padding: 20px 22px;">
+        <div style="font-size: 14px; font-weight: 600; color: #FBBF24;">Seven of the nine intervals are a guideline's. Two are ours, and say so.</div>
+        <p class="muted" style="margin-top: 8px; color: #94a3b8;">Every band on this page comes from the app's own thresholds file, which carries the study behind each one. The repeat column now does the same. Seven are lifted straight from a guideline: HbA1c and fasting glucose from the ADA's screening interval, blood pressure from AHA/ACC 2017, and ApoB, LDL, triglycerides and HDL from one lipid panel on the AHA's four-to-six-year screening cycle, tightened to eight weeks after a treatment change.</p>
+        <p class="muted" style="margin-top: 10px; color: #94a3b8;">Two have no guideline interval, and the page does not invent one. The Endocrine Society says a calculated insulin-resistance index belongs in research, not the clinic, so HOMA-IR carries no schedule and simply redraws when both of its inputs do. Neither European nor Asian sarcopenia group names a repeat interval for lean mass, so the six months shown is Verve's own, anchored to the six-month line EWGSOP2 draws between acute and chronic muscle loss. Both are labelled as ours in grey rather than dressed up as evidence.</p>
+        <p class="muted" style="margin-top: 10px; color: #94a3b8;">Next step is a <span class="mono" style="color: #cbd5e1;">retestIntervals</span> block in the thresholds file, one entry per marker carrying the interval, the condition that shortens it, and the source string every other entry already carries. Until it exists the website and the app can drift, which is the failure this file was built to prevent.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

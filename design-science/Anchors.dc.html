@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Hanken Grotesk', ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #a5b4fc; text-decoration: none; }
+    .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+    .eyebrow { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #a5b4fc; }
+    .card { border-radius: 14px; border: 1px solid rgba(255,255,255,0.09); background: rgba(255,255,255,0.035); }
+    p { margin: 0; }
+    .muted { font-size: 12.5px; line-height: 1.6; color: #64748b; }
+    .row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .row:last-child { border-bottom: none; }
+    .from { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; color: #cbd5e1; width: 210px; flex-shrink: 0; }
+    .to   { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; color: #6ee7b7; flex: 1; }
+    .who  { font-size: 11px; color: #64748b; width: 170px; flex-shrink: 0; text-align: right; }
+  </style>
+</helmet>
+
+<div style="width: 920px; background: linear-gradient(178deg, #15151f 0%, #0c0c15 56%, #090910 100%); box-sizing: border-box; padding: 40px;">
+
+  <span class="eyebrow">The constraint</span>
+  <h1 style="margin: 12px 0 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: #f1f5f9;">Every link from the app keeps working</h1>
+  <p class="muted" style="margin-top: 10px; max-width: 700px; font-size: 13.5px; color: #94a3b8;">Ten anchors are linked from inside the app today. Splitting one page into four moves them onto different pages, so the old addresses have to keep resolving. They do, and nothing in the app changes.</p>
+
+  <div class="card" style="margin-top: 24px; padding: 20px 22px;">
+    <div class="eyebrow" style="color: #64748b;">Links that exist in the app today</div>
+    <div style="margin-top: 14px;">
+      <div class="row"><span class="from">/science#test-accuracy</span><span class="to">/science/fitness#test-accuracy</span><span class="who">the fitness test sheet</span></div>
+      <div class="row"><span class="from">/science#zone-2</span><span class="to">/science/movement#zone-2</span><span class="who">Zone 2 tile</span></div>
+      <div class="row"><span class="from">/science#strength-training</span><span class="to">/science/movement#strength-training</span><span class="who">Strength tile</span></div>
+      <div class="row"><span class="from">/science#movement-balance</span><span class="to">/science/movement#movement-balance</span><span class="who">Movement balance row</span></div>
+      <div class="row"><span class="from">/science#sleep-rhythm</span><span class="to">/science/sleep-heart#sleep-rhythm</span><span class="who">Sleep page</span></div>
+      <div class="row"><span class="from">/science#connect-wearables</span><span class="to">/science/sleep-heart#connect-wearables</span><span class="who">Sleep empty state, Wearables</span></div>
+      <div class="row"><span class="from">/science#heart-rate-recovery</span><span class="to">/science/sleep-heart#heart-rate-recovery</span><span class="who">HR recovery page</span></div>
+      <div class="row"><span class="from">/science#resting-heart-rate</span><span class="to">/science/sleep-heart#resting-heart-rate</span><span class="who">Resting HR explainer</span></div>
+      <div class="row"><span class="from">/science#test-crf</span><span class="to">/science/fitness#test-crf</span><span class="who">the test picker</span></div>
+      <div class="row"><span class="from">/science#body-phenotyping</span><span class="to">/science/body#body-phenotyping</span><span class="who">Body page</span></div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; margin-top: 20px;">
+    <div class="card" style="padding: 20px 22px; border-color: rgba(52,211,153,0.3); background: rgba(52,211,153,0.05);">
+      <div style="font-size: 14px; font-weight: 600; color: #6ee7b7;">How the old address keeps working</div>
+      <p class="muted" style="margin-top: 9px; color: #94a3b8;">/science stays a real page: it becomes the hub. A short script on it reads the anchor a visitor arrived with and, if that anchor now lives on a subject page, forwards to it before anything paints. An anchor it does not recognise scrolls to the topic index, as before.</p>
+      <p class="muted" style="margin-top: 9px; color: #94a3b8;">No redirect rules to maintain in hosting, and the mapping is generated from the same list that builds the pages, so a new topic cannot be forgotten.</p>
+    </div>
+    <div class="card" style="padding: 20px 22px;">
+      <div style="font-size: 14px; font-weight: 600; color: #f1f5f9;">What still needs doing by hand</div>
+      <p class="muted" style="margin-top: 9px;">Nothing in the app, and nothing to ship on the App Store. Later, when it suits, the app's links can point straight at the subject pages so there is no forwarding hop at all. That is a one-line change per link and can wait for any release.</p>
+      <p class="muted" style="margin-top: 9px;">Worth checking once after the split: all ten anchors above, opened from a phone, land on the paragraph and not the top of the page.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 20px; padding: 20px 22px; border-color: rgba(251,191,36,0.28); background: rgba(251,191,36,0.04);">
+    <div style="font-size: 14px; font-weight: 600; color: #FBBF24;">One decision to make</div>
+    <p class="muted" style="margin-top: 9px; color: #94a3b8;">If you would rather not split the page at all, the hub can sit at the top of the existing /science and the twenty sections stay below it, unchanged and un-moved. You lose the short subject pages and keep one long scroll, but no address moves and there is no forwarding. Say which you prefer and the build follows it.</p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

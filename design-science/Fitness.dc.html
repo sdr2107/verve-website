@@ -1,0 +1,183 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Hanken Grotesk', ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #a5b4fc; text-decoration: none; } a:hover { color: #c7d2fe; }
+    .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+    .eyebrow { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #a5b4fc; }
+    .card { border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); }
+    h2 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: #f1f5f9; }
+    p { margin: 0; }
+    .body { font-size: 14.5px; line-height: 1.7; color: #94a3b8; }
+    .muted { font-size: 12.5px; line-height: 1.6; color: #64748b; }
+    .sub { font-size: 13px; color: #64748b; }
+    .rail { font-size: 13px; color: #64748b; padding: 7px 12px; border-radius: 8px; display: block; }
+    .rail.on { color: #f1f5f9; background: rgba(255,255,255,0.06); border-left: 2px solid #818cf8; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; background: linear-gradient(178deg, #15151f 0%, #0c0c15 56%, #090910 100%); box-sizing: border-box; padding-bottom: 64px;">
+
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; border-bottom: 1px solid rgba(255,255,255,0.06);">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span style="width: 30px; height: 30px; border-radius: 8px; background: #1e1b4b; border: 1px solid rgba(129,140,248,0.4); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; color: #818cf8;">V</span>
+      <span style="font-size: 17px; font-weight: 600; color: #f1f5f9;">Verve</span>
+      <span style="font-size: 14px; color: #475569; margin: 0 4px;">/</span>
+      <span style="font-size: 14px; color: #94a3b8;">Science</span>
+      <span style="font-size: 14px; color: #475569; margin: 0 4px;">/</span>
+      <span style="font-size: 14px; color: #f1f5f9; font-weight: 500;">Fitness</span>
+    </div>
+    <span style="border-radius: 999px; border: 1px solid rgba(255,255,255,0.14); padding: 7px 15px; font-size: 13px; font-weight: 500; color: #f1f5f9;">Get the app</span>
+  </div>
+
+  <div style="display: flex; max-width: 1200px; margin: 0 auto; padding: 0 40px; gap: 44px;">
+
+    <div style="width: 200px; flex-shrink: 0; padding-top: 42px;">
+      <div class="eyebrow" style="padding-left: 12px;">On this page</div>
+      <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 12px;">
+        <span class="rail on">METs vs MET-hours</span>
+        <span class="rail">Cardiorespiratory fitness</span>
+        <span class="rail">Test your CRF</span>
+        <span class="rail">How accurate each test is</span>
+        <span class="rail">The run protocols</span>
+      </div>
+      <div style="height: 1px; background: rgba(255,255,255,0.07); margin: 20px 12px;"></div>
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <span class="rail">All subjects</span>
+        <span class="rail">Movement &rarr;</span>
+      </div>
+      <div style="margin: 22px 12px 0; padding: 14px; border-radius: 12px; border: 1px solid rgba(129,140,248,0.25); background: rgba(129,140,248,0.06);">
+        <svg width="150" height="62" viewBox="0 0 150 62" style="display: block;">
+          <g stroke="rgba(129,140,248,0.45)" fill="none" stroke-width="1"><path d="M9 31 H 34"/><path d="M34 14 V 48"/><path d="M34 14 H 61"/><path d="M34 48 H 61"/></g>
+          <circle cx="9" cy="31" r="3.5" fill="#818cf8"/><circle cx="61" cy="14" r="3.5" fill="#34d399"/><circle cx="61" cy="48" r="3.5" fill="rgba(255,255,255,0.25)"/>
+          <g font-family="Hanken Grotesk" font-size="8" fill="#94a3b8"><text x="70" y="17" fill="#6ee7b7">measured in METs</text><text x="70" y="51">estimating CRF</text></g>
+        </svg>
+        <p class="muted" style="margin-top: 9px; font-size: 11px;">Where this sits in the AHA statement.</p>
+        <span class="mono" style="display: block; margin-top: 7px; font-size: 10px; color: #a5b4fc;">Open the map &rarr;</span>
+      </div>
+    </div>
+
+    <div style="flex: 1; min-width: 0; padding-top: 42px;">
+      <span class="eyebrow">Subject 1 of 4</span>
+      <h1 style="margin: 12px 0 0; font-size: 40px; font-weight: 700; letter-spacing: -0.025em; color: #f1f5f9;">Fitness</h1>
+      <p class="body" style="margin-top: 12px; font-size: 16px; max-width: 660px;">What a MET is, why it is the number Verve leads with, how to measure yours in six to twelve minutes, and how much to trust the answer. Five topics, eighteen citations.</p>
+
+      <!-- METs vs MET-h -->
+      <div style="margin-top: 36px; padding-top: 26px; border-top: 1px solid rgba(255,255,255,0.07);">
+        <h2>METs vs MET-hours</h2>
+        <p class="sub" style="margin-top: 6px;">One is how hard, the other is how much</p>
+        <div class="card" style="margin-top: 18px; display: flex; overflow: hidden;">
+          <div style="flex: 1; padding: 20px 22px;">
+            <div class="eyebrow" style="color: #64748b;">The difference in one line</div>
+            <p class="body" style="margin-top: 9px;">A MET is intensity: one MET is you at rest, four METs is a brisk walk. A MET-hour is volume: four METs held for half an hour is two MET-hours. Verve tracks both, and never adds them together.</p>
+          </div>
+          <div style="width: 268px; border-left: 1px solid rgba(255,255,255,0.07); background: rgba(0,0,0,0.2); padding: 18px;">
+            <div style="display: flex; flex-direction: column; gap: 9px;">
+              <div style="display: flex; align-items: center; gap: 10px;"><span class="mono" style="width: 34px; font-size: 11px; color: #6ee7b7;">1</span><span style="flex: 1; height: 7px; border-radius: 4px; background: rgba(52,211,153,0.2);"><span style="display: block; width: 8%; height: 7px; border-radius: 4px; background: #34d399;"></span></span><span style="font-size: 10.5px; color: #94a3b8; width: 52px;">at rest</span></div>
+              <div style="display: flex; align-items: center; gap: 10px;"><span class="mono" style="width: 34px; font-size: 11px; color: #6ee7b7;">3&ndash;4</span><span style="flex: 1; height: 7px; border-radius: 4px; background: rgba(52,211,153,0.2);"><span style="display: block; width: 30%; height: 7px; border-radius: 4px; background: #34d399;"></span></span><span style="font-size: 10.5px; color: #94a3b8; width: 52px;">walking</span></div>
+              <div style="display: flex; align-items: center; gap: 10px;"><span class="mono" style="width: 34px; font-size: 11px; color: #6ee7b7;">6&ndash;8</span><span style="flex: 1; height: 7px; border-radius: 4px; background: rgba(52,211,153,0.2);"><span style="display: block; width: 58%; height: 7px; border-radius: 4px; background: #34d399;"></span></span><span style="font-size: 10.5px; color: #94a3b8; width: 52px;">jogging</span></div>
+              <div style="display: flex; align-items: center; gap: 10px;"><span class="mono" style="width: 34px; font-size: 11px; color: #6ee7b7;">10+</span><span style="flex: 1; height: 7px; border-radius: 4px; background: rgba(52,211,153,0.2);"><span style="display: block; width: 84%; height: 7px; border-radius: 4px; background: #34d399;"></span></span><span style="font-size: 10.5px; color: #94a3b8; width: 52px;">running</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CRF -->
+      <div style="margin-top: 34px; padding-top: 26px; border-top: 1px solid rgba(255,255,255,0.07);">
+        <h2>Cardiorespiratory fitness</h2>
+        <p class="sub" style="margin-top: 6px;">The five tiers, and why they are read against your own age and sex</p>
+
+        <div class="card" style="margin-top: 18px; padding: 20px 22px;">
+          <div class="eyebrow" style="color: #64748b;">Men, 40 to 49</div>
+          <div style="display: flex; gap: 4px; margin-top: 12px;">
+            <div style="flex: 1;"><div style="height: 9px; border-radius: 4px 0 0 4px; background: rgba(244,63,94,0.45);"></div><div class="mono" style="font-size: 10px; color: #94a3b8; margin-top: 7px;">under 8.0</div><div style="font-size: 11px; color: #64748b;">Low</div></div>
+            <div style="flex: 1;"><div style="height: 9px; background: rgba(251,191,36,0.5);"></div><div class="mono" style="font-size: 10px; color: #FBBF24; margin-top: 7px;">8.0&ndash;9.9</div><div style="font-size: 11px; color: #64748b;">Below average</div></div>
+            <div style="flex: 1;"><div style="height: 9px; background: rgba(129,140,248,0.45);"></div><div class="mono" style="font-size: 10px; color: #94a3b8; margin-top: 7px;">10.0&ndash;11.9</div><div style="font-size: 11px; color: #64748b;">Above average</div></div>
+            <div style="flex: 1;"><div style="height: 9px; background: rgba(6,182,212,0.4);"></div><div class="mono" style="font-size: 10px; color: #94a3b8; margin-top: 7px;">12.0&ndash;13.9</div><div style="font-size: 11px; color: #64748b;">High</div></div>
+            <div style="flex: 1;"><div style="height: 9px; border-radius: 0 4px 4px 0; background: rgba(52,211,153,0.4);"></div><div class="mono" style="font-size: 10px; color: #94a3b8; margin-top: 7px;">14.0+</div><div style="font-size: 11px; color: #64748b;">Elite</div></div>
+          </div>
+          <p class="muted" style="margin-top: 14px;">Figures in METs. Your own table depends on your age and sex, and on which dataset covers you: the Cleveland Clinic's treadmill data from 40, the Cooper Institute's norms below it. There is no middle band on purpose: the boundary between below average and above average is the median of the people in the study, so everyone falls on one side of it.</p>
+        </div>
+
+        <p class="body" style="margin-top: 18px;">Being below average rather than above it carried a hazard ratio of 1.41 in 122,007 patients, the same order of risk as smoking or diabetes. From the lowest tier to the highest the difference was fivefold, and the benefit was larger for women in every tier. The elite band has no ceiling: in 750,000 veterans followed for a decade, risk kept falling at the top.</p>
+
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; margin-top: 18px;">
+          <div class="card" style="padding: 16px 18px;">
+            <div style="font-size: 13.5px; font-weight: 600; color: #f1f5f9;">Mandsager et al, JAMA Network Open 2018</div>
+            <p class="muted" style="margin-top: 7px;">122,007 patients treadmill-tested at the Cleveland Clinic. Hazard ratio 1.41 below average against above; fivefold lowest to highest.</p>
+            <div class="mono" style="margin-top: 10px; font-size: 11px; color: #a5b4fc;">PMID 30646252 &rarr;</div>
+          </div>
+          <div class="card" style="padding: 16px 18px;">
+            <div style="font-size: 13.5px; font-weight: 600; color: #f1f5f9;">Kodama et al, JAMA 2009</div>
+            <p class="muted" style="margin-top: 7px;">33 studies, 102,980 participants. Each extra MET of capacity: about 13 percent lower all-cause mortality.</p>
+            <div class="mono" style="margin-top: 10px; font-size: 11px; color: #a5b4fc;">PMID 19454641 &rarr;</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Test -->
+      <div style="margin-top: 34px; padding-top: 26px; border-top: 1px solid rgba(255,255,255,0.07);">
+        <h2>Test your CRF</h2>
+        <p class="sub" style="margin-top: 6px;">Which test you are offered, and why it might not be the hard one</p>
+
+        <div class="card" style="margin-top: 18px; display: flex; overflow: hidden;">
+          <div style="flex: 1; padding: 20px 22px;">
+            <div class="eyebrow" style="color: #64748b;">In the app</div>
+            <p class="body" style="margin-top: 9px;">A short health screen runs before your first test. A beta-blocker, or a resting pressure at or above 180 over 110, and the six-minute walk is the only test offered. Cleared and training regularly, and the twelve-minute run is recommended instead. You can always pick another.</p>
+          </div>
+          <div style="width: 268px; border-left: 1px solid rgba(255,255,255,0.07); background: rgba(0,0,0,0.2); padding: 18px;">
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; align-items: center; gap: 9px;"><span style="width: 22px; height: 22px; border-radius: 7px; background: rgba(52,211,153,0.14); display: flex; align-items: center; justify-content: center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 7"/></svg></span><span style="font-size: 11.5px; color: #cbd5e1;">6-minute walk</span><span class="mono" style="margin-left: auto; font-size: 10px; color: #64748b;">submaximal</span></div>
+              <div style="display: flex; align-items: center; gap: 9px;"><span style="width: 22px; height: 22px; border-radius: 7px; background: rgba(251,191,36,0.14); display: flex; align-items: center; justify-content: center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="2" stroke-linecap="round"><path d="M12 8v5M12 16.5v.5"/></svg></span><span style="font-size: 11.5px; color: #cbd5e1;">12-minute run</span><span class="mono" style="margin-left: auto; font-size: 10px; color: #64748b;">maximal</span></div>
+              <div style="height: 1px; background: rgba(255,255,255,0.07);"></div>
+              <div class="mono" style="font-size: 10px; color: #f87171;">blocked at 180/110 or above</div>
+              <div class="mono" style="font-size: 10px; color: #64748b;">retest nudged at 8 weeks</div>
+            </div>
+          </div>
+        </div>
+        <p class="body" style="margin-top: 18px;">Eight weeks is not a round number. Aerobic adaptation has a half-time of ten to eleven days and a reliable change needs on the order of twenty-one sessions, which puts an honest retest at six to nine weeks. Testing sooner is not wrong; it is just unlikely to show much, and Verve says so rather than discouraging you.</p>
+      </div>
+
+      <!-- Accuracy -->
+      <div style="margin-top: 34px; padding-top: 26px; border-top: 1px solid rgba(255,255,255,0.07);">
+        <h2>How accurate each test is</h2>
+        <p class="sub" style="margin-top: 6px;">What the stars mean, and where each test stops working</p>
+        <div class="card" style="margin-top: 18px; padding: 20px 22px;">
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: flex; align-items: baseline; gap: 12px;"><span style="width: 150px; font-size: 13px; font-weight: 600; color: #f1f5f9;">Lab test, direct</span><span class="mono" style="font-size: 11px; color: #6ee7b7;">measured</span><span class="muted" style="flex: 1;">Gas analysis. The only one that measures rather than estimates.</span></div>
+            <div style="display: flex; align-items: baseline; gap: 12px;"><span style="width: 150px; font-size: 13px; font-weight: 600; color: #f1f5f9;">12-minute run</span><span class="mono" style="font-size: 11px; color: #94a3b8;">r &asymp; 0.90</span><span class="muted" style="flex: 1;">Strong, if you truly go all out. Pacing conservatively under-reads you.</span></div>
+            <div style="display: flex; align-items: baseline; gap: 12px;"><span style="width: 150px; font-size: 13px; font-weight: 600; color: #f1f5f9;">6-minute walk</span><span class="mono" style="font-size: 11px; color: #94a3b8;">submaximal</span><span class="muted" style="flex: 1;">Built for lower fitness. It under-reads a fit person by design.</span></div>
+            <div style="display: flex; align-items: baseline; gap: 12px;"><span style="width: 150px; font-size: 13px; font-weight: 600; color: #f1f5f9;">Watch estimate</span><span class="mono" style="font-size: 11px; color: #FBBF24;">7 to 16 % error</span><span class="muted" style="flex: 1;">Carried with every wearable reading Verve shows. Never the headline.</span></div>
+          </div>
+        </div>
+        <p class="body" style="margin-top: 18px;">A correlation of 0.90 is strong and is not the same as agreement. It means the test ranks people well, not that your number is within a beat of the truth. Verve keeps test types apart for the same reason: a walk test and a maximal run measure differently, so a trend across them would show the change of method, not a change in you.</p>
+      </div>
+
+      <!-- Run protocols -->
+      <div style="margin-top: 34px; padding-top: 26px; border-top: 1px solid rgba(255,255,255,0.07);">
+        <h2>The run protocols</h2>
+        <p class="sub" style="margin-top: 6px;">What the app's checklist is short for</p>
+        <p class="body" style="margin-top: 16px;">The twelve-minute run wants a flat measured route, a warm-up, and an even effort you can only just hold to the end. The app's checklist is the short version; the full protocol, including what to do if you have to stop, is written out here. Chest pain, dizziness, nausea or breathlessness beyond hard breathing end the test, and the result does not matter.</p>
+      </div>
+
+      <div style="margin-top: 42px; border-radius: 16px; border: 1px solid rgba(129,140,248,0.25); background: rgba(129,140,248,0.06); padding: 22px 24px; display: flex; align-items: center; gap: 20px;">
+        <div style="flex: 1;">
+          <div style="font-size: 16px; font-weight: 600; color: #f1f5f9;">Next: Movement</div>
+          <p class="muted" style="margin-top: 5px;">The weekly dose, Zone 2, strength, steps and how much of the day you spend sitting.</p>
+        </div>
+        <span style="border-radius: 999px; background: #818cf8; color: #0D0D1C; padding: 10px 18px; font-size: 13.5px; font-weight: 600;">Read it &rarr;</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

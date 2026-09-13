@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Hanken Grotesk', ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #a5b4fc; text-decoration: none; } a:hover { color: #c7d2fe; }
+    .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+    .eyebrow { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #a5b4fc; }
+    .card { border-radius: 14px; border: 1px solid rgba(255,255,255,0.09); background: rgba(255,255,255,0.035); padding: 20px 22px; }
+    p { margin: 0; }
+    .muted { font-size: 12.5px; line-height: 1.6; color: #64748b; }
+    .verdict { font-size: 12px; line-height: 1.55; }
+  </style>
+</helmet>
+
+<div style="width: 920px; background: linear-gradient(178deg, #15151f 0%, #0c0c15 56%, #090910 100%); box-sizing: border-box; padding: 40px;">
+
+  <span class="eyebrow">The opening line</span>
+  <h1 style="margin: 12px 0 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: #f1f5f9;">Keep the promise, drop the inventory</h1>
+
+  <div class="card" style="margin-top: 22px; border-color: rgba(248,113,113,0.28); background: rgba(248,113,113,0.05);">
+    <div class="mono" style="font-size: 10px; color: #fca5a5; letter-spacing: 0.1em;">TODAY</div>
+    <p style="margin-top: 10px; font-size: 15.5px; line-height: 1.65; color: #cbd5e1;">&ldquo;50 citations across 12 topics. No proprietary score you can't check the math on &mdash; every number below is the same one used inside the app, and every number links to where it came from.&rdquo;</p>
+    <div style="height: 1px; background: rgba(255,255,255,0.08); margin: 16px 0;"></div>
+    <div style="display: flex; flex-direction: column; gap: 7px;">
+      <p class="verdict" style="color: #fca5a5;">The counts are wrong. There are 61 citations and 20 topics on the page as it stands, and both were typed by hand, so they drift every time a study is added.</p>
+      <p class="verdict" style="color: #fca5a5;">&ldquo;Check the math on&rdquo; picks a fight with competitors in the first ten words. The reader has not been told what this is yet.</p>
+      <p class="verdict" style="color: #fca5a5;">Three claims in one sentence: a count, a negative, and a promise. The promise is the good one and it arrives last.</p>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; margin-top: 22px;">
+    <div class="card" style="border-color: rgba(52,211,153,0.35); background: rgba(52,211,153,0.05);">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="mono" style="font-size: 10px; font-weight: 700; color: #0D0D1C; background: #34d399; border-radius: 4px; padding: 2px 6px;">1</span>
+        <span class="mono" style="font-size: 9.5px; color: #34d399; letter-spacing: 0.1em;">DRAWN INTO THE HUB</span>
+      </div>
+      <p style="margin-top: 12px; font-size: 15px; line-height: 1.65; color: #f1f5f9;">Verve shows you numbers a clinician would recognise, and tells you which study each one came from. Nothing is scored by a formula we will not show you.</p>
+      <p class="muted" style="margin-top: 12px;">The counts move out of the sentence and become three figures under it, counted in the build rather than typed: 61 citations, 20 topics, 0 made-up scores. The zero does the work the old negative was trying to do, without the elbow.</p>
+    </div>
+
+    <div class="card">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="mono" style="font-size: 10px; font-weight: 700; color: #0D0D1C; background: #94a3b8; border-radius: 4px; padding: 2px 6px;">2</span>
+        <span class="mono" style="font-size: 9.5px; color: #94a3b8; letter-spacing: 0.1em;">SHORTER, IF YOU WANT THE STATS GONE</span>
+      </div>
+      <p style="margin-top: 12px; font-size: 15px; line-height: 1.65; color: #f1f5f9;">Every number in Verve comes from a study, and every study is named here.</p>
+      <p class="muted" style="margin-top: 12px;">One sentence, no counts at all. Works if the three figures below feel like clutter; loses the chance to say how much evidence there is.</p>
+      <div style="height: 1px; background: rgba(255,255,255,0.08); margin: 14px 0;"></div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="mono" style="font-size: 10px; font-weight: 700; color: #0D0D1C; background: #94a3b8; border-radius: 4px; padding: 2px 6px;">3</span>
+        <span class="mono" style="font-size: 9.5px; color: #94a3b8; letter-spacing: 0.1em;">IF YOU WANT THE EDGE KEPT</span>
+      </div>
+      <p style="margin-top: 12px; font-size: 15px; line-height: 1.65; color: #f1f5f9;">No readiness score. No recovery percentage. No number we made up. Every reading here is one a clinician uses, and every one names its study.</p>
+      <p class="muted" style="margin-top: 12px;">Keeps the fight but aims it at the practice rather than at a rival. Good as a post; harder on a first-time visitor who has not met the category yet.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 18px;">
+    <div class="eyebrow" style="color: #64748b;">Either way</div>
+    <p class="muted" style="margin-top: 10px; color: #94a3b8;">Count the citations and the topics in the build rather than typing them. The data file already holds both, so the line can never be wrong again, and nobody has to remember to update it when a study is added.</p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

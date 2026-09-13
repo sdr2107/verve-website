@@ -26,3 +26,6 @@ pnpm-debug.log*
 # Never commit account recovery codes
 github-recovery-codes.txt
 *recovery-codes*
+
+# Generated design canvases (sources .dc.html + canvas.json are tracked)
+design-*/[a-z]*-page.html

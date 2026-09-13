@@ -1,0 +1,87 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "/science — the hub (map B, drawn in)",
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 2480
+    },
+    {
+      "file": "Mobile.dc.html",
+      "title": "The hub on a phone",
+      "x": 1400,
+      "y": 0,
+      "w": 390,
+      "h": 1980
+    },
+    {
+      "file": "Topic.dc.html",
+      "title": "/science/movement",
+      "x": 1380,
+      "y": 2780,
+      "w": 1280,
+      "h": 1760
+    },
+    {
+      "file": "Opener.dc.html",
+      "title": "The opening line, rewritten",
+      "x": 1900,
+      "y": 0,
+      "w": 920,
+      "h": 1020
+    },
+    {
+      "file": "Anchors.dc.html",
+      "title": "Keeping the app's links alive",
+      "x": 2920,
+      "y": 0,
+      "w": 920,
+      "h": 1100
+    },
+    {
+      "file": "Fitness.dc.html",
+      "title": "/science/fitness",
+      "x": 0,
+      "y": 2780,
+      "w": 1280,
+      "h": 2340
+    },
+    {
+      "file": "SleepHeart.dc.html",
+      "title": "/science/sleep-heart",
+      "x": 2760,
+      "y": 2780,
+      "w": 1280,
+      "h": 2540
+    },
+    {
+      "file": "Body.dc.html",
+      "title": "/science/body — bands and retest intervals",
+      "x": 4140,
+      "y": 2780,
+      "w": 1280,
+      "h": 3820
+    }
+  ],
+  "annotations": [
+    {
+      "id": "brief",
+      "x": 3960,
+      "y": 0,
+      "w": 400,
+      "text": "The science page, reshaped. Decisions taken: the hub with four subjects, and the AHA map as a live card (option B), drawn into the hub.\n\nAll four subject pages are now drawn: Fitness, Movement, Sleep & heart, Body. Each opens with what the app shows, then the studies.\n\nTHE BODY PAGE carries your suggestion: every marker under its Body-page section, with the band Verve screens against and how often to repeat it.\n\nTHE NINE BLANK INTERVALS ARE NOW FILLED. Seven come from a guideline and cite it. Two have no guideline interval anywhere, so they are shown in grey and labelled as Verve's own rather than invented. The note to the right of the Body board sets out each one.\n\nStatic mockups, not a clickable prototype. Sample figures throughout."
+    },
+    {
+      "id": "retest",
+      "x": 5560,
+      "y": 2780,
+      "w": 420,
+      "text": "The nine intervals, proposed with their sources.\n\nSEVEN FROM A GUIDELINE\n\nHbA1c — every 3 years when normal; yearly from 5.7; twice a year once diabetes is treated and at goal, every 3 months when it is not. ADA Standards of Care 2026, §2 and §6.\n\nFasting glucose — the same schedule, from the same ADA screening recommendation, which covers A1C, fasting glucose and the 2-hour value together.\n\nBlood pressure — yearly under 120/80; every 3 to 6 months once above it and not on drug therapy; within a month from 140/90. AHA/ACC 2017.\n\nApoB · LDL · triglycerides · HDL — one panel, one interval. Every 4 to 6 years from age 20 at low risk (AHA; USPSTF says at least every 5). After starting or changing lipid-lowering treatment, 6 to 8 weeks, and yearly once at target. ESC/EAS 2019.\n\nTWO WITH NO GUIDELINE INTERVAL\n\nHOMA-IR — the Endocrine Society puts calculated insulin-resistance indices in research, not the clinic, and no society has ratified a cut-point. So: no schedule. It redraws whenever fasting insulin and glucose are both entered.\n\nALMI — neither EWGSOP2 (2019) nor AWGS (2019) names a repeat interval. EWGSOP2 asks for periodic reassessment and draws its acute/chronic line at 6 months, and reports 1–2% muscle loss a year after 50, so anything shorter sits inside the noise of a home scale. Six months, labelled as Verve's cadence.\n\nNEXT: a retestIntervals block in data/met-thresholds.json, one entry per marker with interval, the condition that shortens it, and a source string — so the app and this page cannot drift."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

@@ -1,0 +1,212 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Hanken Grotesk', ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #a5b4fc; text-decoration: none; } a:hover { color: #c7d2fe; }
+    .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+    .eyebrow { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #a5b4fc; }
+    .card { border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); }
+    h2 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: #f1f5f9; }
+    p { margin: 0; }
+    .body { font-size: 14.5px; line-height: 1.7; color: #94a3b8; }
+    .muted { font-size: 12.5px; line-height: 1.6; color: #64748b; }
+    .sub { font-size: 13px; color: #64748b; }
+    .rail { font-size: 13px; color: #64748b; padding: 7px 12px; border-radius: 8px; display: block; }
+    .rail.on { color: #f1f5f9; background: rgba(255,255,255,0.06); border-left: 2px solid #818cf8; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; background: linear-gradient(178deg, #15151f 0%, #0c0c15 56%, #090910 100%); box-sizing: border-box; padding-bottom: 64px;">
+
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; border-bottom: 1px solid rgba(255,255,255,0.06);">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span style="width: 30px; height: 30px; border-radius: 8px; background: #1e1b4b; border: 1px solid rgba(129,140,248,0.4); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; color: #818cf8;">V</span>
+      <span style="font-size: 17px; font-weight: 600; color: #f1f5f9;">Verve</span>
+      <span style="font-size: 14px; color: #475569; margin: 0 4px;">/</span>
+      <span style="font-size: 14px; color: #94a3b8;">Science</span>
+      <span style="font-size: 14px; color: #475569; margin: 0 4px;">/</span>
+      <span style="font-size: 14px; color: #f1f5f9; font-weight: 500;">Sleep &amp; heart</span>
+    </div>
+    <span style="border-radius: 999px; border: 1px solid rgba(255,255,255,0.14); padding: 7px 15px; font-size: 13px; font-weight: 500; color: #f1f5f9;">Get the app</span>
+  </div>
+
+  <div style="display: flex; max-width: 1200px; margin: 0 auto; padding: 0 40px; gap: 44px;">
+
+    <div style="width: 200px; flex-shrink: 0; padding-top: 42px;">
+      <div class="eyebrow" style="padding-left: 12px;">On this page</div>
+      <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 12px;">
+        <span class="rail on">The morning read</span>
+        <span class="rail">Sleep timing</span>
+        <span class="rail">Sleep and training</span>
+        <span class="rail">Resting heart rate</span>
+        <span class="rail">Heart rate recovery</span>
+      </div>
+      <div style="height: 1px; background: rgba(255,255,255,0.07); margin: 20px 12px;"></div>
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <span class="rail">&larr; Movement</span>
+        <span class="rail">Body &rarr;</span>
+      </div>
+      <div style="margin: 22px 12px 0; padding: 13px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03);">
+        <div class="eyebrow" style="font-size: 9.5px; color: #64748b;">Wearing something else?</div>
+        <p class="muted" style="margin-top: 7px; font-size: 11px;">Oura, Whoop and Garmin reach Verve through Apple Health.</p>
+        <span class="mono" style="display: block; margin-top: 7px; font-size: 10px; color: #a5b4fc;">How to connect &rarr;</span>
+      </div>
+    </div>
+
+    <div style="flex: 1; min-width: 0; padding-top: 42px;">
+      <span class="eyebrow">Subject 3 of 4</span>
+      <h1 style="margin: 12px 0 0; font-size: 40px; font-weight: 700; letter-spacing: -0.025em; color: #f1f5f9;">Sleep &amp; heart</h1>
+      <p class="body" style="margin-top: 12px; font-size: 16px; max-width: 660px;">What your watch reads while you are asleep and in the minute after you stop, and what each of those readings is worth. Five topics, twenty citations.</p>
+
+      <!-- Morning read -->
+      <div style="margin-top: 36px; padding-top: 26px; border-top: 1px solid rgba(255,255,255,0.07);">
+        <h2>The morning read</h2>
+        <p class="sub" style="margin-top: 6px;">How the four Today tiles are coloured, and where each line comes from</p>
+
+        <div class="card" style="margin-top: 18px; padding: 20px 22px;">
+          <div style="display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px;">
+            <div style="border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); padding: 13px;">
+              <div style="font-size: 11px; color: #94a3b8;">Sleep</div>
+              <div style="font-size: 19px; font-weight: 800; color: #FBBF24; margin-top: 4px;">6h 29</div>
+              <div class="mono" style="font-size: 9.5px; color: #64748b; margin-top: 7px;">amber under 7 h</div>
+            </div>
+            <div style="border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); padding: 13px;">
+              <div style="font-size: 11px; color: #94a3b8;">Resting HR</div>
+              <div style="font-size: 19px; font-weight: 800; color: #34d399; margin-top: 4px;">52</div>
+              <div class="mono" style="font-size: 9.5px; color: #64748b; margin-top: 7px;">amber +5 &middot; red +10</div>
+            </div>
+            <div style="border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); padding: 13px;">
+              <div style="font-size: 11px; color: #94a3b8;">Recovery</div>
+              <div style="font-size: 19px; font-weight: 800; color: #34d399; margin-top: 4px;">&darr;25</div>
+              <div class="mono" style="font-size: 9.5px; color: #64748b; margin-top: 7px;">red at 12 or under</div>
+            </div>
+            <div style="border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); padding: 13px;">
+              <div style="font-size: 11px; color: #94a3b8;">Sitting</div>
+              <div style="font-size: 19px; font-weight: 800; color: #34d399; margin-top: 4px;">3 h</div>
+              <div class="mono" style="font-size: 9.5px; color: #64748b; margin-top: 7px;">amber 10.6 h &middot; red 12 h</div>
+            </div>
+          </div>
+          <p class="muted" style="margin-top: 14px;">Green means inside the range its evidence calls ordinary. A grey dash means Verve has not measured it and will not guess. Sleep, resting rate and recovery are explained below; the sitting line belongs to Movement.</p>
+        </div>
+      </div>
+
+      <!-- Sleep timing -->
+      <div style="margin-top: 34px; padding-top: 26px; border-top: 1px solid rgba(255,255,255,0.07);">
+        <h2>Sleep timing</h2>
+        <p class="sub" style="margin-top: 6px;">How much your bedtime moves, and the research index behind it</p>
+
+        <div class="card" style="margin-top: 18px; display: flex; overflow: hidden;">
+          <div style="flex: 1; padding: 20px 22px;">
+            <div class="eyebrow" style="color: #64748b;">In the app</div>
+            <p class="body" style="margin-top: 9px;">Three numbers: last night's hours, how far your bedtime drifts from one night to the next, and a regularity score from 0 to 100. Drift needs five nights. The score needs five comparable days, and a day is only comparable once there is a day before it to compare with, so five days means six nights.</p>
+          </div>
+          <div style="width: 268px; border-left: 1px solid rgba(255,255,255,0.07); background: rgba(0,0,0,0.2); padding: 18px;">
+            <div class="mono" style="font-size: 9px; letter-spacing: 0.1em; color: #64748b;">REGULARITY</div>
+            <div style="display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 9px;"><span style="width: 71.6%; background: rgba(244,63,94,0.35);"></span><span style="width: 15.7%; background: rgba(251,191,36,0.45);"></span><span style="width: 12.7%; background: rgba(52,211,153,0.4);"></span></div>
+            <div style="position: relative; height: 13px;"><span style="position: absolute; left: 81%; top: 2px; width: 2px; height: 9px; background: #f1f5f9;"></span></div>
+            <div style="position: relative; height: 14px;">
+              <span class="mono" style="position: absolute; left: 0; font-size: 9.5px; color: #475569;">0</span>
+              <span class="mono" style="position: absolute; left: 71.6%; transform: translateX(-50%); font-size: 9.5px; color: #FBBF24;">71.6</span>
+              <span class="mono" style="position: absolute; left: 87.3%; transform: translateX(-50%); font-size: 9.5px; color: #6ee7b7;">87.3</span>
+              <span class="mono" style="position: absolute; right: 0; font-size: 9.5px; color: #475569;">100</span>
+            </div>
+            <p class="muted" style="margin-top: 10px; font-size: 11px;">The marker is the UK Biobank median, 81.0. Bands are percentiles of that sample, not lines a guideline drew.</p>
+          </div>
+        </div>
+
+        <p class="body" style="margin-top: 18px;">The index asks how likely you are to be in the same state, asleep or awake, at the same clock time on two consecutive days. It measures consistency, not duration: you can sleep seven hours a night and still score poorly if you take them at a different time each night. Bedtime drift answers the same question in minutes, which is the form a guideline uses and the form you can act on. Sixty minutes is the mark Verve draws.</p>
+      </div>
+
+      <!-- Resting HR -->
+      <div style="margin-top: 34px; padding-top: 26px; border-top: 1px solid rgba(255,255,255,0.07);">
+        <h2>Resting heart rate</h2>
+        <p class="sub" style="margin-top: 6px;">Measured against your own normal, not a population range</p>
+
+        <div class="card" style="margin-top: 18px; padding: 20px 22px;">
+          <div style="display: flex; gap: 26px;">
+            <div style="flex: 1;">
+              <div class="eyebrow" style="color: #64748b;">Against yourself</div>
+              <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 11px;">
+                <div style="display: flex; align-items: center; gap: 10px;"><span style="width: 9px; height: 9px; border-radius: 3px; background: #34d399;"></span><span style="font-size: 12.5px; color: #cbd5e1; flex: 1;">Within 5 bpm of your 30-day median</span></div>
+                <div style="display: flex; align-items: center; gap: 10px;"><span style="width: 9px; height: 9px; border-radius: 3px; background: #FBBF24;"></span><span style="font-size: 12.5px; color: #cbd5e1; flex: 1;">About 5 above, for a few days</span></div>
+                <div style="display: flex; align-items: center; gap: 10px;"><span style="width: 9px; height: 9px; border-radius: 3px; background: #f87171;"></span><span style="font-size: 12.5px; color: #cbd5e1; flex: 1;">About 10 above</span></div>
+              </div>
+            </div>
+            <div style="width: 1px; background: rgba(255,255,255,0.07);"></div>
+            <div style="flex: 1;">
+              <div class="eyebrow" style="color: #64748b;">Against the level</div>
+              <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 11px;">
+                <div style="display: flex; align-items: center; gap: 10px;"><span class="mono" style="width: 58px; font-size: 11px; color: #6ee7b7;">50&ndash;60</span><span style="font-size: 12.5px; color: #cbd5e1; flex: 1;">Lowest risk sits here</span></div>
+                <div style="display: flex; align-items: center; gap: 10px;"><span class="mono" style="width: 58px; font-size: 11px; color: #FBBF24;">75&ndash;80</span><span style="font-size: 12.5px; color: #cbd5e1; flex: 1;">Higher risk even when steady</span></div>
+                <div style="display: flex; align-items: center; gap: 10px;"><span class="mono" style="width: 58px; font-size: 11px; color: #94a3b8;">under 50</span><span style="font-size: 12.5px; color: #cbd5e1; flex: 1;">Usually adaptation, not a finding</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="body" style="margin-top: 18px;">The tile takes whichever of the two reads worse. Below your usual is never coloured, because a rested morning and an endurance athlete both land there. A rise has many ordinary causes before it has a worrying one: alcohol, heat, a late meal, poor sleep, altitude, hard training. Verve reports the deviation and its direction, and does not diagnose.</p>
+      </div>
+
+      <!-- HRR -->
+      <div style="margin-top: 34px; padding-top: 26px; border-top: 1px solid rgba(255,255,255,0.07);">
+        <h2>Heart rate recovery</h2>
+        <p class="sub" style="margin-top: 6px;">One cited line, and why there is no second one</p>
+
+        <div class="card" style="margin-top: 18px; padding: 20px 22px;">
+          <div class="mono" style="font-size: 9px; letter-spacing: 0.1em; color: #64748b;">THE FALL IN THE FIRST MINUTE, BPM</div>
+          <div style="display: flex; height: 9px; border-radius: 5px; overflow: hidden; margin-top: 11px;">
+            <span style="width: 30%; background: rgba(244,63,94,0.45);"></span>
+            <span style="width: 70%; background: linear-gradient(90deg, rgba(251,191,36,0.4), rgba(52,211,153,0.4));"></span>
+          </div>
+          <div style="position: relative; height: 15px; margin-top: 7px;">
+            <span class="mono" style="position: absolute; left: 0; font-size: 10px; color: #475569;">0</span>
+            <span class="mono" style="position: absolute; left: 30%; transform: translateX(-50%); font-size: 10px; color: #fca5a5;">12</span>
+            <span class="mono" style="position: absolute; right: 0; font-size: 10px; color: #475569;">40</span>
+          </div>
+          <p class="muted" style="margin-top: 12px;">Below the line is a cited finding. Above it is a gradient, not a grade: published cut-points span 12 to 30 depending on the study and the protocol, so Verve shades and refuses to print a verdict word.</p>
+        </div>
+
+        <p class="body" style="margin-top: 18px;">A fall of twelve beats or fewer carried about four times the risk of death in 2,428 adults followed for six years, independent of workload and of what the ECG showed. A cohort in 2025 landed on the same line. It is not a proxy for blocked arteries: recovery predicted death even after accounting for what angiography showed, which is why it sits beside resting heart rate rather than inside a heart-disease panel.</p>
+        <p class="body" style="margin-top: 14px;">How far your rate falls also depends on what you do after you stop. Walking it off and sitting down give different numbers, and the twelve-beat line was drawn with an active cool-down. Your watch measures whatever you happen to do, which is one more reason the comparison Verve leads with is you against your own recent readings.</p>
+
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; margin-top: 18px;">
+          <div class="card" style="padding: 16px 18px;">
+            <div style="font-size: 13.5px; font-weight: 600; color: #f1f5f9;">Cole et al, NEJM 1999</div>
+            <p class="muted" style="margin-top: 7px;">2,428 adults, six years. A fall of 12 beats or fewer carried roughly four times the risk of death, independent of workload and of the ECG.</p>
+            <div class="mono" style="margin-top: 10px; font-size: 11px; color: #a5b4fc;">nejm.org &rarr;</div>
+          </div>
+          <div class="card" style="padding: 16px 18px;">
+            <div style="font-size: 13.5px; font-weight: 600; color: #f1f5f9;">Petek et al, JACC 2023</div>
+            <p class="muted" style="margin-top: 7px;">Consumer wearables reviewed. No agreed normal values for recovery; published one-minute cut-points span 12 to 30.</p>
+            <div class="mono" style="margin-top: 10px; font-size: 11px; color: #a5b4fc;">PMID 37438010 &rarr;</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sleep and training -->
+      <div style="margin-top: 34px; padding-top: 26px; border-top: 1px solid rgba(255,255,255,0.07);">
+        <h2>Sleep and training</h2>
+        <p class="sub" style="margin-top: 6px;">What the Guide's sleep line is, and what it refuses to claim</p>
+        <p class="body" style="margin-top: 16px;">Because sleep and training now come from the same weekly summary, the Guide can lay them side by side: your average night, the minutes awake in it, and what you did in the days around it. It reports what moved together. It does not tell you that one caused the other, because a week of your own data cannot show that.</p>
+      </div>
+
+      <div style="margin-top: 42px; border-radius: 16px; border: 1px solid rgba(129,140,248,0.25); background: rgba(129,140,248,0.06); padding: 22px 24px; display: flex; align-items: center; gap: 20px;">
+        <div style="flex: 1;">
+          <div style="font-size: 16px; font-weight: 600; color: #f1f5f9;">Next: Body</div>
+          <p class="muted" style="margin-top: 5px;">Blood pressure, lipids, waist and muscle, each with the band it is screened against and how often to repeat it.</p>
+        </div>
+        <span style="border-radius: 999px; background: #818cf8; color: #0D0D1C; padding: 10px 18px; font-size: 13.5px; font-weight: 600;">Read it &rarr;</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

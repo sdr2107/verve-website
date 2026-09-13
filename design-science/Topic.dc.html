@@ -1,0 +1,142 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Hanken Grotesk', ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #a5b4fc; text-decoration: none; } a:hover { color: #c7d2fe; }
+    .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+    .eyebrow { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #a5b4fc; }
+    .card { border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); }
+    h2 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: #f1f5f9; }
+    p { margin: 0; }
+    .body { font-size: 14.5px; line-height: 1.7; color: #94a3b8; }
+    .muted { font-size: 12.5px; line-height: 1.6; color: #64748b; }
+    .sub { font-size: 13px; color: #64748b; }
+    .rail { font-size: 13px; color: #64748b; padding: 7px 12px; border-radius: 8px; }
+    .rail.on { color: #f1f5f9; background: rgba(255,255,255,0.06); border-left: 2px solid #818cf8; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; background: linear-gradient(178deg, #15151f 0%, #0c0c15 56%, #090910 100%); box-sizing: border-box; padding-bottom: 64px;">
+
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 20px 40px; border-bottom: 1px solid rgba(255,255,255,0.06);">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span style="width: 30px; height: 30px; border-radius: 8px; background: #1e1b4b; border: 1px solid rgba(129,140,248,0.4); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; color: #818cf8;">V</span>
+      <span style="font-size: 17px; font-weight: 600; color: #f1f5f9;">Verve</span>
+      <span style="font-size: 14px; color: #475569; margin: 0 4px;">/</span>
+      <span style="font-size: 14px; color: #94a3b8;">Science</span>
+      <span style="font-size: 14px; color: #475569; margin: 0 4px;">/</span>
+      <span style="font-size: 14px; color: #f1f5f9; font-weight: 500;">Movement</span>
+    </div>
+    <span style="border-radius: 999px; border: 1px solid rgba(255,255,255,0.14); padding: 7px 15px; font-size: 13px; font-weight: 500; color: #f1f5f9;">Get the app</span>
+  </div>
+
+  <div style="display: flex; max-width: 1160px; margin: 0 auto; padding: 0 40px; gap: 48px;">
+
+    <!-- sticky rail -->
+    <div style="width: 208px; flex-shrink: 0; padding-top: 42px;">
+      <div class="eyebrow" style="padding-left: 12px;">On this page</div>
+      <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 12px;">
+        <span class="rail on">Weekly volume</span>
+        <span class="rail">Zone 2 training</span>
+        <span class="rail">Strength training</span>
+        <span class="rail">Steps &amp; cadence</span>
+        <span class="rail">Movement balance</span>
+        <span class="rail">Physical activity level</span>
+      </div>
+      <div style="height: 1px; background: rgba(255,255,255,0.07); margin: 20px 12px;"></div>
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <span class="rail">&larr; Fitness</span>
+        <span class="rail">Sleep &amp; heart &rarr;</span>
+      </div>
+    </div>
+
+    <!-- content -->
+    <div style="flex: 1; min-width: 0; padding-top: 42px;">
+      <span class="eyebrow">Subject 2 of 4</span>
+      <h1 style="margin: 12px 0 0; font-size: 40px; font-weight: 700; letter-spacing: -0.025em; color: #f1f5f9;">Movement</h1>
+      <p class="body" style="margin-top: 12px; font-size: 16px; max-width: 640px;">How much, how hard, how often, and how much of the rest of the day you spend sitting. Six topics, sixteen citations.</p>
+
+      <!-- section 1 -->
+      <div style="margin-top: 40px; padding-top: 28px; border-top: 1px solid rgba(255,255,255,0.07);">
+        <h2>Weekly volume</h2>
+        <p class="sub" style="margin-top: 6px;">How much per week, and why the summit sits well above 150 minutes</p>
+
+        <!-- what the app shows — the new part -->
+        <div class="card" style="margin-top: 18px; display: flex; overflow: hidden;">
+          <div style="flex: 1; padding: 20px 22px;">
+            <div class="eyebrow" style="color: #64748b;">In the app</div>
+            <p class="body" style="margin-top: 9px;">The Activity page draws your week as a climb, with flags at 150, 300 and 560 minutes. The line is your aerobic minutes; the flags are where the evidence below changes what it says.</p>
+          </div>
+          <div style="width: 280px; border-left: 1px solid rgba(255,255,255,0.07); background: rgba(0,0,0,0.2); padding: 16px;">
+            <svg width="248" height="104" viewBox="0 0 248 104" style="display: block;">
+              <line x1="0" y1="88" x2="248" y2="88" stroke="rgba(255,255,255,0.08)"/>
+              <polygon fill="rgba(52,211,153,0.12)" points="6,86 54,72 100,58 148,40 196,26 232,18 232,86"/>
+              <polyline fill="none" stroke="#34d399" stroke-width="2.2" points="6,86 54,72 100,58 148,40 196,26 232,18"/>
+              <line x1="108" y1="88" x2="108" y2="52" stroke="#FBBF24" stroke-width="1.2" stroke-dasharray="3 3"/><text x="112" y="50" font-family="JetBrains Mono, monospace" font-size="8" fill="#FBBF24">150</text>
+              <line x1="172" y1="88" x2="172" y2="34" stroke="#06B6D4" stroke-width="1.2" stroke-dasharray="3 3"/><text x="176" y="32" font-family="JetBrains Mono, monospace" font-size="8" fill="#06B6D4">300</text>
+              <line x1="228" y1="88" x2="228" y2="16" stroke="#8B5CF6" stroke-width="1.2" stroke-dasharray="3 3"/><text x="204" y="12" font-family="JetBrains Mono, monospace" font-size="8" fill="#8B5CF6">560</text>
+              <g font-family="JetBrains Mono, monospace" font-size="7" fill="#475569"><text x="2" y="100">M</text><text x="40" y="100">T</text><text x="78" y="100">W</text><text x="116" y="100">T</text><text x="154" y="100">F</text><text x="192" y="100">S</text><text x="228" y="100">S</text></g>
+            </svg>
+          </div>
+        </div>
+
+        <p class="body" style="margin-top: 18px;">The World Health Organization's floor is 150 minutes of moderate activity a week, or 75 vigorous. That is a floor, not a target: the risk curve keeps falling well past it. In 2026 the British Journal of Sports Medicine put the flattening point at roughly 560 to 610 measured minutes a week, where the reduction in heart attack, stroke, heart failure and atrial fibrillation reaches about 30 percent, against 8 to 9 percent at 150.</p>
+        <p class="body" style="margin-top: 14px;">Verve plants flags at all three and no further. Past the last one the climb carries on being drawn, but no flag is planted, because the evidence stops promising more.</p>
+
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; margin-top: 20px;">
+          <div class="card" style="padding: 16px 18px;">
+            <div style="font-size: 13.5px; font-weight: 600; color: #f1f5f9;">WHO Guidelines on Physical Activity, 2020</div>
+            <p class="muted" style="margin-top: 7px;">150 to 300 minutes of moderate activity a week for adults, or 75 to 150 vigorous, plus strength work on two days.</p>
+            <div class="mono" style="margin-top: 10px; font-size: 11px; color: #a5b4fc;">who.int &rarr;</div>
+          </div>
+          <div class="card" style="padding: 16px 18px;">
+            <div style="font-size: 13.5px; font-weight: 600; color: #f1f5f9;">British Journal of Sports Medicine, 2026</div>
+            <p class="muted" style="margin-top: 7px;">Device-measured activity and cardiovascular outcomes: benefit flattens around 560 to 610 minutes a week.</p>
+            <div class="mono" style="margin-top: 10px; font-size: 11px; color: #a5b4fc;">PMID 41240876 &rarr;</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- section 2, collapsed head only -->
+      <div style="margin-top: 34px; padding-top: 28px; border-top: 1px solid rgba(255,255,255,0.07);">
+        <h2>Zone 2 training</h2>
+        <p class="sub" style="margin-top: 6px;">The weekly target, and the personal heart-rate band behind it</p>
+        <div class="card" style="margin-top: 18px; display: flex; align-items: center; gap: 18px; padding: 18px 22px;">
+          <div style="flex: 1;">
+            <div class="eyebrow" style="color: #64748b;">In the app</div>
+            <p class="body" style="margin-top: 9px;">Your band is Karvonen, built from your own resting rate and your age-predicted maximum: 40 to 60 percent of the reserve between them. The app counts minutes inside that band, not inside a table everyone shares.</p>
+          </div>
+          <div style="width: 220px;">
+            <div style="display: flex; height: 9px; border-radius: 5px; overflow: hidden;"><span style="width: 40%; background: rgba(255,255,255,0.08);"></span><span style="width: 20%; background: rgba(52,211,153,0.55);"></span><span style="width: 40%; background: rgba(255,255,255,0.08);"></span></div>
+            <div style="display: flex; justify-content: space-between; margin-top: 7px;"><span class="mono" style="font-size: 10px; color: #475569;">52</span><span class="mono" style="font-size: 10px; color: #34d399;">102&ndash;127</span><span class="mono" style="font-size: 10px; color: #475569;">177</span></div>
+          </div>
+        </div>
+        <p class="body" style="margin-top: 16px;">Two studies and the method note sit under here, in the same shape.</p>
+      </div>
+
+      <div style="margin-top: 34px; padding-top: 28px; border-top: 1px solid rgba(255,255,255,0.07);">
+        <h2>Strength training</h2>
+        <p class="sub" style="margin-top: 6px;">Where the 60 minutes a week comes from, and why the app no longer draws it as a bar to clear</p>
+      </div>
+
+      <div style="margin-top: 48px; border-radius: 16px; border: 1px solid rgba(129,140,248,0.25); background: rgba(129,140,248,0.06); padding: 22px 24px; display: flex; align-items: center; gap: 20px;">
+        <div style="flex: 1;">
+          <div style="font-size: 16px; font-weight: 600; color: #f1f5f9;">Next: Sleep &amp; heart</div>
+          <p class="muted" style="margin-top: 5px;">Hours and stages, how steady your nights are, resting rate, and the fall after you stop.</p>
+        </div>
+        <span style="border-radius: 999px; background: #818cf8; color: #0D0D1C; padding: 10px 18px; font-size: 13.5px; font-weight: 600;">Read it &rarr;</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
