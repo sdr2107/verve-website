@@ -1,0 +1,245 @@
+---
+import SubjectLayout from "../../layouts/SubjectLayout.astro";
+import CitationCard from "../../components/CitationCard.astro";
+import VideoSlot from "../../components/VideoSlot.astro";
+import {
+  BODY_PHENOTYPING_SECTION,
+  HEART_HEALTH_SECTION,
+  MUSCLE_HEALTH_SECTION,
+} from "../../data/science";
+import MarkerRetest from "../../components/science/MarkerRetest.astro";
+import { BODY_MARKERS, BODY_MARKER_CONTEXT } from "../../data/bodyMarkers";
+---
+
+<SubjectLayout subject="body">
+  <!-- ── Heart Health ──────────────────────────────────────────────── -->
+  <section id="heart-health" class="scroll-mt-8">
+    <h2 class="text-2xl font-bold text-text-primary">Heart Health</h2>
+    <p class="mt-2 text-sm text-text-tertiary">ApoB &middot; LDL-C &middot; Lp(a) &middot; hs-CRP &mdash; screening bands, not treatment targets</p>
+    <div class="mt-6"><VideoSlot topic="Heart Health" /></div>
+    <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+      <p class="text-sm leading-relaxed text-text-secondary">
+        For ApoB and LDL-C in particular, clinical targets are set by a
+        person's overall cardiovascular risk category &mdash; a value in the
+        "borderline" band may be perfectly appropriate for one person and a
+        treatment trigger for another. Verve classifies against population
+        screening bands and always defers to a clinician.
+      </p>
+    </div>
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      {HEART_HEALTH_SECTION.map((c) => <CitationCard {...c} />)}
+    </div>
+  </section>
+
+  <!-- ── Body Phenotyping ──────────────────────────────────────────── -->
+  <section id="body-phenotyping" class="scroll-mt-8">
+    <h2 class="text-2xl font-bold text-text-primary">Body Phenotyping</h2>
+    <p class="mt-2 text-sm text-text-tertiary">Metabolic syndrome screening, beyond BMI</p>
+    <div class="mt-6"><VideoSlot topic="Body Phenotyping" /></div>
+
+    <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6" id="health-picture">
+      <h3 class="text-base font-semibold text-text-primary">The Health Picture &mdash; weight &times; fitness</h3>
+      <p class="mt-3 text-sm leading-relaxed text-text-secondary">
+        The app&rsquo;s Health Picture grid crosses your BMI band with your
+        fitness tier, because the two together predict better than either
+        alone &mdash; and fitness is the half that responds to training
+        within weeks. What each square means:
+      </p>
+      <ul class="mt-4 space-y-3 text-sm leading-relaxed text-text-secondary">
+        <li><strong class="text-text-primary">Lean &amp; Active</strong> &mdash; both dimensions working in your favour. Strength training is the highest-value next add.</li>
+        <li><strong class="text-text-primary">Fit on the Outside</strong> &mdash; normal weight, low fitness. Normal-weight-unfit carries 2&ndash;3&times; the mortality of fit people across all BMI bands; fitness is the lever.</li>
+        <li><strong class="text-text-primary">Active &amp; Heavy</strong> &mdash; fitness substantially attenuates the risk of extra weight. Keep fitness high while addressing visceral fat.</li>
+        <li><strong class="text-text-primary">Weight &amp; Fitness Gap</strong> &mdash; improve fitness first: risk reduction begins before the scale moves.</li>
+        <li><strong class="text-text-primary">Strong Foundation</strong> &mdash; fitness substantially attenuates but does not fully eliminate cardiovascular risk at this BMI. Maintain fitness alongside gradual body-composition change.</li>
+        <li><strong class="text-text-primary">Time to Move</strong> &mdash; 1&ndash;2 METs gained from daily walking produces measurable mortality reduction; each 1 MET is roughly 13&ndash;14% lower risk.</li>
+      </ul>
+    </div>
+    <div class="mt-6 grid gap-4 sm:grid-cols-2">
+      {BODY_PHENOTYPING_SECTION.map((c) => <CitationCard {...c} />)}
+    </div>
+  </section>
+
+  <!-- ── Body markers ──────────────────────────────────────────────────
+       One entry per marker the Body page can record, anchored so the app
+       links straight to the parameter a reader is looking at.
+
+       GENERATED from lib/markers.ts in the app repo — the same definitions
+       the app classifies readings with. That is deliberate: a threshold
+       quoted here that no longer matches the one a reader was just shown on
+       their phone is worse than no page at all. ── -->
+  <section id="body-markers" class="scroll-mt-8">
+    <h2 class="text-2xl font-bold text-text-primary">Body markers</h2>
+    <p class="mt-2 text-sm text-text-tertiary">
+      What each measurement is, how to take it, the range it is read against,
+      and how often it is worth repeating
+    </p>
+    <p class="mt-3 text-xs text-text-tertiary">{BODY_MARKER_CONTEXT}</p>
+
+    {["Metabolic", "Heart", "Muscle"].map((group) => (
+      <div class="mt-8">
+        <h3 class="text-xs font-semibold uppercase tracking-widest text-text-tertiary">{group}</h3>
+        <div class="mt-4 space-y-6">
+          {BODY_MARKERS.filter((m) => m.section === group).map((m) => (
+            <article id={m.slug} class="scroll-mt-8 rounded-xl border border-white/10 bg-white/[0.03] p-5">
+              <h4 class="text-lg font-bold text-text-primary">
+                {m.label}
+                {m.units.length > 0 && (
+                  <span class="ml-2 text-sm font-normal text-text-tertiary">{m.units.join(" · ")}</span>
+                )}
+              </h4>
+              {m.purpose && <p class="mt-1 text-sm text-text-secondary">{m.purpose}</p>}
+              {m.note && <p class="mt-2 text-sm text-text-tertiary">{m.note}</p>}
+
+              {m.bands.length > 0 && (
+                <div class="mt-4">
+                  <p class="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Ranges</p>
+                  <ul class="mt-2 space-y-1 text-sm text-text-secondary">
+                    {m.bands.map((b) => <li>{b}</li>)}
+                  </ul>
+                </div>
+              )}
+
+              <MarkerRetest retest={m.retest} />
+
+              {m.howTo.length > 0 && (
+                <div class="mt-4">
+                  <p class="text-xs font-semibold uppercase tracking-wider text-text-tertiary">How to measure it</p>
+                  <ol class="mt-2 list-decimal space-y-1 pl-5 text-sm text-text-secondary">
+                    {m.howTo.map((h) => <li>{h}</li>)}
+                  </ol>
+                </div>
+              )}
+
+              {m.detail.length > 0 && (
+                <div class="mt-4 space-y-3 border-t border-white/[0.07] pt-4">
+                  {m.detail.map((d) => (
+                    <p class="text-sm leading-6 text-text-secondary">{d}</p>
+                  ))}
+                </div>
+              )}
+
+              {m.references.length > 0 && (
+                <div class="mt-4">
+                  <p class="text-xs font-semibold uppercase tracking-wider text-text-tertiary">References</p>
+                  <ol class="mt-2 list-decimal space-y-1.5 pl-5 text-xs leading-5 text-text-tertiary">
+                    {m.references.map((r) => <li>{r}</li>)}
+                  </ol>
+                </div>
+              )}
+
+              {m.citation && <p class="mt-4 text-xs text-text-tertiary">{m.citation}</p>}
+            </article>
+          ))}
+        </div>
+      </div>
+    ))}
+  </section>
+
+  <!-- ── Muscle Health ─────────────────────────────────────────────── -->
+  <section id="muscle-health" class="scroll-mt-8">
+    <h2 class="text-2xl font-bold text-text-primary">Muscle Health &amp; Grip Strength</h2>
+    <p class="mt-2 text-sm text-text-tertiary">Why grip strength is in a fitness app at all</p>
+    <div class="mt-6"><VideoSlot topic="Muscle Health & Grip Strength" /></div>
+    <div class="mt-6 grid gap-4 sm:grid-cols-2">
+      {MUSCLE_HEALTH_SECTION.map((c) => <CitationCard {...c} />)}
+    </div>
+  </section>
+
+  <!-- ── Intrinsic Capacity ────────────────────────────────────────── -->
+  <section id="intrinsic-capacity" class="scroll-mt-8">
+    <h2 class="text-2xl font-bold text-text-primary">Intrinsic Capacity</h2>
+    <p class="mt-2 text-sm text-text-tertiary">Why grip, walking speed, chair stand and SPPB belong in the same room — and which parts of the picture Verve does not measure</p>
+
+    <div class="mt-6 space-y-4 text-sm leading-relaxed text-text-secondary">
+      <p>
+        <strong class="text-text-primary">Intrinsic capacity</strong> is the World Health
+        Organization's name for everything a person's body and mind can do — their functional
+        reserve, taken as a whole rather than as a list of diseases. It was defined in the 2015
+        <em>World Report on Ageing and Health</em> as the centrepiece of a deliberate shift: away
+        from asking what conditions an older adult has, and toward asking what they are able to
+        do and whether that is changing.
+      </p>
+
+      <h3 class="pt-2 text-lg font-semibold text-text-primary">The five domains</h3>
+      <p>
+        The framework scores a person across five areas: <strong class="text-text-primary">locomotion</strong>
+        (strength and mobility), <strong class="text-text-primary">vitality</strong> (energy,
+        nutrition and resilience to physical stress), <strong class="text-text-primary">cognition</strong>,
+        <strong class="text-text-primary">sensory capacity</strong> (vision and hearing) and
+        <strong class="text-text-primary">psychological wellbeing</strong>. Many of the instruments
+        are ones geriatric medicine already uses: grip strength, usual-pace walking speed, the
+        five-times chair rise, and the Short Physical Performance Battery that scores balance,
+        gait and chair stand together.
+      </p>
+      <p>
+        Lower intrinsic capacity predicts disability and mortality in older adults, and in 2022 the
+        WHO added <em>ageing-associated decline in intrinsic capacity</em> to the eleventh revision
+        of the International Classification of Diseases. What researchers most want from it, though,
+        is not a single reading but a trajectory: a person followed over time, so that a decline is
+        seen early enough to do something about it — often while they are still robust and have no
+        diagnosis at all.
+      </p>
+
+      <h3 class="pt-2 text-lg font-semibold text-text-primary">What Verve measures, and what it does not</h3>
+      <div class="overflow-x-auto">
+        <table class="mt-2 w-full text-left text-sm">
+          <thead class="text-xs uppercase tracking-wider text-text-tertiary">
+            <tr><th class="py-2 pr-4">Domain</th><th class="py-2 pr-4">WHO's screening measures</th><th class="py-2">In Verve</th></tr>
+          </thead>
+          <tbody class="divide-y divide-white/[0.07]">
+            <tr><td class="py-2 pr-4 text-text-primary">Locomotion</td><td class="py-2 pr-4">chair rise, gait speed, SPPB, grip</td><td class="py-2">All four, with cited cut-offs</td></tr>
+            <tr><td class="py-2 pr-4 text-text-primary">Vitality</td><td class="py-2 pr-4">weight loss, appetite, muscle mass</td><td class="py-2">Lean mass, ALMI, FFMI, body fat, physical activity level</td></tr>
+            <tr><td class="py-2 pr-4 text-text-primary">Cognition</td><td class="py-2 pr-4">orientation, recall</td><td class="py-2 text-text-tertiary">Not measured</td></tr>
+            <tr><td class="py-2 pr-4 text-text-primary">Sensory</td><td class="py-2 pr-4">vision, hearing</td><td class="py-2 text-text-tertiary">Not measured</td></tr>
+            <tr><td class="py-2 pr-4 text-text-primary">Psychological</td><td class="py-2 pr-4">mood, depression screen</td><td class="py-2 text-text-tertiary">Not measured</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Two of the five domains, and those are the two whose instruments are objective rather
+        than questionnaires — the half of intrinsic capacity a phone and a tape measure can
+        honestly do. The other three are screened in clinic with validated tools, and Verve does
+        not attempt them: a reaction-time widget presented as a cognition score would be exactly
+        the kind of invented measure this app exists to avoid.
+      </p>
+
+      <h3 class="pt-2 text-lg font-semibold text-text-primary">The ceiling, and the measure that has none</h3>
+      <p>
+        The locomotion tests were designed to detect decline in people over about 65. In a healthy
+        40-year-old, SPPB reads 11 or 12 out of 12, chair stand is comfortably under the cut-off,
+        and gait speed is well above it — and that will stay true for a long time. Verve keeps
+        these tests because they are the right instruments for later, and because a baseline
+        recorded while a number is boring is what makes a later change visible. But they are not
+        where a younger user's signal lives.
+      </p>
+      <p>
+        The measure that varies across the whole lifespan and predicts mortality at every age is
+        <a href="#crf">cardiorespiratory fitness</a>. That is why METs are Verve's primary metric
+        rather than a functional battery: it is the one capacity that is already informative at 30,
+        and still informative at 80.
+      </p>
+
+      <h3 class="pt-2 text-lg font-semibold text-text-primary">What Verve deliberately does not do</h3>
+      <p>
+        Verve does not compute an intrinsic capacity score. The composite's value as a proxy for
+        healthy ageing is still being established — that is the explicit purpose of the current
+        research programmes — and a single number synthesised from two of five domains would be
+        an overclaim wearing the WHO's vocabulary. Each measure is shown on its own, against its
+        own cited range, with its own history. The trajectory is the point; the arithmetic can
+        wait for the evidence.
+      </p>
+
+      <h3 class="pt-2 text-lg font-semibold text-text-primary">References</h3>
+      <ol class="list-decimal space-y-1 pl-5 text-xs text-text-tertiary">
+        <li>World Health Organization. World Report on Ageing and Health. Geneva: WHO; 2015.</li>
+        <li>Beard JR, Officer A, de Carvalho IA, et al. The World report on ageing and health: a policy framework for healthy ageing. Lancet. 2016;387(10033):2145-2154.</li>
+        <li>World Health Organization. Integrated Care for Older People (ICOPE): Guidelines on community-level interventions to manage declines in intrinsic capacity. Geneva: WHO; 2017.</li>
+        <li>Cesari M, Araujo de Carvalho I, Amuthavalli Thiyagarajan J, et al. Evidence for the domains supporting the construct of intrinsic capacity. J Gerontol A Biol Sci Med Sci. 2018;73(12):1653-1660.</li>
+        <li>Beard JR, Si Y, Liu Z, Chenoweth L, Hanewald K. Intrinsic capacity: validation of a new WHO concept for healthy aging in a longitudinal Chinese study. J Gerontol A Biol Sci Med Sci. 2022;77(1):94-100.</li>
+        <li>World Health Organization. ICD-11 for Mortality and Morbidity Statistics, MG2A: Ageing associated decline in intrinsic capacity. 2022.</li>
+        <li>Guralnik JM, Simonsick EM, Ferrucci L, et al. A short physical performance battery assessing lower extremity function. J Gerontol. 1994;49(2):M85-94.</li>
+        <li>Mandsager K, Harb S, Cremer P, et al. Association of cardiorespiratory fitness with long-term mortality among adults undergoing exercise treadmill testing. JAMA Netw Open. 2018;1(6):e183605.</li>
+      </ol>
+    </div>
+  </section>
+</SubjectLayout>

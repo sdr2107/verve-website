@@ -1,0 +1,238 @@
+---
+import SubjectLayout from "../../layouts/SubjectLayout.astro";
+import CitationCard from "../../components/CitationCard.astro";
+import MovementBalance from "../../components/science/MovementBalance.astro";
+import VideoSlot from "../../components/VideoSlot.astro";
+import {
+  MOVEMENT_BALANCE_SECTION,
+  SEDENTARY_EXTRA,
+  STEPS_SECTION,
+  ZONE2_SECTION,
+  WEEKLY_VOLUME_SECTION,
+  ZONE2_HR_SECTION,
+} from "../../data/science";
+---
+
+<SubjectLayout subject="movement">
+  <!-- ── Weekly Volume ─────────────────────────────────────────────── -->
+  <section id="weekly-volume" class="scroll-mt-8">
+    <h2 class="text-2xl font-bold text-text-primary">Weekly Activity Volume</h2>
+    <p class="mt-2 text-sm text-text-tertiary">How much per week &mdash; and why the summit sits well above 150 minutes</p>
+    <div class="mt-6"><VideoSlot topic="Weekly Activity Volume" /></div>
+    <p class="mt-6 text-sm leading-relaxed text-text-secondary">
+      The Weekly Ascent draws no lines to clear and has no ceiling. The
+      climb rises as far as your week does, and a flag is planted where it
+      passes 150, 300 and 610 measured minutes &mdash; only once passed, so
+      there is never a mark ahead of you to fall short of. Someone who runs
+      thirty miles every weekend and logs 1,200 minutes sees a climb to 1,200.
+      The first two figures are the familiar public-health doses. The third
+      is newer, larger, and measured the same way Verve measures you.
+    </p>
+    <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+      <strong class="text-text-primary">The climb is drawn as two bands.</strong> The line is
+      the week&rsquo;s measured moderate-plus-vigorous minutes, exactly as before. Beneath it, the
+      area is split: moderate minutes fill from the ground up, and vigorous minutes sit on top of
+      them, in a darker green. Nothing is re-weighted &mdash; vigorous is not credited double the
+      way WHO&rsquo;s moderate-equivalent doses are, because the axis carries measured minutes and
+      one axis holds one unit. What the bands add is composition: intensity drives most of the
+      fitness benefit, and a 75-minute week that was all hard running now looks like what it is
+      rather than like half a target.
+    </p>
+    <div class="mt-6 grid gap-4 sm:grid-cols-2">
+      {WEEKLY_VOLUME_SECTION.map((c) => <CitationCard {...c} />)}
+    </div>
+  </section>
+
+  <!-- ── Zone 2 (volume + HR method together) ──────────────────────── -->
+  <section id="zone-2" class="scroll-mt-8">
+    <h2 class="text-2xl font-bold text-text-primary">Zone 2 Training</h2>
+    <p class="mt-2 text-sm text-text-tertiary">The weekly target, and the personal heart-rate band behind it</p>
+    <div class="mt-6"><VideoSlot topic="Zone 2 Training" /></div>
+    <div class="mt-6 grid gap-4 sm:grid-cols-2">
+      {ZONE2_SECTION.map((c) => <CitationCard {...c} />)}
+    </div>
+    <h3 class="mt-10 text-lg font-semibold text-text-primary">Heart-rate method: Karvonen HRR</h3>
+    <p class="mt-2 text-sm leading-relaxed text-text-secondary">
+      "Zone 2" is a training label applied to the 40&ndash;60% Heart Rate Reserve
+      band &mdash; different models (Seiler polarised, Maffetone 180-minus-age,
+      San Mill&aacute;n VT1-based) draw the upper boundary slightly differently, but
+      all target the same physiological space just below the first ventilatory
+      threshold.
+    </p>
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      {ZONE2_HR_SECTION.map((c) => <CitationCard {...c} />)}
+    </div>
+  </section>
+
+  <!-- ── Strength Training ─────────────────────────────────────── -->
+  <section id="strength-training" class="scroll-mt-8">
+    <h2 class="text-2xl font-bold text-text-primary">Strength Training</h2>
+    <p class="mt-2 text-sm text-text-tertiary">Where the 60 minutes a week comes from &mdash; and why the app no longer draws it as a bar to clear</p>
+
+    <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+      <p class="text-sm leading-relaxed text-text-secondary">
+        Verve treats strength as co-equal with aerobic training, not as an
+        add-on. In the UK Biobank analysis of over 70,000 adults, improving
+        cardiorespiratory fitness and muscle strength <em>together</em> was
+        associated with lower all-cause and cardiovascular mortality than
+        either alone &mdash; the two protect through different mechanisms, and
+        neither substitutes for the other.
+      </p>
+      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+        <strong class="text-text-primary">Sitting today, as the tile counts it.</strong>
+        An hour counts as sitting when fewer than 50 steps happened in it,
+        from 07:00 to now; it is the same number the Movement balance row
+        shows. Short, regular breaks help more than one long workout does.
+        The phone only knows you were not walking &mdash; not whether you sat
+        or stood &mdash; and a watch adds the standing minutes beside it.
+      </p>
+      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+        <strong class="text-text-primary">The 60-minute figure.</strong> Public
+        guidance asks for muscle-strengthening activity on two or more days a
+        week; roughly an hour across those days is the volume the mortality
+        studies were built on, and is the number Verve cites. It is a figure
+        from population evidence, not a personal prescription. Someone starting
+        out will do less and gain a great deal; someone training seriously
+        will do far more, with the benefit curve flattening rather than
+        stopping.
+      </p>
+      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+        <strong class="text-text-primary">Why the app stopped drawing it.</strong>
+        The Strength card used to show your minutes against 60 &mdash; a bar,
+        a &ldquo;to go&rdquo;, a &ldquo;target met&rdquo;. For a beginner that
+        reads as a bar they are under every week; for an athlete it is
+        meaningless. The card now reports the minutes and the sessions, and
+        the number lives here, where it can be explained. The same reasoning
+        removed the 150&ndash;300 minute band from the Zone 2 card &mdash; see
+        <a href="#zone-2">Zone 2 Training</a>.
+      </p>
+    </div>
+  </section>
+
+  <!-- ── Steps & Cadence ───────────────────────────────────────────── -->
+  <section id="steps" class="scroll-mt-8">
+    <h2 class="text-2xl font-bold text-text-primary">Step Count &amp; Daily Movement</h2>
+    <p class="mt-2 text-sm text-text-tertiary">Daily step tiers and cadence zones</p>
+    <div class="mt-6"><VideoSlot topic="Steps & Cadence" /></div>
+    <div class="mt-6 grid gap-4 sm:grid-cols-2">
+      {STEPS_SECTION.map((c) => <CitationCard {...c} />)}
+    </div>
+  </section>
+
+  <!-- ── Movement Balance ──────────────────────────────────────────── -->
+  <section id="movement-balance" class="scroll-mt-8">
+    <h2 class="text-2xl font-bold text-text-primary">Sedentary Behavior &amp; Movement Balance</h2>
+    <p class="mt-2 text-sm text-text-tertiary">How Verve reads your day beyond workout minutes</p>
+    <div class="mt-6"><VideoSlot topic="Movement Balance" /></div>
+    <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+      <MovementBalance />
+    </div>
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      {[...MOVEMENT_BALANCE_SECTION, ...SEDENTARY_EXTRA].map((c) => <CitationCard {...c} />)}
+    </div>
+
+    <h3 class="mt-10 text-lg font-semibold text-text-primary">What each figure on the card means</h3>
+    <div class="mt-4 space-y-4 text-sm leading-relaxed text-text-secondary">
+      <p>
+        <strong class="text-text-primary">Sedentary hours.</strong> A waking hour with fewer than
+        50 steps in it counts as sedentary. Steps come from Apple Health, so nothing is typed in.
+        Waking hours are your measured sleep where Verve has it, and 7am to 10pm where it does
+        not — the card says which, because an assumed wake time counts somebody's actual lie-in
+        as sitting.
+      </p>
+      <p>
+        <strong class="text-text-primary">Unbroken sitting.</strong> The longest run of
+        consecutive sedentary hours, not the daily total. This is the figure the evidence is
+        actually about: risk tracks uninterrupted sitting rather than hours accumulated across a
+        day, and six hours broken every thirty minutes is a different day from six hours in one
+        block. A sleep hour or a workout ends a run — you were not sitting through either.
+      </p>
+      <p>
+        <strong class="text-text-primary">Standing minutes.</strong> Minutes Apple Watch detected
+        you upright and moving. More precise than the Stand ring, which credits a whole hour for
+        one minute on your feet: this counts the minutes themselves. Apple Watch only.
+      </p>
+      <p>
+        <strong class="text-text-primary">Napped.</strong> Daytime sleep, shown when there was
+        some. A nap is any sleep session that does not begin in the night (20:00 to 05:00),
+        however long it runs. It is drawn as rest on the terrain and excluded from sitting — you
+        were not sitting through it — and it is excluded from last night's sleep on the Sleep
+        card, because a nap is not a bedtime. The same rule decides both.
+      </p>
+      <p>
+        <strong class="text-text-primary">The 24-hour terrain.</strong> Height is steps per hour.
+        The strip beneath it is the hour's state: green active, orange sedentary, blue asleep
+        (naps included), grey an hour that has not happened yet.
+      </p>
+      <p>
+        <strong class="text-text-primary">Longest sit, and sits over 30 minutes.</strong>
+        Uninterrupted sitting, detected from five-minute step buckets rather than hours &mdash;
+        the resolution the evidence needs. Diaz found that mortality tracked not only total
+        sedentary time but how it accumulated: the excess sat with bouts of thirty minutes or
+        more, and was highest in people whose sitting came in blocks of an hour or longer. A bout
+        is closed by any movement, by a recorded workout (a swim registers no steps and would
+        otherwise read as the day&rsquo;s longest sit), and by sleep, naps included. Under the
+        terrain a thin row marks each one &mdash; amber to an hour, red past it &mdash; so the
+        figure above can be read off the day rather than trusted. Verve had this once on hourly
+        steps and removed it, because an hourly total cannot see a thirty-minute bout; it returned
+        only when the data could support it, and on a day without fine buckets it shows nothing
+        rather than zero.
+      </p>
+    </div>
+  </section>
+
+  <!-- ── Activity Level (PAL) ──────────────────────────────────────── -->
+  <section id="activity-level" class="scroll-mt-8">
+    <h2 class="text-2xl font-bold text-text-primary">Physical Activity Level (PAL)</h2>
+    <p class="mt-2 text-sm text-text-tertiary">How active your whole day is — and how much of that number to trust</p>
+
+    <div class="mt-6 space-y-4 text-sm leading-relaxed text-text-secondary">
+      <p>
+        <strong class="text-text-primary">Physical Activity Level</strong> measures how active your
+        entire day is, not just your workouts. It is your total daily energy expenditure divided by
+        your basal metabolic rate — the energy your body would use lying still. A PAL of 1.0 would
+        mean complete bed rest. Around 2.5 is elite-athlete territory. Verve reads it from Apple
+        Health's basal and active energy, averaged over seven days.
+      </p>
+
+      <h3 class="pt-2 text-lg font-semibold text-text-primary">The four levels</h3>
+      <p>
+        The tiers come from the Institute of Medicine's Dietary Reference Intakes, which defined
+        them to set energy requirements for populations: sedentary 1.00–1.39, low active 1.40–1.59,
+        active 1.60–1.89, very active 1.90–2.50.
+      </p>
+
+      <h3 class="pt-2 text-lg font-semibold text-text-primary">Read the trend, not the number</h3>
+      <p>
+        Both halves of this ratio are estimates, so the error compounds. Active calories come from
+        your wrist, where systematic reviews put energy-expenditure error above 30%, and they miss
+        effort that does not move your arm — cycling, rowing, lifting, carrying. Your resting figure
+        is not measured at all; it is predicted from your height, weight, age and sex. Every wearable
+        tested against doubly-labelled water <em>under</em>-estimates, for Apple Watch by roughly
+        394 kcal a day, and the bias grows at higher effort and higher body fat.
+      </p>
+      <p>
+        The practical consequence: a single PAL carries a band wide enough to straddle two tiers.
+        Whether it drifts up over months does not. That is why Verve shows this as a trend read
+        against the tier bands rather than as a figure to hit, and why the app's chart marks which
+        band each week or month fell in rather than asking you to read a slope off a noisy line.
+      </p>
+
+      <h3 class="pt-2 text-lg font-semibold text-text-primary">The one correction Verve makes</h3>
+      <p>
+        Apple reports basal and active energy but not the thermic effect of food — the energy spent
+        digesting, conventionally about 10% of total daily expenditure. Their sum is therefore not
+        total daily energy expenditure, so Verve divides by 0.9 to recover it. That correction is
+        definitional rather than a judgement call, and it is the only adjustment applied.
+      </p>
+      <p>
+        Two further adjustments were tried and removed: an additive correction for occupational
+        activity, and a rule that raised the tier when logged training contradicted a sedentary
+        label. Both were judgement calls stacked on a base with more than 30% error, and the
+        occupational one double-counted part of the very bias the thermic-effect correction already
+        approximates. Layers of inference do not rescue a noisy instrument; they only obscure how
+        noisy it is.
+      </p>
+    </div>
+  </section>
+</SubjectLayout>

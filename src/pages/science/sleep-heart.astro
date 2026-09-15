@@ -1,0 +1,407 @@
+---
+import SubjectLayout from "../../layouts/SubjectLayout.astro";
+import CitationCard from "../../components/CitationCard.astro";
+import VideoSlot from "../../components/VideoSlot.astro";
+import {
+  SLEEP_RHYTHM_SECTION,
+  RESTING_HR_SECTION,
+  HEART_RATE_RECOVERY_SECTION,
+  SLEEP_TRAINING_SECTION,
+} from "../../data/science";
+---
+
+<SubjectLayout subject="sleep-heart">
+  <div slot="rail" class="rounded-2xl border border-white/8 bg-white/4 p-4">
+    <p class="text-xs font-semibold text-text-primary">Wearing something else?</p>
+    <p class="mt-1 text-xs leading-relaxed text-text-secondary">
+      Oura, Whoop and Garmin reach Verve through Apple Health.
+    </p>
+    <a href="#connect-wearables" class="mt-2 block text-xs font-medium text-accent-light">How to connect &rarr;</a>
+  </div>
+  <!-- ── The Morning Read — the four Today tiles ─────────────────────── -->
+  <section id="today-tiles" class="scroll-mt-8">
+    <h2 class="text-2xl font-bold text-text-primary">The Morning Read</h2>
+    <p class="mt-2 text-sm text-text-tertiary">How the four Today tiles on the Activity page are coloured, and where each line comes from</p>
+    <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+      <p class="text-sm leading-relaxed text-text-secondary">
+        Each tile takes its colour from the figure it shows. Green means the
+        reading is inside the range its evidence calls ordinary, amber that it
+        has crossed one line, red that it has crossed a second. A grey dash
+        means Verve has not measured it yet and will not guess. The rules,
+        one per tile:
+      </p>
+      <ul class="mt-4 space-y-3 text-sm leading-relaxed text-text-secondary">
+        <li>
+          <strong class="text-text-primary">Sleep</strong> &mdash; last night's hours
+          asleep against the <strong class="text-text-primary">7 to 9 hour</strong>
+          range. Amber under seven; ordinary text above nine, because a long
+          night is worth noticing but is not a warning. The drift and
+          regularity figures inside the tile's page keep their own scales.
+          <a href="#sleep-rhythm">Sleep timing &rarr;</a>
+        </li>
+        <li>
+          <strong class="text-text-primary">Resting HR</strong> &mdash; the worse of
+          two verdicts. Against your own 30-day median: amber around
+          <strong class="text-text-primary">5 bpm above</strong>, red around
+          <strong class="text-text-primary">10 above</strong>. Against the level
+          itself: amber from <strong class="text-text-primary">75</strong>, red
+          from <strong class="text-text-primary">80</strong>. Below your usual, and
+          under 50, stay green on purpose &mdash; a rested morning and an
+          endurance athlete both land there.
+          <a href="#resting-heart-rate">Resting heart rate &rarr;</a>
+        </li>
+        <li>
+          <strong class="text-text-primary">Recovery</strong> &mdash; how far your heart
+          rate fell in the first minute after the last workout. One cited line:
+          red at a fall of <strong class="text-text-primary">12 bpm or less</strong>,
+          green above it. There is no amber, because no second line has been
+          validated; the tile refuses to invent one.
+          <a href="#heart-rate-recovery">Heart rate recovery &rarr;</a>
+        </li>
+        <li>
+          <strong class="text-text-primary">Sitting</strong> &mdash; hours today with
+          almost no stepping. Amber from <strong class="text-text-primary">10.6
+          hours</strong>, red from <strong class="text-text-primary">12</strong>,
+          the same two ticks the Movement Balance bar draws.
+          <a href="#movement-balance">Movement balance &rarr;</a>
+        </li>
+      </ul>
+      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+        Every number above is read from one thresholds file inside the app,
+        the same file the tiles read, so this page and the tiles cannot
+        disagree about where a line sits.
+      </p>
+    </div>
+  </section>
+
+  <!-- ── Sleep Rhythm ──────────────────────────────────────────────── -->
+  <section id="sleep-rhythm" class="scroll-mt-8">
+    <h2 class="text-2xl font-bold text-text-primary">Sleep Timing</h2>
+    <p class="mt-2 text-sm text-text-tertiary">How much your bedtime moves, and the research index behind it</p>
+    <div class="mt-6"><VideoSlot topic="Sleep Timing" /></div>
+    <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+      <p class="text-sm leading-relaxed text-text-secondary">
+        Verve leads with the <strong class="text-text-primary">spread of your
+        bedtime in minutes</strong>: how far it moves from one night to the
+        next. That is the measure the 2025 AHA scientific statement names for
+        regularity, it carries a real mark at
+        <strong class="text-text-primary">60 minutes</strong>, and it is in a
+        unit you can act on tonight. Clock times are treated as angles on a
+        24-hour circle &mdash; a plain average would place 23:50 and 00:10
+        nearly a full day apart and report the steadiest sleepers as the most
+        erratic.
+      </p>
+      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+        Behind it sits the <strong class="text-text-primary">Sleep Regularity
+        Index</strong>: the probability of being in the same state, asleep or
+        awake, at any two clock times 24 hours apart. It is the stronger
+        research metric &mdash; in UK Biobank it out-predicted sleep duration
+        for mortality &mdash; but it is a research metric, reported by no
+        consumer wearable and named by no guideline for individual care, and
+        two accepted calculators disagree on the same nights. So it is the
+        number underneath, not the headline. Its median of
+        <strong class="text-text-primary">81</strong> is a percentile of one
+        cohort, not a clinical threshold.
+      </p>
+      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+        <strong class="text-text-primary">The three numbers on the Sleep page.</strong>
+        <em>Last night</em> is the summed asleep time of your most recent
+        overnight sleep &mdash; awake spells inside the night excluded, naps
+        excluded, the same definition Apple Health uses for &ldquo;time
+        asleep&rdquo;. <em>Bedtime drift</em> is the night-to-night spread of
+        the time you fell asleep, in minutes, over your recent nights; under
+        <strong class="text-text-primary">60</strong> is the mark the 2025 AHA
+        statement uses. The <em>regularity index</em> is the Sleep Regularity
+        Index, 0 to 100, with its bands printed on the bar where they fall:
+        below <strong class="text-text-primary">71.6</strong> irregular,
+        <strong class="text-text-primary">71.6&ndash;87.3</strong> moderately
+        irregular, above <strong class="text-text-primary">87.3</strong>
+        regular. Those cut-points are the 25th and 75th percentiles of the UK
+        Biobank sample, which is why they are printed to a decimal: they are
+        where a cohort fell, not lines a guideline drew.
+      </p>
+      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+        <strong class="text-text-primary">In Trends, under Over Time.</strong>
+        Each lens carries the period&rsquo;s average night by stage &mdash; a
+        column per night for the week, per week for the block, per month for
+        the year &mdash; and what the body did while asleep: the watch&rsquo;s
+        heart rate and breathing rate inside the sleep hours, averaged per
+        night and then across nights, against the period before. A night
+        belongs to the morning you woke. Stages appear only from a device
+        that writes them; a plain asleep record from another writer is shown
+        as one block, not divided into stages it never had.
+      </p>
+      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+        <strong class="text-text-primary">What it needs, and what it leaves out.</strong>
+        The timing measures need a handful of recent recorded nights &mdash;
+        the page counts them up for you &mdash; and only recent nights count,
+        so a break from wearing the watch means the count starts again.
+        Anything that writes sleep to Apple Health works: Apple Watch, Oura,
+        Whoop, Garmin. Naps are left out of the timing measures, since a nap
+        is not a bedtime. Timing is not hours: a steady short night scores
+        better here than an erratic long one, and the two are complementary
+        risk markers rather than alternatives. Because accepted SRI
+        calculators disagree on the same nights, read your own trend rather
+        than comparing the number with anyone else's; and crossing time zones
+        registers as irregularity even when your rhythm is steady in local
+        time.
+      </p>
+    </div>
+    <div id="connect-wearables" class="mt-4 scroll-mt-8 rounded-2xl border border-white/8 bg-white/4 p-6">
+      <p class="text-sm leading-relaxed text-text-secondary">
+        <strong class="text-text-primary">Connecting Oura, Whoop or Garmin.</strong>
+        Verve reads only Apple Health, so a third-party wearable reaches it
+        through its own app&rsquo;s Apple Health setting. <em>Oura</em>: the
+        Oura app &rarr; menu &rarr; Settings &rarr; Apple Health, and allow it
+        to write Sleep, Workouts, Heart Rate and Respiratory Rate.
+        <em>Whoop</em>: More &rarr; App Settings &rarr; Integrations &rarr;
+        Apple Health, and allow the same categories. <em>Garmin</em>: Garmin
+        Connect &rarr; More &rarr; Settings &rarr; Apple Health. Then in Verve,
+        Settings &rarr; Apple Health on. How far back an app writes when you
+        switch the integration on varies by app; from that day on every night
+        arrives. Stages appear when the app writes them; a plain asleep record
+        shows as one block. Steps come from whatever writes them to Health:
+        the phone in a pocket, an Apple Watch, and Oura or Garmin through
+        their apps; Whoop does not write steps. In Verve, Settings &rarr;
+        Wearables shows which app wrote the latest sleep, heart-rate and
+        workout sample, and when.
+      </p>
+    </div>
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      {SLEEP_RHYTHM_SECTION.map((c) => <CitationCard {...c} />)}
+    </div>
+  </section>
+
+  <!-- ── Sleep and training ────────────────────────────────────────── -->
+  <section id="sleep-and-training" class="scroll-mt-8">
+    <h2 class="text-2xl font-bold text-text-primary">Sleep and Training, Read Together</h2>
+    <p class="mt-2 text-sm text-text-tertiary">What the Guide's SLEEP line is, and what it refuses to claim</p>
+    <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+      <p class="text-sm leading-relaxed text-text-secondary">
+        The Guide compares two periods of your own record. Since sleep and
+        training now come from the same period summary, it can lay them
+        side by side: average night asleep, minutes awake in the night,
+        sleeping heart rate, bedtime drift and the regularity index, beside
+        MVPA, training minutes and strength days for the same two periods.
+        Sleep joins the list of movers too &mdash; judged against the adult
+        <strong class="text-text-primary">7&ndash;9 hour</strong> band rather
+        than a direction, so 6 to 7 hours is an improvement and 8 to 9&frac12;
+        is not, while less time awake in the night, a lower sleeping heart
+        rate, less bedtime drift and a higher regularity index count the way
+        you would expect.
+      </p>
+      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+        <strong class="text-text-primary">What the SLEEP line says.</strong>
+        One sentence on what moved alongside what &mdash; &ldquo;training rose
+        40% and sleep fell 35 minutes, with sleeping heart rate up 3&rdquo;.
+        It describes co-movement in your data. It never says one caused the
+        other, because two periods of one person cannot show that: a hard
+        block can shorten sleep, short sleep can make a block feel harder,
+        and a work deadline can do both. The literature below is why the
+        pairing is worth reading at all &mdash; short sleep tracks injury and
+        worse endurance, and extended sleep has moved performance in small
+        trials &mdash; but the line reports, and you interpret.
+      </p>
+    </div>
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      {SLEEP_TRAINING_SECTION.map((c) => <CitationCard {...c} />)}
+    </div>
+  </section>
+
+  <!-- ── Resting Heart Rate ────────────────────────────────────────── -->
+  <section id="resting-heart-rate" class="scroll-mt-8">
+    <h2 class="text-2xl font-bold text-text-primary">Resting Heart Rate</h2>
+    <p class="mt-2 text-sm text-text-tertiary">Measured against your own normal, not a population range</p>
+    <div class="mt-6"><VideoSlot topic="Resting Heart Rate" /></div>
+    <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+      <p class="text-sm leading-relaxed text-text-secondary">
+        Verve compares today's resting heart rate with the median of your own
+        last 30 days. Within <strong class="text-text-primary">5 bpm</strong> is
+        ordinary day-to-day variation; around
+        <strong class="text-text-primary">5 bpm above</strong>, sustained for a few
+        days, is worth noticing; around
+        <strong class="text-text-primary">10 above</strong> is a clear departure.
+        The instrument shades only the high side, because a low resting rate is
+        not a finding &mdash; a rested morning and an adapted endurance athlete
+        both land there.
+      </p>
+      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+        <strong class="text-text-primary">The level, and what a reading cannot say.</strong>
+        Beside the comparison with your own normal, the level itself matters:
+        lowest risk sits around <strong class="text-text-primary">50&ndash;60
+        bpm</strong>, and above <strong class="text-text-primary">75&ndash;80</strong>
+        carries higher risk even when it never moves. Under 50 is common in
+        trained people and usually adaptation, worth raising only alongside
+        dizziness, fainting or breathlessness. The slow direction counts on its
+        own &mdash; a baseline falling over months tracks lower risk, a rising
+        one higher, whatever today says. Alcohol, heat, a late meal, poor
+        sleep, illness, dehydration, thyroid and some medicines all raise it;
+        a wearable reading is not diagnostic.
+      </p>
+    </div>
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      {RESTING_HR_SECTION.map((c) => <CitationCard {...c} />)}
+    </div>
+  </section>
+
+  <!-- ── Heart Rate Recovery ───────────────────────────────────── -->
+  <section id="heart-rate-recovery" class="scroll-mt-8">
+    <h2 class="text-2xl font-bold text-text-primary">Heart Rate Recovery</h2>
+    <p class="mt-2 text-sm text-text-tertiary">How far your heart rate falls in the first minute after you stop &mdash; one cited line, and a trend against your own normal</p>
+
+    <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+      <p class="text-sm leading-relaxed text-text-secondary">
+        Heart rate recovery is the drop from your peak exercising heart rate to
+        the rate a fixed time later &mdash; most often one minute. The early part
+        of that fall is driven mainly by the vagus nerve switching back on;
+        slower sympathetic withdrawal follows over the next few minutes. It is,
+        in effect, a read of how quickly your autonomic nervous system lets go
+        of effort &mdash; and it predicts mortality independently of how fit you
+        are or how much coronary disease you have.
+      </p>
+      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+        <strong class="text-text-primary">The one line Verve draws is 12 bpm.</strong>
+        In the original study of 2,428 people, a fall of 12 beats or fewer in the
+        first minute carried roughly a four-fold higher mortality risk over six
+        years. The American Heart Association&rsquo;s exercise-testing statement
+        names it the most frequently used cut-point, and a 2025 cohort found the
+        same threshold associated with a hazard ratio of about 3.2 for death at
+        72 months. That is why the scale on the card is red up to 12 and marks
+        nothing else as a verdict.
+      </p>
+      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+        <strong class="text-text-primary">Why there is no &ldquo;good&rdquo; number.</strong>
+        You will see 18&ndash;20 bpm quoted as a healthy recovery. It is a lay
+        benchmark, not a validated norm: published cut-points for one-minute
+        recovery run anywhere from 12 to 30 bpm depending on the study, the
+        population and the protocol. What the evidence does show is that the
+        relationship is not a switch. Risk falls steeply as recovery improves to
+        somewhere around 15&ndash;20 bpm, then the curve flattens &mdash; beyond
+        that range, extra recovery buys little further protection. Verve shades
+        the scale above 12 from amber towards green to say exactly that, and
+        deliberately draws no second line.
+      </p>
+      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+        <strong class="text-text-primary">The number depends on what you do after you stop.</strong>
+        Recovery measured while walking slowly is different from recovery
+        measured sitting or lying down; passive recovery produces larger drops
+        and needs higher cut-points. The 12 bpm line was derived with an active
+        walking cool-down. Apple Watch measures recovery in whatever you happen
+        to do after ending a workout, which is one more reason the comparison
+        Verve leads with is <strong class="text-text-primary">you against your own
+        30-day median</strong> &mdash; the same rule as resting heart rate &mdash;
+        rather than you against a table. Your protocol is at least consistent
+        with itself. Recovery also declines with age and is higher in
+        adolescents, so a fixed adult line is not applied to younger users.
+      </p>
+      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+        <strong class="text-text-primary">Shown but not scored.</strong>
+        The line was measured after hard effort, and how far the rate falls
+        scales with how high it went. A walk that ended below your own Zone 2
+        floor still has a fall, and the page shows it, in grey, with
+        &ldquo;ended below Zone 2&rdquo; beside it &mdash; but it is not judged
+        against the 12 bpm line, not counted among the readings above or below
+        it, and not in the week average. It is what the watch measured; it is
+        not a fitness reading.
+      </p>
+      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+        <strong class="text-text-primary">Where the number comes from.</strong>
+        Two places, and the card says which. Apple Watch stores a one-minute
+        recovery for a workout when it sees an undisturbed minute after you tap
+        End; Verve reads that value as it is. But the watch keeps recording your
+        heart rate for about three minutes after every workout whether or not it
+        stores a recovery &mdash; a run followed straight by a walk gets none
+        &mdash; and the Fitness app draws that as &ldquo;Post-Workout Heart
+        Rate&rdquo;. For a recent workout with no stored reading, Verve takes the
+        same two points the Fitness app shows, the rate at the end of the workout
+        and the rate one minute later, and reports the difference, marked
+        <em>from workout HR</em>. Nothing is smoothed, fitted or assumed: two
+        readings, one subtraction.
+      </p>
+      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+        <strong class="text-text-primary">Why Verve&rsquo;s number can differ from the one on the Fitness chart.</strong>
+        Open a workout in Fitness and you will see a number under each minute of
+        the post-workout chart. Those numbers summarise the chart. They are not
+        the recovery measurement, and subtracting one from the next gives a
+        figure nobody validated. Apple keeps the recovery separately, worked out
+        its own way: the highest rate it saw once recovery had begun, minus the
+        rate one minute later. The two disagree because they do not start at the
+        same moment. The chart starts the instant you tap End; the stored figure
+        starts a little later, once the watch is satisfied that recovery has
+        actually started, so it begins from a lower rate. On one run here the
+        chart read 150 then 137, a fall of 13, while the watch stored a fall of
+        25 for the same minute.
+      </p>
+      <figure class="mt-6 space-y-4">
+        <div class="overflow-hidden rounded-xl border border-white/10 bg-black/30">
+          <img
+            src="/science/apple-post-workout-hr.png"
+            alt="The Post-Workout Heart Rate chart in Apple Fitness. Below the chart, three labels: 150 BPM at 07:00, 137 BPM at 1 MIN, 126 BPM at 2 MIN. The chart's range is 152 at the top and 123 at the bottom."
+            width="760"
+            height="275"
+            class="block w-full"
+            loading="lazy"
+          />
+        </div>
+        <figcaption class="text-xs leading-relaxed text-text-tertiary">
+          <strong class="font-semibold text-text-secondary">Apple Fitness, the same run.</strong>
+          The three labels summarise the three minutes of the chart above them.
+          Reading the first two as a recovery gives 13 bpm. That subtraction is
+          the reader&rsquo;s, not Apple&rsquo;s: nothing on this screen claims it.
+        </figcaption>
+
+        <div class="overflow-hidden rounded-xl border border-white/10 bg-black/30">
+          <img
+            src="/science/verve-hr-recovery.png"
+            alt="The same run in Verve, on the heart rate recovery page. Sunday 13 September, Running, 07:00, 139 falling to 114, a drop of 25 bpm shown in green."
+            width="760"
+            height="163"
+            class="block w-full"
+            loading="lazy"
+          />
+        </div>
+        <figcaption class="text-xs leading-relaxed text-text-tertiary">
+          <strong class="font-semibold text-text-secondary">Verve, the same run.</strong>
+          25 bpm, which is the figure the watch stored for that workout, shown
+          unchanged. The two rates beside it are the ones Apple measured it
+          between: the highest rate once recovery had begun, and the rate a
+          minute later.
+        </figcaption>
+      </figure>
+      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+        <strong class="text-text-primary">Which one Verve shows, and why that is the right one.</strong>
+        The stored figure, unchanged and unrounded, for two reasons. It is the
+        number Apple itself commits to for that workout, so Verve is not
+        second-guessing your watch with arithmetic of its own. And it is measured
+        the way the research measured it &mdash; from the effort down through the
+        first minute &mdash; which is what makes the 12&nbsp;bpm line above mean
+        anything at all. A number read off a chart cannot be compared with a
+        study that measured something else. When the watch stores nothing, Verve
+        says so by marking the reading as its own, so you always know which of
+        the two you are looking at.
+      </p>
+      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+        <strong class="text-text-primary">Where the readings live.</strong>
+        The Activity page shows this week, Monday to today, every reading
+        under the day it happened. Earlier weeks are in Trends, under Over Time, as the
+        period average beside resting HR, the way every other measure works.
+      </p>
+      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+        <strong class="text-text-primary">Your own usual.</strong>
+        The app does not print a &ldquo;vs usual&rdquo; figure; the reading
+        is the reading. The yardstick worth keeping in mind is the median of
+        your own recoveries over the last 30 days &mdash; the rule the resting
+        heart rate tile uses &mdash; because there is no population
+        &ldquo;good&rdquo; to compare with: above 12 bpm the evidence is a
+        gradient, not a second line. A recovery is one number per workout,
+        not per day, so it takes a handful of workouts before that median
+        means anything, and a single low reading after a hard, hot or
+        back-to-back session is a session, not a trend.
+      </p>
+    </div>
+
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      {HEART_RATE_RECOVERY_SECTION.map((c) => <CitationCard {...c} />)}
+    </div>
+  </section>
+</SubjectLayout>

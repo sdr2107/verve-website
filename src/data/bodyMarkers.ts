@@ -9,6 +9,23 @@
  * Ranges shown for a 50-year-old man of 175 cm; several move with sex, age, height or ancestry.
  */
 
+export interface MarkerRetest {
+  /** The routine cadence. Null for a marker nothing schedules. */
+  interval: string | null;
+  /** The condition that shortens it, and to what. */
+  shorter: string | null;
+  /** What to print where there is no schedule at all. */
+  instead: string | null;
+  /** Short citation for the interval itself, not for the marker's bands. */
+  source: string;
+  /** false or "partial" means part of this is Verve's own, not a guideline's. */
+  sourced: boolean | "partial";
+  /** For "partial": which part is ours. */
+  ownPhrase: string | null;
+  /** Markers that share one blood draw and one interval. */
+  panel: string | null;
+}
+
 export interface BodyMarkerExplainer {
   /** Anchor id. The app links to /science#{slug}. */
   slug: string;
@@ -24,6 +41,8 @@ export interface BodyMarkerExplainer {
   detail: string[];
   /** Papers behind the cut-offs, for markers that carry a full list. */
   references: string[];
+  /** How often to repeat it. Null where no block schedules this marker. */
+  retest: MarkerRetest | null;
 }
 
 export const BODY_MARKER_CONTEXT = "Ranges shown for a 50-year-old man of 175 cm; several move with sex, age, height or ancestry.";
@@ -44,6 +63,15 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     citation: "Alberti et al. 2009 — harmonised metabolic syndrome criteria.",
     detail: [],
     references: [],
+    retest: {
+      interval:  "every 3 years",
+      shorter:   "yearly from 100 mg/dL",
+      instead:   null,
+      source:    "ADA Standards of Care 2026, §2",
+      sourced:   true,
+      ownPhrase: null,
+      panel:     null,
+    },
   },
   {
     slug: "hba1c",
@@ -61,6 +89,15 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     citation: "American Diabetes Association — Standards of Care in Diabetes, Section 2.",
     detail: [],
     references: [],
+    retest: {
+      interval:  "every 3 years",
+      shorter:   "yearly from 5.7% · twice a year once treated and at goal, every 3 months when it is not",
+      instead:   null,
+      source:    "ADA Standards of Care 2026, §2 and §6",
+      sourced:   true,
+      ownPhrase: null,
+      panel:     null,
+    },
   },
   {
     slug: "bp",
@@ -84,6 +121,15 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     citation: "Whelton et al. 2017 (AHA/ACC) · McEvoy et al. 2024 (ESC) · Alberti et al. 2009.",
     detail: [],
     references: [],
+    retest: {
+      interval:  "yearly under 120/80",
+      shorter:   "3 to 6 months once above it · within a month from 140/90",
+      instead:   null,
+      source:    "AHA/ACC 2017",
+      sourced:   "partial",
+      ownPhrase: "the within-a-month figure from 140/90 is Verve's own",
+      panel:     null,
+    },
   },
   {
     slug: "tg",
@@ -100,6 +146,15 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     citation: "Alberti et al. 2009 — harmonised metabolic syndrome criteria.",
     detail: [],
     references: [],
+    retest: {
+      interval:  "every 4 to 6 years",
+      shorter:   "4 to 6 weeks after starting or changing lipid-lowering treatment",
+      instead:   null,
+      source:    "AHA · USPSTF; on treatment, ESC/EAS 2019",
+      sourced:   true,
+      ownPhrase: null,
+      panel:     "One panel, one interval — ApoB, LDL, triglycerides and HDL come off the same blood draw.",
+    },
   },
   {
     slug: "hdl",
@@ -116,6 +171,15 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     citation: "Alberti et al. 2009 — harmonised metabolic syndrome criteria.",
     detail: [],
     references: [],
+    retest: {
+      interval:  "every 4 to 6 years",
+      shorter:   "4 to 6 weeks after starting or changing lipid-lowering treatment",
+      instead:   null,
+      source:    "AHA · USPSTF; on treatment, ESC/EAS 2019",
+      sourced:   true,
+      ownPhrase: null,
+      panel:     "One panel, one interval — ApoB, LDL, triglycerides and HDL come off the same blood draw.",
+    },
   },
   {
     slug: "waist",
@@ -157,6 +221,15 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
       "National Institute for Health and Care Excellence. Obesity: identification, assessment and management. NICE guideline CG189, 2022 update.",
       "Alberti KGMM, Eckel RH, Grundy SM, et al. Harmonizing the Metabolic Syndrome: A Joint Interim Statement. Circulation. 2009.",
     ],
+    retest: {
+      interval:  null,
+      shorter:   null,
+      instead:   "Whenever you measure.",
+      source:    "No guideline names an interval for a tape measure",
+      sourced:   false,
+      ownPhrase: null,
+      panel:     null,
+    },
   },
   {
     slug: "post-meal-glucose",
@@ -173,6 +246,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     citation: "American Diabetes Association, Standards of Care in Diabetes-2026, Section 6: Glycemic Goals, Hypoglycemia, and Hyperglycemic Crises (Diabetes Care 2026;49(Suppl 1):S132-S149). Peak postprandial self-monitoring target: <180 mg/dL.",
     detail: [],
     references: [],
+    retest: null,
   },
   {
     slug: "homa-ir",
@@ -186,6 +260,15 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     citation: "No universally accepted single cutoff exists for HOMA-IR — results vary by population, assay, and lab. This threshold is derived from a Spanish cohort; some populations, including South Asian, tend to show insulin resistance at somewhat lower absolute values (MDCalc/NHANES-referenced range approximately 1.4-2.5). Not part of any validated management algorithm — a screening signal, not a diagnosis.",
     detail: [],
     references: [],
+    retest: {
+      interval:  null,
+      shorter:   null,
+      instead:   "No schedule. It redraws whenever fasting insulin and fasting glucose are both on file.",
+      source:    "No guideline schedules it",
+      sourced:   false,
+      ownPhrase: null,
+      panel:     null,
+    },
   },
   {
     slug: "apo-b",
@@ -203,6 +286,15 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     citation: "ESC/EAS 2019 Guidelines for the Management of Dyslipidaemias (Mach F et al, Eur Heart J 2020;41:111-188). Risk-stratified ApoB goals: <65 mg/dL very-high risk, <80 mg/dL high risk, <100 mg/dL moderate risk. Verve screens against the <80 / <100 boundaries.",
     detail: [],
     references: [],
+    retest: {
+      interval:  "every 4 to 6 years",
+      shorter:   "4 to 6 weeks after starting or changing lipid-lowering treatment",
+      instead:   null,
+      source:    "AHA · USPSTF; on treatment, ESC/EAS 2019",
+      sourced:   true,
+      ownPhrase: null,
+      panel:     "One panel, one interval — ApoB, LDL, triglycerides and HDL come off the same blood draw.",
+    },
   },
   {
     slug: "ldl",
@@ -220,6 +312,15 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     citation: "NCEP ATP III (Expert Panel on Detection, Evaluation, and Treatment of High Blood Cholesterol in Adults, JAMA 2001;285:2486-2497). LDL-C classification: optimal <100, near-optimal 100-129, borderline-high 130-159, high 160-189, very high >=190 mg/dL. Verve collapses the upper bands into one 'elevated' tier for screening.",
     detail: [],
     references: [],
+    retest: {
+      interval:  "every 4 to 6 years",
+      shorter:   "4 to 6 weeks after starting or changing lipid-lowering treatment",
+      instead:   null,
+      source:    "AHA · USPSTF; on treatment, ESC/EAS 2019",
+      sourced:   true,
+      ownPhrase: null,
+      panel:     "One panel, one interval — ApoB, LDL, triglycerides and HDL come off the same blood draw.",
+    },
   },
   {
     slug: "lpa",
@@ -237,6 +338,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     citation: "EAS 2022 Consensus Statement on lipoprotein(a) (Kronenberg F et al, Eur Heart J 2022;43:3925-3946). Risk rises continuously; commonly cited bands are <75 nmol/L (~<30 mg/dL) low, 75-125 nmol/L (30-50 mg/dL) intermediate, >125 nmol/L (>50 mg/dL) high.",
     detail: [],
     references: [],
+    retest: null,
   },
   {
     slug: "hs-crp",
@@ -255,6 +357,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     citation: "AHA/CDC Scientific Statement on markers of inflammation and cardiovascular disease (Pearson TA et al, Circulation 2003;107:499-511). Relative cardiovascular risk bands: <1.0 mg/L low, 1.0-3.0 mg/L average, >3.0 mg/L high.",
     detail: [],
     references: [],
+    retest: null,
   },
   {
     slug: "alm",
@@ -288,6 +391,15 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
       "Jagim AR, Harty PS, Jones MT, et al. Fat-Free Mass Index in Sport: Normative Profiles and Applications for Collegiate Athletes. Journal of Strength and Conditioning Research. 2024.",
       "Olshvang D, Harris C, Chellappa R, Santhanam P. Predictive modeling of lean body mass, appendicular lean mass, and appendicular skeletal muscle mass using machine learning techniques: NHANES and the Look AHEAD study. PLoS One. 2024.",
     ],
+    retest: {
+      interval:  "every 6 months",
+      shorter:   null,
+      instead:   null,
+      source:    "Verve's own cadence, anchored to EWGSOP2 2019",
+      sourced:   false,
+      ownPhrase: null,
+      panel:     null,
+    },
   },
   {
     slug: "handgrip",
@@ -309,6 +421,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     citation: "EWGSOP2 (Cruz-Jentoft 2019) — sarcopenia case-finding.",
     detail: [],
     references: [],
+    retest: null,
   },
   {
     slug: "body-fat",
@@ -340,6 +453,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
       "Takagi S, Maeda K, Satake S, et al. Fat-Free Mass Index Cutoff Values for Reduced Muscle Mass in Older Community-Dwelling Adults in Japan: A Descriptive Cohort Study. JPEN. 2025.",
       "Yin L, Cao Y, Tang M, et al. Operationalizing the Global Leadership Initiative in Sarcopenia: Muscle-Specific Strength, Optimal Criteria and Clinical Relevance. Journal of Cachexia, Sarcopenia and Muscle. 2026.",
     ],
+    retest: null,
   },
   {
     slug: "lean-body-mass",
@@ -353,6 +467,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     citation: "Fat-free mass from body fat and weight, plus the essential fat every body carries (3% men, 5% women).",
     detail: [],
     references: [],
+    retest: null,
   },
   {
     slug: "skel-musc",
@@ -366,6 +481,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     citation: "Janssen et al. 2000 (NHANES) with BIA population survey norms.",
     detail: [],
     references: [],
+    retest: null,
   },
   {
     slug: "balance",
@@ -388,6 +504,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     citation: "Araujo et al. 2022 — 10-second one-leg stand and survival.",
     detail: [],
     references: [],
+    retest: null,
   },
   {
     slug: "chair-stand",
@@ -409,6 +526,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     citation: "EWGSOP2 — 5-repetition sit-to-stand.",
     detail: [],
     references: [],
+    retest: null,
   },
   {
     slug: "sppb",
@@ -439,6 +557,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
       "Cruz-Jentoft AJ, et al. Sarcopenia: revised European consensus on definition and diagnosis (EWGSOP2). Age and Ageing. 2019;48(1):16-31.",
       "Perera S, Mody SH, Woodman RC, Studenski SA. Meaningful change and responsiveness in common physical performance measures in older adults. Journal of the American Geriatrics Society. 2006;54(5):743-9.",
     ],
+    retest: null,
   },
   {
     slug: "gait-speed",
@@ -461,5 +580,6 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     citation: "EWGSOP2 — usual-pace 4-metre gait speed.",
     detail: [],
     references: [],
+    retest: null,
   },
 ];

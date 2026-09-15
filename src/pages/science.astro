@@ -1,56 +1,102 @@
 ---
+/**
+ * /science — the hub.
+ *
+ * This was one 1,200-line page carrying all twenty topics. It is now four
+ * subject pages and this, which is the way in: the map, the four subjects,
+ * where the readings land in the app, and the full index.
+ *
+ * It stays a real page at the same address for a reason beyond the reader.
+ * Ten anchors are linked from inside the app — /science#zone-2 and the rest —
+ * and those topics now live on subject pages. The script at the top of the
+ * body forwards them before the page paints, from the same list that builds
+ * the pages, so no hosting redirect rules exist to fall out of date and no
+ * App Store release is needed to keep an old link working.
+ */
 import Layout from "../layouts/Layout.astro";
-import CitationCard from "../components/CitationCard.astro";
-import VideoSlot from "../components/VideoSlot.astro";
 import Footer from "../components/Footer.astro";
-import MetsVsMetHours from "../components/science/MetsVsMetHours.astro";
-import MovementBalance from "../components/science/MovementBalance.astro";
-import {
-  CRF_SECTION,
-  TEST_CRF_SECTION,
-  MOVEMENT_BALANCE_SECTION,
-  SEDENTARY_EXTRA,
-  STEPS_SECTION,
-  ZONE2_SECTION,
-  WEEKLY_VOLUME_SECTION,
-  ZONE2_HR_SECTION,
-  BODY_PHENOTYPING_SECTION,
-  HEART_HEALTH_SECTION,
-  MUSCLE_HEALTH_SECTION,
-  SLEEP_RHYTHM_SECTION,
-  RESTING_HR_SECTION,
-  HEART_RATE_RECOVERY_SECTION,
-  SLEEP_TRAINING_SECTION,
-} from "../data/science";
-import { BODY_MARKERS, BODY_MARKER_CONTEXT } from "../data/bodyMarkers";
+import { SUBJECTS, TOPICS, topicsFor, subjectCounts, COUNTS, ANCHOR_PAGE } from "../data/scienceTopics";
 
-const nav = [
-  { slug: "mets-vs-met-h", label: "METs vs MET-h" },
-  { slug: "crf", label: "Cardiorespiratory Fitness" },
-  { slug: "test-crf", label: "Test Your CRF" },
-  { slug: "test-accuracy", label: "Test Accuracy" },
-  { slug: "run-protocols", label: "Run Protocols" },
-  { slug: "today-tiles", label: "The Morning Read" },
-  { slug: "movement-balance", label: "Movement Balance" },
-  { slug: "activity-level", label: "Physical Activity Level" },
-  { slug: "steps", label: "Steps & Cadence" },
-  { slug: "zone-2", label: "Zone 2 Training" },
-  { slug: "strength-training", label: "Strength Training" },
-  { slug: "sleep-rhythm", label: "Sleep Timing" },
-  { slug: "resting-heart-rate", label: "Resting Heart Rate" },
-  { slug: "heart-rate-recovery", label: "Heart Rate Recovery" },
-  { slug: "weekly-volume", label: "Weekly Volume" },
-  { slug: "heart-health", label: "Heart Health" },
-  { slug: "body-phenotyping", label: "Body Phenotyping" },
-  { slug: "muscle-health", label: "Muscle Health" },
-  { slug: "intrinsic-capacity", label: "Intrinsic Capacity" },
+/** The three figures under the opening line. Counted, never typed. */
+const figures = [
+  { n: COUNTS.citations, label: "citations" },
+  { n: COUNTS.topics, label: "topics" },
+  { n: COUNTS.markers, label: "body markers" },
+];
+
+/** The sample readings drawn on the hub's three app cards. */
+const screens = [
+  {
+    name: "Activity",
+    caption: "This morning's read, your fitness tier, the week's climb.",
+    tiles: [
+      ["Sleep", "6h 29"],
+      ["Resting HR", "52"],
+      ["Recovery", "↓41"],
+      ["Sitting", "3 h"],
+    ],
+    hero: { label: "CRF", value: "8.7 METs", note: "Below Average" },
+  },
+  {
+    name: "Body",
+    caption: "Metabolic, heart and muscle health from the values you already have.",
+    tiles: [
+      ["Metabolic", "6 of 8"],
+      ["Heart", "4 of 7"],
+      ["Muscle", "3 of 6"],
+    ],
+    hero: { label: "Lab timeline", value: "2024 – 2026", note: "Every reading, dated" },
+  },
+  {
+    name: "Trends",
+    caption: "Weeks, months and years, and a guide that says what moved.",
+    tiles: [
+      ["Fitness", "Below Avg"],
+      ["Body", "Watch"],
+      ["Sleep", "6h 29"],
+      ["Activity", "Low Active"],
+    ],
+    hero: { label: "The Route", value: "8.7 METs", note: "Week · month · year" },
+  },
 ];
 ---
 
 <Layout
   title="The Science Behind Verve"
-  description="Every threshold in Verve, traced to its source — CRF, Zone 2, Heart Health, Body Phenotyping, and more, each backed by named, checkable research."
+  description="Every threshold in Verve, traced to its source. Four subjects — fitness, movement, sleep and heart, body — each opening with what the app shows you, then the studies behind it."
 >
+  {/* ── Anchor forwarding. The app links to ten anchors that used to live on
+       this page; they now live on subject pages. This runs before the body
+       paints and rewrites the address, so a link from inside the app — or one
+       a reader bookmarked — still lands on its paragraph. The map is derived
+       from the topic list itself, so a topic added later cannot be left out
+       of it. An anchor this does not recognise is left alone and the page
+       scrolls to the index, as it did before. ─────────────────────────── */}
+  <script is:inline define:vars={{ ANCHOR_PAGE }}>
+    (function () {
+      var hash = window.location.hash.slice(1);
+      if (!hash) return;
+      var page = ANCHOR_PAGE[hash];
+      if (page) {
+        window.location.replace(page + "#" + hash);
+        return;
+      }
+      // Not a topic we know. The hub has nothing at that id, so the browser
+      // would leave the reader at the top with no idea why. Put them at the
+      // index instead, which is where the thing they asked for is listed.
+      //
+      // Twice: at DOMContentLoaded so there is no visible delay, and again at
+      // load, because the first jump is measured before the web fonts settle
+      // and a reflow after it would leave the reader short of the index.
+      var toIndex = function () {
+        var index = document.getElementById("every-topic");
+        if (index) index.scrollIntoView();
+      };
+      document.addEventListener("DOMContentLoaded", toIndex);
+      window.addEventListener("load", toIndex);
+    })();
+  </script>
+
   <header class="mx-auto flex max-w-6xl items-center justify-between px-6 py-6 sm:px-10">
     <a href="/" class="flex items-center gap-2.5">
       <img src="/app-icon.png" alt="" class="h-8 w-8 rounded-lg" />
@@ -69,7 +115,8 @@ const nav = [
     </div>
   </header>
 
-  <section class="px-6 pt-8 pb-14 sm:px-10">
+  <!-- ── The opening ─────────────────────────────────────────────────── -->
+  <section class="relative px-6 pt-8 pb-16 sm:px-10">
     <div class="mx-auto max-w-3xl text-center">
       <span class="font-mono text-xs font-semibold uppercase tracking-widest text-accent-light">
         The evidence base
@@ -77,1146 +124,158 @@ const nav = [
       <h1 class="mt-4 text-4xl font-bold tracking-tight text-text-primary sm:text-5xl">
         Every threshold, traced to its source.
       </h1>
-      <p class="mx-auto mt-5 max-w-xl text-base leading-relaxed text-text-secondary">
-        50 citations across 12 topics. No proprietary score you can't check the
-        math on — every number below is the same one used inside the app, and
-        every number links to where it came from.
+      <p class="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-text-secondary">
+        Verve is built so you come to know your own readings. Every number it
+        shows you is one a clinician would use, and every threshold names the
+        study it came from.
       </p>
+
+      <dl class="mx-auto mt-10 flex max-w-lg justify-center gap-12">
+        {figures.map((f) => (
+          <div>
+            <dt class="sr-only">{f.label}</dt>
+            <dd>
+              <span class="block font-mono text-3xl font-bold text-text-primary">{f.n}</span>
+              <span class="mt-1 block text-xs text-text-tertiary">{f.label}</span>
+            </dd>
+          </div>
+        ))}
+      </dl>
     </div>
-
-    <!-- The map is the same evidence in a different shape — one whole-picture
-         view of the AHA statement, versus this page's per-topic breakdown. -->
-    <a
-      href="/crf-map"
-      class="mx-auto mt-8 flex max-w-2xl items-center gap-4 rounded-2xl border border-white/10 bg-white/4 px-5 py-4 transition-colors hover:border-white/22"
-    >
-      <span class="font-mono text-2xl leading-none text-accent-light" aria-hidden="true">⌥</span>
-      <span class="flex-1">
-        <span class="block text-sm font-semibold text-text-primary">
-          See the whole AHA statement as one map
-        </span>
-        <span class="mt-0.5 block text-xs leading-relaxed text-text-secondary">
-          226 concepts on cardiorespiratory fitness — interactive, pan and zoom.
-        </span>
-      </span>
-      <span class="text-sm text-accent-light">&rarr;</span>
-    </a>
-
-    <!-- In-page nav -->
-    <nav class="mx-auto mt-10 flex max-w-4xl flex-wrap justify-center gap-2">
-      {nav.map((n) => (
-        <a
-          href={`#${n.slug}`}
-          class="rounded-full border border-white/8 bg-white/4 px-4 py-2 text-xs font-medium text-text-secondary transition-colors hover:border-white/16 hover:text-text-primary"
-        >
-          {n.label}
-        </a>
-      ))}
-    </nav>
   </section>
 
-  <main class="mx-auto max-w-4xl space-y-20 px-6 pb-28 sm:px-10">
-    <!-- ── METs vs MET-h ─────────────────────────────────────────────── -->
-    <section id="mets-vs-met-h" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">METs vs MET-h</h2>
-      <p class="mt-2 text-sm text-text-tertiary">Methodology &mdash; not a citation, this is how Verve computes it</p>
-      <div class="mt-6"><VideoSlot topic="METs vs MET-h" /></div>
-      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
-        <MetsVsMetHours />
-      </div>
-    </section>
+  <!-- ── Start here: the map ─────────────────────────────────────────── -->
+  <section class="px-6 pb-20 sm:px-10">
+    <div class="mx-auto max-w-4xl">
+      <h2 class="font-mono text-[11px] font-semibold uppercase tracking-widest text-text-muted">
+        Start here
+      </h2>
+      <a
+        href="/crf-map"
+        class="mt-4 block rounded-2xl border border-white/10 bg-white/4 p-7 transition-colors hover:border-white/22"
+      >
+        <span class="block text-xl font-semibold text-text-primary sm:text-2xl">
+          The whole of cardiorespiratory fitness, on one map
+        </span>
+        <span class="mt-3 block max-w-2xl text-sm leading-relaxed text-text-secondary">
+          The American Heart Association&rsquo;s 2016 statement is 30 pages of
+          prose. Here it is as 226 connected ideas: what fitness measures, what
+          it predicts, how it is tested, how it improves. Open a branch to read
+          the claim; every branch Verve acts on is marked.
+        </span>
+        <span class="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <span class="text-sm font-medium text-accent-light">Open the map &rarr;</span>
+          <span class="font-mono text-xs text-text-muted">
+            Pan, zoom, expand &middot; Ross et al. 2016
+          </span>
+        </span>
+      </a>
+    </div>
+  </section>
 
-    <!-- ── Cardiorespiratory Fitness ─────────────────────────────────── -->
-    <section id="crf" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">Cardiorespiratory Fitness &amp; MET</h2>
-      <p class="mt-2 text-sm text-text-tertiary">Why Verve treats CRF as the headline metric, VO&#8322;Max as secondary</p>
-      <div class="mt-6"><VideoSlot topic="Cardiorespiratory Fitness" /></div>
-      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
-        <p class="text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">Ages 18&ndash;39:</strong> ACSM / Cooper
-          Institute adult VO&#8322;Max norms (1997), converted to METs.
-          <strong class="ml-1 text-text-primary">Ages 40+:</strong> Cleveland Clinic
-          treadmill data (Mandsager 2018, 122,007 patients). Both use the same
-          5-tier system (Low &rarr; Elite) &mdash; Verve automatically selects the
-          correct source based on your profile age.
-        </p>
-      </div>
-      <div class="mt-4 grid gap-4 sm:grid-cols-2">
-        {CRF_SECTION.map((c) => <CitationCard {...c} />)}
-      </div>
-    </section>
-
-    <!-- ── Test Your CRF ─────────────────────────────────────────────── -->
-    <section id="test-crf" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">Test Your CRF</h2>
-      <p class="mt-2 text-sm text-text-tertiary">Which test, when to retest, and why your watch disagrees</p>
-      <div class="mt-6"><VideoSlot topic="Test Your CRF" /></div>
-
-      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
-        <p class="text-sm leading-relaxed text-text-secondary">
-          Verve recommends a fitness test in two stages, and the order is the
-          whole design. <strong class="text-text-primary">Stage 1 is a safety
-          ceiling</strong> &mdash; three questions about medical supervision,
-          chest pain or dizziness during everyday activity, and any cardiac
-          event in the past six months. Any yes means talking to a doctor before
-          an all-out effort, and no amount of training history can lift that.
-          It is applied before anything else is looked at.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">Stage 2 reads your recorded
-          training</strong>, and all five checks must pass before a maximal test
-          is recommended: trained within the window, 4 of 8 weeks carrying 3 or
-          more training days, at least 2 hard sessions a week, one hard session
-          in the last 14 days, and fewer than 2 consecutive quiet weeks. Where
-          all five pass, Verve prefers to repeat <em>your last test</em> &mdash;
-          comparing a 6-minute walk against a 12-minute run mixes method
-          variance into what you would read as a change in your fitness.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">Why tests don&rsquo;t mix.</strong>
-          A submaximal walk estimates your capacity from how your heart
-          responds to easy work; a maximal run measures what you can actually
-          do. The two carry different errors in different directions &mdash; a
-          walk under-reads a fit person, a first maximal run under-reads a
-          cautious pacer &mdash; so a change between test types usually
-          reflects the tests, not your fitness. Verve flags a mixed history in
-          the app and reads trends within one test type; when you retest, it
-          offers your last test again for the same reason.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">Retesting is every 8 weeks.</strong>
-          VO&#8322;Max adapts with a half-time of about 10&ndash;11 days and a
-          dependable change takes on the order of 21 sessions, so a test before
-          about 4 weeks usually returns your old number and teaches you only
-          that you tested early. Eight weeks is also the window Verve reads your
-          training over, so the two are the same span rather than two nearby
-          ones.
-        </p>
-      </div>
-
-      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6" id="two-windows">
-        <h3 class="text-lg font-semibold text-text-primary">Why the app shows two windows</h3>
-        <p class="mt-3 text-sm leading-relaxed text-text-secondary">
-          The readiness card in the app carries one row measured over
-          <strong class="text-text-primary">three months</strong> and five
-          measured over <strong class="text-text-primary">eight weeks</strong>.
-          That is not an inconsistency. They answer different questions and
-          come from different places.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          The three-month row is the exercise guideline&rsquo;s. ACSM defines
-          &ldquo;currently active&rdquo; as habitual activity over the past
-          three months, and that definition is used for one decision only:
-          whether you should speak to a doctor before an all-out effort. It is
-          a screening threshold, and screening thresholds are conservative on
-          purpose.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          The eight-week rows are Verve&rsquo;s own, and they answer a
-          physiological question instead: which test suits the training you
-          have actually done. Eight weeks is chosen because that is roughly how
-          long fitness takes to move by an amount a field test can detect
-          (Hickson 1981). Neither number can stand in for the other. Borrowing
-          the screening threshold to answer the physiology question is how an
-          app ends up recommending a maximal run to someone who walked twice
-          last month.
-        </p>
-      </div>
-
-      <div class="mt-4 grid gap-4 sm:grid-cols-2">
-        {TEST_CRF_SECTION.map((c) => <CitationCard {...c} />)}
-      </div>
-    </section>
-
-    <!-- ── How accurate each test is ─────────────────────── -->
-    <section id="test-accuracy" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">How Accurate Each Test Is</h2>
-      <p class="mt-2 text-sm text-text-tertiary">What r &asymp; 0.90 means, what the stars mean, and where these tests stop working</p>
-
-      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
-        <h3 class="text-lg font-semibold text-text-primary">The r value</h3>
-        <p class="mt-3 text-sm leading-relaxed text-text-secondary">
-          Every test in Verve carries a small badge &mdash;
-          <code class="rounded bg-white/8 px-1.5 py-0.5 text-xs">r &asymp; 0.90</code>
-          on the Cooper run, for instance. <strong class="text-text-primary">r
-          is a correlation coefficient</strong>: how closely the test&rsquo;s
-          estimate tracks a true VO&#8322;Max measured in a laboratory with a
-          gas-analysis mask. It runs from 0 (no relationship at all) to 1 (a
-          perfect one).
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          An r of 0.90 means the test ranks people almost exactly as the lab
-          would. Someone it puts above you would almost certainly test above
-          you on a treadmill. What r does <em>not</em> tell you is how far off
-          any single number is &mdash; a test can rank a whole group perfectly
-          and still read a few points high for everyone in it. That is why the
-          honest use of a field test is
-          <strong class="text-text-primary">comparing you against yourself over
-          time</strong>, on the same test, rather than treating one result as a
-          laboratory measurement.
-        </p>
-
-        <div class="mt-6 overflow-x-auto">
-          <table class="w-full text-left text-sm">
-            <thead>
-              <tr class="border-b border-white/10 text-xs uppercase tracking-wide text-text-tertiary">
-                <th class="pb-2 pr-4 font-medium">Test</th>
-                <th class="pb-2 pr-4 font-medium">Effort</th>
-                <th class="pb-2 font-medium">Accuracy</th>
-              </tr>
-            </thead>
-            <tbody class="text-text-secondary">
-              <tr class="border-b border-white/5"><td class="py-2 pr-4">Bruce Protocol</td><td class="py-2 pr-4">Maximal, supervised</td><td class="py-2">&plusmn;3.5 mL/kg/min</td></tr>
-              <tr class="border-b border-white/5"><td class="py-2 pr-4">Cooper 12-Minute Run</td><td class="py-2 pr-4">Maximal</td><td class="py-2">r &asymp; 0.90</td></tr>
-              <tr class="border-b border-white/5"><td class="py-2 pr-4">1.5-Mile Run</td><td class="py-2 pr-4">Maximal</td><td class="py-2">r &asymp; 0.85</td></tr>
-              <tr class="border-b border-white/5"><td class="py-2 pr-4">1-Mile Walk Test</td><td class="py-2 pr-4">Submaximal</td><td class="py-2">r &asymp; 0.88</td></tr>
-              <tr><td class="py-2 pr-4">6-Minute Walk Test</td><td class="py-2 pr-4">Submaximal</td><td class="py-2">~13% MAPE</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <p class="mt-4 text-xs leading-relaxed text-text-tertiary">
-          MAPE is mean absolute percentage error &mdash; the average size of the
-          miss, regardless of direction. It answers the question r cannot.
-        </p>
-      </div>
-
-      <div class="mt-4 rounded-2xl border border-white/8 bg-white/4 p-6">
-        <h3 class="text-lg font-semibold text-text-primary">The stars</h3>
-        <p class="mt-3 text-sm leading-relaxed text-text-secondary">
-          The star rating is Verve&rsquo;s own shorthand for how much weight a
-          result deserves, and it combines two things the r value keeps
-          separate: how well the method is validated, and how much of the
-          answer depends on you performing well on the day. Four stars are the
-          maximal tests, where the number is limited by your physiology. Three
-          stars are the submaximal ones, which estimate your capacity from how
-          your heart responds to easy work &mdash; safer, repeatable, and one
-          inference further from the thing being measured.
-        </p>
-      </div>
-
-      <div class="mt-4 rounded-2xl border border-white/8 bg-white/4 p-6">
-        <h3 class="text-lg font-semibold text-text-primary">Where these tests stop working</h3>
-        <p class="mt-3 text-sm leading-relaxed text-text-secondary">
-          Field-test estimates are most accurate for active-to-trained young and
-          middle-aged adults, because that is who the validation studies
-          recruited. They are less reliable at both edges: highly trained
-          athletes, whose results compress near the top of the scale, and very
-          sedentary people, who are under-represented in the original data and
-          whose pacing on an unfamiliar all-out effort is itself unpractised.
-          If you sit at either edge, the trend in your own numbers is worth more
-          than any single one of them.
-        </p>
-      </div>
-    </section>
-
-    <!-- ── The run protocols in full ─────────────────────── -->
-    <section id="run-protocols" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">The Run Protocols In Full</h2>
-      <p class="mt-2 text-sm text-text-tertiary">What the app&rsquo;s checklist is short for</p>
-
-      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
-        <p class="text-sm leading-relaxed text-text-secondary">
-          The app shows these as a short checklist on purpose. You read it
-          standing on a start line, and a paragraph of reasoning is the wrong
-          thing to hand someone in that moment. The reasoning is here.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">No hard exercise for 24 hours.</strong>
-          A maximal test measures your ceiling, and residual fatigue lowers it.
-          Testing the day after a hard session reads as a fitness decline that
-          never happened &mdash; the most common way a person records a drop
-          they then try to explain.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">Warm up for 10&ndash;15 minutes.</strong>
-          Beyond injury risk, an unwarmed start spends the first minutes of a
-          12-minute test on physiology a warm-up would already have handled, and
-          those minutes are a measurable part of the distance.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">Start controlled, finish hard.</strong>
-          The Cooper test rewards even pacing. Going out too fast produces an
-          early slowdown that costs more distance than the fast start gained,
-          which is why first-time testers frequently under-read their own
-          fitness. On the 1.5-mile run the same logic applies to splits.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">Walk if you need to, but keep
-          moving.</strong> The test is a distance in a fixed time (Cooper) or a
-          time over a fixed distance (1.5-mile). Stopping entirely ends the
-          test; walking is a slower pace, not a failure, and a walked finish is
-          still a valid result.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">Why a large meal matters.</strong>
-          Digestion diverts blood flow a maximal effort is competing for. Two to
-          three hours is enough for a normal meal; the guidance is about comfort
-          and performance rather than safety.
-        </p>
-      </div>
-
-      <div class="mt-4 rounded-2xl border border-white/8 bg-white/4 p-6">
-        <h3 class="text-lg font-semibold text-text-primary">The stop signals, and why they are absolute</h3>
-        <p class="mt-3 text-sm leading-relaxed text-text-secondary">
-          Chest pain, dizziness, lightheadedness, nausea, leg cramps, or
-          breathlessness beyond hard breathing mean stop &mdash; not slow down.
-          Hard running is uncomfortable, and the difficulty is telling ordinary
-          maximal-effort discomfort from a symptom. The rule Verve uses is that
-          you should not have to make that judgement: if you meet any of these,
-          the test is over and the result does not matter.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          The same symptoms in the hours after a test warrant medical attention.
-          Cardiac events associated with unaccustomed maximal exertion are rare,
-          and are concentrated in people doing an all-out effort they have not
-          trained for &mdash; which is precisely what the safety check and the
-          eight-week training window exist to catch before you reach the start
-          line.
-        </p>
-      </div>
-    </section>
-
-    <!-- ── The Morning Read — the four Today tiles ─────────────────────── -->
-    <section id="today-tiles" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">The Morning Read</h2>
-      <p class="mt-2 text-sm text-text-tertiary">How the four Today tiles on the Activity page are coloured, and where each line comes from</p>
-      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
-        <p class="text-sm leading-relaxed text-text-secondary">
-          Each tile takes its colour from the figure it shows. Green means the
-          reading is inside the range its evidence calls ordinary, amber that it
-          has crossed one line, red that it has crossed a second. A grey dash
-          means Verve has not measured it yet and will not guess. The rules,
-          one per tile:
-        </p>
-        <ul class="mt-4 space-y-3 text-sm leading-relaxed text-text-secondary">
-          <li>
-            <strong class="text-text-primary">Sleep</strong> &mdash; last night's hours
-            asleep against the <strong class="text-text-primary">7 to 9 hour</strong>
-            range. Amber under seven; ordinary text above nine, because a long
-            night is worth noticing but is not a warning. The drift and
-            regularity figures inside the tile's page keep their own scales.
-            <a href="#sleep-rhythm">Sleep timing &rarr;</a>
-          </li>
-          <li>
-            <strong class="text-text-primary">Resting HR</strong> &mdash; the worse of
-            two verdicts. Against your own 30-day median: amber around
-            <strong class="text-text-primary">5 bpm above</strong>, red around
-            <strong class="text-text-primary">10 above</strong>. Against the level
-            itself: amber from <strong class="text-text-primary">75</strong>, red
-            from <strong class="text-text-primary">80</strong>. Below your usual, and
-            under 50, stay green on purpose &mdash; a rested morning and an
-            endurance athlete both land there.
-            <a href="#resting-heart-rate">Resting heart rate &rarr;</a>
-          </li>
-          <li>
-            <strong class="text-text-primary">Recovery</strong> &mdash; how far your heart
-            rate fell in the first minute after the last workout. One cited line:
-            red at a fall of <strong class="text-text-primary">12 bpm or less</strong>,
-            green above it. There is no amber, because no second line has been
-            validated; the tile refuses to invent one.
-            <a href="#heart-rate-recovery">Heart rate recovery &rarr;</a>
-          </li>
-          <li>
-            <strong class="text-text-primary">Sitting</strong> &mdash; hours today with
-            almost no stepping. Amber from <strong class="text-text-primary">10.6
-            hours</strong>, red from <strong class="text-text-primary">12</strong>,
-            the same two ticks the Movement Balance bar draws.
-            <a href="#movement-balance">Movement balance &rarr;</a>
-          </li>
-        </ul>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          Every number above is read from one thresholds file inside the app,
-          the same file the tiles read, so this page and the tiles cannot
-          disagree about where a line sits.
-        </p>
-      </div>
-    </section>
-
-    <!-- ── Movement Balance ──────────────────────────────────────────── -->
-    <section id="movement-balance" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">Sedentary Behavior &amp; Movement Balance</h2>
-      <p class="mt-2 text-sm text-text-tertiary">How Verve reads your day beyond workout minutes</p>
-      <div class="mt-6"><VideoSlot topic="Movement Balance" /></div>
-      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
-        <MovementBalance />
-      </div>
-      <div class="mt-4 grid gap-4 sm:grid-cols-2">
-        {[...MOVEMENT_BALANCE_SECTION, ...SEDENTARY_EXTRA].map((c) => <CitationCard {...c} />)}
-      </div>
-
-      <h3 class="mt-10 text-lg font-semibold text-text-primary">What each figure on the card means</h3>
-      <div class="mt-4 space-y-4 text-sm leading-relaxed text-text-secondary">
-        <p>
-          <strong class="text-text-primary">Sedentary hours.</strong> A waking hour with fewer than
-          50 steps in it counts as sedentary. Steps come from Apple Health, so nothing is typed in.
-          Waking hours are your measured sleep where Verve has it, and 7am to 10pm where it does
-          not — the card says which, because an assumed wake time counts somebody's actual lie-in
-          as sitting.
-        </p>
-        <p>
-          <strong class="text-text-primary">Unbroken sitting.</strong> The longest run of
-          consecutive sedentary hours, not the daily total. This is the figure the evidence is
-          actually about: risk tracks uninterrupted sitting rather than hours accumulated across a
-          day, and six hours broken every thirty minutes is a different day from six hours in one
-          block. A sleep hour or a workout ends a run — you were not sitting through either.
-        </p>
-        <p>
-          <strong class="text-text-primary">Standing minutes.</strong> Minutes Apple Watch detected
-          you upright and moving. More precise than the Stand ring, which credits a whole hour for
-          one minute on your feet: this counts the minutes themselves. Apple Watch only.
-        </p>
-        <p>
-          <strong class="text-text-primary">Napped.</strong> Daytime sleep, shown when there was
-          some. A nap is any sleep session that does not begin in the night (20:00 to 05:00),
-          however long it runs. It is drawn as rest on the terrain and excluded from sitting — you
-          were not sitting through it — and it is excluded from last night's sleep on the Sleep
-          card, because a nap is not a bedtime. The same rule decides both.
-        </p>
-        <p>
-          <strong class="text-text-primary">The 24-hour terrain.</strong> Height is steps per hour.
-          The strip beneath it is the hour's state: green active, orange sedentary, blue asleep
-          (naps included), grey an hour that has not happened yet.
-        </p>
-        <p>
-          <strong class="text-text-primary">Longest sit, and sits over 30 minutes.</strong>
-          Uninterrupted sitting, detected from five-minute step buckets rather than hours &mdash;
-          the resolution the evidence needs. Diaz found that mortality tracked not only total
-          sedentary time but how it accumulated: the excess sat with bouts of thirty minutes or
-          more, and was highest in people whose sitting came in blocks of an hour or longer. A bout
-          is closed by any movement, by a recorded workout (a swim registers no steps and would
-          otherwise read as the day&rsquo;s longest sit), and by sleep, naps included. Under the
-          terrain a thin row marks each one &mdash; amber to an hour, red past it &mdash; so the
-          figure above can be read off the day rather than trusted. Verve had this once on hourly
-          steps and removed it, because an hourly total cannot see a thirty-minute bout; it returned
-          only when the data could support it, and on a day without fine buckets it shows nothing
-          rather than zero.
-        </p>
-      </div>
-    </section>
-
-    <!-- ── Activity Level (PAL) ──────────────────────────────────────── -->
-    <section id="activity-level" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">Physical Activity Level (PAL)</h2>
-      <p class="mt-2 text-sm text-text-tertiary">How active your whole day is — and how much of that number to trust</p>
-
-      <div class="mt-6 space-y-4 text-sm leading-relaxed text-text-secondary">
-        <p>
-          <strong class="text-text-primary">Physical Activity Level</strong> measures how active your
-          entire day is, not just your workouts. It is your total daily energy expenditure divided by
-          your basal metabolic rate — the energy your body would use lying still. A PAL of 1.0 would
-          mean complete bed rest. Around 2.5 is elite-athlete territory. Verve reads it from Apple
-          Health's basal and active energy, averaged over seven days.
-        </p>
-
-        <h3 class="pt-2 text-lg font-semibold text-text-primary">The four levels</h3>
-        <p>
-          The tiers come from the Institute of Medicine's Dietary Reference Intakes, which defined
-          them to set energy requirements for populations: sedentary 1.00–1.39, low active 1.40–1.59,
-          active 1.60–1.89, very active 1.90–2.50.
-        </p>
-
-        <h3 class="pt-2 text-lg font-semibold text-text-primary">Read the trend, not the number</h3>
-        <p>
-          Both halves of this ratio are estimates, so the error compounds. Active calories come from
-          your wrist, where systematic reviews put energy-expenditure error above 30%, and they miss
-          effort that does not move your arm — cycling, rowing, lifting, carrying. Your resting figure
-          is not measured at all; it is predicted from your height, weight, age and sex. Every wearable
-          tested against doubly-labelled water <em>under</em>-estimates, for Apple Watch by roughly
-          394 kcal a day, and the bias grows at higher effort and higher body fat.
-        </p>
-        <p>
-          The practical consequence: a single PAL carries a band wide enough to straddle two tiers.
-          Whether it drifts up over months does not. That is why Verve shows this as a trend read
-          against the tier bands rather than as a figure to hit, and why the app's chart marks which
-          band each week or month fell in rather than asking you to read a slope off a noisy line.
-        </p>
-
-        <h3 class="pt-2 text-lg font-semibold text-text-primary">The one correction Verve makes</h3>
-        <p>
-          Apple reports basal and active energy but not the thermic effect of food — the energy spent
-          digesting, conventionally about 10% of total daily expenditure. Their sum is therefore not
-          total daily energy expenditure, so Verve divides by 0.9 to recover it. That correction is
-          definitional rather than a judgement call, and it is the only adjustment applied.
-        </p>
-        <p>
-          Two further adjustments were tried and removed: an additive correction for occupational
-          activity, and a rule that raised the tier when logged training contradicted a sedentary
-          label. Both were judgement calls stacked on a base with more than 30% error, and the
-          occupational one double-counted part of the very bias the thermic-effect correction already
-          approximates. Layers of inference do not rescue a noisy instrument; they only obscure how
-          noisy it is.
-        </p>
-      </div>
-    </section>
-
-    <!-- ── Steps & Cadence ───────────────────────────────────────────── -->
-    <section id="steps" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">Step Count &amp; Daily Movement</h2>
-      <p class="mt-2 text-sm text-text-tertiary">Daily step tiers and cadence zones</p>
-      <div class="mt-6"><VideoSlot topic="Steps & Cadence" /></div>
-      <div class="mt-6 grid gap-4 sm:grid-cols-2">
-        {STEPS_SECTION.map((c) => <CitationCard {...c} />)}
-      </div>
-    </section>
-
-    <!-- ── Zone 2 (volume + HR method together) ──────────────────────── -->
-    <section id="zone-2" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">Zone 2 Training</h2>
-      <p class="mt-2 text-sm text-text-tertiary">The weekly target, and the personal heart-rate band behind it</p>
-      <div class="mt-6"><VideoSlot topic="Zone 2 Training" /></div>
-      <div class="mt-6 grid gap-4 sm:grid-cols-2">
-        {ZONE2_SECTION.map((c) => <CitationCard {...c} />)}
-      </div>
-      <h3 class="mt-10 text-lg font-semibold text-text-primary">Heart-rate method: Karvonen HRR</h3>
-      <p class="mt-2 text-sm leading-relaxed text-text-secondary">
-        "Zone 2" is a training label applied to the 40&ndash;60% Heart Rate Reserve
-        band &mdash; different models (Seiler polarised, Maffetone 180-minus-age,
-        San Mill&aacute;n VT1-based) draw the upper boundary slightly differently, but
-        all target the same physiological space just below the first ventilatory
-        threshold.
+  <!-- ── The four subjects ───────────────────────────────────────────── -->
+  <section class="px-6 pb-20 sm:px-10">
+    <div class="mx-auto max-w-4xl">
+      <h2 class="text-2xl font-bold text-text-primary">Read it by subject</h2>
+      <p class="mt-2 max-w-2xl text-sm leading-relaxed text-text-secondary">
+        Four pages instead of one scroll. Each opens with what the app shows
+        you, then the studies behind it.
       </p>
-      <div class="mt-4 grid gap-4 sm:grid-cols-2">
-        {ZONE2_HR_SECTION.map((c) => <CitationCard {...c} />)}
-      </div>
-    </section>
 
-    <!-- ── Conditions: the three readings on the Activity card ───────────
-         Linked directly from the app — each tile's "The research behind
-         this" opens the matching anchor below, not the page root. -->
+      <div class="mt-8 grid gap-4 sm:grid-cols-2">
+        {SUBJECTS.map((s) => {
+          const counts = subjectCounts(s.slug);
+          return (
+            <a
+              href={`/science/${s.slug}`}
+              class="flex flex-col rounded-2xl border border-white/8 bg-white/4 p-6 transition-colors hover:border-white/20"
+            >
+              <span class="text-lg font-semibold text-text-primary">{s.label}</span>
+              <span class="mt-2 text-sm leading-relaxed text-text-secondary">
+                {s.teaser}
+              </span>
+              <span class="mt-4 text-xs leading-relaxed text-text-tertiary">
+                {topicsFor(s.slug).map((t) => t.label).join(" · ")}
+              </span>
+              <span class="mt-auto flex items-center justify-between pt-5">
+                <span class="font-mono text-xs text-text-muted">
+                  {counts.citations} citations &middot; {counts.topics} topics
+                </span>
+                <span class="text-sm text-accent-light">&rarr;</span>
+              </span>
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  </section>
 
-    <!-- ── Strength Training ─────────────────────────────────────── -->
-    <section id="strength-training" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">Strength Training</h2>
-      <p class="mt-2 text-sm text-text-tertiary">Where the 60 minutes a week comes from &mdash; and why the app no longer draws it as a bar to clear</p>
+  <!-- ── Where the readings land in the app ──────────────────────────── -->
+  <section class="px-6 pb-20 sm:px-10">
+    <div class="mx-auto max-w-4xl">
+      <h2 class="text-2xl font-bold text-text-primary">Where the numbers land</h2>
+      <p class="mt-2 max-w-2xl text-sm leading-relaxed text-text-secondary">
+        Three pages. Each reading on them is one of the studies above, put
+        where you will actually look at it.
+      </p>
+      <p class="mt-3 font-mono text-xs text-text-muted">
+        iPhone &middot; Android soon &middot; sample figures
+      </p>
 
-      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
-        <p class="text-sm leading-relaxed text-text-secondary">
-          Verve treats strength as co-equal with aerobic training, not as an
-          add-on. In the UK Biobank analysis of over 70,000 adults, improving
-          cardiorespiratory fitness and muscle strength <em>together</em> was
-          associated with lower all-cause and cardiovascular mortality than
-          either alone &mdash; the two protect through different mechanisms, and
-          neither substitutes for the other.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">Sitting today, as the tile counts it.</strong>
-          An hour counts as sitting when fewer than 50 steps happened in it,
-          from 07:00 to now; it is the same number the Movement balance row
-          shows. Short, regular breaks help more than one long workout does.
-          The phone only knows you were not walking &mdash; not whether you sat
-          or stood &mdash; and a watch adds the standing minutes beside it.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">The 60-minute figure.</strong> Public
-          guidance asks for muscle-strengthening activity on two or more days a
-          week; roughly an hour across those days is the volume the mortality
-          studies were built on, and is the number Verve cites. It is a figure
-          from population evidence, not a personal prescription. Someone starting
-          out will do less and gain a great deal; someone training seriously
-          will do far more, with the benefit curve flattening rather than
-          stopping.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">Why the app stopped drawing it.</strong>
-          The Strength card used to show your minutes against 60 &mdash; a bar,
-          a &ldquo;to go&rdquo;, a &ldquo;target met&rdquo;. For a beginner that
-          reads as a bar they are under every week; for an athlete it is
-          meaningless. The card now reports the minutes and the sessions, and
-          the number lives here, where it can be explained. The same reasoning
-          removed the 150&ndash;300 minute band from the Zone 2 card &mdash; see
-          <a href="#zone-2">Zone 2 Training</a>.
-        </p>
-      </div>
-    </section>
+      <div class="mt-8 grid gap-4 sm:grid-cols-3">
+        {screens.map((s) => (
+          <div class="rounded-2xl border border-white/8 bg-white/4 p-5">
+            <span class="font-mono text-[11px] font-semibold uppercase tracking-widest text-accent-light">
+              {s.name}
+            </span>
 
-    <!-- ── Sleep Rhythm ──────────────────────────────────────────────── -->
-    <section id="sleep-rhythm" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">Sleep Timing</h2>
-      <p class="mt-2 text-sm text-text-tertiary">How much your bedtime moves, and the research index behind it</p>
-      <div class="mt-6"><VideoSlot topic="Sleep Timing" /></div>
-      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
-        <p class="text-sm leading-relaxed text-text-secondary">
-          Verve leads with the <strong class="text-text-primary">spread of your
-          bedtime in minutes</strong>: how far it moves from one night to the
-          next. That is the measure the 2025 AHA scientific statement names for
-          regularity, it carries a real mark at
-          <strong class="text-text-primary">60 minutes</strong>, and it is in a
-          unit you can act on tonight. Clock times are treated as angles on a
-          24-hour circle &mdash; a plain average would place 23:50 and 00:10
-          nearly a full day apart and report the steadiest sleepers as the most
-          erratic.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          Behind it sits the <strong class="text-text-primary">Sleep Regularity
-          Index</strong>: the probability of being in the same state, asleep or
-          awake, at any two clock times 24 hours apart. It is the stronger
-          research metric &mdash; in UK Biobank it out-predicted sleep duration
-          for mortality &mdash; but it is a research metric, reported by no
-          consumer wearable and named by no guideline for individual care, and
-          two accepted calculators disagree on the same nights. So it is the
-          number underneath, not the headline. Its median of
-          <strong class="text-text-primary">81</strong> is a percentile of one
-          cohort, not a clinical threshold.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">The three numbers on the Sleep page.</strong>
-          <em>Last night</em> is the summed asleep time of your most recent
-          overnight sleep &mdash; awake spells inside the night excluded, naps
-          excluded, the same definition Apple Health uses for &ldquo;time
-          asleep&rdquo;. <em>Bedtime drift</em> is the night-to-night spread of
-          the time you fell asleep, in minutes, over your recent nights; under
-          <strong class="text-text-primary">60</strong> is the mark the 2025 AHA
-          statement uses. The <em>regularity index</em> is the Sleep Regularity
-          Index, 0 to 100, with its bands printed on the bar where they fall:
-          below <strong class="text-text-primary">71.6</strong> irregular,
-          <strong class="text-text-primary">71.6&ndash;87.3</strong> moderately
-          irregular, above <strong class="text-text-primary">87.3</strong>
-          regular. Those cut-points are the 25th and 75th percentiles of the UK
-          Biobank sample, which is why they are printed to a decimal: they are
-          where a cohort fell, not lines a guideline drew.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">In Trends, under Over Time.</strong>
-          Each lens carries the period&rsquo;s average night by stage &mdash; a
-          column per night for the week, per week for the block, per month for
-          the year &mdash; and what the body did while asleep: the watch&rsquo;s
-          heart rate and breathing rate inside the sleep hours, averaged per
-          night and then across nights, against the period before. A night
-          belongs to the morning you woke. Stages appear only from a device
-          that writes them; a plain asleep record from another writer is shown
-          as one block, not divided into stages it never had.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">What it needs, and what it leaves out.</strong>
-          The timing measures need a handful of recent recorded nights &mdash;
-          the page counts them up for you &mdash; and only recent nights count,
-          so a break from wearing the watch means the count starts again.
-          Anything that writes sleep to Apple Health works: Apple Watch, Oura,
-          Whoop, Garmin. Naps are left out of the timing measures, since a nap
-          is not a bedtime. Timing is not hours: a steady short night scores
-          better here than an erratic long one, and the two are complementary
-          risk markers rather than alternatives. Because accepted SRI
-          calculators disagree on the same nights, read your own trend rather
-          than comparing the number with anyone else's; and crossing time zones
-          registers as irregularity even when your rhythm is steady in local
-          time.
-        </p>
-      </div>
-      <div id="connect-wearables" class="mt-4 scroll-mt-8 rounded-2xl border border-white/8 bg-white/4 p-6">
-        <p class="text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">Connecting Oura, Whoop or Garmin.</strong>
-          Verve reads only Apple Health, so a third-party wearable reaches it
-          through its own app&rsquo;s Apple Health setting. <em>Oura</em>: the
-          Oura app &rarr; menu &rarr; Settings &rarr; Apple Health, and allow it
-          to write Sleep, Workouts, Heart Rate and Respiratory Rate.
-          <em>Whoop</em>: More &rarr; App Settings &rarr; Integrations &rarr;
-          Apple Health, and allow the same categories. <em>Garmin</em>: Garmin
-          Connect &rarr; More &rarr; Settings &rarr; Apple Health. Then in Verve,
-          Settings &rarr; Apple Health on. How far back an app writes when you
-          switch the integration on varies by app; from that day on every night
-          arrives. Stages appear when the app writes them; a plain asleep record
-          shows as one block. Steps come from whatever writes them to Health:
-          the phone in a pocket, an Apple Watch, and Oura or Garmin through
-          their apps; Whoop does not write steps. In Verve, Settings &rarr;
-          Wearables shows which app wrote the latest sleep, heart-rate and
-          workout sample, and when.
-        </p>
-      </div>
-      <div class="mt-4 grid gap-4 sm:grid-cols-2">
-        {SLEEP_RHYTHM_SECTION.map((c) => <CitationCard {...c} />)}
-      </div>
-    </section>
+            <div class="mt-4 rounded-xl border border-white/8 bg-white/4 px-4 py-3">
+              <span class="block font-mono text-[10px] uppercase tracking-wider text-text-muted">
+                {s.hero.label}
+              </span>
+              <span class="mt-1 block text-xl font-bold text-text-primary">{s.hero.value}</span>
+              <span class="mt-0.5 block text-xs text-text-tertiary">{s.hero.note}</span>
+            </div>
 
-    <!-- ── Sleep and training ────────────────────────────────────────── -->
-    <section id="sleep-and-training" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">Sleep and Training, Read Together</h2>
-      <p class="mt-2 text-sm text-text-tertiary">What the Guide's SLEEP line is, and what it refuses to claim</p>
-      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
-        <p class="text-sm leading-relaxed text-text-secondary">
-          The Guide compares two periods of your own record. Since sleep and
-          training now come from the same period summary, it can lay them
-          side by side: average night asleep, minutes awake in the night,
-          sleeping heart rate, bedtime drift and the regularity index, beside
-          MVPA, training minutes and strength days for the same two periods.
-          Sleep joins the list of movers too &mdash; judged against the adult
-          <strong class="text-text-primary">7&ndash;9 hour</strong> band rather
-          than a direction, so 6 to 7 hours is an improvement and 8 to 9&frac12;
-          is not, while less time awake in the night, a lower sleeping heart
-          rate, less bedtime drift and a higher regularity index count the way
-          you would expect.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">What the SLEEP line says.</strong>
-          One sentence on what moved alongside what &mdash; &ldquo;training rose
-          40% and sleep fell 35 minutes, with sleeping heart rate up 3&rdquo;.
-          It describes co-movement in your data. It never says one caused the
-          other, because two periods of one person cannot show that: a hard
-          block can shorten sleep, short sleep can make a block feel harder,
-          and a work deadline can do both. The literature below is why the
-          pairing is worth reading at all &mdash; short sleep tracks injury and
-          worse endurance, and extended sleep has moved performance in small
-          trials &mdash; but the line reports, and you interpret.
-        </p>
-      </div>
-      <div class="mt-4 grid gap-4 sm:grid-cols-2">
-        {SLEEP_TRAINING_SECTION.map((c) => <CitationCard {...c} />)}
-      </div>
-    </section>
+            <dl class="mt-3 space-y-1.5">
+              {s.tiles.map(([label, value]) => (
+                <div class="flex items-baseline justify-between gap-3">
+                  <dt class="text-xs text-text-tertiary">{label}</dt>
+                  <dd class="font-mono text-xs font-semibold text-text-secondary">{value}</dd>
+                </div>
+              ))}
+            </dl>
 
-    <!-- ── Resting Heart Rate ────────────────────────────────────────── -->
-    <section id="resting-heart-rate" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">Resting Heart Rate</h2>
-      <p class="mt-2 text-sm text-text-tertiary">Measured against your own normal, not a population range</p>
-      <div class="mt-6"><VideoSlot topic="Resting Heart Rate" /></div>
-      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
-        <p class="text-sm leading-relaxed text-text-secondary">
-          Verve compares today's resting heart rate with the median of your own
-          last 30 days. Within <strong class="text-text-primary">5 bpm</strong> is
-          ordinary day-to-day variation; around
-          <strong class="text-text-primary">5 bpm above</strong>, sustained for a few
-          days, is worth noticing; around
-          <strong class="text-text-primary">10 above</strong> is a clear departure.
-          The instrument shades only the high side, because a low resting rate is
-          not a finding &mdash; a rested morning and an adapted endurance athlete
-          both land there.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">The level, and what a reading cannot say.</strong>
-          Beside the comparison with your own normal, the level itself matters:
-          lowest risk sits around <strong class="text-text-primary">50&ndash;60
-          bpm</strong>, and above <strong class="text-text-primary">75&ndash;80</strong>
-          carries higher risk even when it never moves. Under 50 is common in
-          trained people and usually adaptation, worth raising only alongside
-          dizziness, fainting or breathlessness. The slow direction counts on its
-          own &mdash; a baseline falling over months tracks lower risk, a rising
-          one higher, whatever today says. Alcohol, heat, a late meal, poor
-          sleep, illness, dehydration, thyroid and some medicines all raise it;
-          a wearable reading is not diagnostic.
-        </p>
-      </div>
-      <div class="mt-4 grid gap-4 sm:grid-cols-2">
-        {RESTING_HR_SECTION.map((c) => <CitationCard {...c} />)}
-      </div>
-    </section>
-
-    <!-- ── Heart Rate Recovery ───────────────────────────────────── -->
-    <section id="heart-rate-recovery" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">Heart Rate Recovery</h2>
-      <p class="mt-2 text-sm text-text-tertiary">How far your heart rate falls in the first minute after you stop &mdash; one cited line, and a trend against your own normal</p>
-
-      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
-        <p class="text-sm leading-relaxed text-text-secondary">
-          Heart rate recovery is the drop from your peak exercising heart rate to
-          the rate a fixed time later &mdash; most often one minute. The early part
-          of that fall is driven mainly by the vagus nerve switching back on;
-          slower sympathetic withdrawal follows over the next few minutes. It is,
-          in effect, a read of how quickly your autonomic nervous system lets go
-          of effort &mdash; and it predicts mortality independently of how fit you
-          are or how much coronary disease you have.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">The one line Verve draws is 12 bpm.</strong>
-          In the original study of 2,428 people, a fall of 12 beats or fewer in the
-          first minute carried roughly a four-fold higher mortality risk over six
-          years. The American Heart Association&rsquo;s exercise-testing statement
-          names it the most frequently used cut-point, and a 2025 cohort found the
-          same threshold associated with a hazard ratio of about 3.2 for death at
-          72 months. That is why the scale on the card is red up to 12 and marks
-          nothing else as a verdict.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">Why there is no &ldquo;good&rdquo; number.</strong>
-          You will see 18&ndash;20 bpm quoted as a healthy recovery. It is a lay
-          benchmark, not a validated norm: published cut-points for one-minute
-          recovery run anywhere from 12 to 30 bpm depending on the study, the
-          population and the protocol. What the evidence does show is that the
-          relationship is not a switch. Risk falls steeply as recovery improves to
-          somewhere around 15&ndash;20 bpm, then the curve flattens &mdash; beyond
-          that range, extra recovery buys little further protection. Verve shades
-          the scale above 12 from amber towards green to say exactly that, and
-          deliberately draws no second line.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">The number depends on what you do after you stop.</strong>
-          Recovery measured while walking slowly is different from recovery
-          measured sitting or lying down; passive recovery produces larger drops
-          and needs higher cut-points. The 12 bpm line was derived with an active
-          walking cool-down. Apple Watch measures recovery in whatever you happen
-          to do after ending a workout, which is one more reason the comparison
-          Verve leads with is <strong class="text-text-primary">you against your own
-          30-day median</strong> &mdash; the same rule as resting heart rate &mdash;
-          rather than you against a table. Your protocol is at least consistent
-          with itself. Recovery also declines with age and is higher in
-          adolescents, so a fixed adult line is not applied to younger users.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">Shown but not scored.</strong>
-          The line was measured after hard effort, and how far the rate falls
-          scales with how high it went. A walk that ended below your own Zone 2
-          floor still has a fall, and the page shows it, in grey, with
-          &ldquo;ended below Zone 2&rdquo; beside it &mdash; but it is not judged
-          against the 12 bpm line, not counted among the readings above or below
-          it, and not in the week average. It is what the watch measured; it is
-          not a fitness reading.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">Where the number comes from.</strong>
-          Two places, and the card says which. Apple Watch stores a one-minute
-          recovery for a workout when it sees an undisturbed minute after you tap
-          End; Verve reads that value as it is. But the watch keeps recording your
-          heart rate for about three minutes after every workout whether or not it
-          stores a recovery &mdash; a run followed straight by a walk gets none
-          &mdash; and the Fitness app draws that as &ldquo;Post-Workout Heart
-          Rate&rdquo;. For a recent workout with no stored reading, Verve takes the
-          same two points the Fitness app shows, the rate at the end of the workout
-          and the rate one minute later, and reports the difference, marked
-          <em>from workout HR</em>. Nothing is smoothed, fitted or assumed: two
-          readings, one subtraction.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">Why Verve&rsquo;s number can differ from the one on the Fitness chart.</strong>
-          Open a workout in Fitness and you will see a number under each minute of
-          the post-workout chart. Those numbers summarise the chart. They are not
-          the recovery measurement, and subtracting one from the next gives a
-          figure nobody validated. Apple keeps the recovery separately, worked out
-          its own way: the highest rate it saw once recovery had begun, minus the
-          rate one minute later. The two disagree because they do not start at the
-          same moment. The chart starts the instant you tap End; the stored figure
-          starts a little later, once the watch is satisfied that recovery has
-          actually started, so it begins from a lower rate. On one run here the
-          chart read 150 then 137, a fall of 13, while the watch stored a fall of
-          25 for the same minute.
-        </p>
-        <figure class="mt-6 space-y-4">
-          <div class="overflow-hidden rounded-xl border border-white/10 bg-black/30">
-            <img
-              src="/science/apple-post-workout-hr.png"
-              alt="The Post-Workout Heart Rate chart in Apple Fitness. Below the chart, three labels: 150 BPM at 07:00, 137 BPM at 1 MIN, 126 BPM at 2 MIN. The chart's range is 152 at the top and 123 at the bottom."
-              width="760"
-              height="275"
-              class="block w-full"
-              loading="lazy"
-            />
+            <p class="mt-4 text-xs leading-relaxed text-text-secondary">{s.caption}</p>
           </div>
-          <figcaption class="text-xs leading-relaxed text-text-tertiary">
-            <strong class="font-semibold text-text-secondary">Apple Fitness, the same run.</strong>
-            The three labels summarise the three minutes of the chart above them.
-            Reading the first two as a recovery gives 13 bpm. That subtraction is
-            the reader&rsquo;s, not Apple&rsquo;s: nothing on this screen claims it.
-          </figcaption>
+        ))}
+      </div>
+    </div>
+  </section>
 
-          <div class="overflow-hidden rounded-xl border border-white/10 bg-black/30">
-            <img
-              src="/science/verve-hr-recovery.png"
-              alt="The same run in Verve, on the heart rate recovery page. Sunday 13 September, Running, 07:00, 139 falling to 114, a drop of 25 bpm shown in green."
-              width="760"
-              height="163"
-              class="block w-full"
-              loading="lazy"
-            />
-          </div>
-          <figcaption class="text-xs leading-relaxed text-text-tertiary">
-            <strong class="font-semibold text-text-secondary">Verve, the same run.</strong>
-            25 bpm, which is the figure the watch stored for that workout, shown
-            unchanged. The two rates beside it are the ones Apple measured it
-            between: the highest rate once recovery had begun, and the rate a
-            minute later.
-          </figcaption>
-        </figure>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">Which one Verve shows, and why that is the right one.</strong>
-          The stored figure, unchanged and unrounded, for two reasons. It is the
-          number Apple itself commits to for that workout, so Verve is not
-          second-guessing your watch with arithmetic of its own. And it is measured
-          the way the research measured it &mdash; from the effort down through the
-          first minute &mdash; which is what makes the 12&nbsp;bpm line above mean
-          anything at all. A number read off a chart cannot be compared with a
-          study that measured something else. When the watch stores nothing, Verve
-          says so by marking the reading as its own, so you always know which of
-          the two you are looking at.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">Where the readings live.</strong>
-          The Activity page shows this week, Monday to today, every reading
-          under the day it happened. Earlier weeks are in Trends, under Over Time, as the
-          period average beside resting HR, the way every other measure works.
-        </p>
-        <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-          <strong class="text-text-primary">Your own usual.</strong>
-          The app does not print a &ldquo;vs usual&rdquo; figure; the reading
-          is the reading. The yardstick worth keeping in mind is the median of
-          your own recoveries over the last 30 days &mdash; the rule the resting
-          heart rate tile uses &mdash; because there is no population
-          &ldquo;good&rdquo; to compare with: above 12 bpm the evidence is a
-          gradient, not a second line. A recovery is one number per workout,
-          not per day, so it takes a handful of workouts before that median
-          means anything, and a single low reading after a hard, hot or
-          back-to-back session is a session, not a trend.
-        </p>
+  <!-- ── The full index. Also where an unrecognised anchor lands. ─────── -->
+  <section id="every-topic" class="scroll-mt-8 px-6 pb-28 sm:px-10">
+    <div class="mx-auto max-w-4xl">
+      <h2 class="text-2xl font-bold text-text-primary">Every topic</h2>
+
+      <div class="mt-6 flex flex-wrap gap-2">
+        {TOPICS.map((t) => (
+          <a
+            href={`/science/${t.subject}#${t.slug}`}
+            class="rounded-full border border-white/8 bg-white/4 px-4 py-2 text-xs font-medium text-text-secondary transition-colors hover:border-white/16 hover:text-text-primary"
+          >
+            {t.label}
+          </a>
+        ))}
       </div>
 
-      <div class="mt-4 grid gap-4 sm:grid-cols-2">
-        {HEART_RATE_RECOVERY_SECTION.map((c) => <CitationCard {...c} />)}
-      </div>
-    </section>
-
-    <!-- ── Weekly Volume ─────────────────────────────────────────────── -->
-    <section id="weekly-volume" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">Weekly Activity Volume</h2>
-      <p class="mt-2 text-sm text-text-tertiary">How much per week &mdash; and why the summit sits well above 150 minutes</p>
-      <div class="mt-6"><VideoSlot topic="Weekly Activity Volume" /></div>
-      <p class="mt-6 text-sm leading-relaxed text-text-secondary">
-        The Weekly Ascent draws no lines to clear and has no ceiling. The
-        climb rises as far as your week does, and a flag is planted where it
-        passes 150, 300 and 610 measured minutes &mdash; only once passed, so
-        there is never a mark ahead of you to fall short of. Someone who runs
-        thirty miles every weekend and logs 1,200 minutes sees a climb to 1,200.
-        The first two figures are the familiar public-health doses. The third
-        is newer, larger, and measured the same way Verve measures you.
+      <p class="mt-6 max-w-2xl text-xs leading-relaxed text-text-muted">
+        Every one of these keeps the address it has today. A link from inside
+        the app, or one you have bookmarked, lands on the same paragraph it
+        always did.
       </p>
-      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-        <strong class="text-text-primary">The climb is drawn as two bands.</strong> The line is
-        the week&rsquo;s measured moderate-plus-vigorous minutes, exactly as before. Beneath it, the
-        area is split: moderate minutes fill from the ground up, and vigorous minutes sit on top of
-        them, in a darker green. Nothing is re-weighted &mdash; vigorous is not credited double the
-        way WHO&rsquo;s moderate-equivalent doses are, because the axis carries measured minutes and
-        one axis holds one unit. What the bands add is composition: intensity drives most of the
-        fitness benefit, and a 75-minute week that was all hard running now looks like what it is
-        rather than like half a target.
-      </p>
-      <div class="mt-6 grid gap-4 sm:grid-cols-2">
-        {WEEKLY_VOLUME_SECTION.map((c) => <CitationCard {...c} />)}
-      </div>
-    </section>
+    </div>
+  </section>
 
-    <!-- ── Heart Health ──────────────────────────────────────────────── -->
-    <section id="heart-health" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">Heart Health</h2>
-      <p class="mt-2 text-sm text-text-tertiary">ApoB &middot; LDL-C &middot; Lp(a) &middot; hs-CRP &mdash; screening bands, not treatment targets</p>
-      <div class="mt-6"><VideoSlot topic="Heart Health" /></div>
-      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
-        <p class="text-sm leading-relaxed text-text-secondary">
-          For ApoB and LDL-C in particular, clinical targets are set by a
-          person's overall cardiovascular risk category &mdash; a value in the
-          "borderline" band may be perfectly appropriate for one person and a
-          treatment trigger for another. Verve classifies against population
-          screening bands and always defers to a clinician.
-        </p>
-      </div>
-      <div class="mt-4 grid gap-4 sm:grid-cols-2">
-        {HEART_HEALTH_SECTION.map((c) => <CitationCard {...c} />)}
-      </div>
-    </section>
-
-    <!-- ── Body Phenotyping ──────────────────────────────────────────── -->
-    <section id="body-phenotyping" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">Body Phenotyping</h2>
-      <p class="mt-2 text-sm text-text-tertiary">Metabolic syndrome screening, beyond BMI</p>
-      <div class="mt-6"><VideoSlot topic="Body Phenotyping" /></div>
-
-      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6" id="health-picture">
-        <h3 class="text-base font-semibold text-text-primary">The Health Picture &mdash; weight &times; fitness</h3>
-        <p class="mt-3 text-sm leading-relaxed text-text-secondary">
-          The app&rsquo;s Health Picture grid crosses your BMI band with your
-          fitness tier, because the two together predict better than either
-          alone &mdash; and fitness is the half that responds to training
-          within weeks. What each square means:
-        </p>
-        <ul class="mt-4 space-y-3 text-sm leading-relaxed text-text-secondary">
-          <li><strong class="text-text-primary">Lean &amp; Active</strong> &mdash; both dimensions working in your favour. Strength training is the highest-value next add.</li>
-          <li><strong class="text-text-primary">Fit on the Outside</strong> &mdash; normal weight, low fitness. Normal-weight-unfit carries 2&ndash;3&times; the mortality of fit people across all BMI bands; fitness is the lever.</li>
-          <li><strong class="text-text-primary">Active &amp; Heavy</strong> &mdash; fitness substantially attenuates the risk of extra weight. Keep fitness high while addressing visceral fat.</li>
-          <li><strong class="text-text-primary">Weight &amp; Fitness Gap</strong> &mdash; improve fitness first: risk reduction begins before the scale moves.</li>
-          <li><strong class="text-text-primary">Strong Foundation</strong> &mdash; fitness substantially attenuates but does not fully eliminate cardiovascular risk at this BMI. Maintain fitness alongside gradual body-composition change.</li>
-          <li><strong class="text-text-primary">Time to Move</strong> &mdash; 1&ndash;2 METs gained from daily walking produces measurable mortality reduction; each 1 MET is roughly 13&ndash;14% lower risk.</li>
-        </ul>
-      </div>
-      <div class="mt-6 grid gap-4 sm:grid-cols-2">
-        {BODY_PHENOTYPING_SECTION.map((c) => <CitationCard {...c} />)}
-      </div>
-    </section>
-
-    <!-- ── Body markers ──────────────────────────────────────────────────
-         One entry per marker the Body page can record, anchored so the app
-         links straight to the parameter a reader is looking at.
-
-         GENERATED from lib/markers.ts in the app repo — the same definitions
-         the app classifies readings with. That is deliberate: a threshold
-         quoted here that no longer matches the one a reader was just shown on
-         their phone is worse than no page at all. ── -->
-    <section id="body-markers" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">Body markers</h2>
-      <p class="mt-2 text-sm text-text-tertiary">
-        What each measurement is, how to take it, and the ranges it is read against
-      </p>
-      <p class="mt-3 text-xs text-text-tertiary">{BODY_MARKER_CONTEXT}</p>
-
-      {["Metabolic", "Heart", "Muscle"].map((group) => (
-        <div class="mt-8">
-          <h3 class="text-xs font-semibold uppercase tracking-widest text-text-tertiary">{group}</h3>
-          <div class="mt-4 space-y-6">
-            {BODY_MARKERS.filter((m) => m.section === group).map((m) => (
-              <article id={m.slug} class="scroll-mt-8 rounded-xl border border-white/10 bg-white/[0.03] p-5">
-                <h4 class="text-lg font-bold text-text-primary">
-                  {m.label}
-                  {m.units.length > 0 && (
-                    <span class="ml-2 text-sm font-normal text-text-tertiary">{m.units.join(" · ")}</span>
-                  )}
-                </h4>
-                {m.purpose && <p class="mt-1 text-sm text-text-secondary">{m.purpose}</p>}
-                {m.note && <p class="mt-2 text-sm text-text-tertiary">{m.note}</p>}
-
-                {m.bands.length > 0 && (
-                  <div class="mt-4">
-                    <p class="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Ranges</p>
-                    <ul class="mt-2 space-y-1 text-sm text-text-secondary">
-                      {m.bands.map((b) => <li>{b}</li>)}
-                    </ul>
-                  </div>
-                )}
-
-                {m.howTo.length > 0 && (
-                  <div class="mt-4">
-                    <p class="text-xs font-semibold uppercase tracking-wider text-text-tertiary">How to measure it</p>
-                    <ol class="mt-2 list-decimal space-y-1 pl-5 text-sm text-text-secondary">
-                      {m.howTo.map((h) => <li>{h}</li>)}
-                    </ol>
-                  </div>
-                )}
-
-                {m.detail.length > 0 && (
-                  <div class="mt-4 space-y-3 border-t border-white/[0.07] pt-4">
-                    {m.detail.map((d) => (
-                      <p class="text-sm leading-6 text-text-secondary">{d}</p>
-                    ))}
-                  </div>
-                )}
-
-                {m.references.length > 0 && (
-                  <div class="mt-4">
-                    <p class="text-xs font-semibold uppercase tracking-wider text-text-tertiary">References</p>
-                    <ol class="mt-2 list-decimal space-y-1.5 pl-5 text-xs leading-5 text-text-tertiary">
-                      {m.references.map((r) => <li>{r}</li>)}
-                    </ol>
-                  </div>
-                )}
-
-                {m.citation && <p class="mt-4 text-xs text-text-tertiary">{m.citation}</p>}
-              </article>
-            ))}
-          </div>
-        </div>
-      ))}
-    </section>
-
-    <!-- ── Muscle Health ─────────────────────────────────────────────── -->
-    <section id="muscle-health" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">Muscle Health &amp; Grip Strength</h2>
-      <p class="mt-2 text-sm text-text-tertiary">Why grip strength is in a fitness app at all</p>
-      <div class="mt-6"><VideoSlot topic="Muscle Health & Grip Strength" /></div>
-      <div class="mt-6 grid gap-4 sm:grid-cols-2">
-        {MUSCLE_HEALTH_SECTION.map((c) => <CitationCard {...c} />)}
-      </div>
-    </section>
-
-    <!-- ── Intrinsic Capacity ────────────────────────────────────────── -->
-    <section id="intrinsic-capacity" class="scroll-mt-8">
-      <h2 class="text-2xl font-bold text-text-primary">Intrinsic Capacity</h2>
-      <p class="mt-2 text-sm text-text-tertiary">Why grip, walking speed, chair stand and SPPB belong in the same room — and which parts of the picture Verve does not measure</p>
-
-      <div class="mt-6 space-y-4 text-sm leading-relaxed text-text-secondary">
-        <p>
-          <strong class="text-text-primary">Intrinsic capacity</strong> is the World Health
-          Organization's name for everything a person's body and mind can do — their functional
-          reserve, taken as a whole rather than as a list of diseases. It was defined in the 2015
-          <em>World Report on Ageing and Health</em> as the centrepiece of a deliberate shift: away
-          from asking what conditions an older adult has, and toward asking what they are able to
-          do and whether that is changing.
-        </p>
-
-        <h3 class="pt-2 text-lg font-semibold text-text-primary">The five domains</h3>
-        <p>
-          The framework scores a person across five areas: <strong class="text-text-primary">locomotion</strong>
-          (strength and mobility), <strong class="text-text-primary">vitality</strong> (energy,
-          nutrition and resilience to physical stress), <strong class="text-text-primary">cognition</strong>,
-          <strong class="text-text-primary">sensory capacity</strong> (vision and hearing) and
-          <strong class="text-text-primary">psychological wellbeing</strong>. Many of the instruments
-          are ones geriatric medicine already uses: grip strength, usual-pace walking speed, the
-          five-times chair rise, and the Short Physical Performance Battery that scores balance,
-          gait and chair stand together.
-        </p>
-        <p>
-          Lower intrinsic capacity predicts disability and mortality in older adults, and in 2022 the
-          WHO added <em>ageing-associated decline in intrinsic capacity</em> to the eleventh revision
-          of the International Classification of Diseases. What researchers most want from it, though,
-          is not a single reading but a trajectory: a person followed over time, so that a decline is
-          seen early enough to do something about it — often while they are still robust and have no
-          diagnosis at all.
-        </p>
-
-        <h3 class="pt-2 text-lg font-semibold text-text-primary">What Verve measures, and what it does not</h3>
-        <div class="overflow-x-auto">
-          <table class="mt-2 w-full text-left text-sm">
-            <thead class="text-xs uppercase tracking-wider text-text-tertiary">
-              <tr><th class="py-2 pr-4">Domain</th><th class="py-2 pr-4">WHO's screening measures</th><th class="py-2">In Verve</th></tr>
-            </thead>
-            <tbody class="divide-y divide-white/[0.07]">
-              <tr><td class="py-2 pr-4 text-text-primary">Locomotion</td><td class="py-2 pr-4">chair rise, gait speed, SPPB, grip</td><td class="py-2">All four, with cited cut-offs</td></tr>
-              <tr><td class="py-2 pr-4 text-text-primary">Vitality</td><td class="py-2 pr-4">weight loss, appetite, muscle mass</td><td class="py-2">Lean mass, ALMI, FFMI, body fat, physical activity level</td></tr>
-              <tr><td class="py-2 pr-4 text-text-primary">Cognition</td><td class="py-2 pr-4">orientation, recall</td><td class="py-2 text-text-tertiary">Not measured</td></tr>
-              <tr><td class="py-2 pr-4 text-text-primary">Sensory</td><td class="py-2 pr-4">vision, hearing</td><td class="py-2 text-text-tertiary">Not measured</td></tr>
-              <tr><td class="py-2 pr-4 text-text-primary">Psychological</td><td class="py-2 pr-4">mood, depression screen</td><td class="py-2 text-text-tertiary">Not measured</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <p>
-          Two of the five domains, and those are the two whose instruments are objective rather
-          than questionnaires — the half of intrinsic capacity a phone and a tape measure can
-          honestly do. The other three are screened in clinic with validated tools, and Verve does
-          not attempt them: a reaction-time widget presented as a cognition score would be exactly
-          the kind of invented measure this app exists to avoid.
-        </p>
-
-        <h3 class="pt-2 text-lg font-semibold text-text-primary">The ceiling, and the measure that has none</h3>
-        <p>
-          The locomotion tests were designed to detect decline in people over about 65. In a healthy
-          40-year-old, SPPB reads 11 or 12 out of 12, chair stand is comfortably under the cut-off,
-          and gait speed is well above it — and that will stay true for a long time. Verve keeps
-          these tests because they are the right instruments for later, and because a baseline
-          recorded while a number is boring is what makes a later change visible. But they are not
-          where a younger user's signal lives.
-        </p>
-        <p>
-          The measure that varies across the whole lifespan and predicts mortality at every age is
-          <a href="#crf">cardiorespiratory fitness</a>. That is why METs are Verve's primary metric
-          rather than a functional battery: it is the one capacity that is already informative at 30,
-          and still informative at 80.
-        </p>
-
-        <h3 class="pt-2 text-lg font-semibold text-text-primary">What Verve deliberately does not do</h3>
-        <p>
-          Verve does not compute an intrinsic capacity score. The composite's value as a proxy for
-          healthy ageing is still being established — that is the explicit purpose of the current
-          research programmes — and a single number synthesised from two of five domains would be
-          an overclaim wearing the WHO's vocabulary. Each measure is shown on its own, against its
-          own cited range, with its own history. The trajectory is the point; the arithmetic can
-          wait for the evidence.
-        </p>
-
-        <h3 class="pt-2 text-lg font-semibold text-text-primary">References</h3>
-        <ol class="list-decimal space-y-1 pl-5 text-xs text-text-tertiary">
-          <li>World Health Organization. World Report on Ageing and Health. Geneva: WHO; 2015.</li>
-          <li>Beard JR, Officer A, de Carvalho IA, et al. The World report on ageing and health: a policy framework for healthy ageing. Lancet. 2016;387(10033):2145-2154.</li>
-          <li>World Health Organization. Integrated Care for Older People (ICOPE): Guidelines on community-level interventions to manage declines in intrinsic capacity. Geneva: WHO; 2017.</li>
-          <li>Cesari M, Araujo de Carvalho I, Amuthavalli Thiyagarajan J, et al. Evidence for the domains supporting the construct of intrinsic capacity. J Gerontol A Biol Sci Med Sci. 2018;73(12):1653-1660.</li>
-          <li>Beard JR, Si Y, Liu Z, Chenoweth L, Hanewald K. Intrinsic capacity: validation of a new WHO concept for healthy aging in a longitudinal Chinese study. J Gerontol A Biol Sci Med Sci. 2022;77(1):94-100.</li>
-          <li>World Health Organization. ICD-11 for Mortality and Morbidity Statistics, MG2A: Ageing associated decline in intrinsic capacity. 2022.</li>
-          <li>Guralnik JM, Simonsick EM, Ferrucci L, et al. A short physical performance battery assessing lower extremity function. J Gerontol. 1994;49(2):M85-94.</li>
-          <li>Mandsager K, Harb S, Cremer P, et al. Association of cardiorespiratory fitness with long-term mortality among adults undergoing exercise treadmill testing. JAMA Netw Open. 2018;1(6):e183605.</li>
-        </ol>
-      </div>
-    </section>
-  </main>
-
-  <Footer showScience={false} />
+  <Footer />
 </Layout>

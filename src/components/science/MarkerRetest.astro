@@ -1,0 +1,68 @@
+---
+/**
+ * How often to repeat one marker, as printed on the Body page.
+ *
+ * The whole point of this block is the styling split. Seven of these
+ * intervals come from a guideline and carry its citation; two are Verve's
+ * own because no society publishes one, and one is a guideline's interval
+ * with a single figure of ours inside it. Printing all three the same way
+ * would lend a citation to a number that has not earned it, which is the
+ * one thing this page cannot do. So an interval that is ours is greyed and
+ * labelled, and a partly-ours interval says which part.
+ *
+ * The text comes from retestIntervals[key].display in the app's
+ * met-thresholds.json, via the generated bodyMarkers.ts — never written
+ * here. See that block's _display note for why the prose and the day counts
+ * are stored separately.
+ */
+import type { BodyMarkerExplainer } from "../../data/bodyMarkers";
+
+interface Props {
+  retest: BodyMarkerExplainer["retest"];
+}
+
+const { retest } = Astro.props;
+
+// Ours entirely, and there is a cadence to show — the case that needs the
+// label. A marker with no cadence at all says so in its own words instead,
+// and needs no badge: "whenever you measure" claims nothing.
+const isOurs = retest?.sourced === false && retest?.interval !== null;
+---
+
+{retest && (
+  <div class="mt-4">
+    <p class="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Repeat</p>
+
+    {retest.interval ? (
+      <>
+        <p class={`mt-2 text-sm ${isOurs ? "text-text-muted" : "text-text-secondary"}`}>
+          {retest.interval}
+          {isOurs && (
+            <span class="ml-2 rounded-md border border-white/10 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-text-muted">
+              Verve&rsquo;s own
+            </span>
+          )}
+        </p>
+        {retest.shorter && (
+          <p class="mt-1 text-sm text-text-tertiary">{retest.shorter}</p>
+        )}
+      </>
+    ) : (
+      <p class="mt-2 text-sm text-text-muted">{retest.instead}</p>
+    )}
+
+    {retest.ownPhrase && (
+      <p class="mt-1.5 text-xs leading-5 text-text-muted">
+        Not all of this is the guideline&rsquo;s &mdash; {retest.ownPhrase}.
+      </p>
+    )}
+
+    {retest.panel && (
+      <p class="mt-1.5 text-xs leading-5 text-text-muted">{retest.panel}</p>
+    )}
+
+    {retest.source && (
+      <p class="mt-2 text-xs text-text-tertiary">{retest.source}</p>
+    )}
+  </div>
+)}
