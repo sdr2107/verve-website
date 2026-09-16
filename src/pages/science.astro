@@ -15,6 +15,8 @@
  */
 import Layout from "../layouts/Layout.astro";
 import Footer from "../components/Footer.astro";
+import CrfMapPreview from "../components/science/CrfMapPreview.astro";
+import AppGlimpses from "../components/science/AppGlimpses.astro";
 import { SUBJECTS, TOPICS, topicsFor, subjectCounts, COUNTS, ANCHOR_PAGE } from "../data/scienceTopics";
 
 /** The three figures under the opening line. Counted, never typed. */
@@ -24,41 +26,6 @@ const figures = [
   { n: COUNTS.markers, label: "body markers" },
 ];
 
-/** The sample readings drawn on the hub's three app cards. */
-const screens = [
-  {
-    name: "Activity",
-    caption: "This morning's read, your fitness tier, the week's climb.",
-    tiles: [
-      ["Sleep", "6h 29"],
-      ["Resting HR", "52"],
-      ["Recovery", "↓41"],
-      ["Sitting", "3 h"],
-    ],
-    hero: { label: "CRF", value: "8.7 METs", note: "Below Average" },
-  },
-  {
-    name: "Body",
-    caption: "Metabolic, heart and muscle health from the values you already have.",
-    tiles: [
-      ["Metabolic", "6 of 8"],
-      ["Heart", "4 of 7"],
-      ["Muscle", "3 of 6"],
-    ],
-    hero: { label: "Lab timeline", value: "2024 – 2026", note: "Every reading, dated" },
-  },
-  {
-    name: "Trends",
-    caption: "Weeks, months and years, and a guide that says what moved.",
-    tiles: [
-      ["Fitness", "Below Avg"],
-      ["Body", "Watch"],
-      ["Sleep", "6h 29"],
-      ["Activity", "Low Active"],
-    ],
-    hero: { label: "The Route", value: "8.7 METs", note: "Week · month · year" },
-  },
-];
 ---
 
 <Layout
@@ -130,43 +97,60 @@ const screens = [
         study it came from.
       </p>
 
-      <dl class="mx-auto mt-10 flex max-w-lg justify-center gap-12">
-        {figures.map((f) => (
-          <div>
-            <dt class="sr-only">{f.label}</dt>
-            <dd>
-              <span class="block font-mono text-3xl font-bold text-text-primary">{f.n}</span>
-              <span class="mt-1 block text-xs text-text-tertiary">{f.label}</span>
-            </dd>
-          </div>
+      <dl class="mx-auto mt-8 flex items-center justify-center gap-6 sm:gap-10">
+        {figures.map((f, i) => (
+          <>
+            {i > 0 && <div class="h-10 w-px shrink-0 bg-white/10" aria-hidden="true"></div>}
+            <div>
+              <dt class="sr-only">{f.label}</dt>
+              <dd>
+                <span class="block font-mono text-3xl font-bold text-text-primary">{f.n}</span>
+                <span class="mt-0.5 block text-[13px] text-text-tertiary">{f.label}</span>
+              </dd>
+            </div>
+          </>
         ))}
       </dl>
     </div>
   </section>
 
-  <!-- ── Start here: the map ─────────────────────────────────────────── -->
+  <!-- ── Start here: the map. Two columns, because the shape of the thing
+       is the argument for opening it — 226 ideas is an abstraction until you
+       see five branches off one node. ──────────────────────────────────── -->
   <section class="px-6 pb-20 sm:px-10">
-    <div class="mx-auto max-w-4xl">
-      <h2 class="font-mono text-[11px] font-semibold uppercase tracking-widest text-text-muted">
-        Start here
-      </h2>
+    <div class="mx-auto max-w-5xl">
       <a
         href="/crf-map"
-        class="mt-4 block rounded-2xl border border-white/10 bg-white/4 p-7 transition-colors hover:border-white/22"
+        class="group flex flex-col overflow-hidden rounded-2xl border border-accent/30 bg-accent/[0.06] transition-colors hover:border-accent/50 lg:flex-row"
       >
-        <span class="block text-xl font-semibold text-text-primary sm:text-2xl">
-          The whole of cardiorespiratory fitness, on one map
+        <span class="flex flex-1 flex-col justify-center p-7 sm:p-9">
+          <span class="font-mono text-xs font-semibold uppercase tracking-widest text-accent-light">
+            Start here
+          </span>
+          <span class="mt-3 block text-xl font-bold tracking-tight text-text-primary sm:text-2xl">
+            The whole of cardiorespiratory fitness, on one map
+          </span>
+          <span class="mt-3 block text-sm leading-relaxed text-text-secondary">
+            The American Heart Association&rsquo;s 2016 statement is 30 pages of
+            prose. Here it is as 226 connected ideas: what fitness measures, what
+            it predicts, how it is tested, how it improves. Open a branch to read
+            the claim; every branch Verve acts on is marked.
+          </span>
+          <span class="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
+            <span class="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-canvas transition-colors group-hover:bg-accent-light">
+              Open the map
+            </span>
+            <span class="text-[13px] text-text-tertiary">
+              Pan, zoom, expand &middot; Ross et al. 2016
+            </span>
+          </span>
         </span>
-        <span class="mt-3 block max-w-2xl text-sm leading-relaxed text-text-secondary">
-          The American Heart Association&rsquo;s 2016 statement is 30 pages of
-          prose. Here it is as 226 connected ideas: what fitness measures, what
-          it predicts, how it is tested, how it improves. Open a branch to read
-          the claim; every branch Verve acts on is marked.
-        </span>
-        <span class="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
-          <span class="text-sm font-medium text-accent-light">Open the map &rarr;</span>
-          <span class="font-mono text-xs text-text-muted">
-            Pan, zoom, expand &middot; Ross et al. 2016
+
+        <span class="shrink-0 border-t border-white/8 bg-black/25 p-5 sm:p-6 lg:w-[420px] lg:border-l lg:border-t-0">
+          <CrfMapPreview />
+          <span class="mt-3.5 flex items-center gap-2">
+            <span class="h-[9px] w-[9px] rounded-sm border border-success/60 bg-success/35" aria-hidden="true"></span>
+            <span class="text-xs text-text-tertiary">green = a branch Verve measures</span>
           </span>
         </span>
       </a>
@@ -182,26 +166,36 @@ const screens = [
         you, then the studies behind it.
       </p>
 
-      <div class="mt-8 grid gap-4 sm:grid-cols-2">
+      <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {SUBJECTS.map((s) => {
           const counts = subjectCounts(s.slug);
           return (
             <a
               href={`/science/${s.slug}`}
-              class="flex flex-col rounded-2xl border border-white/8 bg-white/4 p-6 transition-colors hover:border-white/20"
+              class="flex flex-col rounded-2xl border border-white/10 bg-white/4 p-[22px] transition-colors hover:border-white/22"
             >
-              <span class="text-lg font-semibold text-text-primary">{s.label}</span>
-              <span class="mt-2 text-sm leading-relaxed text-text-secondary">
+              <span
+                class="flex h-[34px] w-[34px] items-center justify-center rounded-[10px]"
+                style={`background: ${s.accentTint}`}
+              >
+                <svg
+                  width="18" height="18" viewBox="0 0 24 24" fill="none"
+                  stroke={s.accent} stroke-width="1.8"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                >
+                  {s.slug === "body" && <circle cx="12" cy="5" r="2.5" />}
+                  <path d={s.icon} />
+                </svg>
+              </span>
+              <span class="mt-3.5 block text-[17px] font-semibold text-text-primary">{s.label}</span>
+              <span class="mt-2 block text-[13px] leading-relaxed text-text-tertiary">
                 {s.teaser}
               </span>
-              <span class="mt-4 text-xs leading-relaxed text-text-tertiary">
-                {topicsFor(s.slug).map((t) => t.label).join(" · ")}
+              <span class="mt-3.5 block font-mono text-[10px] leading-relaxed text-text-muted">
+                {topicsFor(s.slug).map((t) => t.label).join(" \u00b7 ")}
               </span>
-              <span class="mt-auto flex items-center justify-between pt-5">
-                <span class="font-mono text-xs text-text-muted">
-                  {counts.citations} citations &middot; {counts.topics} topics
-                </span>
-                <span class="text-sm text-accent-light">&rarr;</span>
+              <span class="mt-auto pt-3.5 font-mono text-[11px] text-accent-light">
+                {counts.citations} citations &middot; {counts.topics} topics &rarr;
               </span>
             </a>
           );
@@ -210,46 +204,32 @@ const screens = [
     </div>
   </section>
 
-  <!-- ── Where the readings land in the app ──────────────────────────── -->
+  <!-- ── Where the readings land in the app. Framed by hairlines, the way
+       the board has it: this section is a break in the argument, not another
+       step in it. ─────────────────────────────────────────────────────── -->
   <section class="px-6 pb-20 sm:px-10">
-    <div class="mx-auto max-w-4xl">
-      <h2 class="text-2xl font-bold text-text-primary">Where the numbers land</h2>
-      <p class="mt-2 max-w-2xl text-sm leading-relaxed text-text-secondary">
-        Three pages. Each reading on them is one of the studies above, put
-        where you will actually look at it.
-      </p>
-      <p class="mt-3 font-mono text-xs text-text-muted">
-        iPhone &middot; Android soon &middot; sample figures
-      </p>
-
-      <div class="mt-8 grid gap-4 sm:grid-cols-3">
-        {screens.map((s) => (
-          <div class="rounded-2xl border border-white/8 bg-white/4 p-5">
-            <span class="font-mono text-[11px] font-semibold uppercase tracking-widest text-accent-light">
-              {s.name}
-            </span>
-
-            <div class="mt-4 rounded-xl border border-white/8 bg-white/4 px-4 py-3">
-              <span class="block font-mono text-[10px] uppercase tracking-wider text-text-muted">
-                {s.hero.label}
-              </span>
-              <span class="mt-1 block text-xl font-bold text-text-primary">{s.hero.value}</span>
-              <span class="mt-0.5 block text-xs text-text-tertiary">{s.hero.note}</span>
-            </div>
-
-            <dl class="mt-3 space-y-1.5">
-              {s.tiles.map(([label, value]) => (
-                <div class="flex items-baseline justify-between gap-3">
-                  <dt class="text-xs text-text-tertiary">{label}</dt>
-                  <dd class="font-mono text-xs font-semibold text-text-secondary">{value}</dd>
-                </div>
-              ))}
-            </dl>
-
-            <p class="mt-4 text-xs leading-relaxed text-text-secondary">{s.caption}</p>
-          </div>
-        ))}
+    <div class="mx-auto max-w-5xl border-y border-white/[0.07] py-11">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-bold text-text-primary sm:text-3xl">Where the numbers land</h2>
+          <p class="mt-2 max-w-xl text-[15px] leading-relaxed text-text-secondary">
+            Three pages. Each reading on them is one of the studies above, put
+            where you will actually look at it.
+          </p>
+        </div>
+        <div class="flex shrink-0 items-center gap-2">
+          <span class="rounded-full border border-white/16 bg-white/4 px-4 py-2 text-xs font-medium text-text-primary">
+            iPhone
+          </span>
+          <span class="rounded-full border border-white/8 bg-white/4 px-4 py-2 text-xs font-medium text-text-secondary">
+            Android &middot; soon
+          </span>
+        </div>
       </div>
+
+      <AppGlimpses />
+
+      <p class="mt-6 font-mono text-[11px] text-text-muted">Sample figures throughout.</p>
     </div>
   </section>
 

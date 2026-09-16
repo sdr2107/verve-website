@@ -1,0 +1,75 @@
+---
+/**
+ * The dendrogram beside the map card on the hub — five branches of the AHA
+ * statement, drawn rather than screenshotted, exactly as the design canvas
+ * has it.
+ *
+ * It is a fixed sample of the real map's shape, not live data: the point is
+ * to show a reader what "226 connected ideas" looks like before they commit
+ * to opening it, and to mark in green that Verve does not act on all of them.
+ * aria-hidden because the card's own copy already says what this shows, and
+ * read aloud it is a list of five disconnected fragments.
+ */
+---
+
+<svg
+  viewBox="0 0 376 250"
+  class="block h-auto w-full max-w-[376px]"
+  role="presentation"
+  aria-hidden="true"
+>
+  <g stroke="rgba(129,140,248,0.35)" fill="none" stroke-width="1.2">
+    <path d="M60 125 C 110 125, 110 30, 160 30" />
+    <path d="M60 125 C 110 125, 110 72, 160 72" />
+    <path d="M60 125 C 110 125, 110 125, 160 125" />
+    <path d="M60 125 C 110 125, 110 178, 160 178" />
+    <path d="M60 125 C 110 125, 110 222, 160 222" />
+    <path d="M246 30 C 280 30, 280 16, 314 16" />
+    <path d="M246 30 C 280 30, 280 44, 314 44" />
+    <path d="M246 125 C 280 125, 280 106, 314 106" />
+    <path d="M246 125 C 280 125, 280 134, 314 134" />
+    <path d="M246 125 C 280 125, 280 162, 314 162" />
+  </g>
+
+  <rect x="12" y="112" width="48" height="26" rx="6" fill="#1e1b4b" stroke="#818cf8" stroke-width="1" />
+  <text
+    x="36"
+    y="129"
+    text-anchor="middle"
+    font-family="JetBrains Mono, ui-monospace, monospace"
+    font-size="9"
+    fill="#c7d2fe">CRF</text>
+
+  <g font-family="Hanken Grotesk, ui-sans-serif, system-ui, sans-serif" font-size="9" fill="#cbd5e1">
+    <rect x="160" y="19" width="86" height="22" rx="5" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.10)" />
+    <text x="169" y="33">What it predicts</text>
+
+    <rect x="160" y="61" width="86" height="22" rx="5" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.10)" />
+    <text x="169" y="75">How it is tested</text>
+
+    <!-- green marks a branch Verve measures — the legend under the svg says so -->
+    <rect x="160" y="114" width="86" height="22" rx="5" fill="rgba(52,211,153,0.10)" stroke="rgba(52,211,153,0.35)" />
+    <text x="169" y="128" fill="#6ee7b7">Measured in METs</text>
+
+    <rect x="160" y="167" width="86" height="22" rx="5" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.10)" />
+    <text x="169" y="181">How to improve</text>
+
+    <rect x="160" y="211" width="86" height="22" rx="5" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.10)" />
+    <text x="169" y="225">Clinical use</text>
+
+    <rect x="314" y="7" width="54" height="18" rx="4" fill="rgba(255,255,255,0.04)" />
+    <text x="320" y="19" font-size="8" fill="#94a3b8">mortality</text>
+
+    <rect x="314" y="35" width="54" height="18" rx="4" fill="rgba(255,255,255,0.04)" />
+    <text x="320" y="47" font-size="8" fill="#94a3b8">CVD risk</text>
+
+    <rect x="308" y="97" width="62" height="18" rx="4" fill="rgba(52,211,153,0.08)" />
+    <text x="314" y="109" font-size="8" fill="#6ee7b7">1 MET = rest</text>
+
+    <rect x="308" y="125" width="62" height="18" rx="4" fill="rgba(52,211,153,0.08)" />
+    <text x="314" y="137" font-size="8" fill="#6ee7b7">tiers by age</text>
+
+    <rect x="308" y="153" width="62" height="18" rx="4" fill="rgba(255,255,255,0.04)" />
+    <text x="314" y="165" font-size="8" fill="#94a3b8">VO&#8322; &divide; 3.5</text>
+  </g>
+</svg>

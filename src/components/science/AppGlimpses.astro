@@ -1,0 +1,180 @@
+---
+/**
+ * "Where the numbers land" — three cropped glimpses of the app, from the
+ * design canvas.
+ *
+ * These are drawn, not screenshotted, so they stay sharp, theme with the rest
+ * of the page, and cost a few kilobytes instead of three retina PNGs. They are
+ * fixed sample figures, which the section's own caption says: nothing here
+ * reads live data.
+ *
+ * The colours carry meaning and are the app's own, from lib/theme.ts via
+ * global.css — amber for a reading outside its ordinary range, green for one
+ * inside it, white for a figure that is not judged. Flattening them to grey,
+ * which an earlier version of this section did, throws away the one thing
+ * these cards are here to show: that the app colours what it measures.
+ *
+ * Each screen is a fixed 300px box with overflow hidden, so it reads as a
+ * phone screen cut off mid-scroll rather than a diagram that ran out.
+ */
+
+const SCREEN =
+  "h-[300px] overflow-hidden rounded-[22px] border border-white/10 bg-canvas p-4";
+const TILE =
+  "flex-1 rounded-[10px] border border-white/8 bg-white/4 p-[9px]";
+const TILE_LABEL = "text-[9px] text-text-secondary";
+const TILE_VALUE = "mt-[3px] text-base font-extrabold";
+
+/** The four Today tiles, with the colour each one takes from its own figure. */
+const today = [
+  { label: "Sleep", value: "6h 29", color: "text-warning" },
+  { label: "Resting HR", value: "52", color: "text-success" },
+  { label: "Recovery", value: "↓41", color: "text-success" },
+  { label: "Sitting", value: "3 h", color: "text-text-primary" },
+];
+
+/** The Body page's three section rings: filled arc out of a 195-unit circle. */
+const rings = [
+  { label: "Metabolic", n: "6", of: "of 8", dash: 146, color: "#FBBF24" },
+  { label: "Heart", n: "4", of: "of 7", dash: 111, color: "#34d399" },
+  { label: "Muscle", n: "3", of: "of 6", dash: 98, color: "#818cf8" },
+];
+
+const snapshot = [
+  { label: "Fitness", value: "Below Avg", ring: "border-success/30" },
+  { label: "Body", value: "Watch", ring: "border-warning/30" },
+  { label: "Sleep", value: "6h 29", ring: "border-white/10" },
+  { label: "Activity", value: "Low Active", ring: "border-warning/30" },
+];
+---
+
+<div class="mt-7 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+  <!-- ── Activity ─────────────────────────────────────────────────────── -->
+  <div>
+    <div class={SCREEN}>
+      <p class="font-mono text-[8px] uppercase tracking-[0.08em] text-text-tertiary">Today</p>
+
+      <div class="mt-2 grid grid-cols-2 gap-2">
+        {today.map((t) => (
+          <div class={TILE}>
+            <div class={TILE_LABEL}>{t.label}</div>
+            <div class={`${TILE_VALUE} ${t.color}`}>{t.value}</div>
+          </div>
+        ))}
+      </div>
+
+      <div class="mt-2.5 rounded-xl border border-warning/40 bg-white/[0.03] p-[11px]">
+        <p class="font-mono text-[8px] uppercase tracking-[0.08em] text-warning">CRF</p>
+        <p class="mt-[5px] flex items-baseline gap-1.5">
+          <span class="text-[15px] font-extrabold text-warning">Below Average</span>
+          <span class="text-[11px] font-bold text-text-primary">8.7 METs</span>
+        </p>
+        <!-- the five tiers, in the app's own order: low to elite -->
+        <div class="mt-2.5 flex h-1.5 overflow-hidden rounded-full">
+          <span class="w-1/5 bg-[rgba(244,63,94,0.35)]"></span>
+          <span class="w-1/5 bg-[rgba(251,191,36,0.5)]"></span>
+          <span class="w-1/5 bg-[rgba(129,140,248,0.35)]"></span>
+          <span class="w-1/5 bg-[rgba(6,182,212,0.3)]"></span>
+          <span class="w-1/5 bg-[rgba(52,211,153,0.3)]"></span>
+        </div>
+      </div>
+
+      <div class="mt-2 rounded-xl border border-white/8 bg-white/[0.03] p-[11px]">
+        <p class="flex items-baseline gap-1.5">
+          <span class="text-[22px] font-extrabold text-success">121</span>
+          <span class="text-[10px] text-text-secondary">Aerobic MVPA minutes</span>
+        </p>
+        <svg viewBox="0 0 240 54" preserveAspectRatio="none" class="mt-1 block h-[54px] w-full" aria-hidden="true">
+          <polygon fill="rgba(52,211,153,0.14)" points="4,48 46,38 92,30 138,22 186,12 224,8 224,52 4,52" />
+          <polyline fill="none" stroke="#34d399" stroke-width="2" points="4,48 46,38 92,30 138,22 186,12 224,8" />
+        </svg>
+      </div>
+    </div>
+    <h3 class="mt-3.5 text-base font-semibold text-text-primary">Activity</h3>
+    <p class="mt-1 text-[13px] leading-relaxed text-text-tertiary">
+      This morning&rsquo;s read, your fitness tier, the week&rsquo;s climb.
+    </p>
+  </div>
+
+  <!-- ── Body ─────────────────────────────────────────────────────────── -->
+  <div>
+    <div class={SCREEN}>
+      <p class="text-[15px] font-extrabold text-text-primary">Body</p>
+
+      <div class="mt-3.5 flex justify-between">
+        {rings.map((r) => (
+          <div class="text-center">
+            <svg viewBox="0 0 78 78" class="h-[78px] w-[78px]" aria-hidden="true">
+              <circle cx="39" cy="39" r="31" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="7" />
+              <circle
+                cx="39" cy="39" r="31" fill="none" stroke={r.color} stroke-width="7"
+                stroke-linecap="round" stroke-dasharray={`${r.dash} 195`}
+                transform="rotate(-90 39 39)"
+              />
+              <text x="39" y="37" text-anchor="middle" font-size="17" font-weight="800" fill="#f1f5f9">{r.n}</text>
+              <text x="39" y="50" text-anchor="middle" font-size="9" fill="#64748b">{r.of}</text>
+            </svg>
+            <p class="mt-0.5 text-[9.5px] text-text-secondary">{r.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div class="mt-3.5 rounded-xl border border-white/8 bg-white/[0.03] p-[11px]">
+        <p class="font-mono text-[8px] uppercase tracking-[0.08em] text-text-tertiary">Lab timeline</p>
+        <svg viewBox="0 0 240 60" preserveAspectRatio="none" class="mt-2 block h-[60px] w-full" aria-hidden="true">
+          <line x1="0" y1="46" x2="240" y2="46" stroke="rgba(255,255,255,0.08)" />
+          <g fill="#818cf8">
+            <circle cx="24" cy="34" r="3" /><circle cx="70" cy="28" r="3" /><circle cx="118" cy="36" r="3" />
+            <circle cx="166" cy="22" r="3" /><circle cx="214" cy="26" r="3" />
+          </g>
+          <g fill="#FBBF24"><circle cx="70" cy="14" r="3" /><circle cx="166" cy="12" r="3" /></g>
+          <g font-family="JetBrains Mono, ui-monospace, monospace" font-size="7" fill="#475569">
+            <text x="16" y="57">2024</text><text x="110" y="57">2025</text><text x="206" y="57">2026</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <h3 class="mt-3.5 text-base font-semibold text-text-primary">Body</h3>
+    <p class="mt-1 text-[13px] leading-relaxed text-text-tertiary">
+      Metabolic, heart and muscle health from the values you already have.
+    </p>
+  </div>
+
+  <!-- ── Trends ───────────────────────────────────────────────────────── -->
+  <div class="sm:col-span-2 lg:col-span-1">
+    <div class={SCREEN}>
+      <p class="text-[15px] font-extrabold text-text-primary">Snapshot</p>
+
+      <div class="mt-3 grid grid-cols-2 gap-2">
+        {snapshot.map((s) => (
+          <div class={`rounded-[10px] border bg-white/4 p-[9px] ${s.ring}`}>
+            <div class={TILE_LABEL}>{s.label}</div>
+            <div class="mt-[3px] text-sm font-bold text-text-primary">{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      <div class="mt-3 rounded-xl border border-white/8 bg-white/[0.03] px-[11px] py-1">
+        <div class="flex items-center border-b border-white/[0.06] py-2.5">
+          <span class="flex-1 text-[11.5px] font-semibold text-text-primary">The Route</span>
+          <span class="font-mono text-[9.5px] text-warning">8.7 METs</span>
+        </div>
+        <div class="flex items-center border-b border-white/[0.06] py-2.5">
+          <span class="flex-1 text-[11.5px] font-semibold text-text-primary">Over Time</span>
+          <span class="font-mono text-[9.5px] text-text-secondary">week &middot; month &middot; year</span>
+        </div>
+        <div class="flex items-center border-b border-white/[0.06] py-2.5">
+          <span class="flex-1 text-[11.5px] font-semibold text-text-primary">The Guide</span>
+          <span class="rounded border border-warning/40 px-1.5 py-0.5 font-mono text-[8px] text-warning">PRO</span>
+        </div>
+        <div class="flex items-center py-2.5">
+          <span class="flex-1 text-[11.5px] font-semibold text-text-primary">Prior Weeks</span>
+        </div>
+      </div>
+    </div>
+    <h3 class="mt-3.5 text-base font-semibold text-text-primary">Trends</h3>
+    <p class="mt-1 text-[13px] leading-relaxed text-text-tertiary">
+      Weeks, months and years, and a guide that says what moved.
+    </p>
+  </div>
+</div>

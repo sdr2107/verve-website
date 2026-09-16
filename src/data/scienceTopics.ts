@@ -43,6 +43,16 @@ export interface Subject {
   /** <title> and og:description for the page. */
   metaTitle: string;
   metaDescription: string;
+  /**
+   * The subject's mark on the hub card: an accent and a glyph, from the
+   * design canvas. Carried here rather than in the page so the card, and
+   * anything later that wants to badge a subject, agree by construction.
+   */
+  accent: string;
+  /** Tint behind the glyph — the accent at low alpha. */
+  accentTint: string;
+  /** Path data for a 24x24 stroked icon. */
+  icon: string;
 }
 
 export interface Topic {
@@ -71,6 +81,9 @@ export const SUBJECTS: Subject[] = [
     metaTitle: "Fitness — The Science Behind Verve",
     metaDescription:
       "METs, the five cardiorespiratory fitness tiers, which test Verve offers you and how accurate each one is — every threshold traced to the study behind it.",
+    accent: "#f97316",
+    accentTint: "rgba(249,115,22,0.12)",
+    icon: "M3 12h4l3-8 4 16 3-8h4"
   },
   {
     slug: "movement",
@@ -82,6 +95,9 @@ export const SUBJECTS: Subject[] = [
     metaTitle: "Movement — The Science Behind Verve",
     metaDescription:
       "The weekly aerobic dose, the Zone 2 heart-rate band, strength minutes, steps, sitting and physical activity level — each with the research that drew the line.",
+    accent: "#34d399",
+    accentTint: "rgba(52,211,153,0.12)",
+    icon: "M13 3l-2 9h6l-8 9 2-9H5z"
   },
   {
     slug: "sleep-heart",
@@ -93,6 +109,9 @@ export const SUBJECTS: Subject[] = [
     metaTitle: "Sleep & heart — The Science Behind Verve",
     metaDescription:
       "Sleep timing and regularity, resting heart rate against your own normal, heart rate recovery, and how the four Today tiles are coloured.",
+    accent: "#818cf8",
+    accentTint: "rgba(129,140,248,0.14)",
+    icon: "M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"
   },
   {
     slug: "body",
@@ -104,6 +123,9 @@ export const SUBJECTS: Subject[] = [
     metaTitle: "Body — The Science Behind Verve",
     metaDescription:
       "Blood sugar, blood pressure, lipids, waist and phenotype, muscle health and intrinsic capacity — the screening band Verve uses for each, and how often to repeat it.",
+    accent: "#FBBF24",
+    accentTint: "rgba(251,191,36,0.12)",
+    icon: "M12 8v6M8 10h8M9.5 21l2.5-7 2.5 7"
   },
 ];
 
