@@ -1,0 +1,144 @@
+---
+/**
+ * One group of markers, as the board's four-column table: what it is, the
+ * band Verve screens against, how often to repeat it, and who drew the line.
+ *
+ * Four columns is right on a laptop and impossible at 375px, so the same rows
+ * become stacked cards below `lg` — each label sits with its value instead of
+ * relying on a header row that has scrolled off. That is why the headers are
+ * `lg:grid` rather than a real <table>: a table that reflows into cards needs
+ * every cell to carry its own label anyway, and this way there is one set of
+ * markup rather than two.
+ *
+ * Everything printed here is generated from lib/markers.ts in the app repo.
+ * Nothing is written on this page.
+ */
+import type { BodyMarkerExplainer } from "../../data/bodyMarkers";
+import MarkerRetest from "./MarkerRetest.astro";
+
+interface Props {
+  group: string;
+  markers: BodyMarkerExplainer[];
+}
+
+const { group, markers } = Astro.props;
+
+const COL = "lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.95fr)] lg:gap-5";
+---
+
+<div class="mt-8">
+  <h3 class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">
+    {group}
+  </h3>
+
+  <div class="mt-3 overflow-hidden rounded-2xl border border-white/8 bg-white/4">
+    <!-- Header row, desktop only: below lg each cell carries its own label. -->
+    <div class={`hidden px-5 py-3 ${COL} border-b border-white/[0.07] bg-white/[0.02]`}>
+      {["Marker", "In range", "Repeat", "Line drawn by"].map((h) => (
+        <span class="font-mono text-[10px] uppercase tracking-[0.1em] text-text-muted">{h}</span>
+      ))}
+    </div>
+
+    <div class="divide-y divide-white/[0.06]">
+      {markers.map((m) => (
+        <div id={m.slug} class={`scroll-mt-8 px-5 py-4 ${COL}`}>
+          <!-- Marker -->
+          <div>
+            <p class="text-[13.5px] font-semibold text-text-primary">
+              {m.label}
+              {m.units.length > 0 && (
+                <span class="ml-1.5 font-normal text-text-muted">{m.units.join(" · ")}</span>
+              )}
+            </p>
+            {m.purpose && (
+              <p class="mt-1 text-[11.5px] leading-relaxed text-text-tertiary">{m.purpose}</p>
+            )}
+            {m.note && (
+              <p class="mt-1 text-[11.5px] leading-relaxed text-text-muted">{m.note}</p>
+            )}
+          </div>
+
+          <!-- In range -->
+          <div class="mt-3 lg:mt-0">
+            <p class="font-mono text-[10px] uppercase tracking-[0.1em] text-text-muted lg:hidden">
+              In range
+            </p>
+            {m.bands.length > 0 ? (
+              <ul class="mt-1 space-y-0.5 lg:mt-0">
+                {m.bands.map((b, i) => (
+                  <li class={i === 0 ? "text-[12.5px] text-text-secondary" : "text-[11.5px] text-text-tertiary"}>
+                    {b}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p class="text-[12.5px] text-text-muted">&mdash;</p>
+            )}
+          </div>
+
+          <!-- Repeat -->
+          <div>
+            {m.retest ? (
+              <MarkerRetest retest={m.retest} />
+            ) : (
+              <>
+                <p class="mt-3 font-mono text-[10px] uppercase tracking-[0.1em] text-text-muted lg:hidden">
+                  Repeat
+                </p>
+                <p class="mt-1 text-[12.5px] text-text-muted lg:mt-0">&mdash;</p>
+              </>
+            )}
+          </div>
+
+          <!-- Line drawn by -->
+          <div class="mt-3 lg:mt-0">
+            <p class="font-mono text-[10px] uppercase tracking-[0.1em] text-text-muted lg:hidden">
+              Line drawn by
+            </p>
+            <p class="mt-1 text-[11.5px] leading-relaxed text-text-tertiary lg:mt-0">
+              {m.citation || "—"}
+            </p>
+          </div>
+
+          <!-- The long-form notes and the how-to, full width under the row. -->
+          {(m.howTo.length > 0 || m.detail.length > 0 || m.references.length > 0) && (
+            <details class="group mt-3 lg:col-span-4">
+              <summary class="cursor-pointer list-none font-mono text-[10.5px] text-accent-light">
+                <span class="group-open:hidden">More on {m.label} &darr;</span>
+                <span class="hidden group-open:inline">Less &uarr;</span>
+              </summary>
+
+              <div class="mt-3 space-y-4 border-l border-white/8 pl-4">
+                {m.howTo.length > 0 && (
+                  <div>
+                    <p class="font-mono text-[10px] uppercase tracking-[0.1em] text-text-muted">
+                      How to measure it
+                    </p>
+                    <ol class="mt-1.5 list-decimal space-y-1 pl-4 text-[12.5px] leading-relaxed text-text-secondary">
+                      {m.howTo.map((h) => <li>{h}</li>)}
+                    </ol>
+                  </div>
+                )}
+
+                {m.detail.map((d) => (
+                  <p class="text-[12.5px] leading-relaxed text-text-secondary">{d}</p>
+                ))}
+
+                {m.references.length > 0 && (
+                  <div>
+                    <p class="font-mono text-[10px] uppercase tracking-[0.1em] text-text-muted">
+                      References
+                    </p>
+                    <ol class="mt-1.5 list-decimal space-y-1 pl-4 text-[11.5px] leading-relaxed text-text-tertiary">
+                      {m.references.map((r) => <li>{r}</li>)}
+                    </ol>
+                  </div>
+                )}
+              </div>
+            </details>
+          )}
+        </div>
+      ))}
+    </div>
+  </div>
+</div>

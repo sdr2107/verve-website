@@ -30,8 +30,10 @@ const isOurs = retest?.sourced === false && retest?.interval !== null;
 ---
 
 {retest && (
-  <div class="mt-4">
-    <p class="text-xs font-semibold uppercase tracking-wider text-text-tertiary">Repeat</p>
+  <div class="mt-4 lg:mt-0">
+    {/* The table supplies a "Repeat" column header on desktop; below lg the
+        headers are gone and each cell has to name itself. */}
+    <p class="font-mono text-[10px] uppercase tracking-[0.1em] text-text-muted lg:hidden">Repeat</p>
 
     {retest.interval ? (
       <>

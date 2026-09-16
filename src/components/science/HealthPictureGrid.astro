@@ -1,0 +1,106 @@
+---
+/**
+ * The Health Picture, drawn as the app draws it: BMI band down, fitness
+ * across, six squares.
+ *
+ * This was six bullet points describing a grid, which is the one thing prose
+ * is worst at. The whole argument of the card is positional — that moving one
+ * column left is worth more than moving one row up, because fitness is the
+ * half that responds in weeks — and you can only see that if the squares are
+ * actually laid out.
+ *
+ * The codes, names and tiers are LAYER1_PHENOTYPE_INFO in lib/body.ts, and the
+ * axes are computeLayer1Phenotype's own: BMI via classifyBMI, and a fitness
+ * tier that is "good" from above-average upward and "low" below it. Copied
+ * here rather than generated — unlike the markers there is no generator for
+ * this card yet, so if that table changes this needs editing to match.
+ */
+
+/** Rows are BMI bands, columns are the two fitness tiers. */
+const rows = [
+  {
+    bmi: "Normal",
+    cells: [
+      { name: "Lean & Active", tier: "good",
+        note: "Both dimensions in your favour. Strength work is the highest-value next add." },
+      { name: "Fit on the Outside", tier: "caution",
+        note: "Normal weight, low fitness — and fitness is the bigger factor. Very changeable." },
+    ],
+  },
+  {
+    bmi: "Overweight",
+    cells: [
+      { name: "Active & Heavy", tier: "neutral",
+        note: "Fitness is doing real protective work. Keep it while you address visceral fat." },
+      { name: "Weight & Fitness Gap", tier: "caution",
+        note: "Improve fitness first: risk reduction begins before the scale moves." },
+    ],
+  },
+  {
+    bmi: "Obese",
+    cells: [
+      { name: "Strong Foundation", tier: "neutral",
+        note: "Fitness attenuates but does not eliminate the risk. Maintain it alongside change." },
+      { name: "Time to Move", tier: "concern",
+        note: "1–2 METs from daily walking produces measurable mortality reduction." },
+    ],
+  },
+];
+
+/** The app's own tier colours, via phenotypeTierColor in lib/body.ts. */
+const TIER = {
+  good:    { ring: "border-success/40",  bg: "bg-success/[0.07]",  text: "text-success" },
+  caution: { ring: "border-warning/40",  bg: "bg-warning/[0.07]",  text: "text-warning" },
+  concern: { ring: "border-danger/40",   bg: "bg-danger/[0.07]",   text: "text-danger" },
+  neutral: { ring: "border-accent/40",   bg: "bg-accent/[0.07]",   text: "text-accent-light" },
+} as const;
+---
+
+<div class="mt-[18px] rounded-2xl border border-white/8 bg-white/4 p-5 sm:px-[22px]">
+  <p class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">
+    The Health Picture &mdash; weight &times; fitness
+  </p>
+
+  <!-- Column headers. Hidden on a phone, where each square names its own
+       column instead of pointing at a header three scrolls up. -->
+  <div class="mt-4 hidden grid-cols-[72px_1fr_1fr] gap-2 sm:grid">
+    <span></span>
+    <span class="px-1 font-mono text-[10px] uppercase tracking-[0.1em] text-text-muted">
+      Fitness above average
+    </span>
+    <span class="px-1 font-mono text-[10px] uppercase tracking-[0.1em] text-text-muted">
+      Fitness low
+    </span>
+  </div>
+
+  <div class="mt-2 space-y-2">
+    {rows.map((row) => (
+      <div class="grid grid-cols-1 gap-2 sm:grid-cols-[72px_1fr_1fr] sm:items-stretch">
+        <span class="flex items-center font-mono text-[10px] uppercase tracking-[0.1em] text-text-muted">
+          {row.bmi}
+        </span>
+        {row.cells.map((cell, i) => {
+          const t = TIER[cell.tier as keyof typeof TIER];
+          return (
+            <div class={`rounded-xl border ${t.ring} ${t.bg} p-3`}>
+              <p class="font-mono text-[9px] uppercase tracking-[0.1em] text-text-muted sm:hidden">
+                {row.bmi} &middot; {i === 0 ? "fitness above average" : "fitness low"}
+              </p>
+              <p class={`text-[13px] font-semibold sm:mt-0 ${t.text} ${i >= 0 ? "mt-1" : ""}`}>
+                {cell.name}
+              </p>
+              <p class="mt-1 text-[11.5px] leading-relaxed text-text-tertiary">{cell.note}</p>
+            </div>
+          );
+        })}
+      </div>
+    ))}
+  </div>
+
+  <p class="mt-4 text-[12.5px] leading-relaxed text-text-tertiary">
+    Fitness is the axis that moves. The two together predict better than either
+    alone, and a column of this grid can change within weeks of training while
+    a row takes far longer &mdash; which is why the app leads with the tier
+    rather than the weight.
+  </p>
+</div>

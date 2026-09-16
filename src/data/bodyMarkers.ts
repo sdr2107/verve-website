@@ -43,9 +43,14 @@ export interface BodyMarkerExplainer {
   references: string[];
   /** How often to repeat it. Null where no block schedules this marker. */
   retest: MarkerRetest | null;
+  /** The heading it prints under. One of BODY_GROUPS. */
+  group: string;
 }
 
 export const BODY_MARKER_CONTEXT = "Ranges shown for a 50-year-old man of 175 cm; several move with sex, age, height or ancestry.";
+
+/** The order the Body page prints the groups in, from the design canvas. */
+export const BODY_GROUPS = ["Blood sugar & insulin","Blood pressure","Lipids & inflammation","Waist & phenotype","Muscle health"] as const;
 
 export const BODY_MARKERS: BodyMarkerExplainer[] = [
   {
@@ -72,6 +77,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
       ownPhrase: null,
       panel:     null,
     },
+    group: "Blood sugar & insulin",
   },
   {
     slug: "hba1c",
@@ -98,6 +104,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
       ownPhrase: null,
       panel:     null,
     },
+    group: "Blood sugar & insulin",
   },
   {
     slug: "bp",
@@ -130,6 +137,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
       ownPhrase: "the within-a-month figure from 140/90 is Verve's own",
       panel:     null,
     },
+    group: "Blood pressure",
   },
   {
     slug: "tg",
@@ -155,6 +163,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
       ownPhrase: null,
       panel:     "One panel, one interval — ApoB, LDL, triglycerides and HDL come off the same blood draw.",
     },
+    group: "Lipids & inflammation",
   },
   {
     slug: "hdl",
@@ -180,6 +189,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
       ownPhrase: null,
       panel:     "One panel, one interval — ApoB, LDL, triglycerides and HDL come off the same blood draw.",
     },
+    group: "Lipids & inflammation",
   },
   {
     slug: "waist",
@@ -230,6 +240,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
       ownPhrase: null,
       panel:     null,
     },
+    group: "Waist & phenotype",
   },
   {
     slug: "post-meal-glucose",
@@ -247,6 +258,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     detail: [],
     references: [],
     retest: null,
+    group: "Blood sugar & insulin",
   },
   {
     slug: "homa-ir",
@@ -269,6 +281,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
       ownPhrase: null,
       panel:     null,
     },
+    group: "Blood sugar & insulin",
   },
   {
     slug: "apo-b",
@@ -295,6 +308,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
       ownPhrase: null,
       panel:     "One panel, one interval — ApoB, LDL, triglycerides and HDL come off the same blood draw.",
     },
+    group: "Lipids & inflammation",
   },
   {
     slug: "ldl",
@@ -321,6 +335,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
       ownPhrase: null,
       panel:     "One panel, one interval — ApoB, LDL, triglycerides and HDL come off the same blood draw.",
     },
+    group: "Lipids & inflammation",
   },
   {
     slug: "lpa",
@@ -339,6 +354,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     detail: [],
     references: [],
     retest: null,
+    group: "Lipids & inflammation",
   },
   {
     slug: "hs-crp",
@@ -358,6 +374,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     detail: [],
     references: [],
     retest: null,
+    group: "Lipids & inflammation",
   },
   {
     slug: "alm",
@@ -400,6 +417,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
       ownPhrase: null,
       panel:     null,
     },
+    group: "Muscle health",
   },
   {
     slug: "handgrip",
@@ -422,6 +440,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     detail: [],
     references: [],
     retest: null,
+    group: "Muscle health",
   },
   {
     slug: "body-fat",
@@ -454,6 +473,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
       "Yin L, Cao Y, Tang M, et al. Operationalizing the Global Leadership Initiative in Sarcopenia: Muscle-Specific Strength, Optimal Criteria and Clinical Relevance. Journal of Cachexia, Sarcopenia and Muscle. 2026.",
     ],
     retest: null,
+    group: "Muscle health",
   },
   {
     slug: "lean-body-mass",
@@ -468,6 +488,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     detail: [],
     references: [],
     retest: null,
+    group: "Muscle health",
   },
   {
     slug: "skel-musc",
@@ -482,6 +503,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     detail: [],
     references: [],
     retest: null,
+    group: "Muscle health",
   },
   {
     slug: "balance",
@@ -505,6 +527,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     detail: [],
     references: [],
     retest: null,
+    group: "Muscle health",
   },
   {
     slug: "chair-stand",
@@ -527,6 +550,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     detail: [],
     references: [],
     retest: null,
+    group: "Muscle health",
   },
   {
     slug: "sppb",
@@ -558,6 +582,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
       "Perera S, Mody SH, Woodman RC, Studenski SA. Meaningful change and responsiveness in common physical performance measures in older adults. Journal of the American Geriatrics Society. 2006;54(5):743-9.",
     ],
     retest: null,
+    group: "Muscle health",
   },
   {
     slug: "gait-speed",
@@ -581,5 +606,6 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     detail: [],
     references: [],
     retest: null,
+    group: "Muscle health",
   },
 ];
