@@ -36,6 +36,11 @@
   --color-warning: #FBBF24;
   --color-danger:  #f87171;
 
+  /* theme.ts keeps a lighter green for text than the one it fills bars with.
+     The Body page's in-range figures use it: at 11-12px mono on this canvas
+     the solid #34d399 reads closer to the grey beside it than it should. */
+  --color-success-light: #6ee7b7; /* darkColors.successText */
+
   --color-met-hero: #f97316; /* metHeroColor — the MET-hours hero number */
   --color-cyan:     #06B6D4; /* "goal met" achievement colour, dashboard */
   --color-violet:   #8B5CF6; /* "AHA optimal" achievement colour, dashboard */

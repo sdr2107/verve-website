@@ -24,6 +24,20 @@ interface Props {
 const { group, markers } = Astro.props;
 
 const COL = "lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,0.95fr)] lg:gap-5";
+
+/**
+ * Whether a band is a single in-range figure, and so earns the green.
+ *
+ * Most bands are one value — "In range: < 5.7%". A few are a whole ladder in
+ * one string: blood pressure's first band runs Normal through Stage 2, and
+ * painting that green would say a stage 2 reading is in range, which is the
+ * precise opposite of what the colour means everywhere else on the page.
+ *
+ * One label, one colon. A ladder carries several and stays grey, which is
+ * right — where the answer is a classification rather than a threshold, there
+ * is no single figure to mark as the good one.
+ */
+const isSingleValue = (band: string) => (band.match(/:/g) ?? []).length <= 1;
 ---
 
 <div class="mt-8">
@@ -63,16 +77,26 @@ const COL = "lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1.1fr)_minmax(0,1fr
             <p class="font-mono text-[10px] uppercase tracking-[0.1em] text-text-muted lg:hidden">
               In range
             </p>
+            {/* The in-range band is the figure a reader is checking themselves
+                against, so it is the one that carries colour and the mono face;
+                the bands past it are context and stay grey. Colouring all of
+                them would make "elevated" look like a target. */}
             {m.bands.length > 0 ? (
               <ul class="mt-1 space-y-0.5 lg:mt-0">
                 {m.bands.map((b, i) => (
-                  <li class={i === 0 ? "text-[12.5px] text-text-secondary" : "text-[11.5px] text-text-tertiary"}>
+                  <li
+                    class={
+                      i === 0 && isSingleValue(b)
+                        ? "font-mono text-[12px] leading-normal text-success-light"
+                        : "font-mono text-[11px] leading-normal text-text-tertiary"
+                    }
+                  >
                     {b}
                   </li>
                 ))}
               </ul>
             ) : (
-              <p class="text-[12.5px] text-text-muted">&mdash;</p>
+              <p class="font-mono text-[12px] text-text-muted">&mdash;</p>
             )}
           </div>
 

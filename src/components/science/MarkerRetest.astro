@@ -37,7 +37,15 @@ const isOurs = retest?.sourced === false && retest?.interval !== null;
 
     {retest.interval ? (
       <>
-        <p class={`mt-2 text-sm ${isOurs ? "text-text-muted" : "text-text-secondary"}`}>
+        {/* Green is the board's mark for a cadence a guideline set. An
+            interval that is Verve's own drops to grey rather than borrowing
+            it — the same split the In range column makes, and the same one
+            the styling has to make here or ours reads as sourced. */}
+        <p
+          class={`mt-1 font-mono text-[11.5px] leading-normal ${
+            isOurs ? "text-text-secondary" : "text-success-light"
+          }`}
+        >
           {retest.interval}
           {isOurs && (
             <span class="ml-2 rounded-md border border-white/10 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-text-muted">
@@ -46,11 +54,13 @@ const isOurs = retest?.sourced === false && retest?.interval !== null;
           )}
         </p>
         {retest.shorter && (
-          <p class="mt-1 text-sm text-text-tertiary">{retest.shorter}</p>
+          <p class="mt-1 font-mono text-[10.5px] leading-relaxed text-text-tertiary">
+            {retest.shorter}
+          </p>
         )}
       </>
     ) : (
-      <p class="mt-2 text-sm text-text-muted">{retest.instead}</p>
+      <p class="mt-1 font-mono text-[11.5px] leading-normal text-text-secondary">{retest.instead}</p>
     )}
 
     {retest.ownPhrase && (
