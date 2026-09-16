@@ -1,0 +1,46 @@
+---
+/**
+ * The board's workhorse: an explanation on the left, and the thing it is
+ * explaining drawn on the right.
+ *
+ * Nearly every topic has one. The pairing is the point — prose about a Zone 2
+ * band is abstract until the band is drawn beside it with your own numbers on
+ * it, and a figure alone tells a reader what but never why. Keeping them in
+ * one card, rather than a paragraph followed by a diagram, stops the two
+ * drifting apart as the page is edited.
+ *
+ * The panel sits on a darker ground than the card so it reads as a readout
+ * rather than more page. Below `lg` the two stack, panel underneath, because
+ * a 268px panel beside text at phone width is neither.
+ */
+interface Props {
+  /** Small label above the prose — "In the app", "The difference in one line". */
+  eyebrow?: string;
+  /** Wider panel, for a diagram that needs the room. */
+  wide?: boolean;
+}
+
+const { eyebrow, wide = false } = Astro.props;
+---
+
+<div class="mt-[18px] flex flex-col overflow-hidden rounded-2xl border border-white/8 bg-white/4 lg:flex-row">
+  <div class="flex-1 p-5 sm:px-[22px]">
+    {eyebrow && (
+      <p class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">
+        {eyebrow}
+      </p>
+    )}
+    <div class="mt-2.5 text-[14.5px] leading-[1.7] text-text-secondary">
+      <slot />
+    </div>
+  </div>
+
+  <div
+    class:list={[
+      "shrink-0 border-t border-white/[0.07] bg-black/20 p-[18px] lg:border-l lg:border-t-0",
+      wide ? "lg:w-[340px]" : "lg:w-[268px]",
+    ]}
+  >
+    <slot name="panel" />
+  </div>
+</div>

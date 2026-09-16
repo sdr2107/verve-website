@@ -1,5 +1,7 @@
 ---
 import SubjectLayout from "../../layouts/SubjectLayout.astro";
+import ScienceSection from "../../components/science/ScienceSection.astro";
+import SplitCard from "../../components/science/SplitCard.astro";
 import CitationCard from "../../components/CitationCard.astro";
 import VideoSlot from "../../components/VideoSlot.astro";
 import {
@@ -8,6 +10,26 @@ import {
   HEART_RATE_RECOVERY_SECTION,
   SLEEP_TRAINING_SECTION,
 } from "../../data/science";
+
+/** The four Today tiles, with the rule that colours each one. */
+const todayTiles = [
+  { label: "Sleep", value: "6h 29", tone: "text-warning", rule: "amber under 7 h" },
+  { label: "Resting HR", value: "52", tone: "text-success", rule: "amber +5 \u00b7 red +10" },
+  { label: "Recovery", value: "\u219325", tone: "text-success", rule: "red at 12 or under" },
+  { label: "Sitting", value: "3 h", tone: "text-text-primary", rule: "amber 10.6 h \u00b7 red 12 h" },
+];
+
+/** Resting rate is read two ways; the tile takes whichever reads worse. */
+const againstYourself = [
+  ["#34d399", "Within 5 bpm of your 30-day median"],
+  ["#FBBF24", "About 5 above, for a few days"],
+  ["#f87171", "About 10 above"],
+];
+const againstLevel = [
+  ["50\u201360", "text-success", "Lowest risk sits here"],
+  ["75\u201380", "text-warning", "Higher risk even when steady"],
+  ["under 50", "text-text-secondary", "Usually adaptation, not a finding"],
+];
 ---
 
 <SubjectLayout subject="sleep-heart">
@@ -19,9 +41,24 @@ import {
     <a href="#connect-wearables" class="mt-2 block text-xs font-medium text-accent-light">How to connect &rarr;</a>
   </div>
   <!-- ── The Morning Read — the four Today tiles ─────────────────────── -->
-  <section id="today-tiles" class="scroll-mt-8">
-    <h2 class="text-2xl font-bold text-text-primary">The Morning Read</h2>
-    <p class="mt-2 text-sm text-text-tertiary">How the four Today tiles on the Activity page are coloured, and where each line comes from</p>
+  <ScienceSection id="today-tiles" title="The morning read" sub="How the four Today tiles are coloured, and where each line comes from">
+    <div class="mt-[18px] rounded-2xl border border-white/8 bg-white/4 p-5 sm:px-[22px]">
+      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {todayTiles.map((t) => (
+          <div class="rounded-xl border border-white/8 bg-white/[0.03] p-3">
+            <div class="text-[11px] text-text-secondary">{t.label}</div>
+            <div class={`mt-1 text-[19px] font-extrabold ${t.tone}`}>{t.value}</div>
+            <div class="mt-[7px] font-mono text-[9.5px] text-text-tertiary">{t.rule}</div>
+          </div>
+        ))}
+      </div>
+      <p class="mt-3.5 text-[12.5px] leading-relaxed text-text-tertiary">
+        Green means inside the range its evidence calls ordinary. A grey dash
+        means Verve has not measured it and will not guess. Sleep, resting rate
+        and recovery are explained below; the sitting line belongs to Movement.
+      </p>
+    </div>
+
     <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
       <p class="text-sm leading-relaxed text-text-secondary">
         Each tile takes its colour from the figure it shows. Green means the
@@ -72,12 +109,42 @@ import {
         disagree about where a line sits.
       </p>
     </div>
-  </section>
+  </ScienceSection>
 
   <!-- ── Sleep Rhythm ──────────────────────────────────────────────── -->
-  <section id="sleep-rhythm" class="scroll-mt-8">
-    <h2 class="text-2xl font-bold text-text-primary">Sleep Timing</h2>
-    <p class="mt-2 text-sm text-text-tertiary">How much your bedtime moves, and the research index behind it</p>
+  <ScienceSection id="sleep-rhythm" title="Sleep timing" sub="How much your bedtime moves, and the research index behind it">
+    <SplitCard eyebrow="In the app" wide>
+      <p>
+        Three numbers: last night&rsquo;s hours, how far your bedtime drifts
+        from one night to the next, and a regularity score from 0 to 100.
+        Drift needs five nights. The score needs five comparable days, and a
+        day is only comparable once there is a day before it to compare with,
+        so five days means six nights.
+      </p>
+      <div slot="panel">
+        <p class="font-mono text-[9px] uppercase tracking-[0.1em] text-text-tertiary">Regularity</p>
+        <!-- Bands are percentiles of the UK Biobank sample, not guideline lines. -->
+        <div class="mt-2.5 flex h-2 overflow-hidden rounded-full">
+          <span class="bg-[rgba(244,63,94,0.35)]" style="width: 71.6%"></span>
+          <span class="bg-[rgba(251,191,36,0.45)]" style="width: 15.7%"></span>
+          <span class="bg-[rgba(52,211,153,0.4)]" style="width: 12.7%"></span>
+        </div>
+        <div class="relative h-[13px]">
+          <span class="absolute top-0.5 h-[9px] w-0.5 bg-text-primary" style="left: 81%"></span>
+        </div>
+        <div class="relative h-3.5 font-mono text-[9.5px]">
+          <span class="absolute left-0 text-text-muted">0</span>
+          <span class="absolute -translate-x-1/2 text-warning" style="left: 71.6%">71.6</span>
+          <span class="absolute -translate-x-1/2 text-success" style="left: 87.3%">87.3</span>
+          <span class="absolute right-0 text-text-muted">100</span>
+        </div>
+        <p class="mt-2.5 text-[11px] leading-relaxed text-text-tertiary">
+          The marker is the UK Biobank median, 81.0. Bands are percentiles of
+          that sample, not lines a guideline drew.
+        </p>
+      </div>
+    </SplitCard>
+
     <div class="mt-6"><VideoSlot topic="Sleep Timing" /></div>
     <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
       <p class="text-sm leading-relaxed text-text-secondary">
@@ -170,12 +237,10 @@ import {
     <div class="mt-4 grid gap-4 sm:grid-cols-2">
       {SLEEP_RHYTHM_SECTION.map((c) => <CitationCard {...c} />)}
     </div>
-  </section>
+  </ScienceSection>
 
   <!-- ── Sleep and training ────────────────────────────────────────── -->
-  <section id="sleep-and-training" class="scroll-mt-8">
-    <h2 class="text-2xl font-bold text-text-primary">Sleep and Training, Read Together</h2>
-    <p class="mt-2 text-sm text-text-tertiary">What the Guide's SLEEP line is, and what it refuses to claim</p>
+  <ScienceSection id="sleep-and-training" title="Sleep and training" sub="What the Guide&rsquo;s sleep line is, and what it refuses to claim">
     <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
       <p class="text-sm leading-relaxed text-text-secondary">
         The Guide compares two periods of your own record. Since sleep and
@@ -206,12 +271,43 @@ import {
     <div class="mt-4 grid gap-4 sm:grid-cols-2">
       {SLEEP_TRAINING_SECTION.map((c) => <CitationCard {...c} />)}
     </div>
-  </section>
+  </ScienceSection>
 
   <!-- ── Resting Heart Rate ────────────────────────────────────────── -->
-  <section id="resting-heart-rate" class="scroll-mt-8">
-    <h2 class="text-2xl font-bold text-text-primary">Resting Heart Rate</h2>
-    <p class="mt-2 text-sm text-text-tertiary">Measured against your own normal, not a population range</p>
+  <ScienceSection id="resting-heart-rate" title="Resting heart rate" sub="Measured against your own normal, not a population range">
+    <div class="mt-[18px] rounded-2xl border border-white/8 bg-white/4 p-5 sm:px-[22px]">
+      <div class="flex flex-col gap-6 sm:flex-row sm:gap-[26px]">
+        <div class="flex-1">
+          <p class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">Against yourself</p>
+          <div class="mt-3 flex flex-col gap-2">
+            {againstYourself.map(([dot, text]) => (
+              <div class="flex items-center gap-2.5">
+                <span class="h-[9px] w-[9px] shrink-0 rounded-sm" style={`background: ${dot}`}></span>
+                <span class="flex-1 text-[12.5px] text-text-primary">{text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div class="hidden w-px bg-white/[0.07] sm:block"></div>
+        <div class="flex-1">
+          <p class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">Against the level</p>
+          <div class="mt-3 flex flex-col gap-2">
+            {againstLevel.map(([range, tone, text]) => (
+              <div class="flex items-center gap-2.5">
+                <span class={`w-[58px] shrink-0 font-mono text-[11px] ${tone}`}>{range}</span>
+                <span class="flex-1 text-[12.5px] text-text-primary">{text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <p class="mt-3.5 text-[12.5px] leading-relaxed text-text-tertiary">
+        The tile takes whichever of the two reads worse. Below your usual is
+        never coloured, because a rested morning and an endurance athlete both
+        land there.
+      </p>
+    </div>
+
     <div class="mt-6"><VideoSlot topic="Resting Heart Rate" /></div>
     <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
       <p class="text-sm leading-relaxed text-text-secondary">
@@ -242,12 +338,32 @@ import {
     <div class="mt-4 grid gap-4 sm:grid-cols-2">
       {RESTING_HR_SECTION.map((c) => <CitationCard {...c} />)}
     </div>
-  </section>
+  </ScienceSection>
 
   <!-- ── Heart Rate Recovery ───────────────────────────────────── -->
-  <section id="heart-rate-recovery" class="scroll-mt-8">
-    <h2 class="text-2xl font-bold text-text-primary">Heart Rate Recovery</h2>
-    <p class="mt-2 text-sm text-text-tertiary">How far your heart rate falls in the first minute after you stop &mdash; one cited line, and a trend against your own normal</p>
+  <ScienceSection id="heart-rate-recovery" title="Heart rate recovery" sub="One cited line, and why there is no second one">
+    <div class="mt-[18px] rounded-2xl border border-white/8 bg-white/4 p-5 sm:px-[22px]">
+      <p class="font-mono text-[9px] uppercase tracking-[0.1em] text-text-tertiary">
+        The fall in the first minute, bpm
+      </p>
+      <!-- Below 12 is a cited finding; above it a gradient, because published
+           cut-points span 12 to 30 and Verve will not invent a verdict word. -->
+      <div class="mt-3 flex h-[9px] overflow-hidden rounded-full">
+        <span class="w-[30%] bg-[rgba(244,63,94,0.45)]"></span>
+        <span class="w-[70%] bg-gradient-to-r from-[rgba(251,191,36,0.4)] to-[rgba(52,211,153,0.4)]"></span>
+      </div>
+      <div class="relative mt-[7px] h-[15px] font-mono text-[10px]">
+        <span class="absolute left-0 text-text-muted">0</span>
+        <span class="absolute -translate-x-1/2 text-danger" style="left: 30%">12</span>
+        <span class="absolute right-0 text-text-muted">40</span>
+      </div>
+      <p class="mt-3 text-[12.5px] leading-relaxed text-text-tertiary">
+        Below the line is a cited finding. Above it is a gradient, not a grade:
+        published cut-points span 12 to 30 depending on the study and the
+        protocol, so Verve shades and refuses to print a verdict word.
+      </p>
+    </div>
+
 
     <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
       <p class="text-sm leading-relaxed text-text-secondary">
@@ -403,5 +519,5 @@ import {
     <div class="mt-4 grid gap-4 sm:grid-cols-2">
       {HEART_RATE_RECOVERY_SECTION.map((c) => <CitationCard {...c} />)}
     </div>
-  </section>
+  </ScienceSection>
 </SubjectLayout>

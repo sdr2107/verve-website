@@ -1,5 +1,7 @@
 ---
 import SubjectLayout from "../../layouts/SubjectLayout.astro";
+import ScienceSection from "../../components/science/ScienceSection.astro";
+import SplitCard from "../../components/science/SplitCard.astro";
 import CitationCard from "../../components/CitationCard.astro";
 import MetsVsMetHours from "../../components/science/MetsVsMetHours.astro";
 import VideoSlot from "../../components/VideoSlot.astro";
@@ -7,6 +9,31 @@ import {
   CRF_SECTION,
   TEST_CRF_SECTION,
 } from "../../data/science";
+
+/** The intensity scale: bar widths are each band's top against a 12-MET ceiling. */
+const intensities = [
+  { met: "1", width: "8%", label: "at rest" },
+  { met: "3\u20134", width: "30%", label: "walking" },
+  { met: "6\u20138", width: "58%", label: "jogging" },
+  { met: "10+", width: "84%", label: "running" },
+];
+
+/** The five tiers as the app draws them for one reader; the caption says whose. */
+const tiers = [
+  { range: "under 8.0", label: "Low", bar: "rgba(244,63,94,0.45)" },
+  { range: "8.0\u20139.9", label: "Below average", bar: "rgba(251,191,36,0.5)", lit: true },
+  { range: "10.0\u201311.9", label: "Above average", bar: "rgba(129,140,248,0.45)" },
+  { range: "12.0\u201313.9", label: "High", bar: "rgba(6,182,212,0.4)" },
+  { range: "14.0+", label: "Elite", bar: "rgba(52,211,153,0.4)" },
+];
+
+/** What each way of getting a number is worth, at a glance. */
+const accuracy = [
+  ["Lab test, direct", "measured", "text-success", "Gas analysis. The only one that measures rather than estimates."],
+  ["12-minute run", "r \u2248 0.90", "text-text-secondary", "Strong, if you truly go all out. Pacing conservatively under-reads you."],
+  ["6-minute walk", "submaximal", "text-text-secondary", "Built for lower fitness. It under-reads a fit person by design."],
+  ["Watch estimate", "7 to 16 % error", "text-warning", "Carried with every wearable reading Verve shows. Never the headline."],
+];
 ---
 
 <SubjectLayout subject="fitness">
@@ -17,19 +44,58 @@ import {
     <a href="/crf-map" class="mt-2 block text-xs font-medium text-accent-light">Open the map &rarr;</a>
   </div>
   <!-- ── METs vs MET-h ─────────────────────────────────────────────── -->
-  <section id="mets-vs-met-h" class="scroll-mt-8">
-    <h2 class="text-2xl font-bold text-text-primary">METs vs MET-h</h2>
-    <p class="mt-2 text-sm text-text-tertiary">Methodology &mdash; not a citation, this is how Verve computes it</p>
+  <ScienceSection id="mets-vs-met-h" title="METs vs MET-hours" sub="One is how hard, the other is how much">
+    <SplitCard eyebrow="The difference in one line">
+      <p>
+        A MET is intensity: one MET is you at rest, four METs is a brisk walk.
+        A MET-hour is volume: four METs held for half an hour is two MET-hours.
+        Verve tracks both, and never adds them together.
+      </p>
+      <div slot="panel" class="flex flex-col gap-2.5">
+        {intensities.map((i) => (
+          <div class="flex items-center gap-2.5">
+            <span class="w-[34px] shrink-0 font-mono text-[11px] text-success">{i.met}</span>
+            <span class="h-[7px] flex-1 rounded-full bg-success/20">
+              <span class="block h-[7px] rounded-full bg-success" style={`width: ${i.width}`}></span>
+            </span>
+            <span class="w-[52px] shrink-0 text-[10.5px] text-text-secondary">{i.label}</span>
+          </div>
+        ))}
+      </div>
+    </SplitCard>
+
     <div class="mt-6"><VideoSlot topic="METs vs MET-h" /></div>
     <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
       <MetsVsMetHours />
     </div>
-  </section>
+  </ScienceSection>
 
   <!-- ── Cardiorespiratory Fitness ─────────────────────────────────── -->
-  <section id="crf" class="scroll-mt-8">
-    <h2 class="text-2xl font-bold text-text-primary">Cardiorespiratory Fitness &amp; MET</h2>
-    <p class="mt-2 text-sm text-text-tertiary">Why Verve treats CRF as the headline metric, VO&#8322;Max as secondary</p>
+  <ScienceSection id="crf" title="Cardiorespiratory fitness" sub="The five tiers, and why they are read against your own age and sex">
+    <div class="mt-[18px] rounded-2xl border border-white/8 bg-white/4 p-5 sm:px-[22px]">
+      <p class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">
+        Men, 40 to 49
+      </p>
+      <!-- No middle band, on purpose: the line between below and above average
+           is the study population's median, so nobody lands on it. -->
+      <div class="mt-3 flex gap-1">
+        {tiers.map((t, i) => (
+          <div class="min-w-0 flex-1">
+            <div
+              class:list={["h-[9px]", i === 0 && "rounded-l-full", i === tiers.length - 1 && "rounded-r-full"]}
+              style={`background: ${t.bar}`}
+            ></div>
+            <div class={`mt-[7px] font-mono text-[10px] ${t.lit ? "text-warning" : "text-text-secondary"}`}>{t.range}</div>
+            <div class="text-[11px] leading-tight text-text-tertiary">{t.label}</div>
+          </div>
+        ))}
+      </div>
+      <p class="mt-3.5 text-[12.5px] leading-relaxed text-text-tertiary">
+        Figures in METs, for one reader. Your own table depends on your age and
+        sex, and on which dataset covers you.
+      </p>
+    </div>
+
     <div class="mt-6"><VideoSlot topic="Cardiorespiratory Fitness" /></div>
     <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
       <p class="text-sm leading-relaxed text-text-secondary">
@@ -44,12 +110,38 @@ import {
     <div class="mt-4 grid gap-4 sm:grid-cols-2">
       {CRF_SECTION.map((c) => <CitationCard {...c} />)}
     </div>
-  </section>
+  </ScienceSection>
 
   <!-- ── Test Your CRF ─────────────────────────────────────────────── -->
-  <section id="test-crf" class="scroll-mt-8">
-    <h2 class="text-2xl font-bold text-text-primary">Test Your CRF</h2>
-    <p class="mt-2 text-sm text-text-tertiary">Which test, when to retest, and why your watch disagrees</p>
+  <ScienceSection id="test-crf" title="Test your CRF" sub="Which test you are offered, and why it might not be the hard one">
+    <SplitCard eyebrow="In the app">
+      <p>
+        A short health screen runs before your first test. A beta-blocker, or a
+        resting pressure at or above 180 over 110, and the six-minute walk is
+        the only test offered. Cleared and training regularly, and the
+        twelve-minute run is recommended instead. You can always pick another.
+      </p>
+      <div slot="panel" class="flex flex-col gap-2.5">
+        <div class="flex items-center gap-2.5">
+          <span class="flex h-[22px] w-[22px] items-center justify-center rounded-[7px] bg-success/15">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l4 4L19 7" /></svg>
+          </span>
+          <span class="text-[11.5px] text-text-primary">6-minute walk</span>
+          <span class="ml-auto font-mono text-[10px] text-text-tertiary">submaximal</span>
+        </div>
+        <div class="flex items-center gap-2.5">
+          <span class="flex h-[22px] w-[22px] items-center justify-center rounded-[7px] bg-warning/15">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 8v5M12 16.5v.5" /></svg>
+          </span>
+          <span class="text-[11.5px] text-text-primary">12-minute run</span>
+          <span class="ml-auto font-mono text-[10px] text-text-tertiary">maximal</span>
+        </div>
+        <div class="h-px bg-white/[0.07]"></div>
+        <p class="font-mono text-[10px] text-danger">blocked at 180/110 or above</p>
+        <p class="font-mono text-[10px] text-text-tertiary">retest nudged at 8 weeks</p>
+      </div>
+    </SplitCard>
+
     <div class="mt-6"><VideoSlot topic="Test Your CRF" /></div>
 
     <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
@@ -126,12 +218,24 @@ import {
     <div class="mt-4 grid gap-4 sm:grid-cols-2">
       {TEST_CRF_SECTION.map((c) => <CitationCard {...c} />)}
     </div>
-  </section>
+  </ScienceSection>
 
   <!-- ── How accurate each test is ─────────────────────── -->
-  <section id="test-accuracy" class="scroll-mt-8">
-    <h2 class="text-2xl font-bold text-text-primary">How Accurate Each Test Is</h2>
-    <p class="mt-2 text-sm text-text-tertiary">What r &asymp; 0.90 means, what the stars mean, and where these tests stop working</p>
+  <ScienceSection id="test-accuracy" title="How accurate each test is" sub="What r &asymp; 0.90 means, what the stars mean, and where each test stops working">
+    <div class="mt-[18px] rounded-2xl border border-white/8 bg-white/4 p-5 sm:px-[22px]">
+      <dl class="flex flex-col gap-3">
+        {accuracy.map(([name, note, tone, detail]) => (
+          <div class="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-3">
+            <dt class="w-[140px] shrink-0 text-[13px] font-semibold text-text-primary">{name}</dt>
+            <dd class="contents">
+              <span class={`w-[104px] shrink-0 font-mono text-[11px] ${tone}`}>{note}</span>
+              <span class="flex-1 text-[12.5px] leading-relaxed text-text-tertiary">{detail}</span>
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+
 
     <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
       <h3 class="text-lg font-semibold text-text-primary">The r value</h3>
@@ -207,12 +311,10 @@ import {
         than any single one of them.
       </p>
     </div>
-  </section>
+  </ScienceSection>
 
   <!-- ── The run protocols in full ─────────────────────── -->
-  <section id="run-protocols" class="scroll-mt-8">
-    <h2 class="text-2xl font-bold text-text-primary">The Run Protocols In Full</h2>
-    <p class="mt-2 text-sm text-text-tertiary">What the app&rsquo;s checklist is short for</p>
+  <ScienceSection id="run-protocols" title="The run protocols" sub="What the app&rsquo;s checklist is short for">
 
     <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
       <p class="text-sm leading-relaxed text-text-secondary">
@@ -274,5 +376,5 @@ import {
         line.
       </p>
     </div>
-  </section>
+  </ScienceSection>
 </SubjectLayout>

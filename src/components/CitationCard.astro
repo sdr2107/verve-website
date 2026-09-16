@@ -1,39 +1,50 @@
 ---
+/**
+ * One study, as the board draws it: who and when, what they found, where to
+ * read it.
+ *
+ * This used to carry a coloured bar across the top and a matching dot and
+ * title, one hue per card. With four to eight of them in a grid that read as
+ * a chart — as though the colours encoded something — when they encoded
+ * nothing but "next card". A page whose argument is that every number is
+ * traceable should not spend its only colour vocabulary on decoration; on the
+ * subject pages colour means a band, a tier, or a reading outside its range.
+ *
+ * The `color` on each Citation is left in the data rather than deleted: it is
+ * the app's own per-card hue and the two files are kept in step by hand.
+ */
 import type { Citation } from "../data/science";
 
 interface Props extends Citation {}
-const { title, summary, url, color, isCommentary } = Astro.props;
+const { title, summary, url, isCommentary } = Astro.props;
+
+/**
+ * "PMID 30646252 →" where there is one, else the host. The board prints the
+ * identifier rather than the URL because a PMID is the thing a reader would
+ * actually type into PubMed.
+ */
+const pmid = url.match(/pubmed\.ncbi\.nlm\.nih\.gov\/(\d+)/)?.[1];
+const linkLabel = pmid ? `PMID ${pmid}` : new URL(url).hostname.replace(/^www\./, "");
 ---
 
 <a
   href={url}
   target="_blank"
   rel="noopener noreferrer"
-  class="block rounded-2xl border border-white/8 bg-white/4 p-5 transition-colors hover:border-white/16"
+  class="group block rounded-2xl border border-white/8 bg-white/4 p-4 transition-colors hover:border-white/20 sm:px-[18px]"
 >
-  <div class="h-1 -mx-5 -mt-5 mb-4 rounded-t-2xl" style={{ backgroundColor: color }}></div>
-  <div class="flex items-center gap-2">
-    <span class="h-2 w-2 rounded-full" style={{ backgroundColor: color }}></span>
-    <span class="text-sm font-bold" style={{ color }}>{title}</span>
+  <div class="flex items-start gap-2">
+    <h3 class="text-[13.5px] font-semibold leading-snug text-text-primary">{title}</h3>
     {isCommentary && (
-      <span class="rounded-md bg-amber-400/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
+      <span class="ml-auto shrink-0 rounded-md bg-warning/15 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wide text-warning">
         Commentary
       </span>
     )}
-    <svg
-      width="14"
-      height="14"
-      class="ml-auto shrink-0 text-text-tertiary"
-      style="width: 14px; height: 14px;"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-    >
-      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-      <path d="M15 3h6v6" />
-      <path d="M10 14 21 3" />
-    </svg>
   </div>
-  <p class="mt-2 text-sm leading-relaxed text-text-secondary">{summary}</p>
+
+  <p class="mt-[7px] text-[12.5px] leading-relaxed text-text-tertiary">{summary}</p>
+
+  <p class="mt-2.5 font-mono text-[11px] text-accent-light">
+    {linkLabel} <span class="transition-transform group-hover:translate-x-0.5 inline-block">&rarr;</span>
+  </p>
 </a>

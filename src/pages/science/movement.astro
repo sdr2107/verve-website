@@ -1,5 +1,7 @@
 ---
 import SubjectLayout from "../../layouts/SubjectLayout.astro";
+import ScienceSection from "../../components/science/ScienceSection.astro";
+import SplitCard from "../../components/science/SplitCard.astro";
 import CitationCard from "../../components/CitationCard.astro";
 import MovementBalance from "../../components/science/MovementBalance.astro";
 import VideoSlot from "../../components/VideoSlot.astro";
@@ -15,9 +17,31 @@ import {
 
 <SubjectLayout subject="movement">
   <!-- ── Weekly Volume ─────────────────────────────────────────────── -->
-  <section id="weekly-volume" class="scroll-mt-8">
-    <h2 class="text-2xl font-bold text-text-primary">Weekly Activity Volume</h2>
-    <p class="mt-2 text-sm text-text-tertiary">How much per week &mdash; and why the summit sits well above 150 minutes</p>
+  <ScienceSection id="weekly-volume" title="Weekly volume" sub="How much per week, and why the summit sits well above 150 minutes">
+    <SplitCard eyebrow="In the app" wide>
+      <p>
+        The Activity page draws your week as a climb, with flags at 150, 300
+        and 560 minutes. The line is your aerobic minutes; the flags are where
+        the evidence below changes what it says.
+      </p>
+      <svg slot="panel" viewBox="0 0 248 104" class="block h-auto w-full" aria-hidden="true">
+        <line x1="0" y1="88" x2="248" y2="88" stroke="rgba(255,255,255,0.08)" />
+        <polygon fill="rgba(52,211,153,0.12)" points="6,86 54,72 100,58 148,40 196,26 232,18 232,86" />
+        <polyline fill="none" stroke="#34d399" stroke-width="2.2" points="6,86 54,72 100,58 148,40 196,26 232,18" />
+        <line x1="108" y1="88" x2="108" y2="52" stroke="#FBBF24" stroke-width="1.2" stroke-dasharray="3 3" />
+        <text x="112" y="50" font-family="JetBrains Mono, monospace" font-size="8" fill="#FBBF24">150</text>
+        <line x1="172" y1="88" x2="172" y2="34" stroke="#06B6D4" stroke-width="1.2" stroke-dasharray="3 3" />
+        <text x="176" y="32" font-family="JetBrains Mono, monospace" font-size="8" fill="#06B6D4">300</text>
+        <line x1="228" y1="88" x2="228" y2="16" stroke="#8B5CF6" stroke-width="1.2" stroke-dasharray="3 3" />
+        <text x="200" y="12" font-family="JetBrains Mono, monospace" font-size="8" fill="#8B5CF6">560</text>
+        <g font-family="JetBrains Mono, monospace" font-size="7" fill="#475569">
+          <text x="2" y="100">M</text><text x="40" y="100">T</text><text x="78" y="100">W</text>
+          <text x="116" y="100">T</text><text x="154" y="100">F</text><text x="192" y="100">S</text>
+          <text x="228" y="100">S</text>
+        </g>
+      </svg>
+    </SplitCard>
+
     <div class="mt-6"><VideoSlot topic="Weekly Activity Volume" /></div>
     <p class="mt-6 text-sm leading-relaxed text-text-secondary">
       The Weekly Ascent draws no lines to clear and has no ceiling. The
@@ -41,12 +65,35 @@ import {
     <div class="mt-6 grid gap-4 sm:grid-cols-2">
       {WEEKLY_VOLUME_SECTION.map((c) => <CitationCard {...c} />)}
     </div>
-  </section>
+  </ScienceSection>
 
   <!-- ── Zone 2 (volume + HR method together) ──────────────────────── -->
-  <section id="zone-2" class="scroll-mt-8">
-    <h2 class="text-2xl font-bold text-text-primary">Zone 2 Training</h2>
-    <p class="mt-2 text-sm text-text-tertiary">The weekly target, and the personal heart-rate band behind it</p>
+  <ScienceSection id="zone-2" title="Zone 2 training" sub="The weekly target, and the personal heart-rate band behind it">
+    <div class="mt-[18px] flex flex-col gap-4 rounded-2xl border border-white/8 bg-white/4 p-5 sm:px-[22px] lg:flex-row lg:items-center lg:gap-[18px]">
+      <div class="flex-1">
+        <p class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">In the app</p>
+        <p class="mt-2.5 text-[14.5px] leading-[1.7] text-text-secondary">
+          Your band is Karvonen, built from your own resting rate and your
+          age-predicted maximum: 40 to 60 percent of the reserve between them.
+          The app counts minutes inside that band, not inside a table everyone
+          shares.
+        </p>
+      </div>
+      <!-- Sample figures: one reader's resting rate, band and maximum. -->
+      <div class="w-full shrink-0 lg:w-[220px]">
+        <div class="flex h-[9px] overflow-hidden rounded-full">
+          <span class="w-2/5 bg-white/8"></span>
+          <span class="w-1/5 bg-success/55"></span>
+          <span class="w-2/5 bg-white/8"></span>
+        </div>
+        <div class="mt-[7px] flex justify-between font-mono text-[10px]">
+          <span class="text-text-muted">52</span>
+          <span class="text-success">102&ndash;127</span>
+          <span class="text-text-muted">177</span>
+        </div>
+      </div>
+    </div>
+
     <div class="mt-6"><VideoSlot topic="Zone 2 Training" /></div>
     <div class="mt-6 grid gap-4 sm:grid-cols-2">
       {ZONE2_SECTION.map((c) => <CitationCard {...c} />)}
@@ -62,12 +109,10 @@ import {
     <div class="mt-4 grid gap-4 sm:grid-cols-2">
       {ZONE2_HR_SECTION.map((c) => <CitationCard {...c} />)}
     </div>
-  </section>
+  </ScienceSection>
 
   <!-- ── Strength Training ─────────────────────────────────────── -->
-  <section id="strength-training" class="scroll-mt-8">
-    <h2 class="text-2xl font-bold text-text-primary">Strength Training</h2>
-    <p class="mt-2 text-sm text-text-tertiary">Where the 60 minutes a week comes from &mdash; and why the app no longer draws it as a bar to clear</p>
+  <ScienceSection id="strength-training" title="Strength training" sub="Where the 60 minutes a week comes from, and why the app no longer draws it as a bar to clear">
 
     <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
       <p class="text-sm leading-relaxed text-text-secondary">
@@ -107,22 +152,18 @@ import {
         <a href="#zone-2">Zone 2 Training</a>.
       </p>
     </div>
-  </section>
+  </ScienceSection>
 
   <!-- ── Steps & Cadence ───────────────────────────────────────────── -->
-  <section id="steps" class="scroll-mt-8">
-    <h2 class="text-2xl font-bold text-text-primary">Step Count &amp; Daily Movement</h2>
-    <p class="mt-2 text-sm text-text-tertiary">Daily step tiers and cadence zones</p>
+  <ScienceSection id="steps" title="Steps &amp; cadence" sub="Daily step tiers and cadence zones">
     <div class="mt-6"><VideoSlot topic="Steps & Cadence" /></div>
     <div class="mt-6 grid gap-4 sm:grid-cols-2">
       {STEPS_SECTION.map((c) => <CitationCard {...c} />)}
     </div>
-  </section>
+  </ScienceSection>
 
   <!-- ── Movement Balance ──────────────────────────────────────────── -->
-  <section id="movement-balance" class="scroll-mt-8">
-    <h2 class="text-2xl font-bold text-text-primary">Sedentary Behavior &amp; Movement Balance</h2>
-    <p class="mt-2 text-sm text-text-tertiary">How Verve reads your day beyond workout minutes</p>
+  <ScienceSection id="movement-balance" title="Movement balance" sub="How Verve reads your day beyond workout minutes">
     <div class="mt-6"><VideoSlot topic="Movement Balance" /></div>
     <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
       <MovementBalance />
@@ -179,12 +220,10 @@ import {
         rather than zero.
       </p>
     </div>
-  </section>
+  </ScienceSection>
 
   <!-- ── Activity Level (PAL) ──────────────────────────────────────── -->
-  <section id="activity-level" class="scroll-mt-8">
-    <h2 class="text-2xl font-bold text-text-primary">Physical Activity Level (PAL)</h2>
-    <p class="mt-2 text-sm text-text-tertiary">How active your whole day is — and how much of that number to trust</p>
+  <ScienceSection id="activity-level" title="Physical activity level" sub="How active your whole day is, and how much of that number to trust">
 
     <div class="mt-6 space-y-4 text-sm leading-relaxed text-text-secondary">
       <p>
@@ -234,5 +273,5 @@ import {
         noisy it is.
       </p>
     </div>
-  </section>
+  </ScienceSection>
 </SubjectLayout>
