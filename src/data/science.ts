@@ -154,18 +154,32 @@ export const ZONE2_SECTION: Citation[] = [
 
 export const SLEEP_RHYTHM_SECTION: Citation[] = [
   {
-    title: "Windred et al — Sleep regularity vs sleep duration, SLEEP 2024",
+    title: "Windred et al \u2014 Sleep regularity vs sleep duration, SLEEP 2024",
     summary:
       "60,977 UK Biobank adults wore wrist accelerometers for a week and were followed for a mean of 6.3 years, up to 7.8. The Sleep Regularity Index predicted all-cause mortality more strongly than sleep duration did: the four most regular fifths had 20 to 48 per cent lower risk than the least regular fifth. The median score was 81.0, with half the sample between 73.8 and 86.3. The least regular fifth scored below 71.6 and the most regular fifth above 87.3.",
     url: "https://doi.org/10.1093/sleep/zsad253",
     color: "#6366f1",
   },
   {
-    title: "AHA 2025 — Multidimensional Sleep Health scientific statement",
+    title: "Cribb et al \u2014 Sleep regularity and mortality, eLife 2023",
     summary:
-      "The American Heart Association's statement describes sleep health in seven dimensions: duration, continuity, timing, regularity, daytime functioning, architecture and the absence of sleep disorders. For regularity it lists within-person variability, such as the standard deviation of sleep timing or duration, alongside rest-activity rhythm measures and social jet lag. Its table of commonly used cut-points gives a standard deviation of 60 minutes or less, and the text notes there is no agreement on which thresholds are best. Verve draws its bedtime spread against that 60-minute mark. The statement does not mention the Sleep Regularity Index.",
+      "88,975 UK Biobank adults, scored with a different SRI calculation: median 60. Risk rose at the irregular end rather than falling steadily toward 100: a hazard ratio of 1.53 at the 5th percentile (a score of 41) against 0.90 at the 95th (75), both relative to the median.",
+    url: "https://doi.org/10.7554/eLife.88359",
+    color: "#4f46e5",
+  },
+  {
+    title: "AHA 2025 \u2014 Multidimensional Sleep Health scientific statement",
+    summary:
+      "The American Heart Association's statement describes sleep health in seven dimensions: duration, continuity, timing, regularity, daytime functioning, architecture and the absence of sleep disorders. For regularity it lists within-person variability, such as the standard deviation of sleep timing or duration, alongside rest-activity rhythm measures and social jet lag. Its table of commonly used cut-points gives a standard deviation of 60 minutes or less, and the text notes there is no agreement on which thresholds are best. Verve's around-your-average spread is the standard deviation of the time you fall asleep, drawn against that 60-minute mark. The statement does not mention the Sleep Regularity Index.",
     url: "https://doi.org/10.1161/hcq.0000000000000139",
     color: "#4f46e5",
+  },
+  {
+    title: "Leota et al \u2014 How many nights are needed?, SLEEP 2026",
+    summary:
+      "10,412 adults with a year of WHOOP data. Averages settled fast: 3 nights for the time of falling asleep, 7 for total sleep time. A reliable standard deviation took 41 to 65 nights, and estimates from 7 to 14 nights were poor. This is why Verve marks spread and the regularity index as still settling until 44 nights.",
+    url: "https://doi.org/10.1093/sleep/zsag040",
+    color: "#6366f1",
   },
   {
     title: "Why Verve shows a number nothing else does",
@@ -178,16 +192,24 @@ export const SLEEP_RHYTHM_SECTION: Citation[] = [
   {
     title: "Why your score is not comparable with anyone else's",
     summary:
-      "The 2026 RIRI statement applied two accepted open-source SRI calculators, sleepreg and GGIR, to the same 73,794-adult accelerometer dataset. They produced meaningfully different SRI values — different enough to change how clinical outcome models read — and a 14-item reporting standard came out of it. So SRI is a method, not a standard. Verve states its own: 1-minute epochs, sleep taken from Apple Health whichever device wrote it, naps included, everything outside a recorded sleep interval treated as awake, local clock times compared, and both partial edge days of the window dropped. Read your own trend over weeks; do not compare the number with a friend's.",
+      "The 2026 RIRI statement applied two accepted open-source SRI calculators, sleepreg and GGIR, to the same 73,794-adult accelerometer dataset. Their scores differed enough to change how clinical outcome models read, and a 14-item reporting standard came out of it. So the SRI is a method, not a standard. Verve states its own: 1-minute epochs, sleep taken from Apple Health whichever device wrote it, naps included, everything outside a recorded sleep interval treated as awake, local clock times compared, both partial edge days of the window dropped, and a day compared only when the nights either side of it are both on record, so a night the watch spent on the charger is not scored as a night awake. Verve reads your score against your own past months, never against a friend's or a study's.",
     url: "https://doi.org/10.1093/sleep/zsaf299",
     color: "#6366f1",
     isCommentary: true,
   },
   {
-    title: "What Verve needs before it will show a score",
+    title: "Why a slow slide needs its own measure",
     summary:
-      "8 nights of recorded sleep for a 7-day score. The first and last day of any window are only partly covered — the night that would have supplied the first morning began before the window, and no night follows the last evening — so both are dropped rather than counted as irregularity that never happened. The minutes-of-spread measure needs only 5 bedtimes, so it appears first. Any device that writes sleep to Apple Health qualifies, including Oura, Whoop and Garmin; an Apple Watch is not required.",
-    url: "https://doi.org/10.1093/sleep/zsad253",
+      "The standard deviation measures regularity across many days; the Sleep Regularity Index compares each day only with the day before (Fischer, Klerman and Phillips, SLEEP 2021). So a bedtime that slides a few minutes later each night barely moves the index. Verve shows drift, one week's average against the next, so a slide that neither the index nor the nightly moves would flag still shows.",
+    url: "https://doi.org/10.1093/sleep/zsab103",
+    color: "#4338ca",
+    isCommentary: true,
+  },
+  {
+    title: "What Verve needs before it shows each measure",
+    summary:
+      "A bedtime average from 3 nights, and drift once there are two weeks to compare. Spread and the regularity index appear after about a week and stay marked as still settling until 44 nights. Regularity-type scores built from fewer than seven days are biased and don't compare with longer recordings (Lok, J Sleep Res 2025). Any device that writes sleep to Apple Health counts, including Oura, Whoop and Garmin; an Apple Watch is not required.",
+    url: "https://doi.org/10.1111/jsr.14332",
     color: "#818cf8",
     isCommentary: true,
   },

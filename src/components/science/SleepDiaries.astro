@@ -1,0 +1,81 @@
+---
+/**
+ * The four diaries from the sleep timing copy, drawn: four people, fourteen
+ * nights each, on one clock axis, with each week's average marked.
+ *
+ * The copy's table says what each measure makes of them. This says why, before
+ * a reader gets to the table: B's slide, C's scatter and D's naps are visible
+ * as shapes, and A is the flat line the other three are read against. Sample
+ * figures, computed from the nights listed in the copy's Part 3 — the same
+ * bedtimes the table's every figure was calculated from, so the picture and
+ * the numbers cannot disagree.
+ *
+ * Clock times are placed on a 21:00-to-03:00 axis, which is the span these
+ * four need; the earliest night is 22:00 and the latest 02:00.
+ */
+
+/** Minutes since 21:00, so a bedtime after midnight sits to the right of one before it. */
+const since21 = (hhmm: string) => {
+  const [h, m] = hhmm.split(":").map(Number);
+  return (h * 60 + m - 21 * 60 + 1440) % 1440;
+};
+const X0 = 24, SPAN = 268, MINUTES = 360;
+const x = (hhmm: string) => X0 + (since21(hhmm) / MINUTES) * SPAN;
+
+const A = ["23:00","23:05","22:58","23:10","23:02","22:55","23:08","23:04","22:57","23:06","23:01","23:12","22:59","23:03"];
+
+const diaries = [
+  { id: "A", nights: A,
+    avg: ["23:03", "23:03"], naps: [] as number[] },
+  { id: "B", nights: ["23:00","23:05","22:58","23:10","23:02","23:15","23:28","23:40","23:55","00:07","00:20","00:32","00:45","00:58"],
+    avg: ["23:08", "00:20"], naps: [] as number[] },
+  { id: "C", nights: ["23:00","02:00","22:00","01:00","23:30","00:30","22:30","00:30","22:00","01:30","23:00","02:00","22:30","23:30"],
+    avg: ["23:47", "23:51"], naps: [] as number[] },
+  // D sleeps A's nights to the minute; the naps are after nights 1, 3, 4, 7, 9, 12, 13.
+  { id: "D", nights: A,
+    avg: ["23:03", "23:03"], naps: [0, 2, 3, 6, 8, 11, 12] },
+];
+
+const ROW_Y = [20, 46, 72, 98];
+const ticks = [["22:00", "22:00"], ["00:00", "midnight"], ["02:00", "02:00"]] as const;
+---
+
+<svg viewBox="0 0 300 134" class="block h-auto w-full" role="img"
+  aria-label="Four bedtime diaries over fourteen nights. A is steady around 23:00. B slides an hour later across the fortnight. C scatters between 22:00 and 02:00. D matches A but naps on seven afternoons.">
+  <!-- the clock axis -->
+  {ticks.map(([t, label]) => (
+    <g>
+      <line x1={x(t)} y1="8" x2={x(t)} y2="110" stroke="rgba(255,255,255,0.06)" />
+      <text x={x(t)} y="124" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="7.5" fill="#475569">{label}</text>
+    </g>
+  ))}
+
+  {diaries.map((d, r) => {
+    const y = ROW_Y[r];
+    const a1 = x(d.avg[0]), a2 = x(d.avg[1]);
+    return (
+      <g>
+        <text x="6" y={y + 3} font-family="JetBrains Mono, monospace" font-size="9" font-weight="600" fill="#94a3b8">{d.id}</text>
+        <line x1={X0} y1={y} x2={X0 + SPAN} y2={y} stroke="rgba(255,255,255,0.05)" />
+        {/* each week's average bedtime — one tick if the two coincide */}
+        <line x1={a1} y1={y - 8} x2={a1} y2={y + 8} stroke="#a5b4fc" stroke-width="1.4" />
+        {Math.abs(a2 - a1) > 0.5 && (
+          <line x1={a2} y1={y - 8} x2={a2} y2={y + 8} stroke="#a5b4fc" stroke-width="1.4" stroke-dasharray="2 2" />
+        )}
+        {/* the nights */}
+        {d.nights.map((n, i) => (
+          <circle cx={x(n)} cy={y} r="2.6" fill={i < 7 ? "#94a3b8" : "#cbd5e1"} />
+        ))}
+        {/* D's naps, above the night that preceded them */}
+        {d.naps.map((i) => (
+          <circle cx={x(d.nights[i])} cy={y - 8.5} r="2" fill="none" stroke="#FBBF24" stroke-width="1.1" />
+        ))}
+      </g>
+    );
+  })}
+</svg>
+
+<p class="mt-2 font-mono text-[9.5px] leading-relaxed text-text-tertiary">
+  A dot is a night, week 1 dim and week 2 light. <span class="text-accent-light">|</span> a week&rsquo;s
+  average, dashed for week 2. <span class="text-warning">&#9675;</span> an afternoon nap.
+</p>

@@ -2,6 +2,7 @@
 import SubjectLayout from "../../layouts/SubjectLayout.astro";
 import ScienceSection from "../../components/science/ScienceSection.astro";
 import SplitCard from "../../components/science/SplitCard.astro";
+import SleepDiaries from "../../components/science/SleepDiaries.astro";
 import CitationCard from "../../components/CitationCard.astro";
 import VideoSlot from "../../components/VideoSlot.astro";
 import {
@@ -112,114 +113,296 @@ const againstLevel = [
   </ScienceSection>
 
   <!-- ── Sleep Rhythm ──────────────────────────────────────────────── -->
-  <ScienceSection id="sleep-rhythm" title="Sleep timing" sub="How much your bedtime moves, and the research index behind it">
+  <ScienceSection id="sleep-rhythm" title="Sleep timing" sub="Four ways to read one bedtime diary">
     <SplitCard eyebrow="In the app" wide>
       <p>
-        Three numbers: last night&rsquo;s hours, how far your bedtime drifts
-        from one night to the next, and a regularity score from 0 to 100.
-        Drift needs five nights. The score needs five comparable days, and a
-        day is only comparable once there is a day before it to compare with,
-        so five days means six nights.
+        Last night&rsquo;s hours, then three short readings. Your average
+        bedtime over the last seven nights and how far it moved from the seven
+        before. How much your bedtime moves, night to night and around your
+        average. And the Sleep Regularity Index for the last 30 days, beside
+        your own median. Spread and the index settle over 44 nights, and the
+        page counts them for you. What each number means is on this page, not
+        in the app.
       </p>
       <div slot="panel">
-        <p class="font-mono text-[9px] uppercase tracking-[0.1em] text-text-tertiary">Regularity</p>
-        <!-- Bands are quintile boundaries of the UK Biobank sample, not guideline lines. -->
-        <div class="mt-2.5 flex h-2 overflow-hidden rounded-full">
-          <span class="bg-[rgba(244,63,94,0.35)]" style="width: 71.6%"></span>
-          <span class="bg-[rgba(251,191,36,0.45)]" style="width: 15.7%"></span>
-          <span class="bg-[rgba(52,211,153,0.4)]" style="width: 12.7%"></span>
-        </div>
-        <div class="relative h-[13px]">
-          <span class="absolute top-0.5 h-[9px] w-0.5 bg-text-primary" style="left: 81%"></span>
-        </div>
-        <div class="relative h-3.5 font-mono text-[9.5px]">
-          <span class="absolute left-0 text-text-muted">0</span>
-          <span class="absolute -translate-x-1/2 text-warning" style="left: 71.6%">71.6</span>
-          <span class="absolute -translate-x-1/2 text-success" style="left: 87.3%">87.3</span>
-          <span class="absolute right-0 text-text-muted">100</span>
-        </div>
-        <p class="mt-2.5 text-[11px] leading-relaxed text-text-tertiary">
-          Where 60,977 UK Biobank adults fell (Windred 2024): the least regular
-          fifth below 71.6, the most regular fifth above 87.3, median 81.0. A
-          different calculation from Verve&rsquo;s, so this is context, not a
-          scale for your score.
-        </p>
+        <SleepDiaries />
       </div>
     </SplitCard>
 
     <div class="mt-6"><VideoSlot topic="Sleep Timing" /></div>
-    <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
-      <p class="text-sm leading-relaxed text-text-secondary">
-        Verve leads with the <strong class="text-text-primary">spread of your
-        bedtime in minutes</strong>: how far it moves from one night to the
-        next. Within-person variability in sleep timing is one of the
-        regularity measures the 2025 AHA scientific statement lists, and
-        <strong class="text-text-primary">60 minutes</strong> is the cut-point
-        its table gives as commonly used &mdash; the text adds that there is no
-        agreement on the best threshold. It is in a unit you can act on
-        tonight. Clock times are treated as angles on a
-        24-hour circle &mdash; a plain average would place 23:50 and 00:10
-        nearly a full day apart and report the steadiest sleepers as the most
-        erratic.
+
+    <!-- ── The short version ── -->
+    <h3 class="mt-9 text-[17px] font-semibold text-text-primary">The short version</h3>
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">
+      How regular your sleep is, not only how long it lasts, is linked with
+      survival. In 60,977 UK Biobank adults who wore wrist sensors, how regular
+      their sleep was predicted their risk of dying better than how long they
+      slept.
+    </p>
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">
+      But &ldquo;regular&rdquo; hides four different questions, and each needs a
+      different amount of data before it can answer:
+    </p>
+    <ul class="mt-3 list-disc space-y-1.5 pl-5 text-[14.5px] leading-[1.7] text-text-secondary">
+      <li><strong class="text-text-primary">Bedtime average:</strong> where the middle of your bedtimes sits.</li>
+      <li><strong class="text-text-primary">Drift:</strong> whether that middle is moving.</li>
+      <li><strong class="text-text-primary">Spread:</strong> how much your bedtime moves, measured two ways.</li>
+      <li><strong class="text-text-primary">Sleep Regularity Index:</strong> whether your whole day, asleep and awake, repeats.</li>
+    </ul>
+
+    <!-- ── Four diaries ── -->
+    <h3 class="mt-9 text-[17px] font-semibold text-text-primary">Four diaries</h3>
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">
+      Picture four people writing down the time they fall asleep, every night
+      for two weeks.
+    </p>
+    <ul class="mt-3 list-disc space-y-1.5 pl-5 text-[14.5px] leading-[1.7] text-text-secondary">
+      <li><strong class="text-text-primary">Person A is steady.</strong> Asleep within about ten minutes of 23:00, every night.</li>
+      <li><strong class="text-text-primary">Person B slides.</strong> Five nights around 23:00, then each night lands 12 to 15 minutes after the last. No single night looks unusual.</li>
+      <li><strong class="text-text-primary">Person C is scattered.</strong> 23:00, 02:00, 22:00, 01:00, 23:30. Late and early, with no direction.</li>
+      <li><strong class="text-text-primary">Person D sleeps Person A&rsquo;s nights to the minute</strong>, but naps for two hours on some afternoons and not others.</li>
+    </ul>
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">Here is what each measure makes of them:</p>
+    <div class="mt-3 overflow-x-auto rounded-2xl border border-white/8 bg-white/4 p-5 sm:px-[22px]">
+      <table class="w-full min-w-[600px] text-left text-[12.5px]">
+        <thead>
+          <tr class="border-b border-white/10 text-[10px] uppercase tracking-wide text-text-tertiary">
+            <th class="pb-2 pr-4 font-medium"></th>
+            <th class="pb-2 pr-4 font-medium">Bedtime average, week 1 &rarr; week 2</th>
+            <th class="pb-2 pr-4 font-medium">Drift</th>
+            <th class="pb-2 pr-4 font-medium">Spread: night to night &middot; around the average</th>
+            <th class="pb-2 font-medium">Regularity index</th>
+          </tr>
+        </thead>
+        <tbody class="text-text-secondary">
+          <tr class="border-b border-white/5"><td class="py-2 pr-4 font-semibold text-text-primary">Person A, steady</td><td class="py-2 pr-4 font-mono">23:03 &rarr; 23:03</td><td class="py-2 pr-4 font-mono">none</td><td class="py-2 pr-4 font-mono">8 min &middot; &plusmn;5 min</td><td class="py-2 font-mono">91</td></tr>
+          <tr class="border-b border-white/5"><td class="py-2 pr-4 font-semibold text-text-primary">Person B, sliding</td><td class="py-2 pr-4 font-mono">23:08 &rarr; 00:20</td><td class="py-2 pr-4 font-mono text-warning">1 h 12 later</td><td class="py-2 pr-4 font-mono">11 min &middot; &plusmn;41 min</td><td class="py-2 font-mono">91</td></tr>
+          <tr class="border-b border-white/5"><td class="py-2 pr-4 font-semibold text-text-primary">Person C, scattered</td><td class="py-2 pr-4 font-mono">23:47 &rarr; 23:51</td><td class="py-2 pr-4 font-mono">4 min</td><td class="py-2 pr-4 font-mono text-warning">2 h 30 &middot; &plusmn;83 min</td><td class="py-2 font-mono text-warning">73</td></tr>
+          <tr><td class="py-2 pr-4 font-semibold text-text-primary">Person D, naps some days</td><td class="py-2 pr-4 font-mono">23:03 &rarr; 23:03</td><td class="py-2 pr-4 font-mono">none</td><td class="py-2 pr-4 font-mono">8 min &middot; &plusmn;5 min</td><td class="py-2 font-mono text-warning">80</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">
+      No single measure catches all three. Only drift catches Person B&rsquo;s
+      slide. Spread and the regularity index both catch Person C. Only the
+      regularity index catches Person D. The average alone flags no one.
+    </p>
+
+    <!-- ── 1. Bedtime average ── -->
+    <h3 class="mt-9 text-[17px] font-semibold text-text-primary">1. Bedtime average: where the middle is</h3>
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">It answers <em>what time do I usually fall asleep?</em></p>
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">
+      Clock times sit on a circle, so they have to be averaged as angles. With
+      plain arithmetic, 23:50 and 00:10 are 23 hours 40 minutes apart and
+      average to noon. On a clock face they are 20 minutes apart and average
+      to midnight.
+    </p>
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">
+      The average settles fast. In 10,412 adults who wore a WHOOP band for a
+      year, three nights gave a reliable average time of falling asleep, and
+      seven a reliable average total sleep time (Leota, <em>Sleep</em> 2026).
+    </p>
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">
+      It can&rsquo;t tell you how consistent you are. Person C&rsquo;s average,
+      23:47, looks perfectly ordinary.
+    </p>
+
+    <!-- ── 2. Drift ── -->
+    <h3 class="mt-9 text-[17px] font-semibold text-text-primary">2. Drift: whether the middle is moving</h3>
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">
+      Compare one week&rsquo;s average with the next. Person B&rsquo;s moved
+      from 23:08 to 00:20: an hour and 12 minutes later in a single week,
+      though no night was more than 15 minutes from the one before.
+    </p>
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">
+      Drift is the only one of the four with a direction. It needs two windows
+      to compare, so two weeks of nights.
+    </p>
+
+    <!-- ── 3. Spread ── -->
+    <h3 class="mt-9 text-[17px] font-semibold text-text-primary">3. Spread: how much your bedtime moves</h3>
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">
+      It answers <em>how much does my bedtime bounce around?</em> Verve
+      measures it two ways, because each one sees something the other
+      doesn&rsquo;t.
+    </p>
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">
+      <strong class="text-text-primary">Night to night</strong> is the average size of the move from
+      one night to the next, in minutes, whichever way it goes: 8 for Person
+      A, 11 for Person B, 2 hours 30 for Person C.
+    </p>
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">
+      <strong class="text-text-primary">Around your average</strong> is the standard deviation: how
+      widely your bedtimes scatter around their own average. It is one of the
+      measures of regularity listed in the American Heart Association&rsquo;s
+      2025 statement on sleep health, which gives 60 minutes or less as a
+      commonly used cut-point while noting there is no agreement on the best
+      threshold (St-Onge, <em>Circ Cardiovasc Qual Outcomes</em> 2025). Person
+      A reads &plusmn;5 minutes and Person C &plusmn;83.
+    </p>
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">
+      Read the two together. Person B&rsquo;s nightly moves are small, 11
+      minutes, but around the average Person B reads &plusmn;41, because
+      measured from the middle the slide looks like scatter. When
+      around-your-average is much wider than night to night, the gap is drift.
+    </p>
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">
+      Both are slow to trust. In the same 10,412 adults, a reliable standard
+      deviation took 41 to 65 nights depending on the measure, and 44 for the
+      time of falling asleep. Estimates from 7 to 14 nights, the length of most
+      sleep studies, were poor, and a single week could misjudge the
+      variability of total sleep time by as much as 50 minutes either way
+      (Leota, <em>Sleep</em> 2026). No study has measured this for
+      night-to-night moves, so Verve applies the same 44 nights to both.
+    </p>
+
+    <!-- ── 4. Sleep Regularity Index ── -->
+    <h3 class="mt-9 text-[17px] font-semibold text-text-primary">4. Sleep Regularity Index: whether your whole day repeats</h3>
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">
+      It answers <em>am I asleep and awake at the same clock minutes today as
+      yesterday?</em> It checks every minute of the 24 hours against the same
+      minute a day earlier, so waking up, naps and time awake in the night all
+      count, not just bedtime. 100 is a day that repeats exactly. 0 is no
+      better than chance.
+    </p>
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">
+      That is why Person D scores 80 to Person A&rsquo;s 91 despite identical
+      nights. It is also why Person B scores 91: a slow slide changes each day
+      only a little from the day before, and the index compares only
+      neighbouring days (Fischer, <em>Sleep</em> 2021).
+    </p>
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">
+      This is the measure the outcome data rest on. Across 60,977 UK Biobank
+      adults followed for an average of 6.3 years, the four most regular fifths
+      had a 20 to 48 per cent lower risk of death from any cause than the least
+      regular fifth, and regularity predicted it better than duration did
+      (Windred, <em>Sleep</em> 2024). A second analysis, of 88,975
+      participants, found the risk concentrated at the irregular end: a hazard
+      ratio of 1.53 at the 5th percentile against 0.90 at the 95th, both
+      relative to the median (Cribb, <em>eLife</em> 2023). The extra risk sat
+      mostly in the irregular tail.
+    </p>
+
+    <!-- The UK Biobank bands, as literature: the canvas moved them here from
+         the app, because a score from a different calculator is context for
+         yours, not a scale to put it on. -->
+    <div class="mt-4 rounded-2xl border border-white/8 bg-white/4 p-5 sm:px-[22px]">
+      <p class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">
+        What the scores looked like in those studies
       </p>
-      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-        Behind it sits the <strong class="text-text-primary">Sleep Regularity
-        Index</strong>: the probability of being in the same state, asleep or
-        awake, at any two clock times 24 hours apart. It is the stronger
-        research metric &mdash; in UK Biobank it out-predicted sleep duration
-        for mortality &mdash; but it is a research metric, reported by no
-        consumer wearable and named by no guideline for individual care, and
-        two accepted calculators disagree on the same nights. So it is the
-        number underneath, not the headline. Its median of
-        <strong class="text-text-primary">81</strong> is a percentile of one
-        cohort, not a clinical threshold.
-      </p>
-      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-        <strong class="text-text-primary">The three numbers on the Sleep page.</strong>
-        <em>Last night</em> is the summed asleep time of your most recent
-        overnight sleep &mdash; awake spells inside the night excluded, naps
-        excluded, the same definition Apple Health uses for &ldquo;time
-        asleep&rdquo;. <em>Bedtime drift</em> is the night-to-night spread of
-        the time you fell asleep, in minutes, over your recent nights; under
-        <strong class="text-text-primary">60</strong> is the cut-point the 2025
-        AHA statement&rsquo;s table gives as commonly used. The <em>regularity index</em> is the Sleep Regularity
-        Index, 0 to 100, with its bands printed on the bar where they fall:
-        below <strong class="text-text-primary">71.6</strong> irregular,
-        <strong class="text-text-primary">71.6&ndash;87.3</strong> moderately
-        irregular, above <strong class="text-text-primary">87.3</strong>
-        regular. Those cut-points are the edges of the least and most regular
-        fifths of the UK Biobank sample &mdash; the 20th and 80th percentiles
-        &mdash; which is why they are printed to a decimal: they are where a
-        cohort fell, not lines a guideline drew. The middle half of that
-        sample sat between 73.8 and 86.3.
-      </p>
-      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-        <strong class="text-text-primary">In Trends, under Over Time.</strong>
-        Each lens carries the period&rsquo;s average night by stage &mdash; a
-        column per night for the week, per week for the block, per month for
-        the year &mdash; and what the body did while asleep: the watch&rsquo;s
-        heart rate and breathing rate inside the sleep hours, averaged per
-        night and then across nights, against the period before. A night
-        belongs to the morning you woke. Stages appear only from a device
-        that writes them; a plain asleep record from another writer is shown
-        as one block, not divided into stages it never had.
-      </p>
-      <p class="mt-4 text-sm leading-relaxed text-text-secondary">
-        <strong class="text-text-primary">What it needs, and what it leaves out.</strong>
-        The timing measures need a handful of recent recorded nights &mdash;
-        the page counts them up for you &mdash; and only recent nights count,
-        so a break from wearing the watch means the count starts again.
-        Anything that writes sleep to Apple Health works: Apple Watch, Oura,
-        Whoop, Garmin. Naps are left out of the timing measures, since a nap
-        is not a bedtime. Timing is not hours: a steady short night scores
-        better here than an erratic long one, and the two are complementary
-        risk markers rather than alternatives. Because accepted SRI
-        calculators disagree on the same nights, read your own trend rather
-        than comparing the number with anyone else's; and crossing time zones
-        registers as irregularity even when your rhythm is steady in local
-        time.
+      <div class="mt-3 flex h-2 overflow-hidden rounded-full">
+        <span class="bg-[rgba(244,63,94,0.35)]" style="width: 71.6%"></span>
+        <span class="bg-[rgba(251,191,36,0.45)]" style="width: 15.7%"></span>
+        <span class="bg-[rgba(52,211,153,0.4)]" style="width: 12.7%"></span>
+      </div>
+      <div class="relative h-[13px]">
+        <span class="absolute top-0.5 h-[9px] w-0.5 bg-text-primary" style="left: 81%"></span>
+      </div>
+      <div class="relative h-3.5 font-mono text-[9.5px]">
+        <span class="absolute left-0 text-text-muted">0</span>
+        <span class="absolute -translate-x-1/2 text-warning" style="left: 71.6%">71.6</span>
+        <span class="absolute -translate-x-1/2 text-success-light" style="left: 87.3%">87.3</span>
+        <span class="absolute right-0 text-text-muted">100</span>
+      </div>
+      <p class="mt-3 text-[12.5px] leading-relaxed text-text-tertiary">
+        In Windred&rsquo;s sample the median was 81.0, marked, and half the
+        sample sat between 73.8 and 86.3. The least regular fifth scored below
+        71.6 and the most regular fifth above 87.3. Cribb&rsquo;s analysis of
+        UK Biobank put the median at 60.
       </p>
     </div>
+
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">
+      <strong class="text-text-primary">Why Verve doesn&rsquo;t put your score on that scale.</strong>
+      Those two medians come from the same biobank. When two widely used SRI
+      calculators were run over the same 73,794 adults, their scores differed
+      enough to change what the outcome models concluded (Czeisler,
+      <em>Sleep</em> 2026). A score only compares with scores from the same
+      calculation, so Verve reads yours against your own past months, and the
+      study figures stay here as context.
+    </p>
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">
+      <strong class="text-text-primary">It needs time.</strong> It takes at least five to seven days
+      of continuous sleep data to calculate. Related regularity scores built
+      from fewer than seven days carry measurable bias and don&rsquo;t compare
+      with longer recordings (Lok, <em>J Sleep Res</em> 2025). How long one
+      person&rsquo;s score takes to settle has no agreed answer yet.
+    </p>
+
+    <!-- ── How many nights ── -->
+    <h3 class="mt-9 text-[17px] font-semibold text-text-primary">How many nights each one needs</h3>
+    <div class="mt-3 overflow-x-auto rounded-2xl border border-white/8 bg-white/4 p-5 sm:px-[22px]">
+      <table class="w-full min-w-[420px] text-left text-[12.5px]">
+        <thead>
+          <tr class="border-b border-white/10 text-[10px] uppercase tracking-wide text-text-tertiary">
+            <th class="pb-2 pr-4 font-medium">Measure</th>
+            <th class="pb-2 pr-4 font-medium">Can be calculated from</th>
+            <th class="pb-2 font-medium">Worth trusting from</th>
+          </tr>
+        </thead>
+        <tbody class="text-text-secondary">
+          <tr class="border-b border-white/5"><td class="py-2 pr-4 font-semibold text-text-primary">Bedtime average</td><td class="py-2 pr-4 font-mono">2 to 3 nights</td><td class="py-2 font-mono text-success-light">3 nights <span class="text-text-tertiary">(7 for total sleep time)</span></td></tr>
+          <tr class="border-b border-white/5"><td class="py-2 pr-4 font-semibold text-text-primary">Drift</td><td class="py-2 pr-4 font-mono">two weekly averages</td><td class="py-2 font-mono text-success-light">two weeks</td></tr>
+          <tr class="border-b border-white/5"><td class="py-2 pr-4 font-semibold text-text-primary">Spread, both ways</td><td class="py-2 pr-4 font-mono">about 7 nights</td><td class="py-2 font-mono text-warning">41 to 65 nights</td></tr>
+          <tr><td class="py-2 pr-4 font-semibold text-text-primary">Sleep Regularity Index</td><td class="py-2 pr-4 font-mono">5 to 7 days</td><td class="py-2 font-mono text-text-tertiary">no agreed figure yet</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">
+      So the average can be trusted within days, and drift within a fortnight.
+      Spread and the regularity index stay provisional much longer. Verve
+      counts both as settled at 44 nights, about six weeks; for the regularity
+      index, where there is no agreed figure, that is Verve&rsquo;s own choice.
+    </p>
+
+    <!-- ── What these measures are not ── -->
+    <h3 class="mt-9 text-[17px] font-semibold text-text-primary">What these measures are not</h3>
+    <ul class="mt-3 list-disc space-y-1.5 pl-5 text-[14.5px] leading-[1.7] text-text-secondary">
+      <li><strong class="text-text-primary">Not hours.</strong> A steady six-hour sleeper can look more regular than an erratic eight-hour one. Timing and duration are separate markers, each linked with health in its own right.</li>
+      <li><strong class="text-text-primary">Not sleep quality.</strong> The regularity index sees only asleep or awake, not how deep the sleep was.</li>
+      <li><strong class="text-text-primary">Not travel-proof.</strong> They compare clock times, so crossing time zones reads as irregular even when your body&rsquo;s rhythm is steady.</li>
+    </ul>
+
+    <!-- ── In Verve ── -->
+    <h3 class="mt-9 text-[17px] font-semibold text-text-primary">In Verve</h3>
+    <p class="mt-3 text-[14.5px] leading-[1.7] text-text-secondary">
+      Verve reads the sleep your watch or ring writes to Apple Health and works
+      out all four measures the way this page describes.
+    </p>
+    <ul class="mt-3 list-disc space-y-1.5 pl-5 text-[14.5px] leading-[1.7] text-text-secondary">
+      <li>
+        <strong class="text-text-primary">The Sleep page</strong> keeps to numbers, under three
+        headings. <em>Bedtime average with drift</em>: your average bedtime
+        over the last seven nights, and how far it moved from the seven before,
+        in amber once the move passes 20 minutes. <em>Bedtime spread</em>:
+        night to night, and around your average, in green or amber against the
+        60-minute mark. <em>Sleep regularity index (SRI)</em>: the last 30
+        days, beside your own median. Until 44 nights are in, spread and the
+        index stay grey with a count toward 44.
+      </li>
+      <li>
+        <strong class="text-text-primary">Trends</strong> shows the same three cards. The Snapshot
+        sets this week&rsquo;s average bedtime against last week&rsquo;s, with
+        spread and the index as on the Sleep page. Over Time shows all three
+        for the period you pick, each with a thin line of how its number moved:
+        night by night, week by week, month by month or year by year. On the
+        spread and index lines, points resting on fewer than 44 nights are
+        hollow; on the months view, the index line also carries your median for
+        the year.
+      </li>
+    </ul>
+
+    <!-- ── Take-home ── -->
+    <div class="mt-8 rounded-2xl border border-accent/25 bg-accent/[0.06] p-5 sm:px-[22px]">
+      <p class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-accent-light">Take-home</p>
+      <p class="mt-2 text-[14.5px] leading-[1.7] text-text-secondary">
+        Start with the two you can trust soonest: your average bedtime, within
+        a few nights, and whether it is drifting, within two weeks. Give the
+        spread and the regularity index about six weeks, then read them against
+        yourself.
+      </p>
+    </div>
+
     <div id="connect-wearables" class="mt-4 scroll-mt-8 rounded-2xl border border-white/8 bg-white/4 p-6">
       <p class="text-sm leading-relaxed text-text-secondary">
         <strong class="text-text-primary">Connecting Oura, Whoop or Garmin.</strong>
