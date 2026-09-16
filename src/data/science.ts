@@ -156,14 +156,14 @@ export const SLEEP_RHYTHM_SECTION: Citation[] = [
   {
     title: "Windred et al — Sleep regularity vs sleep duration, SLEEP 2024",
     summary:
-      "60,977 UK Biobank participants wearing accelerometers for a week, followed for around 7 years. The Sleep Regularity Index — the chance of being in the same state, asleep or awake, at any two clock times 24 hours apart — predicted all-cause mortality more strongly than sleep duration did. The four most regular quintiles carried 20–48% lower risk than the least regular. The sample median was 81.0, which is why Verve treats 81 as ordinary rather than as a shortfall, and the 25th and 75th percentiles (71.6 and 87.3) are the band edges the dial draws.",
+      "60,977 UK Biobank adults wore wrist accelerometers for a week and were followed for a mean of 6.3 years, up to 7.8. The Sleep Regularity Index predicted all-cause mortality more strongly than sleep duration did: the four most regular fifths had 20 to 48 per cent lower risk than the least regular fifth. The median score was 81.0, with half the sample between 73.8 and 86.3. The least regular fifth scored below 71.6 and the most regular fifth above 87.3.",
     url: "https://doi.org/10.1093/sleep/zsad253",
     color: "#6366f1",
   },
   {
     title: "AHA 2025 — Multidimensional Sleep Health scientific statement",
     summary:
-      "The American Heart Association's scientific statement names regularity as one of the core dimensions of sleep health. Its suggested way of measuring it is NOT the Sleep Regularity Index — it is the night-to-night standard deviation of sleep timing, commonly with a mark at 60 minutes. That is the number Verve shows in minutes beneath the score, and it is the one a guideline actually stands behind. The statement presents regularity as a research and clinical concept, not tied to any commercial device.",
+      "The American Heart Association's statement describes sleep health in seven dimensions: duration, continuity, timing, regularity, daytime functioning, architecture and the absence of sleep disorders. For regularity it lists within-person variability, such as the standard deviation of sleep timing or duration, alongside rest-activity rhythm measures and social jet lag. Its table of commonly used cut-points gives a standard deviation of 60 minutes or less, and the text notes there is no agreement on which thresholds are best. Verve draws its bedtime spread against that 60-minute mark. The statement does not mention the Sleep Regularity Index.",
     url: "https://doi.org/10.1161/hcq.0000000000000139",
     color: "#4f46e5",
   },
@@ -179,7 +179,7 @@ export const SLEEP_RHYTHM_SECTION: Citation[] = [
     title: "Why your score is not comparable with anyone else's",
     summary:
       "The 2026 RIRI statement applied two accepted open-source SRI calculators, sleepreg and GGIR, to the same 73,794-adult accelerometer dataset. They produced meaningfully different SRI values — different enough to change how clinical outcome models read — and a 14-item reporting standard came out of it. So SRI is a method, not a standard. Verve states its own: 1-minute epochs, sleep taken from Apple Health whichever device wrote it, naps included, everything outside a recorded sleep interval treated as awake, local clock times compared, and both partial edge days of the window dropped. Read your own trend over weeks; do not compare the number with a friend's.",
-    url: "https://doi.org/10.1093/sleep/zsad253",
+    url: "https://doi.org/10.1093/sleep/zsaf299",
     color: "#6366f1",
     isCommentary: true,
   },

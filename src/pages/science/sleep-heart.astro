@@ -123,7 +123,7 @@ const againstLevel = [
       </p>
       <div slot="panel">
         <p class="font-mono text-[9px] uppercase tracking-[0.1em] text-text-tertiary">Regularity</p>
-        <!-- Bands are percentiles of the UK Biobank sample, not guideline lines. -->
+        <!-- Bands are quintile boundaries of the UK Biobank sample, not guideline lines. -->
         <div class="mt-2.5 flex h-2 overflow-hidden rounded-full">
           <span class="bg-[rgba(244,63,94,0.35)]" style="width: 71.6%"></span>
           <span class="bg-[rgba(251,191,36,0.45)]" style="width: 15.7%"></span>
@@ -139,8 +139,10 @@ const againstLevel = [
           <span class="absolute right-0 text-text-muted">100</span>
         </div>
         <p class="mt-2.5 text-[11px] leading-relaxed text-text-tertiary">
-          The marker is the UK Biobank median, 81.0. Bands are percentiles of
-          that sample, not lines a guideline drew.
+          Where 60,977 UK Biobank adults fell (Windred 2024): the least regular
+          fifth below 71.6, the most regular fifth above 87.3, median 81.0. A
+          different calculation from Verve&rsquo;s, so this is context, not a
+          scale for your score.
         </p>
       </div>
     </SplitCard>
@@ -150,10 +152,12 @@ const againstLevel = [
       <p class="text-sm leading-relaxed text-text-secondary">
         Verve leads with the <strong class="text-text-primary">spread of your
         bedtime in minutes</strong>: how far it moves from one night to the
-        next. That is the measure the 2025 AHA scientific statement names for
-        regularity, it carries a real mark at
-        <strong class="text-text-primary">60 minutes</strong>, and it is in a
-        unit you can act on tonight. Clock times are treated as angles on a
+        next. Within-person variability in sleep timing is one of the
+        regularity measures the 2025 AHA scientific statement lists, and
+        <strong class="text-text-primary">60 minutes</strong> is the cut-point
+        its table gives as commonly used &mdash; the text adds that there is no
+        agreement on the best threshold. It is in a unit you can act on
+        tonight. Clock times are treated as angles on a
         24-hour circle &mdash; a plain average would place 23:50 and 00:10
         nearly a full day apart and report the steadiest sleepers as the most
         erratic.
@@ -177,15 +181,17 @@ const againstLevel = [
         excluded, the same definition Apple Health uses for &ldquo;time
         asleep&rdquo;. <em>Bedtime drift</em> is the night-to-night spread of
         the time you fell asleep, in minutes, over your recent nights; under
-        <strong class="text-text-primary">60</strong> is the mark the 2025 AHA
-        statement uses. The <em>regularity index</em> is the Sleep Regularity
+        <strong class="text-text-primary">60</strong> is the cut-point the 2025
+        AHA statement&rsquo;s table gives as commonly used. The <em>regularity index</em> is the Sleep Regularity
         Index, 0 to 100, with its bands printed on the bar where they fall:
         below <strong class="text-text-primary">71.6</strong> irregular,
         <strong class="text-text-primary">71.6&ndash;87.3</strong> moderately
         irregular, above <strong class="text-text-primary">87.3</strong>
-        regular. Those cut-points are the 25th and 75th percentiles of the UK
-        Biobank sample, which is why they are printed to a decimal: they are
-        where a cohort fell, not lines a guideline drew.
+        regular. Those cut-points are the edges of the least and most regular
+        fifths of the UK Biobank sample &mdash; the 20th and 80th percentiles
+        &mdash; which is why they are printed to a decimal: they are where a
+        cohort fell, not lines a guideline drew. The middle half of that
+        sample sat between 73.8 and 86.3.
       </p>
       <p class="mt-4 text-sm leading-relaxed text-text-secondary">
         <strong class="text-text-primary">In Trends, under Over Time.</strong>
