@@ -58,7 +58,15 @@ body {
 }
 
 /* AccentGlow — the indigo top glow from the app's hero cards, centred above
-   the fold so the light source feels off-screen, exactly as in the app. */
+   the fold so the light source feels off-screen, exactly as in the app.
+   The glow is 56rem wide, so on a phone it reaches past both edges; the
+   host clips it on the x axis, which unlike overflow: hidden does not make
+   the host a scroll container. Without this, My health scrolled sideways
+   on a phone. */
+.vrv-glow {
+  overflow-x: clip;
+}
+
 .vrv-glow::before {
   content: "";
   position: absolute;
