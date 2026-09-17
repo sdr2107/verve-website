@@ -1,0 +1,71 @@
+---
+/**
+ * The hero's one animation: the week's climb draws itself over 1.6 s, and
+ * each flag plants as the line crosses it. The figures are a sample week,
+ * and the caption says so.
+ *
+ * It is the Activity page's Weekly Ascent, drawn the way the app draws it:
+ * the line is aerobic minutes, and a flag is planted where it passes 150,
+ * 300 and 560. A reader who has asked for reduced motion gets the finished
+ * drawing at once.
+ */
+---
+
+<div class="rounded-2xl border border-white/10 bg-canvas/85 px-6 pt-[22px] pb-[18px]">
+  <div class="flex items-baseline justify-between">
+    <span class="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-text-tertiary">This week</span>
+    <span class="font-mono text-[11px] text-text-tertiary">aerobic minutes</span>
+  </div>
+  <div class="mt-2.5 flex items-baseline gap-2">
+    <span class="text-[40px] font-extrabold tracking-[-0.03em] text-success">318</span>
+    <span class="text-[13px] text-text-secondary">of a 560-minute summit</span>
+  </div>
+  <svg viewBox="0 0 520 190" class="mt-3 block h-auto w-full" aria-hidden="true">
+    <line x1="0" y1="160" x2="520" y2="160" stroke="rgba(255,255,255,0.08)" />
+    <polygon class="vrv-ascent-fill" fill="rgba(52,211,153,0.12)" points="12,152 90,132 170,110 250,84 330,58 410,36 488,24 488,158 12,158" />
+    <polyline class="vrv-ascent-line" fill="none" stroke="#34d399" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" points="12,152 90,132 170,110 250,84 330,58 410,36 488,24" />
+    <g class="vrv-ascent-flag vrv-ascent-f1">
+      <line x1="196" y1="160" x2="196" y2="98" stroke="#FBBF24" stroke-width="1.4" stroke-dasharray="3 3" />
+      <text x="202" y="96" font-family="JetBrains Mono, ui-monospace, monospace" font-size="11" fill="#FBBF24">150</text>
+    </g>
+    <g class="vrv-ascent-flag vrv-ascent-f2">
+      <line x1="330" y1="160" x2="330" y2="52" stroke="#06B6D4" stroke-width="1.4" stroke-dasharray="3 3" />
+      <text x="336" y="50" font-family="JetBrains Mono, ui-monospace, monospace" font-size="11" fill="#06B6D4">300</text>
+    </g>
+    <g class="vrv-ascent-flag vrv-ascent-f3">
+      <line x1="488" y1="160" x2="488" y2="18" stroke="#8B5CF6" stroke-width="1.4" stroke-dasharray="3 3" />
+      <text x="452" y="14" font-family="JetBrains Mono, ui-monospace, monospace" font-size="11" fill="#8B5CF6">560</text>
+    </g>
+    <g font-family="JetBrains Mono, ui-monospace, monospace" font-size="10" fill="#475569">
+      <text x="8" y="182">M</text><text x="88" y="182">T</text><text x="168" y="182">W</text>
+      <text x="248" y="182">T</text><text x="328" y="182">F</text><text x="408" y="182">S</text>
+      <text x="486" y="182">S</text>
+    </g>
+  </svg>
+  <p class="mt-2 font-mono text-[10.5px] text-text-tertiary">Sample figures.</p>
+</div>
+
+<style is:global>
+  /* The polyline is about 494 units long; the dash starts at 500 so the
+     whole line is hidden at t=0 and none of the 1.6 s is spent on nothing. */
+  @keyframes vrv-ascent-draw { to { stroke-dashoffset: 0; } }
+  @keyframes vrv-ascent-plant { to { opacity: 1; transform: translateY(0); } }
+  .vrv-ascent-line {
+    stroke-dasharray: 500;
+    stroke-dashoffset: 500;
+    animation: vrv-ascent-draw 1.6s cubic-bezier(0.4, 0, 0.2, 1) 0.3s forwards;
+  }
+  .vrv-ascent-fill { opacity: 0; animation: vrv-ascent-plant 0.8s ease 1.5s forwards; }
+  .vrv-ascent-flag { opacity: 0; transform: translateY(6px); animation: vrv-ascent-plant 0.45s ease forwards; }
+  .vrv-ascent-f1 { animation-delay: 0.85s; }
+  .vrv-ascent-f2 { animation-delay: 1.25s; }
+  .vrv-ascent-f3 { animation-delay: 1.75s; }
+  @media (prefers-reduced-motion: reduce) {
+    .vrv-ascent-line, .vrv-ascent-fill, .vrv-ascent-flag {
+      animation: none;
+      stroke-dashoffset: 0;
+      opacity: 1;
+      transform: none;
+    }
+  }
+</style>

@@ -1,183 +1,281 @@
 ---
+/**
+ * The landing page, in the order a first-time visitor needs things:
+ *
+ *   the promise, in big type, with the week's climb drawing itself beside it;
+ *   the three counts the Science page prints, read from the same file;
+ *   what the evidence says — the two cited claims, and the promise itself;
+ *   where the numbers land in the app;
+ *   what Verve tracks — five things, one line each;
+ *   every number named, with one marker's card as the proof.
+ *
+ * Nothing here is typed that the Science page counts. The figures under the
+ * hero, the numbers in the closing line and the ApoB card all come from the
+ * data the Science page is built from, so the two pages cannot disagree.
+ *
+ * "What Verve tracks" says what the app does, in one line per thing, with no
+ * counts and no links. The index of the science — subjects, topics,
+ * citations — is the Science hub's job, and the two sections used to be
+ * near-copies of each other.
+ */
 import Layout from "../layouts/Layout.astro";
-import ContourTexture from "../components/ContourTexture.astro";
-import StatCallout from "../components/StatCallout.astro";
-import PillarCard from "../components/PillarCard.astro";
-import Footer from "../components/Footer.astro";
 import SiteHeader from "../components/SiteHeader.astro";
+import Footer from "../components/Footer.astro";
+import Ascent from "../components/Ascent.astro";
+import AppGlimpses from "../components/science/AppGlimpses.astro";
 import { APP_STORE_URL } from "../data/site";
+import { SUBJECTS, COUNTS, type SubjectSlug } from "../data/scienceTopics";
+import { BODY_MARKERS } from "../data/bodyMarkers";
 
-const pillars = [
+/** The three figures the Science page prints. Counted there, never typed here. */
+const figures = [
+  { n: COUNTS.citations, label: "citations" },
+  { n: COUNTS.topics, label: "topics" },
+  { n: COUNTS.markers, label: "body markers" },
+];
+
+/**
+ * The two cited claims. Both studies are in CRF_SECTION (data/science.ts),
+ * where the Fitness pages cite them; the figures are the studies' own.
+ */
+const evidence = [
   {
-    eyebrow: "The Ascent",
-    title: "Your week, drawn as a climb",
-    description:
-      "Moderate-to-vigorous minutes climb against WHO, personal, and AHA altitude lines — a flag plants the moment you cross each one. No ring, no streak to break.",
-    accent: "var(--color-cyan)",
+    value: "13%",
+    claim: "lower all-cause mortality for every extra MET of capacity",
+    source: "Kodama et al, JAMA 2009 · 33 studies, 102,980 people",
   },
   {
-    eyebrow: "Cardiorespiratory Fitness",
-    title: "6 validated test methods",
-    description:
-      "Cooper, 1.5-mile run, Rockport walk, CPET and more — classified against ACSM/Cooper norms under 40, Cleveland Clinic treadmill data (Mandsager 2018) at 40 and over.",
-    accent: "var(--color-met-hero)",
-  },
-  {
-    eyebrow: "Zone 2 Training",
-    title: "Your own heart-rate band, not a guess",
-    description:
-      "Karvonen heart-rate-reserve zones computed from your age, resting HR, and fitness — not a fixed 220-minus-age formula.",
-    accent: "var(--color-accent)",
-  },
-  {
-    eyebrow: "Heart Health",
-    title: "ApoB · LDL-C · Lp(a) · hs-CRP",
-    description:
-      "Screening bands from ESC/EAS, NCEP ATP III, and AHA/CDC guidelines — every threshold traced to its source, none of it a treatment target.",
-    accent: "var(--color-danger)",
-  },
-  {
-    eyebrow: "Body Phenotyping",
-    title: "Metabolic health + the Functional Combine",
-    description:
-      "Metabolic syndrome screening (Alberti 2009) alongside a 6-test functional battery — grip, balance, chair stand, gait speed, and SPPB.",
-    accent: "var(--color-violet)",
-  },
-  {
-    eyebrow: "The Grade",
-    title: "This week vs. your own usual",
-    description:
-      "Two bars, one sentence — no percentage, no black-box score, no comparison to anyone but you.",
-    accent: "var(--color-success)",
+    value: "5×",
+    claim: "the difference in all-cause mortality from the Low fitness tier to Elite",
+    source: "Mandsager et al, JAMA Network Open 2018 · 122,007 patients",
   },
 ];
+
+/** What the app shows you, one line per subject. Product copy, not the science index. */
+const LINE: Record<SubjectSlug, string> = {
+  fitness: "Your fitness as a number, in METs, and the tier it puts you in.",
+  movement: "Your week’s activity: aerobic minutes, Zone 2, strength, steps, and time sitting.",
+  "sleep-heart": "When you sleep and how steadily, your resting heart rate, and how fast it settles after effort.",
+  body: "Blood pressure, lipids, waist and muscle, each against its band, with when to repeat the test.",
+};
+
+/** The four subjects, and Trends — which is not a science subject, but is the fifth thing the app does. */
+const tracks = [
+  ...SUBJECTS.map((s) => ({
+    label: s.label,
+    line: LINE[s.slug],
+    accent: s.accent,
+    tint: s.accentTint,
+    icon: s.icon,
+    ring: s.slug === "body",
+  })),
+  {
+    label: "Trends",
+    line: "Each number over weeks, months and years, against your own usual.",
+    accent: "#8B5CF6",
+    tint: "rgba(139,92,246,0.14)",
+    icon: "M3 17l5-6 4 3 4-6 5 4M3 21h18",
+    ring: false,
+  },
+];
+
+/** The proof card: one marker, exactly as the Body page prints it. */
+const apoB = BODY_MARKERS.find((m) => m.label === "ApoB");
+if (!apoB || !apoB.retest?.interval) throw new Error("index: the ApoB card needs the marker and its retest interval");
+const apoBands = apoB.bands.map((b) => {
+  const [name, range] = b.split(": ");
+  return { name, range };
+});
+const apoSource = apoB.citation.split(". ")[0];
 ---
 
 <Layout
-  title="Verve — Fitness tracking built on what predicts how long you live"
-  description="Verve tracks MET-hours and cardiorespiratory fitness — the metrics linked to mortality risk in peer-reviewed research — with every threshold traced to a cited source."
+  title="Verve — Evidence-based fitness tracking"
+  description="Verve reads your fitness, movement, sleep and heart, and body against the thresholds clinicians use, shows how each one moves over weeks and months, and names the study behind every line it draws."
 >
   <SiteHeader />
 
-  <!-- ── Hero ────────────────────────────────────────────────────────── -->
-  <section class="vrv-glow relative overflow-hidden px-6 pt-16 pb-24 sm:px-10 sm:pt-24 sm:pb-32">
-    <div class="relative mx-auto max-w-3xl text-center">
-      <span class="font-mono text-xs font-semibold uppercase tracking-widest text-accent-light">
-        Evidence-based fitness tracking
-      </span>
-      <h1 class="mt-5 text-4xl font-bold tracking-tight text-text-primary sm:text-6xl">
-        Track the number that predicts<br class="hidden sm:block" /> how long you live.
-      </h1>
-      <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-text-secondary">
-        Verve measures MET-hours and cardiorespiratory fitness — the same metrics
-        used to assess mortality risk in peer-reviewed research — with every
-        threshold in the app traced to a cited source.
-      </p>
-      <div class="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-        <a
-          href={APP_STORE_URL}
-          class="rounded-full bg-text-primary px-7 py-3.5 text-sm font-semibold text-canvas transition-opacity hover:opacity-90"
-        >
-          Download on the App Store
-        </a>
-        <a
-          href="#pillars"
-          class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
-        >
-          See what it tracks ↓
-        </a>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── Trust stats ─────────────────────────────────────────────────── -->
-  <section class="border-y border-white/7 px-6 py-14 sm:px-10">
-    <div class="mx-auto grid max-w-4xl grid-cols-1 gap-10 sm:grid-cols-3 sm:gap-6">
-      <StatCallout
-        value="13%"
-        label="lower all-cause mortality per +1 MET improvement"
-        source="Kodama et al, JAMA 2009"
-      />
-      <StatCallout
-        value="5×"
-        label="mortality difference, Low to Elite fitness"
-        source="Mandsager et al, Cleveland Clinic 2018"
-      />
-      <StatCallout
-        value="23"
-        label="peer-reviewed studies behind the app's thresholds"
-        source="Verve Science page"
-      />
-    </div>
-  </section>
-
-  <!-- ── Pillars ─────────────────────────────────────────────────────── -->
-  <section id="pillars" class="px-6 py-20 sm:px-10 sm:py-28">
-    <div class="mx-auto max-w-5xl">
-      <div class="mx-auto max-w-2xl text-center">
-        <h2 class="text-3xl font-bold tracking-tight text-text-primary sm:text-4xl">
-          What Verve actually tracks
+  <!-- ── Hero: the promise in big type, the number under it, the climb beside ── -->
+  <section class="vrv-glow relative overflow-hidden px-6 pt-12 pb-10 sm:px-10 lg:pt-[72px] lg:pb-14">
+    <div class="relative mx-auto grid max-w-6xl gap-12 lg:grid-cols-2 lg:items-center">
+      <div class="flex flex-col gap-5 lg:gap-[22px]">
+        <h1 class="text-[40px] font-extrabold leading-[1.04] tracking-[-0.03em] text-text-primary sm:text-5xl lg:text-[64px] lg:leading-[1.02] lg:tracking-[-0.035em]">
+          Evidence-based fitness tracking.
+        </h1>
+        <h2 class="text-xl font-medium leading-snug tracking-[-0.01em] text-[#c7d2fe] sm:text-[26px] sm:leading-[1.25] sm:tracking-[-0.015em]">
+          Track the number that predicts how long you live.
         </h2>
-        <p class="mt-4 text-base leading-relaxed text-text-secondary">
-          Six pillars, each backed by named, checkable research — not a proprietary
-          score nobody can audit.
+        <p class="max-w-[540px] text-[15px] leading-[1.65] text-text-secondary sm:text-[17px]">
+          Verve reads your fitness, movement, sleep and heart, and body against
+          the thresholds clinicians use, shows how each one moves over weeks and
+          months, and names the study behind every line it draws.
         </p>
-      </div>
-      <div class="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {pillars.map((p) => (
-          <PillarCard eyebrow={p.eyebrow} title={p.title} description={p.description} accent={p.accent} />
-        ))}
-      </div>
-    </div>
-  </section>
-
-  <!-- ── Every number, cited ─────────────────────────────────────────── -->
-  <section class="px-6 py-20 sm:px-10 sm:py-28">
-    <div class="relative mx-auto max-w-5xl overflow-hidden rounded-3xl border border-white/8 bg-white/4 px-8 py-12 sm:px-14 sm:py-16">
-      <ContourTexture />
-      <div class="relative grid grid-cols-1 items-center gap-10 lg:grid-cols-2">
-        <div>
-          <span class="font-mono text-xs font-semibold uppercase tracking-widest text-accent-light">
-            No unciteable numbers
-          </span>
-          <h2 class="mt-4 text-3xl font-bold tracking-tight text-text-primary">
-            Every threshold, traced to its source.
-          </h2>
-          <p class="mt-4 text-base leading-relaxed text-text-secondary">
-            No proprietary "recovery" or "strain" score you can't check the math
-            on &mdash; every threshold links to the paper it came from.
-          </p>
+        <div class="mt-1 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-[18px]">
           <a
-            href="/science"
-            class="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-accent-light hover:text-text-primary"
+            href={APP_STORE_URL}
+            class="inline-flex items-center justify-center rounded-full bg-text-primary px-[22px] py-3 text-sm font-semibold text-canvas transition-opacity hover:opacity-90"
           >
-            Read the full evidence base &rarr;
+            Download on the App Store
+          </a>
+          <a href="/science" class="text-center text-sm font-medium text-text-secondary transition-colors hover:text-text-primary">
+            See the evidence &rarr;
           </a>
         </div>
-        <div class="rounded-2xl border border-white/8 bg-canvas-2/60 p-6">
-          <div class="flex items-center justify-between border-b border-white/7 pb-4">
-            <span class="text-sm font-semibold text-text-primary">ApoB</span>
-            <span class="font-mono text-xs text-text-tertiary">mg/dL</span>
+      </div>
+
+      <Ascent />
+    </div>
+  </section>
+
+  <!-- ── The counted figures: the same three the Science page prints ── -->
+  <section class="border-y border-white/[0.07] px-6 py-7 sm:py-[34px]">
+    <dl class="mx-auto flex items-center justify-center gap-7 sm:gap-14">
+      {figures.map((f, i) => (
+        <>
+          {i > 0 && <div class="h-9 w-px shrink-0 bg-white/10 sm:h-11" aria-hidden="true"></div>}
+          <div class="text-center">
+            <dt class="sr-only">{f.label}</dt>
+            <dd>
+              <span class="block font-mono text-[30px] font-bold text-text-primary sm:text-[40px]">{f.n}</span>
+              <span class="mt-0.5 block text-xs text-text-tertiary sm:text-[13px]">{f.label}</span>
+            </dd>
           </div>
-          <div class="mt-4 space-y-2 text-sm">
-            <div class="flex justify-between">
-              <span class="text-text-secondary">Optimal</span>
-              <span class="font-mono text-text-primary">&le; 79</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-text-secondary">Borderline</span>
-              <span class="font-mono text-text-primary">80&ndash;99</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-text-secondary">Elevated</span>
-              <span class="font-mono text-text-primary">&ge; 100</span>
-            </div>
+        </>
+      ))}
+    </dl>
+  </section>
+
+  <!-- ── What the evidence says: the two real stats, cited, and the promise in place of the old count ── -->
+  <section class="px-6 pt-10 pb-6 sm:px-10 sm:pt-16">
+    <div class="mx-auto max-w-6xl">
+      <span class="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-accent-light">
+        What the evidence says
+      </span>
+      <div class="mt-[18px] grid gap-3.5 sm:grid-cols-3 sm:gap-4">
+        {evidence.map((e) => (
+          <div class="rounded-2xl border border-white/8 bg-white/4 px-5 py-5 sm:px-[26px] sm:py-6">
+            <p class="font-mono text-[40px] font-bold tracking-[-0.02em] text-text-primary sm:text-[48px]">{e.value}</p>
+            <p class="mt-1.5 text-[15px] leading-normal text-text-secondary">{e.claim}</p>
+            <p class="mt-3.5 font-mono text-[11px] text-text-tertiary">{e.source}</p>
           </div>
-          <p class="mt-4 border-t border-white/7 pt-4 text-xs leading-relaxed text-text-muted">
-            ESC/EAS 2019 Guidelines for the Management of Dyslipidaemias &mdash;
-            Mach F et al, Eur Heart J 2020;41:111&ndash;188.
+        ))}
+        <a
+          href="/science"
+          class="flex flex-col justify-between rounded-2xl border border-accent/30 bg-accent/[0.06] px-5 py-5 transition-colors hover:border-accent/50 sm:px-[26px] sm:py-6"
+        >
+          <span>
+            <span class="block text-[22px] font-bold leading-tight tracking-[-0.02em] text-text-primary">
+              Every threshold names its study.
+            </span>
+            <span class="mt-2 block text-sm leading-relaxed text-text-secondary">
+              {COUNTS.topics} topics, {COUNTS.citations} citations, the whole evidence base in the open.
+            </span>
+          </span>
+          <span class="mt-4 block text-sm font-semibold text-accent-light">Read the evidence base &rarr;</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Where the numbers land: here from the Science hub, because it shows
+       the app, not the science, and belongs where a visitor decides whether
+       to download. ─────────────────────────────────────────────────────── -->
+  <section class="px-6 pt-11 pb-6 sm:px-10 sm:pt-14">
+    <div class="mx-auto max-w-6xl">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">Where the numbers land</h2>
+          <p class="mt-2 max-w-xl text-[15px] leading-relaxed text-text-secondary">
+            Three pages. Each reading on them is one of the studies above, put
+            where you will actually look at it.
           </p>
         </div>
+        <div class="flex shrink-0 items-center gap-2">
+          <span class="rounded-full border border-white/16 px-4 py-2 text-xs font-medium text-text-primary">
+            iPhone
+          </span>
+          <span class="rounded-full border border-white/8 bg-white/4 px-4 py-2 text-xs font-medium text-text-secondary">
+            Android &middot; soon
+          </span>
+        </div>
+      </div>
+
+      <AppGlimpses />
+
+      <p class="mt-6 font-mono text-[11px] text-text-muted">Sample figures throughout.</p>
+    </div>
+  </section>
+
+  <!-- ── What Verve tracks: five things the app does, one line each. No
+       counts, no links; the index stays on /science. ───────────────────── -->
+  <section class="px-6 pt-11 pb-6 sm:px-10 sm:pt-16">
+    <div class="mx-auto max-w-6xl">
+      <div class="mx-auto max-w-[620px] text-center">
+        <h2 class="text-[26px] font-bold tracking-tight text-text-primary sm:text-[32px]">What Verve tracks</h2>
+        <p class="mt-2.5 text-[15px] leading-relaxed text-text-secondary">Five things, kept in one place.</p>
+      </div>
+      <ul class="mt-8 grid gap-3.5 sm:grid-cols-2 lg:mt-9 lg:grid-cols-5">
+        {tracks.map((t) => (
+          <li class="flex items-center gap-3.5 rounded-2xl border border-white/8 bg-white/4 p-4 lg:flex-col lg:items-start lg:gap-2.5 lg:p-5">
+            <span
+              class="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px]"
+              style={`background: ${t.tint}`}
+            >
+              <svg
+                width="18" height="18" viewBox="0 0 24 24" fill="none"
+                stroke={t.accent} stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+              >
+                {t.ring && <circle cx="12" cy="5" r="2.5" />}
+                <path d={t.icon} />
+              </svg>
+            </span>
+            <span class="min-w-0">
+              <span class="block text-[15px] font-semibold text-text-primary lg:text-base">{t.label}</span>
+              <span class="mt-0.5 block text-[12.5px] leading-relaxed text-text-tertiary lg:mt-1.5">{t.line}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── Every number named: the promise, kept, without the dig ─────────── -->
+  <section class="px-6 pt-11 pb-20 sm:px-10 sm:pt-16 sm:pb-28">
+    <div class="mx-auto grid max-w-6xl gap-8 rounded-2xl border border-white/8 bg-white/4 px-5 py-7 sm:px-14 sm:py-12 lg:grid-cols-2 lg:items-center lg:gap-10">
+      <div class="flex flex-col gap-3.5">
+        <span class="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-accent-light">
+          Every number named
+        </span>
+        <h2 class="text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">
+          Every threshold, traced to its source.
+        </h2>
+        <p class="text-[15px] leading-[1.65] text-text-secondary">
+          Every line Verve draws links to the paper it came from. Read the whole
+          evidence base: {COUNTS.topics} topics, {COUNTS.citations} studies,
+          {COUNTS.markers} body markers with the band each is screened against.
+        </p>
+        <a href="/science" class="text-sm font-semibold text-accent-light transition-colors hover:text-text-primary">
+          Read the full evidence base &rarr;
+        </a>
+      </div>
+      <div class="rounded-2xl border border-white/8 bg-canvas-2/60 p-[22px]">
+        <div class="flex items-center justify-between border-b border-white/7 pb-3.5">
+          <span class="text-sm font-semibold text-text-primary">{apoB.label}</span>
+          <span class="font-mono text-xs text-text-tertiary">{apoB.units[0]}</span>
+        </div>
+        <dl class="mt-3.5 space-y-2 text-sm">
+          {apoBands.map((b, i) => (
+            <div class="flex justify-between">
+              <dt class="text-text-secondary">{b.name}</dt>
+              <dd class:list={["font-mono", i === 0 ? "text-success-light" : "text-text-primary"]}>{b.range}</dd>
+            </div>
+          ))}
+          <div class="flex justify-between">
+            <dt class="text-text-secondary">Repeat</dt>
+            <dd class="font-mono text-success-light">{apoB.retest.interval}</dd>
+          </div>
+        </dl>
+        <p class="mt-3.5 border-t border-white/7 pt-3.5 text-xs leading-relaxed text-text-tertiary">{apoSource}.</p>
       </div>
     </div>
   </section>

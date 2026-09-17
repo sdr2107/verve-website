@@ -3,8 +3,9 @@
  * /science — the hub.
  *
  * This was one 1,200-line page carrying all twenty topics. It is now four
- * subject pages and this, which is the way in: the map, the four subjects,
- * where the readings land in the app, and the full index.
+ * subject pages and this, which is the way in: the map, the four subjects
+ * and the full index. (Where the readings land in the app is on the landing
+ * page now; it shows the app, not the science.)
  *
  * It stays a real page at the same address for a reason beyond the reader.
  * Ten anchors are linked from inside the app — /science#zone-2 and the rest —
@@ -17,7 +18,6 @@ import Layout from "../layouts/Layout.astro";
 import Footer from "../components/Footer.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import CrfMapPreview from "../components/science/CrfMapPreview.astro";
-import AppGlimpses from "../components/science/AppGlimpses.astro";
 import { SUBJECTS, TOPICS, topicsFor, subjectCounts, COUNTS, ANCHOR_PAGE } from "../data/scienceTopics";
 
 /** The three figures under the opening line. Counted, never typed. */
@@ -186,35 +186,6 @@ const figures = [
           );
         })}
       </div>
-    </div>
-  </section>
-
-  <!-- ── Where the readings land in the app. Framed by hairlines, the way
-       the board has it: this section is a break in the argument, not another
-       step in it. ─────────────────────────────────────────────────────── -->
-  <section class="px-6 pb-20 sm:px-10">
-    <div class="mx-auto max-w-5xl border-y border-white/[0.07] py-11">
-      <div class="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h2 class="text-2xl font-bold text-text-primary sm:text-3xl">Where the numbers land</h2>
-          <p class="mt-2 max-w-xl text-[15px] leading-relaxed text-text-secondary">
-            Three pages. Each reading on them is one of the studies above, put
-            where you will actually look at it.
-          </p>
-        </div>
-        <div class="flex shrink-0 items-center gap-2">
-          <span class="rounded-full border border-white/16 bg-white/4 px-4 py-2 text-xs font-medium text-text-primary">
-            iPhone
-          </span>
-          <span class="rounded-full border border-white/8 bg-white/4 px-4 py-2 text-xs font-medium text-text-secondary">
-            Android &middot; soon
-          </span>
-        </div>
-      </div>
-
-      <AppGlimpses />
-
-      <p class="mt-6 font-mono text-[11px] text-text-muted">Sample figures throughout.</p>
     </div>
   </section>
 
