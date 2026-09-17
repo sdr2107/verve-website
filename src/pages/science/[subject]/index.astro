@@ -1,0 +1,142 @@
+---
+/**
+ * /science/<subject> — the subject as an index.
+ *
+ * One row per topic, each its own page. Everything here that could drift —
+ * the topic list, "Subject 2 of 4", the counts, the next subject — is read
+ * from scienceTopics.ts, so the four indexes cannot disagree with the hub
+ * or with each other.
+ *
+ * The page used to be the four subjects' content in one scroll, and the
+ * app's forwarding sent /science#zone-2 here with the hash kept. A link
+ * that still arrives that way is forwarded on to the topic's page before
+ * the first paint, from the same map the hub uses.
+ */
+import Layout from "../../../layouts/Layout.astro";
+import SiteHeader from "../../../components/SiteHeader.astro";
+import Footer from "../../../components/Footer.astro";
+import {
+  SUBJECTS,
+  topicsFor,
+  subjectFor,
+  subjectIndex,
+  subjectNeighbours,
+  subjectCounts,
+  topicHref,
+  ANCHOR_TARGET,
+  type SubjectSlug,
+} from "../../../data/scienceTopics";
+
+export function getStaticPaths() {
+  return SUBJECTS.map((s) => ({ params: { subject: s.slug } }));
+}
+
+const subject = Astro.params.subject as SubjectSlug;
+const meta = subjectFor(subject);
+const topics = topicsFor(subject);
+const counts = subjectCounts(subject);
+const { next } = subjectNeighbours(subject);
+const position = subjectIndex(subject) + 1;
+
+/** Only this subject's anchors: the hub handles the rest. */
+const forward = Object.fromEntries(
+  Object.entries(ANCHOR_TARGET).filter(([, url]) => url.startsWith(`/science/${subject}/`)),
+);
+---
+
+<Layout title={meta.metaTitle} description={meta.metaDescription}>
+  <script is:inline define:vars={{ forward }}>
+    (function () {
+      var hash = window.location.hash.slice(1);
+      if (hash && forward[hash]) window.location.replace(forward[hash]);
+    })();
+  </script>
+
+  <SiteHeader
+    current="science"
+    crumb={[{ href: "/science", label: "Science" }, { label: meta.label }]}
+    back={{ href: "/science", label: "Science" }}
+    position={`subject ${position} of ${SUBJECTS.length}`}
+  />
+
+  <main class="mx-auto max-w-3xl px-6 pt-7 pb-24 sm:px-10 sm:pt-12">
+    <span
+      class="flex h-[38px] w-[38px] items-center justify-center rounded-[11px]"
+      style={`background: ${meta.accentTint}`}
+    >
+      <svg
+        width="20" height="20" viewBox="0 0 24 24" fill="none"
+        stroke={meta.accent} stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+      >
+        {subject === "body" && <circle cx="12" cy="5" r="2.5" />}
+        <path d={meta.icon} />
+      </svg>
+    </span>
+    <p class="mt-4 hidden font-mono text-xs font-semibold uppercase tracking-widest text-accent-light md:block">
+      Subject {position} of {SUBJECTS.length}
+    </p>
+    <h1 class="mt-3 text-[34px] font-bold leading-[1.06] tracking-[-0.025em] text-text-primary sm:text-5xl">
+      {meta.label}
+    </h1>
+    <p class="mt-4 max-w-2xl text-[15px] leading-relaxed text-text-secondary sm:text-base">{meta.blurb}</p>
+    <p class="mt-3 font-mono text-[11px] text-text-tertiary">
+      {counts.topics} topics &middot; {counts.citations} citations
+    </p>
+
+    <!-- one row per topic, each its own page -->
+    <ol class="mt-6 space-y-2">
+      {topics.map((t, i) => (
+        <li>
+          <a
+            href={topicHref(t.slug)}
+            class="flex min-h-11 items-center gap-3.5 rounded-[14px] border border-white/8 bg-white/4 px-4 py-4 transition-colors hover:border-white/16"
+          >
+            <span class="w-3.5 shrink-0 font-mono text-[11px] text-text-tertiary">{i + 1}</span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-[15px] font-semibold text-text-primary">{t.label}</span>
+              <span class="mt-0.5 block text-[12.5px] leading-snug text-text-tertiary">{t.sub}</span>
+            </span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6" /></svg>
+          </a>
+        </li>
+      ))}
+    </ol>
+
+    {meta.aside && (
+      <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-4">
+        <p class="text-xs leading-relaxed text-text-secondary">{meta.aside.text}</p>
+        <a href={meta.aside.href} class="mt-2 block text-xs font-medium text-accent-light">{meta.aside.label} &rarr;</a>
+      </div>
+    )}
+
+    {next ? (
+      <a
+        href={`/science/${next.slug}`}
+        class="group mt-6 flex items-center gap-3 rounded-[14px] border border-accent/25 bg-accent/[0.06] p-4 transition-colors hover:border-accent/45"
+      >
+        <span class="min-w-0 flex-1">
+          <span class="block text-sm font-semibold text-text-primary">Next: {next.label}</span>
+          <span class="mt-0.5 block text-[12.5px] leading-snug text-text-tertiary">{next.teaser}</span>
+        </span>
+        <span class="shrink-0 rounded-full bg-accent px-4 py-2.5 text-[13px] font-semibold text-canvas transition-colors group-hover:bg-accent-light">
+          Read it &rarr;
+        </span>
+      </a>
+    ) : (
+      <a
+        href="/science"
+        class="mt-6 block rounded-[14px] border border-accent/25 bg-accent/[0.06] p-4 transition-colors hover:border-accent/45"
+      >
+        <span class="font-mono text-[11px] font-semibold uppercase tracking-widest text-accent-light">
+          That is all four
+        </span>
+        <span class="mt-1.5 block text-sm font-semibold text-text-primary">Back to the hub</span>
+        <span class="mt-0.5 block text-[12.5px] leading-snug text-text-tertiary">
+          The other three subjects, the whole topic index, and the AHA map.
+        </span>
+      </a>
+    )}
+  </main>
+
+  <Footer />
+</Layout>

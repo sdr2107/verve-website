@@ -1,0 +1,38 @@
+---
+/** One is how hard, the other is how much. Rendered by /science/fitness/mets-vs-met-h; see scienceTopics.ts. */
+import SplitCard from "../../components/science/SplitCard.astro";
+import MetsVsMetHours from "../../components/science/MetsVsMetHours.astro";
+import VideoSlot from "../../components/VideoSlot.astro";
+
+/** The intensity scale: bar widths are each band's top against a 12-MET ceiling. */
+const intensities = [
+  { met: "1", width: "8%", label: "at rest" },
+  { met: "3\u20134", width: "30%", label: "walking" },
+  { met: "6\u20138", width: "58%", label: "jogging" },
+  { met: "10+", width: "84%", label: "running" },
+];
+---
+
+<SplitCard eyebrow="The difference in one line">
+  <p>
+    A MET is intensity: one MET is you at rest, four METs is a brisk walk.
+    A MET-hour is volume: four METs held for half an hour is two MET-hours.
+    Verve tracks both, and never adds them together.
+  </p>
+  <div slot="panel" class="flex flex-col gap-2.5">
+    {intensities.map((i) => (
+      <div class="flex items-center gap-2.5">
+        <span class="w-[34px] shrink-0 font-mono text-[11px] text-success">{i.met}</span>
+        <span class="h-[7px] flex-1 rounded-full bg-success/20">
+          <span class="block h-[7px] rounded-full bg-success" style={`width: ${i.width}`}></span>
+        </span>
+        <span class="w-[52px] shrink-0 text-[10.5px] text-text-secondary">{i.label}</span>
+      </div>
+    ))}
+  </div>
+</SplitCard>
+
+<div class="mt-6"><VideoSlot topic="METs vs MET-h" /></div>
+<div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+  <MetsVsMetHours />
+</div>

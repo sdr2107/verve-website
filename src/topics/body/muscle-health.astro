@@ -1,0 +1,13 @@
+---
+/** Why grip strength is in a fitness app at all. Rendered by /science/body/muscle-health; see scienceTopics.ts. */
+import CitationCard from "../../components/CitationCard.astro";
+import VideoSlot from "../../components/VideoSlot.astro";
+import {
+  MUSCLE_HEALTH_SECTION,
+} from "../../data/science";
+---
+
+<div class="mt-6"><VideoSlot topic="Muscle Health & Grip Strength" /></div>
+<div class="mt-6 grid gap-4 sm:grid-cols-2">
+  {MUSCLE_HEALTH_SECTION.map((c) => <CitationCard {...c} />)}
+</div>

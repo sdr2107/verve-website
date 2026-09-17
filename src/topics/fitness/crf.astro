@@ -1,0 +1,56 @@
+---
+/** The five tiers, and why they are read against your own age and sex. Rendered by /science/fitness/crf; see scienceTopics.ts. */
+import CitationCard from "../../components/CitationCard.astro";
+import VideoSlot from "../../components/VideoSlot.astro";
+import {
+  CRF_SECTION,
+} from "../../data/science";
+
+/** The five tiers as the app draws them for one reader; the caption says whose. */
+const tiers = [
+  { range: "under 8.0", label: "Low", bar: "rgba(244,63,94,0.45)" },
+  { range: "8.0\u20139.9", label: "Below average", bar: "rgba(251,191,36,0.5)", lit: true },
+  { range: "10.0\u201311.9", label: "Above average", bar: "rgba(129,140,248,0.45)" },
+  { range: "12.0\u201313.9", label: "High", bar: "rgba(6,182,212,0.4)" },
+  { range: "14.0+", label: "Elite", bar: "rgba(52,211,153,0.4)" },
+];
+---
+
+<div class="mt-[18px] rounded-2xl border border-white/8 bg-white/4 p-5 sm:px-[22px]">
+  <p class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">
+    Men, 40 to 49
+  </p>
+  <!-- No middle band, on purpose: the line between below and above average
+       is the study population's median, so nobody lands on it. -->
+  <div class="mt-3 flex gap-1">
+    {tiers.map((t, i) => (
+      <div class="min-w-0 flex-1">
+        <div
+          class:list={["h-[9px]", i === 0 && "rounded-l-full", i === tiers.length - 1 && "rounded-r-full"]}
+          style={`background: ${t.bar}`}
+        ></div>
+        <div class={`mt-[7px] font-mono text-[10px] ${t.lit ? "text-warning" : "text-text-secondary"}`}>{t.range}</div>
+        <div class="text-[11px] leading-tight text-text-tertiary">{t.label}</div>
+      </div>
+    ))}
+  </div>
+  <p class="mt-3.5 text-[12.5px] leading-relaxed text-text-tertiary">
+    Figures in METs, for one reader. Your own table depends on your age and
+    sex, and on which dataset covers you.
+  </p>
+</div>
+
+<div class="mt-6"><VideoSlot topic="Cardiorespiratory Fitness" /></div>
+<div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+  <p class="text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">Ages 18&ndash;39:</strong> ACSM / Cooper
+    Institute adult VO&#8322;Max norms (1997), converted to METs.
+    <strong class="ml-1 text-text-primary">Ages 40+:</strong> Cleveland Clinic
+    treadmill data (Mandsager 2018, 122,007 patients). Both use the same
+    5-tier system (Low &rarr; Elite) &mdash; Verve automatically selects the
+    correct source based on your profile age.
+  </p>
+</div>
+<div class="mt-4 grid gap-4 sm:grid-cols-2">
+  {CRF_SECTION.map((c) => <CitationCard {...c} />)}
+</div>

@@ -1,0 +1,162 @@
+---
+/**
+ * /science/<subject>/<topic> — one topic, and only this topic.
+ *
+ * The chrome is read from scienceTopics.ts: the rail lists the subject's
+ * topics with this one lit, the eyebrow says "topic 2 of 5", and the foot
+ * of the page carries the way back and the way on. The content is the
+ * matching file under src/topics/, found by its path; a topic with no file
+ * fails the build here rather than shipping an empty page.
+ *
+ * On a phone the rail is gone and the header is a back link, so the way on
+ * rides at the bottom of the screen: the progress dots, then prev and next.
+ */
+import Layout from "../../../layouts/Layout.astro";
+import SiteHeader from "../../../components/SiteHeader.astro";
+import Footer from "../../../components/Footer.astro";
+import {
+  TOPICS,
+  topicsFor,
+  subjectFor,
+  subjectNeighbours,
+  topicHref,
+  topicPosition,
+  type SubjectSlug,
+} from "../../../data/scienceTopics";
+
+export function getStaticPaths() {
+  return TOPICS.map((t) => ({ params: { subject: t.subject, topic: t.slug } }));
+}
+
+const subject = Astro.params.subject as SubjectSlug;
+const slug = Astro.params.topic as string;
+
+const topic = TOPICS.find((t) => t.slug === slug && t.subject === subject);
+if (!topic) throw new Error(`No topic "${slug}" under "${subject}"`);
+const meta = subjectFor(subject);
+const siblings = topicsFor(subject);
+const { n, of, prev, next } = topicPosition(slug);
+const { next: nextSubject } = subjectNeighbours(subject);
+
+const modules = import.meta.glob<{ default: any }>("../../../topics/*/*.astro", { eager: true });
+const mod = modules[`../../../topics/${subject}/${slug}.astro`];
+if (!mod) throw new Error(`No content for "${slug}": expected src/topics/${subject}/${slug}.astro`);
+const Content = mod.default;
+
+const RAIL =
+  "block rounded-lg border-l-2 px-3 py-[7px] text-[13px] leading-snug transition-colors hover:text-text-primary";
+const LIT = "border-accent bg-white/6 text-text-primary";
+const DIM = "border-transparent text-text-tertiary";
+
+const onward = next
+  ? { href: topicHref(next.slug), kicker: "Next", label: next.label }
+  : nextSubject
+    ? { href: `/science/${nextSubject.slug}`, kicker: "Next subject", label: nextSubject.label }
+    : { href: "/science", kicker: "That is all four", label: "Back to the hub" };
+---
+
+<Layout
+  title={`${topic.label} — ${meta.label} — The Science Behind Verve`}
+  description={`${topic.sub}. ${meta.label}, topic ${n} of ${of}, in the science behind Verve.`}
+>
+  <SiteHeader
+    current="science"
+    crumb={[
+      { href: "/science", label: "Science" },
+      { href: `/science/${subject}`, label: meta.label },
+      { label: topic.label },
+    ]}
+    back={{ href: `/science/${subject}`, label: meta.label }}
+    position={`${n} of ${of}`}
+  />
+
+  <div class="mx-auto flex max-w-6xl gap-11 px-6 sm:px-10">
+    <!-- ── The rail: the subject's topics, the open one lit. ─────────────── -->
+    <aside class="hidden w-[210px] shrink-0 lg:block">
+      <div class="sticky top-8 pt-10">
+        <a
+          href={`/science/${subject}`}
+          class="block px-3 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-accent-light"
+        >
+          &larr; {meta.label}
+        </a>
+        <nav class="mt-2.5" aria-label={`Topics in ${meta.label}`}>
+          <ol class="space-y-0.5">
+            {siblings.map((t, i) => (
+              <li>
+                <a
+                  href={topicHref(t.slug)}
+                  aria-current={t.slug === slug ? "page" : undefined}
+                  class:list={[RAIL, t.slug === slug ? LIT : DIM]}
+                >
+                  <span class="mr-2 font-mono text-[11px]">{i + 1}</span>{t.label}
+                </a>
+              </li>
+            ))}
+          </ol>
+        </nav>
+        <div class="mx-3 my-[18px] h-px bg-white/[0.07]"></div>
+        <a href="/science" class:list={[RAIL, DIM]}>All subjects</a>
+        {nextSubject && (
+          <a href={`/science/${nextSubject.slug}`} class:list={[RAIL, DIM]}>{nextSubject.label} &rarr;</a>
+        )}
+        {meta.aside && (
+          <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-4">
+            <p class="text-xs leading-relaxed text-text-secondary">{meta.aside.text}</p>
+            <a href={meta.aside.href} class="mt-2 block text-xs font-medium text-accent-light">{meta.aside.label} &rarr;</a>
+          </div>
+        )}
+      </div>
+    </aside>
+
+    <!-- ── One topic, and only this topic. ──────────────────────────────── -->
+    <main class="min-w-0 flex-1 pt-7 lg:pt-10">
+      <p class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-accent-light">
+        {meta.label} &middot; topic {n} of {of}
+      </p>
+      <h1 class="mt-3 text-[32px] font-bold leading-[1.08] tracking-[-0.025em] text-text-primary sm:text-[40px]">
+        {topic.label}
+      </h1>
+      <p class="mt-2 text-[15px] leading-normal text-text-tertiary">{topic.sub}</p>
+
+      <div class="mt-2">
+        <Content />
+      </div>
+
+      <!-- ── The way on: back, and next. On a phone it rides at the bottom of
+           the screen until the page ends. ──────────────────────────────── -->
+      <nav
+        class="sticky bottom-0 -mx-6 mt-8 border-t border-white/[0.07] bg-canvas/92 px-6 pt-3.5 pb-5 backdrop-blur sm:-mx-10 sm:px-10 lg:static lg:mx-0 lg:border-t-0 lg:bg-transparent lg:px-0 lg:pt-8 lg:pb-16 lg:backdrop-blur-none"
+        aria-label="Topic navigation"
+      >
+        <div class="flex justify-center gap-1.5 lg:hidden" aria-hidden="true">
+          {siblings.map((_, i) => (
+            <span class:list={["h-1 rounded-sm", i === n - 1 ? "w-[18px] bg-accent" : "w-2 bg-white/14"]}></span>
+          ))}
+        </div>
+        <div class="mt-3 grid grid-cols-2 gap-2.5 lg:mt-0 lg:flex lg:items-center lg:justify-between lg:gap-4">
+          <a
+            href={prev ? topicHref(prev.slug) : `/science/${subject}`}
+            class="flex min-h-11 items-center justify-center truncate rounded-full border border-white/14 px-[18px] py-2.5 text-[13.5px] font-semibold text-text-primary transition-colors hover:border-white/25 lg:justify-start"
+          >
+            &larr;&nbsp;{prev ? prev.label : `Back to ${meta.label}`}
+          </a>
+          <div class="hidden gap-1.5 lg:flex" aria-hidden="true">
+            {siblings.map((_, i) => (
+              <span class:list={["h-1 rounded-sm", i === n - 1 ? "w-[18px] bg-accent" : "w-2 bg-white/14"]}></span>
+            ))}
+          </div>
+          <a
+            href={onward.href}
+            class="flex min-h-11 flex-col items-center justify-center rounded-full bg-accent px-[18px] py-2 text-[13.5px] font-semibold leading-tight text-canvas transition-colors hover:bg-accent-light lg:items-end"
+          >
+            <span class="text-[10px] font-semibold uppercase tracking-[0.08em] opacity-70">{onward.kicker}</span>
+            <span class="truncate">{onward.label}&nbsp;&rarr;</span>
+          </a>
+        </div>
+      </nav>
+    </main>
+  </div>
+
+  <Footer />
+</Layout>

@@ -1,0 +1,80 @@
+---
+/** How the four Today tiles are coloured, and where each line comes from. Rendered by /science/sleep-heart/today-tiles; see scienceTopics.ts. */
+import { topicHref } from "../../data/scienceTopics";
+
+/** The four Today tiles, with the rule that colours each one. */
+const todayTiles = [
+  { label: "Sleep", value: "6h 29", tone: "text-warning", rule: "amber under 7 h" },
+  { label: "Resting HR", value: "52", tone: "text-success", rule: "amber +5 \u00b7 red +10" },
+  { label: "Recovery", value: "\u219325", tone: "text-success", rule: "red at 12 or under" },
+  { label: "Sitting", value: "3 h", tone: "text-text-primary", rule: "amber 10.6 h \u00b7 red 12 h" },
+];
+---
+
+<div class="mt-[18px] rounded-2xl border border-white/8 bg-white/4 p-5 sm:px-[22px]">
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    {todayTiles.map((t) => (
+      <div class="rounded-xl border border-white/8 bg-white/[0.03] p-3">
+        <div class="text-[11px] text-text-secondary">{t.label}</div>
+        <div class={`mt-1 text-[19px] font-extrabold ${t.tone}`}>{t.value}</div>
+        <div class="mt-[7px] font-mono text-[9.5px] text-text-tertiary">{t.rule}</div>
+      </div>
+    ))}
+  </div>
+  <p class="mt-3.5 text-[12.5px] leading-relaxed text-text-tertiary">
+    Green means inside the range its evidence calls ordinary. A grey dash
+    means Verve has not measured it and will not guess. Sleep, resting rate
+    and recovery are explained on their own pages; the sitting line belongs to Movement.
+  </p>
+</div>
+
+<div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+  <p class="text-sm leading-relaxed text-text-secondary">
+    Each tile takes its colour from the figure it shows. Green means the
+    reading is inside the range its evidence calls ordinary, amber that it
+    has crossed one line, red that it has crossed a second. A grey dash
+    means Verve has not measured it yet and will not guess. The rules,
+    one per tile:
+  </p>
+  <ul class="mt-4 space-y-3 text-sm leading-relaxed text-text-secondary">
+    <li>
+      <strong class="text-text-primary">Sleep</strong> &mdash; last night's hours
+      asleep against the <strong class="text-text-primary">7 to 9 hour</strong>
+      range. Amber under seven; ordinary text above nine, because a long
+      night is worth noticing but is not a warning. The drift and
+      regularity figures inside the tile's page keep their own scales.
+      <a href={topicHref("sleep-rhythm")}>Sleep timing &rarr;</a>
+    </li>
+    <li>
+      <strong class="text-text-primary">Resting HR</strong> &mdash; the worse of
+      two verdicts. Against your own 30-day median: amber around
+      <strong class="text-text-primary">5 bpm above</strong>, red around
+      <strong class="text-text-primary">10 above</strong>. Against the level
+      itself: amber from <strong class="text-text-primary">75</strong>, red
+      from <strong class="text-text-primary">80</strong>. Below your usual, and
+      under 50, stay green on purpose &mdash; a rested morning and an
+      endurance athlete both land there.
+      <a href={topicHref("resting-heart-rate")}>Resting heart rate &rarr;</a>
+    </li>
+    <li>
+      <strong class="text-text-primary">Recovery</strong> &mdash; how far your heart
+      rate fell in the first minute after the last workout. One cited line:
+      red at a fall of <strong class="text-text-primary">12 bpm or less</strong>,
+      green above it. There is no amber, because no second line has been
+      validated; the tile refuses to invent one.
+      <a href={topicHref("heart-rate-recovery")}>Heart rate recovery &rarr;</a>
+    </li>
+    <li>
+      <strong class="text-text-primary">Sitting</strong> &mdash; hours today with
+      almost no stepping. Amber from <strong class="text-text-primary">10.6
+      hours</strong>, red from <strong class="text-text-primary">12</strong>,
+      the same two ticks the Movement Balance bar draws.
+      <a href={topicHref("movement-balance")}>Movement balance &rarr;</a>
+    </li>
+  </ul>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    Every number above is read from one thresholds file inside the app,
+    the same file the tiles read, so this page and the tiles cannot
+    disagree about where a line sits.
+  </p>
+</div>

@@ -1,0 +1,22 @@
+---
+/** ApoB · LDL-C · Lp(a) · hs-CRP — screening bands, not treatment targets. Rendered by /science/body/heart-health; see scienceTopics.ts. */
+import CitationCard from "../../components/CitationCard.astro";
+import VideoSlot from "../../components/VideoSlot.astro";
+import {
+  HEART_HEALTH_SECTION,
+} from "../../data/science";
+---
+
+<div class="mt-6"><VideoSlot topic="Heart Health" /></div>
+<div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+  <p class="text-sm leading-relaxed text-text-secondary">
+    For ApoB and LDL-C in particular, clinical targets are set by a
+    person's overall cardiovascular risk category &mdash; a value in the
+    "borderline" band may be perfectly appropriate for one person and a
+    treatment trigger for another. Verve classifies against population
+    screening bands and always defers to a clinician.
+  </p>
+</div>
+<div class="mt-4 grid gap-4 sm:grid-cols-2">
+  {HEART_HEALTH_SECTION.map((c) => <CitationCard {...c} />)}
+</div>

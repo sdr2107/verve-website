@@ -1,16 +1,16 @@
 ---
 /**
- * One topic on a subject page: a hairline, a heading, a line saying what the
- * section actually answers, then the section's own content.
+ * A section within a topic page: a hairline, a heading, a line saying what
+ * the section actually answers, then the section's own content.
  *
- * The subtitle is not decoration. On the old single page every section opened
- * with a heading and went straight into prose, so a reader skimming for the
- * bit they came for had only the heading to go on. The board gives each one a
- * sentence — "One is how hard, the other is how much" — which is often the
- * whole answer for someone who does not need the rest.
+ * Every topic used to be one of these on a subject page. Now each topic is a
+ * page and its heading is the page's h1, so this is left for the sub-anchors
+ * that ride inside a topic — the marker table under Body phenotyping — where
+ * the id is still an address the app links to.
  *
- * The id is the anchor. The app links to several of these and the hub's
- * forwarding map is built from the same list, so it must match the registry.
+ * The subtitle is not decoration. A reader skimming for the bit they came
+ * for has only the heading to go on otherwise; a sentence — "One is how
+ * hard, the other is how much" — is often the whole answer.
  */
 interface Props {
   id: string;

@@ -9,7 +9,7 @@
  *
  * It stays a real page at the same address for a reason beyond the reader.
  * Ten anchors are linked from inside the app — /science#zone-2 and the rest —
- * and those topics now live on subject pages. The script at the top of the
+ * and each of those topics is a page of its own now. The script at the top of the
  * body forwards them before the page paints, from the same list that builds
  * the pages, so no hosting redirect rules exist to fall out of date and no
  * App Store release is needed to keep an old link working.
@@ -18,7 +18,7 @@ import Layout from "../layouts/Layout.astro";
 import Footer from "../components/Footer.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import CrfMapPreview from "../components/science/CrfMapPreview.astro";
-import { SUBJECTS, TOPICS, topicsFor, subjectCounts, COUNTS, ANCHOR_PAGE } from "../data/scienceTopics";
+import { SUBJECTS, TOPICS, subjectCounts, COUNTS, ANCHOR_TARGET, topicHref } from "../data/scienceTopics";
 
 /** The three figures under the opening line. Counted, never typed. */
 const figures = [
@@ -34,19 +34,19 @@ const figures = [
   description="Every threshold in Verve, traced to its source. Four subjects — fitness, movement, sleep and heart, body — each opening with what the app shows you, then the studies behind it."
 >
   {/* ── Anchor forwarding. The app links to ten anchors that used to live on
-       this page; they now live on subject pages. This runs before the body
+       this page; each is a page of its own now. This runs before the body
        paints and rewrites the address, so a link from inside the app — or one
-       a reader bookmarked — still lands on its paragraph. The map is derived
+       a reader bookmarked — still lands on its topic. The map is derived
        from the topic list itself, so a topic added later cannot be left out
        of it. An anchor this does not recognise is left alone and the page
        scrolls to the index, as it did before. ─────────────────────────── */}
-  <script is:inline define:vars={{ ANCHOR_PAGE }}>
+  <script is:inline define:vars={{ ANCHOR_TARGET }}>
     (function () {
       var hash = window.location.hash.slice(1);
       if (!hash) return;
-      var page = ANCHOR_PAGE[hash];
-      if (page) {
-        window.location.replace(page + "#" + hash);
+      var target = ANCHOR_TARGET[hash];
+      if (target) {
+        window.location.replace(target);
         return;
       }
       // Not a topic we know. The hub has nothing at that id, so the browser
@@ -147,8 +147,8 @@ const figures = [
     <div class="mx-auto max-w-4xl">
       <h2 class="text-2xl font-bold text-text-primary">Read it by subject</h2>
       <p class="mt-2 max-w-2xl text-sm leading-relaxed text-text-secondary">
-        Four pages instead of one scroll. Each opens with what the app shows
-        you, then the studies behind it.
+        Four subjects, one topic per page. Each topic opens with what the app
+        shows you, then the studies behind it.
       </p>
 
       <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -176,9 +176,6 @@ const figures = [
               <span class="mt-2 block text-[13px] leading-relaxed text-text-tertiary">
                 {s.teaser}
               </span>
-              <span class="mt-3.5 block font-mono text-[10px] leading-relaxed text-text-muted">
-                {topicsFor(s.slug).map((t) => t.label).join(" \u00b7 ")}
-              </span>
               <span class="mt-auto pt-3.5 font-mono text-[11px] text-accent-light">
                 {counts.citations} citations &middot; {counts.topics} topics &rarr;
               </span>
@@ -197,7 +194,7 @@ const figures = [
       <div class="mt-6 flex flex-wrap gap-2">
         {TOPICS.map((t) => (
           <a
-            href={`/science/${t.subject}#${t.slug}`}
+            href={topicHref(t.slug)}
             class="rounded-full border border-white/8 bg-white/4 px-4 py-2 text-xs font-medium text-text-secondary transition-colors hover:border-white/16 hover:text-text-primary"
           >
             {t.label}
@@ -206,9 +203,8 @@ const figures = [
       </div>
 
       <p class="mt-6 max-w-2xl text-xs leading-relaxed text-text-muted">
-        Every one of these keeps the address it has today. A link from inside
-        the app, or one you have bookmarked, lands on the same paragraph it
-        always did.
+        Each of these is a page of its own. Every address the app links to
+        keeps working: this page forwards the old anchor to the topic’s page.
       </p>
     </div>
   </section>

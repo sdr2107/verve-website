@@ -1,13 +1,16 @@
 /**
  * The science section's table of contents — one list that builds everything.
  *
- * The four subject pages, the hub's topic index, each page's "On this page"
- * nav, the counts in the opening line, and the anchor-forwarding map on
- * /science all read from here. That is the point: splitting one page into
- * four moved ten addresses the app links to, and a hand-maintained redirect
- * list is a thing someone forgets to update. Add a topic here and it appears
- * on its page, in the index, in the counts, and in the forwarding map at the
- * same time, or it does not exist at all.
+ * The four subject indexes, the twenty topic pages, each topic page's rail,
+ * the hub's index, the counts in the opening line, and the anchor-forwarding
+ * map on /science all read from here. That is the point: every topic is a
+ * page now, at /science/<subject>/<slug>, and the ten addresses the app
+ * links to — /science#zone-2 and the rest — have moved twice. A
+ * hand-maintained redirect list is a thing someone forgets to update. Add a
+ * topic here and it gets its page, its place in the index and the rail, its
+ * share of the counts, and its line in the forwarding map at the same time,
+ * or it does not exist at all. Its content lives in src/topics/<subject>/
+ * <slug>.astro, and the build fails if that file is missing.
  */
 
 import type { Citation } from "./science";
@@ -53,12 +56,23 @@ export interface Subject {
   accentTint: string;
   /** Path data for a 24x24 stroked icon. */
   icon: string;
+  /**
+   * A note that rides in the rail on every page of the subject — where the
+   * subject sits in the AHA statement, how to connect another wearable.
+   */
+  aside?: { text: string; href: string; label: string };
 }
 
 export interface Topic {
-  /** The anchor id. The app links to some of these; none of them may change. */
+  /**
+   * The anchor id, and now the last segment of the topic's address:
+   * /science/<subject>/<slug>. The app links to some of these; none of them
+   * may change.
+   */
   slug: string;
   label: string;
+  /** What the topic answers, in one line: under the heading, and in the index. */
+  sub: string;
   subject: SubjectSlug;
   citations: Citation[];
   /**
@@ -83,7 +97,12 @@ export const SUBJECTS: Subject[] = [
       "METs, the five cardiorespiratory fitness tiers, which test Verve offers you and how accurate each one is — every threshold traced to the study behind it.",
     accent: "#f97316",
     accentTint: "rgba(249,115,22,0.12)",
-    icon: "M3 12h4l3-8 4 16 3-8h4"
+    icon: "M3 12h4l3-8 4 16 3-8h4",
+    aside: {
+      text: "Where this sits in the AHA statement.",
+      href: "/crf-map",
+      label: "Open the map",
+    },
   },
   {
     slug: "movement",
@@ -111,7 +130,12 @@ export const SUBJECTS: Subject[] = [
       "Sleep timing and regularity, resting heart rate against your own normal, heart rate recovery, and how the four Today tiles are coloured.",
     accent: "#818cf8",
     accentTint: "rgba(129,140,248,0.14)",
-    icon: "M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"
+    icon: "M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z",
+    aside: {
+      text: "Wearing something else? Oura, Whoop and Garmin reach Verve through Apple Health.",
+      href: "/science/sleep-heart/sleep-rhythm#connect-wearables",
+      label: "How to connect",
+    },
   },
   {
     slug: "body",
@@ -137,60 +161,65 @@ export const SUBJECTS: Subject[] = [
  */
 export const TOPICS: Topic[] = [
   // ── Fitness ────────────────────────────────────────────────────────────
-  { slug: "mets-vs-met-h", label: "METs vs MET-hours", subject: "fitness", citations: [] },
-  { slug: "crf", label: "Cardiorespiratory fitness", subject: "fitness", citations: CRF_SECTION },
+  { slug: "mets-vs-met-h", label: "METs vs MET-hours", sub: "One is how hard, the other is how much", subject: "fitness", citations: [] },
+  { slug: "crf", label: "Cardiorespiratory fitness", sub: "The five tiers, and why they are read against your own age and sex", subject: "fitness", citations: CRF_SECTION },
   {
     slug: "test-crf",
     label: "Test your CRF",
+    sub: "Which test you are offered, and why it might not be the hard one",
     subject: "fitness",
     citations: TEST_CRF_SECTION,
     subAnchors: ["two-windows"],
   },
-  { slug: "test-accuracy", label: "How accurate each test is", subject: "fitness", citations: [] },
-  { slug: "run-protocols", label: "The run protocols", subject: "fitness", citations: [] },
+  { slug: "test-accuracy", label: "How accurate each test is", sub: "What r ≈ 0.90 means, what the stars mean, and where each test stops working", subject: "fitness", citations: [] },
+  { slug: "run-protocols", label: "The run protocols", sub: "What the app’s checklist is short for", subject: "fitness", citations: [] },
 
   // ── Movement ───────────────────────────────────────────────────────────
-  { slug: "weekly-volume", label: "Weekly volume", subject: "movement", citations: WEEKLY_VOLUME_SECTION },
+  { slug: "weekly-volume", label: "Weekly volume", sub: "How much per week, and why the summit sits well above 150 minutes", subject: "movement", citations: WEEKLY_VOLUME_SECTION },
   {
     slug: "zone-2",
     label: "Zone 2 training",
+    sub: "The weekly target, and the personal heart-rate band behind it",
     subject: "movement",
     citations: [...ZONE2_SECTION, ...ZONE2_HR_SECTION],
   },
-  { slug: "strength-training", label: "Strength training", subject: "movement", citations: [] },
-  { slug: "steps", label: "Steps & cadence", subject: "movement", citations: STEPS_SECTION },
+  { slug: "strength-training", label: "Strength training", sub: "Where the 60 minutes a week comes from, and why the app no longer draws it as a bar to clear", subject: "movement", citations: [] },
+  { slug: "steps", label: "Steps & cadence", sub: "Daily step tiers and cadence zones", subject: "movement", citations: STEPS_SECTION },
   {
     slug: "movement-balance",
     label: "Movement balance",
+    sub: "How Verve reads your day beyond workout minutes",
     subject: "movement",
     citations: [...MOVEMENT_BALANCE_SECTION, ...SEDENTARY_EXTRA],
   },
-  { slug: "activity-level", label: "Physical activity level", subject: "movement", citations: [] },
+  { slug: "activity-level", label: "Physical activity level", sub: "How active your whole day is, and how much of that number to trust", subject: "movement", citations: [] },
 
   // ── Sleep & heart ──────────────────────────────────────────────────────
-  { slug: "today-tiles", label: "The morning read", subject: "sleep-heart", citations: [] },
+  { slug: "today-tiles", label: "The morning read", sub: "How the four Today tiles are coloured, and where each line comes from", subject: "sleep-heart", citations: [] },
   {
     slug: "sleep-rhythm",
     label: "Sleep timing",
+    sub: "Four ways to read one bedtime diary",
     subject: "sleep-heart",
     citations: SLEEP_RHYTHM_SECTION,
     subAnchors: ["connect-wearables"],
   },
-  { slug: "sleep-and-training", label: "Sleep and training", subject: "sleep-heart", citations: SLEEP_TRAINING_SECTION },
-  { slug: "resting-heart-rate", label: "Resting heart rate", subject: "sleep-heart", citations: RESTING_HR_SECTION },
-  { slug: "heart-rate-recovery", label: "Heart rate recovery", subject: "sleep-heart", citations: HEART_RATE_RECOVERY_SECTION },
+  { slug: "sleep-and-training", label: "Sleep and training", sub: "What the Guide’s sleep line is, and what it refuses to claim", subject: "sleep-heart", citations: SLEEP_TRAINING_SECTION },
+  { slug: "resting-heart-rate", label: "Resting heart rate", sub: "Measured against your own normal, not a population range", subject: "sleep-heart", citations: RESTING_HR_SECTION },
+  { slug: "heart-rate-recovery", label: "Heart rate recovery", sub: "One cited line, and why there is no second one", subject: "sleep-heart", citations: HEART_RATE_RECOVERY_SECTION },
 
   // ── Body ───────────────────────────────────────────────────────────────
-  { slug: "heart-health", label: "Heart health", subject: "body", citations: HEART_HEALTH_SECTION },
+  { slug: "heart-health", label: "Heart health", sub: "ApoB · LDL-C · Lp(a) · hs-CRP — screening bands, not treatment targets", subject: "body", citations: HEART_HEALTH_SECTION },
   {
     slug: "body-phenotyping",
     label: "Body phenotyping",
+    sub: "Metabolic syndrome screening, beyond BMI",
     subject: "body",
     citations: BODY_PHENOTYPING_SECTION,
     subAnchors: ["health-picture", "body-markers"],
   },
-  { slug: "muscle-health", label: "Muscle health", subject: "body", citations: MUSCLE_HEALTH_SECTION },
-  { slug: "intrinsic-capacity", label: "Intrinsic capacity", subject: "body", citations: [] },
+  { slug: "muscle-health", label: "Muscle health", sub: "Why grip strength is in a fitness app at all", subject: "body", citations: MUSCLE_HEALTH_SECTION },
+  { slug: "intrinsic-capacity", label: "Intrinsic capacity", sub: "Why grip, walking speed, chair stand and SPPB belong in the same room — and which parts of the picture Verve does not measure", subject: "body", citations: [] },
 ];
 
 export const topicsFor = (subject: SubjectSlug) =>
@@ -228,13 +257,36 @@ export const subjectCounts = (slug: SubjectSlug) => ({
   topics: topicsFor(slug).length,
 });
 
+/** The address of a topic's page. */
+export const topicHref = (slug: string) => {
+  const t = TOPICS.find((x) => x.slug === slug);
+  if (!t) throw new Error(`scienceTopics: no topic "${slug}"`);
+  return `/science/${t.subject}/${t.slug}`;
+};
+
+/** "Topic 2 of 5", and the prev/next links at the foot of a topic page. */
+export const topicPosition = (slug: string) => {
+  const t = TOPICS.find((x) => x.slug === slug)!;
+  const siblings = topicsFor(t.subject);
+  const i = siblings.findIndex((x) => x.slug === slug);
+  return {
+    n: i + 1,
+    of: siblings.length,
+    prev: siblings[i - 1] ?? null,
+    next: siblings[i + 1] ?? null,
+  };
+};
+
 /**
- * Anchor → the page it now lives on. Every topic slug and every sub-anchor,
- * derived from TOPICS above, which is why a new topic cannot be left out of
- * it. /science reads this at load and forwards before the first paint.
+ * Anchor → the address it now lives at: a topic's own page, or its parent's
+ * page with the anchor kept for a sub-anchor. Every topic slug and every
+ * sub-anchor, derived from TOPICS above, which is why a new topic cannot be
+ * left out of it. /science reads this at load and forwards before the first
+ * paint; so does each subject index, for a link that carried a hash to it.
  */
-export const ANCHOR_PAGE: Record<string, string> = Object.fromEntries(
-  TOPICS.flatMap((t) =>
-    [t.slug, ...(t.subAnchors ?? [])].map((a) => [a, `/science/${t.subject}`]),
-  ),
+export const ANCHOR_TARGET: Record<string, string> = Object.fromEntries(
+  TOPICS.flatMap((t) => [
+    [t.slug, topicHref(t.slug)],
+    ...(t.subAnchors ?? []).map((a) => [a, `${topicHref(t.slug)}#${a}`]),
+  ]),
 );

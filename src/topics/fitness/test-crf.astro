@@ -1,0 +1,114 @@
+---
+/** Which test you are offered, and why it might not be the hard one. Rendered by /science/fitness/test-crf; see scienceTopics.ts. */
+import SplitCard from "../../components/science/SplitCard.astro";
+import CitationCard from "../../components/CitationCard.astro";
+import VideoSlot from "../../components/VideoSlot.astro";
+import {
+  TEST_CRF_SECTION,
+} from "../../data/science";
+---
+
+<SplitCard eyebrow="In the app">
+  <p>
+    A short health screen runs before your first test. A beta-blocker, or a
+    resting pressure at or above 180 over 110, and the six-minute walk is
+    the only test offered. Cleared and training regularly, and the
+    twelve-minute run is recommended instead. You can always pick another.
+  </p>
+  <div slot="panel" class="flex flex-col gap-2.5">
+    <div class="flex items-center gap-2.5">
+      <span class="flex h-[22px] w-[22px] items-center justify-center rounded-[7px] bg-success/15">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l4 4L19 7" /></svg>
+      </span>
+      <span class="text-[11.5px] text-text-primary">6-minute walk</span>
+      <span class="ml-auto font-mono text-[10px] text-text-tertiary">submaximal</span>
+    </div>
+    <div class="flex items-center gap-2.5">
+      <span class="flex h-[22px] w-[22px] items-center justify-center rounded-[7px] bg-warning/15">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 8v5M12 16.5v.5" /></svg>
+      </span>
+      <span class="text-[11.5px] text-text-primary">12-minute run</span>
+      <span class="ml-auto font-mono text-[10px] text-text-tertiary">maximal</span>
+    </div>
+    <div class="h-px bg-white/[0.07]"></div>
+    <p class="font-mono text-[10px] text-danger">blocked at 180/110 or above</p>
+    <p class="font-mono text-[10px] text-text-tertiary">retest nudged at 8 weeks</p>
+  </div>
+</SplitCard>
+
+<div class="mt-6"><VideoSlot topic="Test Your CRF" /></div>
+
+<div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+  <p class="text-sm leading-relaxed text-text-secondary">
+    Verve recommends a fitness test in two stages, and the order is the
+    whole design. <strong class="text-text-primary">Stage 1 is a safety
+    ceiling</strong> &mdash; three questions about medical supervision,
+    chest pain or dizziness during everyday activity, and any cardiac
+    event in the past six months. Any yes means talking to a doctor before
+    an all-out effort, and no amount of training history can lift that.
+    It is applied before anything else is looked at.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">Stage 2 reads your recorded
+    training</strong>, and all five checks must pass before a maximal test
+    is recommended: trained within the window, 4 of 8 weeks carrying 3 or
+    more training days, at least 2 hard sessions a week, one hard session
+    in the last 14 days, and fewer than 2 consecutive quiet weeks. Where
+    all five pass, Verve prefers to repeat <em>your last test</em> &mdash;
+    comparing a 6-minute walk against a 12-minute run mixes method
+    variance into what you would read as a change in your fitness.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">Why tests don&rsquo;t mix.</strong>
+    A submaximal walk estimates your capacity from how your heart
+    responds to easy work; a maximal run measures what you can actually
+    do. The two carry different errors in different directions &mdash; a
+    walk under-reads a fit person, a first maximal run under-reads a
+    cautious pacer &mdash; so a change between test types usually
+    reflects the tests, not your fitness. Verve flags a mixed history in
+    the app and reads trends within one test type; when you retest, it
+    offers your last test again for the same reason.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">Retesting is every 8 weeks.</strong>
+    VO&#8322;Max adapts with a half-time of about 10&ndash;11 days and a
+    dependable change takes on the order of 21 sessions, so a test before
+    about 4 weeks usually returns your old number and teaches you only
+    that you tested early. Eight weeks is also the window Verve reads your
+    training over, so the two are the same span rather than two nearby
+    ones.
+  </p>
+</div>
+
+<div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6" id="two-windows">
+  <h3 class="text-lg font-semibold text-text-primary">Why the app shows two windows</h3>
+  <p class="mt-3 text-sm leading-relaxed text-text-secondary">
+    The readiness card in the app carries one row measured over
+    <strong class="text-text-primary">three months</strong> and five
+    measured over <strong class="text-text-primary">eight weeks</strong>.
+    That is not an inconsistency. They answer different questions and
+    come from different places.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    The three-month row is the exercise guideline&rsquo;s. ACSM defines
+    &ldquo;currently active&rdquo; as habitual activity over the past
+    three months, and that definition is used for one decision only:
+    whether you should speak to a doctor before an all-out effort. It is
+    a screening threshold, and screening thresholds are conservative on
+    purpose.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    The eight-week rows are Verve&rsquo;s own, and they answer a
+    physiological question instead: which test suits the training you
+    have actually done. Eight weeks is chosen because that is roughly how
+    long fitness takes to move by an amount a field test can detect
+    (Hickson 1981). Neither number can stand in for the other. Borrowing
+    the screening threshold to answer the physiology question is how an
+    app ends up recommending a maximal run to someone who walked twice
+    last month.
+  </p>
+</div>
+
+<div class="mt-4 grid gap-4 sm:grid-cols-2">
+  {TEST_CRF_SECTION.map((c) => <CitationCard {...c} />)}
+</div>

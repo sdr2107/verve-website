@@ -1,0 +1,13 @@
+---
+/** Daily step tiers and cadence zones. Rendered by /science/movement/steps; see scienceTopics.ts. */
+import CitationCard from "../../components/CitationCard.astro";
+import VideoSlot from "../../components/VideoSlot.astro";
+import {
+  STEPS_SECTION,
+} from "../../data/science";
+---
+
+<div class="mt-6"><VideoSlot topic="Steps & Cadence" /></div>
+<div class="mt-6 grid gap-4 sm:grid-cols-2">
+  {STEPS_SECTION.map((c) => <CitationCard {...c} />)}
+</div>

@@ -1,0 +1,85 @@
+---
+/** Measured against your own normal, not a population range. Rendered by /science/sleep-heart/resting-heart-rate; see scienceTopics.ts. */
+import CitationCard from "../../components/CitationCard.astro";
+import VideoSlot from "../../components/VideoSlot.astro";
+import {
+  RESTING_HR_SECTION,
+} from "../../data/science";
+
+/** Resting rate is read two ways; the tile takes whichever reads worse. */
+const againstYourself = [
+  ["#34d399", "Within 5 bpm of your 30-day median"],
+  ["#FBBF24", "About 5 above, for a few days"],
+  ["#f87171", "About 10 above"],
+];
+
+const againstLevel = [
+  ["50\u201360", "text-success", "Lowest risk sits here"],
+  ["75\u201380", "text-warning", "Higher risk even when steady"],
+  ["under 50", "text-text-secondary", "Usually adaptation, not a finding"],
+];
+---
+
+<div class="mt-[18px] rounded-2xl border border-white/8 bg-white/4 p-5 sm:px-[22px]">
+  <div class="flex flex-col gap-6 sm:flex-row sm:gap-[26px]">
+    <div class="flex-1">
+      <p class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">Against yourself</p>
+      <div class="mt-3 flex flex-col gap-2">
+        {againstYourself.map(([dot, text]) => (
+          <div class="flex items-center gap-2.5">
+            <span class="h-[9px] w-[9px] shrink-0 rounded-sm" style={`background: ${dot}`}></span>
+            <span class="flex-1 text-[12.5px] text-text-primary">{text}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+    <div class="hidden w-px bg-white/[0.07] sm:block"></div>
+    <div class="flex-1">
+      <p class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">Against the level</p>
+      <div class="mt-3 flex flex-col gap-2">
+        {againstLevel.map(([range, tone, text]) => (
+          <div class="flex items-center gap-2.5">
+            <span class={`w-[58px] shrink-0 font-mono text-[11px] ${tone}`}>{range}</span>
+            <span class="flex-1 text-[12.5px] text-text-primary">{text}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+  <p class="mt-3.5 text-[12.5px] leading-relaxed text-text-tertiary">
+    The tile takes whichever of the two reads worse. Below your usual is
+    never coloured, because a rested morning and an endurance athlete both
+    land there.
+  </p>
+</div>
+
+<div class="mt-6"><VideoSlot topic="Resting Heart Rate" /></div>
+<div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+  <p class="text-sm leading-relaxed text-text-secondary">
+    Verve compares today's resting heart rate with the median of your own
+    last 30 days. Within <strong class="text-text-primary">5 bpm</strong> is
+    ordinary day-to-day variation; around
+    <strong class="text-text-primary">5 bpm above</strong>, sustained for a few
+    days, is worth noticing; around
+    <strong class="text-text-primary">10 above</strong> is a clear departure.
+    The instrument shades only the high side, because a low resting rate is
+    not a finding &mdash; a rested morning and an adapted endurance athlete
+    both land there.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">The level, and what a reading cannot say.</strong>
+    Beside the comparison with your own normal, the level itself matters:
+    lowest risk sits around <strong class="text-text-primary">50&ndash;60
+    bpm</strong>, and above <strong class="text-text-primary">75&ndash;80</strong>
+    carries higher risk even when it never moves. Under 50 is common in
+    trained people and usually adaptation, worth raising only alongside
+    dizziness, fainting or breathlessness. The slow direction counts on its
+    own &mdash; a baseline falling over months tracks lower risk, a rising
+    one higher, whatever today says. Alcohol, heat, a late meal, poor
+    sleep, illness, dehydration, thyroid and some medicines all raise it;
+    a wearable reading is not diagnostic.
+  </p>
+</div>
+<div class="mt-4 grid gap-4 sm:grid-cols-2">
+  {RESTING_HR_SECTION.map((c) => <CitationCard {...c} />)}
+</div>

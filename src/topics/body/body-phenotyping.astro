@@ -1,0 +1,53 @@
+---
+/** Metabolic syndrome screening, beyond BMI. Rendered by /science/body/body-phenotyping; see scienceTopics.ts. */
+import CitationCard from "../../components/CitationCard.astro";
+import VideoSlot from "../../components/VideoSlot.astro";
+import MarkerTable from "../../components/science/MarkerTable.astro";
+import HealthPictureGrid from "../../components/science/HealthPictureGrid.astro";
+import ScienceSection from "../../components/science/ScienceSection.astro";
+import {
+  BODY_PHENOTYPING_SECTION,
+} from "../../data/science";
+import { BODY_MARKERS, BODY_MARKER_CONTEXT, BODY_GROUPS } from "../../data/bodyMarkers";
+---
+
+<div class="mt-6"><VideoSlot topic="Body Phenotyping" /></div>
+
+<div id="health-picture" class="scroll-mt-8">
+  <HealthPictureGrid />
+</div>
+<div class="mt-6 grid gap-4 sm:grid-cols-2">
+  {BODY_PHENOTYPING_SECTION.map((c) => <CitationCard {...c} />)}
+</div>
+
+<!-- ── Body markers ──────────────────────────────────────────────────────
+     One entry per marker the Body page can record, anchored so the app
+     links straight to the parameter a reader is looking at. It rides on
+     this page as a sub-anchor: the markers carry their own citations in
+     bodyMarkers.ts, so it is an address but not a topic.
+
+     GENERATED from lib/markers.ts in the app repo — the same definitions
+     the app classifies readings with. That is deliberate: a threshold
+     quoted here that no longer matches the one a reader was just shown on
+     their phone is worse than no page at all. ── -->
+<ScienceSection
+  id="body-markers"
+  title="Body markers"
+  sub="What each measurement is, how to take it, the range it is read against, and how often it is worth repeating"
+>
+  <!-- The board leads the marker list with this, and it is the most
+       important sentence on the page: a screening band is a population
+       line, not a number anyone should be treating themselves against. -->
+  <p class="mt-[18px] rounded-2xl border border-warning/25 bg-warning/[0.06] p-4 text-[13.5px] leading-relaxed text-text-secondary sm:px-5">
+    These are <strong class="font-semibold text-warning">screening bands, not
+    treatment targets</strong>. What counts as a good number for you depends
+    on your overall risk, and that is a conversation with your doctor. Verve
+    classifies against population bands and says which study drew each line.
+  </p>
+
+  <p class="mt-3 text-xs text-text-tertiary">{BODY_MARKER_CONTEXT}</p>
+
+  {BODY_GROUPS.map((group) => (
+    <MarkerTable group={group} markers={BODY_MARKERS.filter((m) => m.group === group)} />
+  ))}
+</ScienceSection>

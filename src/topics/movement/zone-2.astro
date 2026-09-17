@@ -1,0 +1,50 @@
+---
+/** The weekly target, and the personal heart-rate band behind it. Rendered by /science/movement/zone-2; see scienceTopics.ts. */
+import CitationCard from "../../components/CitationCard.astro";
+import VideoSlot from "../../components/VideoSlot.astro";
+import {
+  ZONE2_SECTION,
+  ZONE2_HR_SECTION,
+} from "../../data/science";
+---
+
+<div class="mt-[18px] flex flex-col gap-4 rounded-2xl border border-white/8 bg-white/4 p-5 sm:px-[22px] lg:flex-row lg:items-center lg:gap-[18px]">
+  <div class="flex-1">
+    <p class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">In the app</p>
+    <p class="mt-2.5 text-[14.5px] leading-[1.7] text-text-secondary">
+      Your band is Karvonen, built from your own resting rate and your
+      age-predicted maximum: 40 to 60 percent of the reserve between them.
+      The app counts minutes inside that band, not inside a table everyone
+      shares.
+    </p>
+  </div>
+  <!-- Sample figures: one reader's resting rate, band and maximum. -->
+  <div class="w-full shrink-0 lg:w-[220px]">
+    <div class="flex h-[9px] overflow-hidden rounded-full">
+      <span class="w-2/5 bg-white/8"></span>
+      <span class="w-1/5 bg-success/55"></span>
+      <span class="w-2/5 bg-white/8"></span>
+    </div>
+    <div class="mt-[7px] flex justify-between font-mono text-[10px]">
+      <span class="text-text-muted">52</span>
+      <span class="text-success">102&ndash;127</span>
+      <span class="text-text-muted">177</span>
+    </div>
+  </div>
+</div>
+
+<div class="mt-6"><VideoSlot topic="Zone 2 Training" /></div>
+<div class="mt-6 grid gap-4 sm:grid-cols-2">
+  {ZONE2_SECTION.map((c) => <CitationCard {...c} />)}
+</div>
+<h3 class="mt-10 text-lg font-semibold text-text-primary">Heart-rate method: Karvonen HRR</h3>
+<p class="mt-2 text-sm leading-relaxed text-text-secondary">
+  "Zone 2" is a training label applied to the 40&ndash;60% Heart Rate Reserve
+  band &mdash; different models (Seiler polarised, Maffetone 180-minus-age,
+  San Mill&aacute;n VT1-based) draw the upper boundary slightly differently, but
+  all target the same physiological space just below the first ventilatory
+  threshold.
+</p>
+<div class="mt-4 grid gap-4 sm:grid-cols-2">
+  {ZONE2_HR_SECTION.map((c) => <CitationCard {...c} />)}
+</div>
