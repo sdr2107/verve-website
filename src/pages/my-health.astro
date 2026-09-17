@@ -252,13 +252,19 @@ import SiteHeader from "../components/SiteHeader.astro";
 
       <!-- ═══ REPORTS ════════════════════════════════════════════════════ -->
       <div id="tab-reports" class="mt-6 hidden">
+        <!-- the one place to add a report; dragging anywhere on the page lands here too -->
         <label id="drop" for="file"
-          class="flex max-w-3xl cursor-pointer flex-col items-center gap-2 rounded-2xl border-[1.5px] border-dashed border-accent/45 bg-accent/[0.05] px-6 py-10 transition-colors">
-          <svg class="h-8 w-8 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>
-          </svg>
-          <span class="text-sm font-bold">Drag reports here, or tap to choose</span>
-          <span class="text-xs text-text-tertiary">PDF · several at once is fine · originals stay in your private archive</span>
+          class="flex max-w-3xl cursor-pointer items-center gap-4 rounded-2xl border-[1.5px] border-dashed border-accent/45 bg-accent/[0.05] px-5 py-4 transition-colors hover:border-accent/70">
+          <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent/[0.14]">
+            <svg class="h-5 w-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>
+            </svg>
+          </span>
+          <span class="min-w-0 flex-1">
+            <span class="block text-sm font-semibold text-text-primary">Drop old reports here, or tap to choose</span>
+            <span class="mt-0.5 block text-xs leading-relaxed text-text-tertiary">PDF &middot; several at once is fine &middot; originals stay in your private archive &middot; a file you already have is spotted before it is filed</span>
+          </span>
+          <span class="hidden shrink-0 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-bold text-accent-light sm:inline-block">Choose files</span>
           <input id="file" type="file" accept="application/pdf" multiple class="hidden" />
         </label>
 
@@ -314,8 +320,8 @@ import SiteHeader from "../components/SiteHeader.astro";
         <!-- ── echo review: numbers → Labs, the doctor's words kept apart ── -->
         <div id="echoreview" class="mt-6 hidden rounded-2xl border border-accent/40 bg-white/[0.03] p-5"></div>
 
-        <!-- ── the archive: one card per original PDF ────────────────────── -->
-        <div id="repcards" class="mt-6 grid max-w-3xl gap-3"></div>
+        <!-- ── the archive: a timeline, one card per original PDF, a year at a time ── -->
+        <div id="repcards" class="mt-6 flex max-w-3xl flex-col gap-3"></div>
       </div>
 
       <p class="mt-10 text-xs leading-5 text-text-muted">
@@ -326,6 +332,19 @@ import SiteHeader from "../components/SiteHeader.astro";
 
     <p id="loading" class="mt-10 text-sm text-text-tertiary">Checking your session…</p>
   </main>
+
+  <!-- ── the veil: any page, the moment a file is dragged over it ──────── -->
+  <div id="veil" class="pointer-events-none fixed inset-0 z-50 hidden items-center justify-center bg-canvas-3/75 p-6 backdrop-blur-sm">
+    <div class="flex w-full max-w-[560px] flex-col items-center gap-3.5 rounded-3xl border-2 border-dashed border-accent/70 bg-canvas/85 px-8 py-11 text-center">
+      <span class="flex h-16 w-16 items-center justify-center rounded-[18px] bg-accent/[0.16]">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+      </span>
+      <p class="text-[26px] font-extrabold tracking-[-0.02em] text-text-primary">Drop to add</p>
+      <p class="max-w-[380px] text-[13px] leading-relaxed text-text-secondary">
+        PDF reports, several at once. They land on the Reports tab, and any that you already have is spotted before it is filed.
+      </p>
+    </div>
+  </div>
 
   <Footer />
 </Layout>
@@ -970,9 +989,44 @@ import SiteHeader from "../components/SiteHeader.astro";
   }
 
   // ═══ REPORTS ═════════════════════════════════════════════════════════════
+  /** The stored name, as a title: the upload stamp off, underscores as spaces, no .pdf. */
+  const pretty = (name: string) => name.replace(/^\d+-/, "").replace(/\.pdf$/i, "").replace(/_/g, " ");
+  /** The upload time, from the stamp the upload put in front of the name. */
+  const stampOf = (name: string) => Number((name.match(/^(\d+)-/) ?? [])[1] ?? 0);
+
+  /** "Keep both" decisions, per file, kept in this browser. */
+  const keptKey = "mh-keep-both";
+  function keptSet(): Set<string> {
+    try { return new Set(JSON.parse(localStorage.getItem(keptKey) ?? "[]")); } catch { return new Set(); }
+  }
+  function keepBoth(name: string) {
+    try { localStorage.setItem(keptKey, JSON.stringify([...keptSet(), name])); } catch { /* private mode: the flag returns next visit */ }
+  }
+
+  /**
+   * Which files are second copies of another. Storage gives each object an
+   * eTag — a checksum of its bytes — so two uploads of the same PDF share
+   * one; failing that, the same size and the same name is the same file.
+   * The earliest upload is the original; the rest are its copies.
+   */
+  function findDuplicates(files: any[]): Map<string, string> {
+    const dupOf = new Map<string, string>();
+    const groups = new Map<string, any[]>();
+    for (const f of files) {
+      const tag = f.metadata?.eTag ? `etag:${f.metadata.eTag}` : `size:${f.metadata?.size ?? "?"}|${pretty(f.name).toLowerCase()}`;
+      (groups.get(tag) ?? groups.set(tag, []).get(tag)!).push(f);
+    }
+    for (const g of groups.values()) {
+      if (g.length < 2) continue;
+      g.sort((x, y) => stampOf(x.name) - stampOf(y.name));
+      for (const f of g.slice(1)) dupOf.set(f.name, g[0].name);
+    }
+    return dupOf;
+  }
+
   async function renderReports() {
     const { data } = await supabase.storage.from("reports").list(userId, {
-      sortBy: { column: "created_at", order: "desc" }, limit: 50,
+      sortBy: { column: "created_at", order: "desc" }, limit: 200,
     });
     const files = (data ?? []).filter((f) => f.name.toLowerCase().endsWith(".pdf"));
 
@@ -985,37 +1039,91 @@ import SiteHeader from "../components/SiteHeader.astro";
       o.date = r.measured_on;
       outcomes.set(r.report_path, o);
     }
-
     const imagingByPath = new Map(allImaging.map((im) => [im.report_path, im]));
-    $("repcards").innerHTML = files.map((f) => {
-      const o = outcomes.get(`${userId}/${f.name}`);
-      const im = imagingByPath.get(`${userId}/${f.name}`);
+    const dupOf = findDuplicates(files);
+    const kept = keptSet();
+
+    // each file's date: the report's own, else the imaging report's, else the
+    // upload's. A copy has no filed values of its own, so it takes its
+    // original's date and sits beside it.
+    const dated = files.map((f) => {
+      const path = `${userId}/${f.name}`;
+      const o = outcomes.get(path);
+      const im = imagingByPath.get(path);
+      const uploaded = stampOf(f.name) ? new Date(stampOf(f.name)).toISOString().slice(0, 10) : "";
+      return { f, path, o, im, date: o?.date ?? im?.report_date ?? uploaded, uploaded };
+    });
+    const byName = new Map(dated.map((d) => [d.f.name, d]));
+    for (const d of dated) {
+      const orig = dupOf.get(d.f.name);
+      if (orig && !d.o && !d.im && byName.get(orig)?.date) d.date = byName.get(orig)!.date;
+    }
+    dated.sort((x, y) => (y.date || "").localeCompare(x.date || "") || stampOf(y.f.name) - stampOf(x.f.name));
+
+    // a year at a time, newest first, the first year open
+    const years = new Map<string, typeof dated>();
+    for (const d of dated) {
+      const y = d.date ? d.date.slice(0, 4) : "Undated";
+      (years.get(y) ?? years.set(y, []).get(y)!).push(d);
+    }
+
+    const card = (d: (typeof dated)[number]) => {
+      const { f, o, im } = d;
+      const original = dupOf.get(f.name);
+      const flagged = original != null && !kept.has(f.name);
       const modChip = im ? `<span class="rounded-md bg-accent/15 px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-accent-light">${esc(String(im.modality).toUpperCase())}</span>` : "";
-      const chips = modChip + (o
-        ? `<span class="rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-text-secondary">${o.n} VALUES</span>
-           ${o.flagged ? `<span class="rounded-md bg-warning/15 px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-warning">${o.flagged} OUT OF RANGE</span>` : `<span class="rounded-md bg-success/15 px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-success">ALL IN RANGE</span>`}
-           <span class="font-mono text-[9px] tracking-wider text-text-tertiary">${fmtDay(o.date).toUpperCase()}</span>`
-        : `<span class="rounded-md bg-accent/15 px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-accent-light">NOT READ YET</span>`);
+      const dateChip = d.date ? `<span class="rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-text-secondary">${fmtDay(d.date).toUpperCase()}</span>` : "";
+      const outcome = o
+        ? `${o.n} values · ${o.flagged ? `<span class="text-warning">${o.flagged} outside range</span>` : `<span class="text-success">all in range</span>`}`
+        : im ? "the report's own words, on Labs · Imaging"
+        : flagged ? "" : `<span class="text-accent-light">not read yet</span>`;
       return `
-        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+        <div class="rounded-2xl border ${flagged ? "border-warning/45" : "border-white/10"} bg-white/[0.03] p-4">
           <div class="flex items-center gap-3">
+            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-accent/[0.12]">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
+            </span>
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-2" data-namewrap>
-                <div class="truncate text-sm font-bold">${esc(f.name.replace(/^\d+-/, ""))}</div>
+                <div class="truncate text-sm font-semibold text-text-primary">${esc(pretty(f.name))}</div>
                 <button data-ren="${esc(f.name)}" title="Rename" aria-label="Rename report" class="shrink-0 text-text-muted transition-colors hover:text-text-primary">
                   <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
                 </button>
               </div>
-              <div class="mt-1 flex flex-wrap items-center gap-1.5">${chips}</div>
+              <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-tertiary">${dateChip}${modChip}${outcome ? `<span>${outcome}</span>` : ""}</div>
+            </div>
+            <div class="hidden shrink-0 items-center gap-2 sm:flex">
+              <button data-view="${esc(f.name)}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-white/25 hover:text-text-primary">View</button>
+              <button data-parse="${esc(f.name)}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-white/25 hover:text-text-primary">${o || im ? "Read again" : "Read values"}</button>
+              <button data-del="${esc(f.name)}" title="Delete" aria-label="Delete report" class="rounded-lg border border-white/12 px-2 py-1.5 text-text-tertiary transition-colors hover:border-danger/50 hover:text-danger">
+                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+              </button>
             </div>
           </div>
-          <div class="mt-3 flex flex-wrap gap-2">
-            <button data-parse="${esc(f.name)}" class="rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-xs font-bold text-accent-light hover:bg-accent/20">${o ? "Read again" : "Read values"}</button>
-            <button data-view="${esc(f.name)}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-white/40 hover:bg-white/[0.07] hover:text-text-primary">View PDF</button>
-            <button data-del="${esc(f.name)}" class="ml-auto rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-tertiary transition-colors hover:border-danger/50 hover:bg-danger/10 hover:text-danger">Delete</button>
+          <div class="mt-3 flex flex-wrap gap-2 sm:hidden">
+            <button data-view="${esc(f.name)}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary">View</button>
+            <button data-parse="${esc(f.name)}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary">${o || im ? "Read again" : "Read values"}</button>
+            <button data-del="${esc(f.name)}" class="ml-auto rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-tertiary">Delete</button>
           </div>
+          ${flagged ? `
+          <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-white/[0.06] pt-3">
+            <span class="rounded-md bg-warning/15 px-2 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-warning">Duplicate</span>
+            <span class="min-w-0 flex-1 text-xs leading-relaxed text-text-tertiary">The same file as <strong class="font-semibold text-text-secondary">${esc(pretty(original!))}</strong>. Its values were filed once; this PDF is a second copy.</span>
+            <button data-del="${esc(f.name)}" data-quiet class="rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-xs font-bold text-accent-light hover:bg-accent/20">Remove this copy</button>
+            <button data-keep="${esc(f.name)}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary hover:border-white/25">Keep both</button>
+          </div>` : ""}
         </div>`;
-    }).join("");
+    };
+
+    $("repcards").innerHTML = [...years.entries()].map(([y, list], i) => `
+      <details ${i === 0 ? "open" : ""} class="group">
+        <summary class="flex cursor-pointer list-none items-center gap-2.5 py-1 text-text-primary [&::-webkit-details-marker]:hidden">
+          <span class="font-mono text-[13px] font-bold">${esc(y)}</span>
+          <span class="text-xs text-text-tertiary">${list.length} report${list.length === 1 ? "" : "s"}</span>
+          <svg class="h-3.5 w-3.5 text-text-tertiary transition-transform group-open:rotate-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+        </summary>
+        <div class="mt-2 flex flex-col gap-2.5">${list.map(card).join("")}</div>
+      </details>`).join("");
 
     $("repcards").querySelectorAll("[data-parse]").forEach((b) =>
       b.addEventListener("click", () => parseReport((b as HTMLElement).dataset.parse!)));
@@ -1023,9 +1131,15 @@ import SiteHeader from "../components/SiteHeader.astro";
       b.addEventListener("click", () => viewPdf(`${userId}/${(b as HTMLElement).dataset.view}`)));
     $("repcards").querySelectorAll("[data-del]").forEach((b) =>
       b.addEventListener("click", async () => {
-        await supabase.storage.from("reports").remove([`${userId}/${(b as HTMLElement).dataset.del}`]);
+        const el = b as HTMLElement;
+        // Removing a copy needs no question; deleting a report does. Its
+        // values stay on Labs either way — only the PDF goes.
+        if (el.dataset.quiet == null && !confirm(`Delete "${pretty(el.dataset.del!)}"? The PDF is removed; its values stay on your Labs tab.`)) return;
+        await supabase.storage.from("reports").remove([`${userId}/${el.dataset.del}`]);
         renderReports();
       }));
+    $("repcards").querySelectorAll("[data-keep]").forEach((b) =>
+      b.addEventListener("click", () => { keepBoth((b as HTMLElement).dataset.keep!); renderReports(); }));
     $("repcards").querySelectorAll("[data-ren]").forEach((b) =>
       b.addEventListener("click", () => renameUI(b as HTMLElement)));
   }
@@ -1112,12 +1226,19 @@ import SiteHeader from "../components/SiteHeader.astro";
         <span data-qchip class="rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-text-tertiary">QUEUED</span>
       </div>`).join("");
 
+    // the archive as it stands, so a file already in it is spotted before
+    // it is uploaded again: same bytes (size) and the same name
+    const { data: existing } = await supabase.storage.from("reports").list(userId, { limit: 200 });
+    const already = new Set((existing ?? []).map((e) => `${e.metadata?.size ?? "?"}|${pretty(e.name).toLowerCase()}`));
+
     let last: { name: string; out: any; path: string; filed: any } | null = null;
     let filedN = 0;
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
       if (f.type !== "application/pdf") { qset(i, "SKIPPED", "bad", "Not a PDF"); continue; }
       if (f.size > 15 * 1024 * 1024) { qset(i, "SKIPPED", "bad", "Over 15 MB"); continue; }
+      const asStored = `${f.size}|${pretty(f.name.replace(/[^\w.\-]+/g, "_")).toLowerCase()}`;
+      if (already.has(asStored)) { qset(i, "ALREADY HERE", "ok", "This file is in your archive. Its card's Read again re-reads it."); continue; }
 
       qset(i, "UPLOADING…", "busy", "Saving the original to your private archive");
       const path = `${userId}/${Date.now()}-${f.name.replace(/[^\w.\-]+/g, "_")}`;
@@ -1137,7 +1258,10 @@ import SiteHeader from "../components/SiteHeader.astro";
         qset(i, "ARCHIVED", "ok", `Read as: ${out.kind ?? "a medical document"} — kept as a PDF; its type is on the roadmap`);
       } else {
         const filed = await archiveLab(out, path);
-        qset(i, "FILED ✓", "ok", `${filed.allValues.length} values → Labs · ${filed.fresh.length} new on your trends`);
+        if (filed.allValues.length > 0 && filed.fresh.length === 0)
+          qset(i, "A COPY", "ok", `${filed.allValues.length} values, every one already on your Labs tab from ${fmtDay(filed.date)} — this is a copy of a report you have`);
+        else
+          qset(i, "FILED ✓", "ok", `${filed.allValues.length} values → Labs · ${filed.fresh.length} new on your trends`);
         filedN++; last = { name: f.name, out, path, filed };
       }
     }
@@ -1157,18 +1281,29 @@ import SiteHeader from "../components/SiteHeader.astro";
     ($("file") as HTMLInputElement).value = "";
     if (fs.length) uploadBatch(fs);
   });
-  ["dragover", "dragenter"].forEach((ev) => document.addEventListener(ev, (e) => {
-    if (!userId) return;
+  // Drag a file over ANY part of the page and the veil says where it will
+  // land. dragenter/dragleave fire for every element crossed, so a depth
+  // counter tells a real leave from a move between children.
+  let dragDepth = 0;
+  const veil = (on: boolean) => { $("veil").classList.toggle("hidden", !on); $("veil").classList.toggle("flex", on); };
+  const hasFiles = (e: Event) => Array.from((e as DragEvent).dataTransfer?.types ?? []).includes("Files");
+  document.addEventListener("dragenter", (e) => {
+    if (!userId || !hasFiles(e)) return;
     e.preventDefault();
-    $("drop").classList.add("border-accent", "bg-accent/10");
-  }));
-  ["dragleave", "drop"].forEach((ev) => document.addEventListener(ev, (e) => {
-    if (!userId) return;
+    if (dragDepth++ === 0) veil(true);
+  });
+  document.addEventListener("dragover", (e) => {
+    if (!userId || !hasFiles(e)) return;
     e.preventDefault();
-    $("drop").classList.remove("border-accent", "bg-accent/10");
-  }));
+  });
+  document.addEventListener("dragleave", (e) => {
+    if (!userId || !hasFiles(e)) return;
+    if (--dragDepth <= 0) { dragDepth = 0; veil(false); }
+  });
   document.addEventListener("drop", (e) => {
     if (!userId) return;
+    e.preventDefault();
+    dragDepth = 0; veil(false);
     const fs = Array.from((e as DragEvent).dataTransfer?.files ?? []);
     if (fs.length) uploadBatch(fs);
   });
