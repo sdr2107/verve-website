@@ -47,7 +47,12 @@ import SiteHeader from "../components/SiteHeader.astro";
          The page says why you would sign in before it asks you to: three
          lines on the left, one card on the right with one primary action.
          Every id the script wires is kept. ───────────────────────────── -->
-    <section id="auth" class="mt-4 hidden max-w-[1120px] gap-10 lg:mt-8 lg:grid lg:grid-cols-[minmax(0,1.1fr)_440px] lg:items-center lg:gap-16">
+    <section id="auth" class="mt-4 hidden max-w-[1120px] lg:mt-8">
+      <!-- The grid lives on an inner div, not on #auth: the script hides
+           #auth by adding `hidden`, and a responsive display class on the
+           same element (`lg:grid`) would win over it on a desktop — which
+           is how the sign-in card stayed on screen after signing in. -->
+      <div class="gap-10 lg:grid lg:grid-cols-[minmax(0,1.1fr)_440px] lg:items-center lg:gap-16">
       <div class="flex flex-col gap-4 lg:gap-[22px]">
         <span class="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-accent-light">My health</span>
         <h1 class="text-[30px] font-bold leading-[1.1] tracking-[-0.025em] text-text-primary sm:text-[46px] sm:leading-[1.06] sm:tracking-[-0.03em]">
@@ -139,6 +144,7 @@ import SiteHeader from "../components/SiteHeader.astro";
         </p>
 
         <p id="authmsg" class="mt-4 hidden text-sm"></p>
+      </div>
       </div>
     </section>
 
