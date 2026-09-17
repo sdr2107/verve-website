@@ -374,6 +374,37 @@ import SiteHeader from "../components/SiteHeader.astro";
   <Footer />
 </Layout>
 
+<style is:global>
+  /* Motion has one job here: to say what just changed and where to look.
+     Six moments move; nothing else does. Every entry eases out and is under
+     a third of a second, and all of it is off under reduced motion. */
+  @keyframes mh-rise { to { opacity: 1; transform: translateY(0); } }
+  @keyframes mh-draw { to { stroke-dashoffset: 0; } }
+  @keyframes mh-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes mh-veil { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes mh-frame { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+  @keyframes mh-pulse { 0%, 100% { background-color: transparent; } 40% { background-color: rgba(251, 191, 36, 0.22); } }
+
+  /* the page opens: the greeting fades up, tiles and cards rise in, staggered by --i */
+  .mh-rise { opacity: 0; transform: translateY(6px); animation: mh-rise 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; animation-delay: calc(var(--i, 0) * 60ms); }
+  /* a section ring draws itself: --len is the arc, set where the ring is drawn */
+  .mh-ring { stroke-dashoffset: var(--len, 0); animation: mh-draw 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards; animation-delay: calc(var(--i, 0) * 60ms + 0.2s); }
+  /* a tab switch, and a chart opening */
+  .mh-fade { animation: mh-fade 0.18s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  .mh-open { animation: mh-fade 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  /* a file dragged over the page */
+  #veil.flex { animation: mh-veil 0.15s ease-out both; }
+  #veil.flex > div { animation: mh-frame 0.18s cubic-bezier(0.2, 0.7, 0.2, 1) 0.05s both; }
+  /* a value outside its range, the moment a report is read: one pulse, then it settles */
+  .mh-pulse { border-radius: 6px; animation: mh-pulse 0.6s ease-out 0.3s 1; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mh-rise, .mh-ring, .mh-fade, .mh-open, #veil.flex, #veil.flex > div, .mh-pulse {
+      animation: none; opacity: 1; transform: none; stroke-dashoffset: 0;
+    }
+  }
+</style>
+
 <script>
   import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   import { canonName, unitKey } from "../lib/canon.js";
@@ -436,8 +467,15 @@ import SiteHeader from "../components/SiteHeader.astro";
   // ── tabs ───────────────────────────────────────────────────────────────
   let activeTab = "overview";
   function setTab(t: string) {
+    const switching = activeTab !== t;
     activeTab = t;
     ["overview", "labs", "reports"].forEach((x) => show("tab-" + x, x === t));
+    if (switching) {
+      const el = $("tab-" + t);
+      el.classList.remove("mh-fade");
+      void el.offsetWidth;   // restart the animation
+      el.classList.add("mh-fade");
+    }
     $("tabbar").querySelectorAll("[data-tab]").forEach((b) => {
       const on = (b as HTMLElement).dataset.tab === t;
       b.className = `flex-1 rounded-xl px-4 py-2 text-sm font-semibold sm:flex-none transition-colors ${
@@ -459,6 +497,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       userEmail = session.user.email ?? "";
       firstName = await resolveFirstName(session.user);
       $("greet").textContent = greeting();
+      $("greet").parentElement!.parentElement!.classList.add("mh-rise");
       appLink?.classList.add("hidden");
       show("signout", true); show("home", true); show("auth", false);
       const wanted = window.location.hash.replace("#", "");
@@ -726,15 +765,16 @@ import SiteHeader from "../components/SiteHeader.astro";
 
   // ═══ OVERVIEW ═══════════════════════════════════════════════════════════
   /** A section's ring: latest readings in range, out of those with a printed range. */
-  function ringSvg(ok: number, judged: number): string {
+  function ringSvg(ok: number, judged: number, i = 0): string {
     const C = 2 * Math.PI * 22;
     const frac = judged ? ok / judged : 0;
+    const len = (frac * C).toFixed(1);
     const color = judged === 0 ? "#64748b" : ok === judged ? "#34d399" : "#FBBF24";
     return `
       <svg width="52" height="52" viewBox="0 0 56 56" aria-hidden="true">
         <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="5"/>
-        <circle cx="28" cy="28" r="22" fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round"
-          stroke-dasharray="${(frac * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 28 28)"/>
+        <circle class="mh-ring" style="--len: ${len}; --i: ${i}" cx="28" cy="28" r="22" fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round"
+          stroke-dasharray="${len} ${C.toFixed(1)}" transform="rotate(-90 28 28)"/>
         <text x="28" y="26.5" text-anchor="middle" font-size="13" font-weight="800" fill="#f1f5f9">${judged ? ok : "–"}</text>
         <text x="28" y="37" text-anchor="middle" font-size="7.5" fill="#64748b">${judged ? `of ${judged}` : "no range"}</text>
       </svg>`;
@@ -772,7 +812,7 @@ import SiteHeader from "../components/SiteHeader.astro";
 
     // ── your sections: the same split as Labs, each a way in ─────────────
     show("secwrap", true);
-    $("sections").innerHTML = SECTION_ORDER.filter((s) => labSecs.has(s)).map((s) => {
+    $("sections").innerHTML = SECTION_ORDER.filter((s) => labSecs.has(s)).map((s, i) => {
       const series = [...labSecs.get(s)!.values()];
       let ok = 0, judged = 0;
       for (const rs of series) {
@@ -785,8 +825,8 @@ import SiteHeader from "../components/SiteHeader.astro";
         ? `<span class="text-warning">${flagged} outside range</span>`
         : judged ? `<span class="text-success">all in range</span>` : `<span class="text-text-tertiary">no printed ranges</span>`;
       return `
-        <button data-opensec="${s}" class="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/4 px-3.5 py-3 text-left transition-colors hover:border-white/16">
-          ${ringSvg(ok, judged)}
+        <button data-opensec="${s}" style="--i: ${i}" class="mh-rise flex items-center gap-3 rounded-2xl border border-white/8 bg-white/4 px-3.5 py-3 text-left transition-colors hover:border-white/16">
+          ${ringSvg(ok, judged, i)}
           <span class="min-w-0 flex-1">
             <span class="block truncate text-sm font-semibold text-text-primary">${SECTIONS[s]}</span>
             <span class="block text-xs leading-snug">${series.length} marker${series.length === 1 ? "" : "s"} · ${status}</span>
@@ -819,11 +859,11 @@ import SiteHeader from "../components/SiteHeader.astro";
     $("worthall").textContent = findings.length > top.length
       ? `All ${findings.length} outside range in Labs →` : findings.length ? "Open in Labs →" : "";
     show("worthall", findings.length > 0);
-    $("worth").innerHTML = top.length ? top.map((f) => {
+    $("worth").innerHTML = top.length ? top.map((f, i) => {
       const dir = f.latest.ref_low != null && f.latest.value < f.latest.ref_low ? "below" : "above";
       const trend = f.n > 1 ? `${f.first.value} → ${f.latest.value} across ${f.n} reports` : `from ${fmtDay(f.latest.measured_on)}`;
       return `
-        <button data-worth="${esc(f.sec)}|${esc(f.name)}" class="flex flex-col gap-1.5 rounded-2xl border border-white/8 bg-white/4 p-4 text-left transition-colors hover:border-warning/40">
+        <button data-worth="${esc(f.sec)}|${esc(f.name)}" style="--i: ${i + 4}" class="mh-rise flex flex-col gap-1.5 rounded-2xl border border-white/8 bg-white/4 p-4 text-left transition-colors hover:border-warning/40">
           <span class="flex w-full items-center justify-between gap-2">
             <span class="min-w-0 truncate text-sm font-semibold text-text-primary">${esc(f.name)}</span>
             <span class="shrink-0 rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-text-secondary">${esc(SECTIONS[f.sec])}</span>
@@ -853,7 +893,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     const repName = path ? path.split("/").pop()!.replace(/^\d+-/, "").replace(/\.pdf$/i, "").replace(/_/g, " ") : "";
     show("latestwrap", true);
     $("latestcard").innerHTML = `
-      <div class="flex flex-wrap items-center gap-3 sm:gap-4">
+      <div class="mh-rise flex flex-wrap items-center gap-3 sm:gap-4" style="--i: 7">
         <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/[0.14]">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>
         </span>
@@ -1061,7 +1101,7 @@ import SiteHeader from "../components/SiteHeader.astro";
 
     const unitLabel = rs[rs.length - 1].unit ? esc(String(rs[rs.length - 1].unit)) : "";
     return `
-      <div class="mb-3 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+      <div class="mh-open mb-3 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
         <svg viewBox="0 0 ${W} ${H}" class="w-full">${ticks}${bands}${line}${dots}${diamonds}${xlabels}</svg>
         <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-text-tertiary">
           <span><span class="text-success">●</span> in its lab's range</span>
@@ -1364,6 +1404,11 @@ import SiteHeader from "../components/SiteHeader.astro";
     }
 
     await refresh();
+    // the report just filed: its card rises into the timeline
+    if (last) {
+      const card = $("repcards").querySelector(`[data-view="${CSS.escape(last.path.split("/")[1])}"]`)?.closest("details > div > div");
+      card?.classList.add("mh-rise");
+    }
     // the review opens once, for the last report that filed — every other
     // file's values are already on the Labs tab regardless
     if (last) {
@@ -1566,7 +1611,7 @@ import SiteHeader from "../components/SiteHeader.astro";
         ${bySec.get(s)!.map((v: any) => `
           <div class="flex items-baseline gap-3 py-1.5">
             <span class="flex-1 text-[13px] text-text-primary">${esc(v.name)}</span>
-            <span class="font-mono text-xs ${inRange(v) === false ? "text-warning" : "text-success"}">${v.value}${v.unit ? ` ${esc(v.unit)}` : ""}</span>
+            <span class="font-mono text-xs ${inRange(v) === false ? "mh-pulse px-1 text-warning" : "text-success"}">${v.value}${v.unit ? ` ${esc(v.unit)}` : ""}</span>
             <span class="w-24 text-right font-mono text-[10px] text-text-muted">${esc(rangeLabel(v))}</span>
           </div>`).join("")}
       </div>`).join("");
