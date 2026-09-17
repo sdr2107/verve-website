@@ -5,7 +5,8 @@ import SiteHeader from "../components/SiteHeader.astro";
 ---
 
 <!--
-  My health — the website's signed-in corner, in three tabs.
+  My health — the website's signed-in corner, in three tabs. Signed out,
+  it says what the page is for before it asks for a password.
 
   · Overview — a greeting, the handful of findings worth a look, the latest
     report, and a slim drop bar. The answer-at-a-glance page.
@@ -42,51 +43,103 @@ import SiteHeader from "../components/SiteHeader.astro";
 
   <main class="vrv-glow relative mx-auto max-w-6xl px-6 pb-24 sm:px-10">
 
-    <!-- ── signed out ─────────────────────────────────────────────────── -->
-    <section id="auth" class="mt-6 hidden max-w-3xl rounded-2xl border border-white/10 bg-white/[0.03] p-7">
-      <h1 class="text-2xl font-extrabold tracking-tight">My health</h1>
-      <p class="mt-2 text-sm leading-6 text-text-secondary">
-        Drop an old lab report — Verve reads every value. The markers the app tracks
-        go to your app on one tap; everything else is kept and charted here.
-      </p>
-      <div class="mt-6 flex w-fit gap-1 rounded-full border border-white/10 bg-white/[0.04] p-1">
-        <button type="button" data-mode="signin" class="rounded-full px-4 py-1.5 text-[13px] font-bold">Sign in</button>
-        <button type="button" data-mode="signup" class="rounded-full px-4 py-1.5 text-[13px] font-semibold">Create account</button>
+    <!-- ── signed out: what My health is for, then the way in ────────────
+         The page says why you would sign in before it asks you to: three
+         lines on the left, one card on the right with one primary action.
+         Every id the script wires is kept. ───────────────────────────── -->
+    <section id="auth" class="mt-4 hidden max-w-[1120px] gap-10 lg:mt-8 lg:grid lg:grid-cols-[minmax(0,1.1fr)_440px] lg:items-center lg:gap-16">
+      <div class="flex flex-col gap-4 lg:gap-[22px]">
+        <span class="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-accent-light">My health</span>
+        <h1 class="text-[30px] font-bold leading-[1.1] tracking-[-0.025em] text-text-primary sm:text-[46px] sm:leading-[1.06] sm:tracking-[-0.03em]">
+          Your lab reports, read and filed for you.
+        </h1>
+        <p class="max-w-[520px] text-[14.5px] leading-[1.6] text-text-secondary sm:text-base sm:leading-[1.65]">
+          Drop a PDF from any lab. Verve reads every value, sends the markers
+          the app tracks to your phone on one tap, and keeps the rest charted
+          here.
+        </p>
+        <ul class="mt-1 hidden flex-col gap-3.5 lg:flex">
+          <li class="flex items-start gap-3.5">
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-accent/[0.14]">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14" /></svg>
+            </span>
+            <span>
+              <span class="block text-[15px] font-semibold text-text-primary">Drop a report</span>
+              <span class="block text-[13px] leading-relaxed text-text-tertiary">Any lab, any year. Imaging reports too.</span>
+            </span>
+          </li>
+          <li class="flex items-start gap-3.5">
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-success/[0.12]">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l4 4L19 7" /></svg>
+            </span>
+            <span>
+              <span class="block text-[15px] font-semibold text-text-primary">Every value read</span>
+              <span class="block text-[13px] leading-relaxed text-text-tertiary">Everything parsed is charted here; you check the app-bound values before they are sent.</span>
+            </span>
+          </li>
+          <li class="flex items-start gap-3.5">
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-warning/[0.12]">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2" /><path d="M11 18h2" /></svg>
+            </span>
+            <span>
+              <span class="block text-[15px] font-semibold text-text-primary">The app&rsquo;s markers go to your phone</span>
+              <span class="block text-[13px] leading-relaxed text-text-tertiary">Everything else stays charted here, with its own history.</span>
+            </span>
+          </li>
+        </ul>
+        <p class="hidden text-[13px] text-text-tertiary lg:block">The login is the one you use in the app.</p>
       </div>
-      <p id="modenote" class="mt-3 text-sm text-text-secondary"></p>
 
-      <form id="pwform" class="mt-4 flex flex-col gap-3">
-        <input id="email" type="email" required placeholder="you@example.com" autocomplete="email"
-          class="rounded-xl border border-white/12 bg-white/[0.04] px-4 py-3 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
-        <div class="relative">
-          <input id="password" type="password" placeholder="Password" autocomplete="current-password"
-            class="w-full rounded-xl border border-white/12 bg-white/[0.04] px-4 py-3 pr-12 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
-          <button type="button" data-eye="password" aria-label="Show password"
-            class="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-text-tertiary hover:text-text-primary">
-            <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
-          </button>
+      <!-- the card: one primary action, the alternative under a rule -->
+      <div class="mt-6 rounded-[20px] border border-white/10 bg-white/[0.03] p-5 sm:p-7 lg:mt-0">
+        <div class="flex w-full gap-1 rounded-full border border-white/10 bg-white/[0.04] p-1 sm:w-fit">
+          <button type="button" data-mode="signin" class="min-h-10 flex-1 rounded-full px-4 py-1.5 text-[13px] font-bold sm:flex-none">Sign in</button>
+          <button type="button" data-mode="signup" class="min-h-10 flex-1 rounded-full px-4 py-1.5 text-[13px] font-semibold sm:flex-none">Create account</button>
         </div>
-        <button type="submit" id="authsubmit"
-          class="rounded-xl bg-accent px-4 py-3 text-sm font-bold text-canvas transition-opacity hover:opacity-90">
-          Sign in
-        </button>
-        <button type="button" id="forgot" class="self-end text-xs font-medium text-accent-light hover:underline">
-          Forgot password?
-        </button>
-      </form>
+        <p id="modenote" class="mt-3 hidden text-sm leading-relaxed text-text-secondary"></p>
 
-      <div id="ordiv" class="mt-4 flex items-center gap-3">
-        <div class="h-px flex-1 bg-white/10"></div>
-        <span class="text-xs text-text-muted">or</span>
-        <div class="h-px flex-1 bg-white/10"></div>
+        <form id="pwform" class="mt-4 flex flex-col gap-4">
+          <div>
+            <label for="email" class="mb-1.5 block text-xs font-semibold text-text-secondary">Email</label>
+            <input id="email" type="email" required placeholder="you@example.com" autocomplete="email"
+              class="w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-3 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none sm:text-sm" />
+          </div>
+          <div>
+            <div class="mb-1.5 flex items-baseline justify-between">
+              <label for="password" class="text-xs font-semibold text-text-secondary">Password</label>
+              <button type="button" id="forgot" class="text-xs font-medium text-accent-light hover:underline">Forgot?</button>
+            </div>
+            <div class="relative">
+              <input id="password" type="password" placeholder="Password" autocomplete="current-password"
+                class="w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-3 pr-12 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none sm:text-sm" />
+              <button type="button" data-eye="password" aria-label="Show password"
+                class="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-text-tertiary hover:text-text-primary">
+                <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+          </div>
+          <button type="submit" id="authsubmit"
+            class="min-h-11 rounded-xl bg-accent px-4 py-3 text-sm font-bold text-canvas transition-opacity hover:opacity-90">
+            Sign in
+          </button>
+        </form>
+
+        <div id="ordiv" class="mt-4 flex items-center gap-3">
+          <div class="h-px flex-1 bg-white/10"></div>
+          <span class="text-xs text-text-muted">or</span>
+          <div class="h-px flex-1 bg-white/10"></div>
+        </div>
+
+        <button id="magic"
+          class="mt-4 min-h-11 w-full rounded-xl border border-white/14 px-4 py-3 text-sm font-semibold text-text-primary transition-colors hover:border-white/25">
+          Email me a sign-in link
+        </button>
+        <p id="applenote" class="mt-3 text-xs leading-relaxed text-text-tertiary">
+          Signed up with Apple? Use the email link &mdash; it goes to the address on your Apple ID.
+        </p>
+
+        <p id="authmsg" class="mt-4 hidden text-sm"></p>
       </div>
-
-      <button id="magic"
-        class="mt-4 w-full rounded-xl border border-white/14 px-4 py-3 text-sm font-semibold text-text-primary transition-colors hover:border-white/25">
-        Email me a sign-in link
-      </button>
-
-      <p id="authmsg" class="mt-4 hidden text-sm"></p>
     </section>
 
     <!-- ── set a new password (arrived from a reset email) ──────────────── -->
@@ -364,14 +417,20 @@ import SiteHeader from "../components/SiteHeader.astro";
       const on = (b as HTMLElement).dataset.mode === m;
       b.className = `rounded-full px-4 py-1.5 text-[13px] ${on ? "bg-accent/20 font-bold text-text-primary" : "font-semibold text-text-tertiary hover:text-text-primary"}`;
     });
-    $("modenote").textContent = m === "signin"
-      ? "The login you use in the app. Signed up with Apple? Use the email link below — it goes to the address on your Apple ID."
+    // Sign-in needs no note: the left column says whose login it is, and
+    // the Apple line sits under the email link it is about.
+    const note = m === "signin"
+      ? ""
       : "No app needed to start — this account works here today and signs into the Verve app whenever you get it.";
+    $("modenote").textContent = note;
+    show("modenote", !!note);
     $("authsubmit").textContent = m === "signin" ? "Sign in" : "Create my account";
     ($("password") as HTMLInputElement).placeholder = m === "signin" ? "Password" : "Choose a password (8+ characters)";
+    ($("password") as HTMLInputElement).autocomplete = m === "signin" ? "current-password" : "new-password";
     show("forgot", m === "signin");
     show("magic", m === "signin");
     show("ordiv", m === "signin");
+    show("applenote", m === "signin");
     msg("authmsg", "");
   }
   document.querySelectorAll("[data-mode]").forEach((b) =>
