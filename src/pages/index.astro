@@ -4,8 +4,8 @@ import ContourTexture from "../components/ContourTexture.astro";
 import StatCallout from "../components/StatCallout.astro";
 import PillarCard from "../components/PillarCard.astro";
 import Footer from "../components/Footer.astro";
-
-const APP_STORE_URL = "https://apps.apple.com/app/id6760022278";
+import SiteHeader from "../components/SiteHeader.astro";
+import { APP_STORE_URL } from "../data/site";
 
 const pillars = [
   {
@@ -57,27 +57,7 @@ const pillars = [
   title="Verve — Fitness tracking built on what predicts how long you live"
   description="Verve tracks MET-hours and cardiorespiratory fitness — the metrics linked to mortality risk in peer-reviewed research — with every threshold traced to a cited source."
 >
-  <!-- ── Nav ─────────────────────────────────────────────────────────── -->
-  <header class="mx-auto flex max-w-6xl items-center justify-between px-6 py-6 sm:px-10">
-    <div class="flex items-center gap-2.5">
-      <img src="/app-icon.png" alt="" class="h-8 w-8 rounded-lg" />
-      <span class="text-lg font-semibold tracking-tight text-text-primary">Verve</span>
-    </div>
-    <div class="flex items-center gap-6">
-      <a href="/science" class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary">
-        Science
-      </a>
-      <a href="/my-health" class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary">
-        My health
-      </a>
-      <a
-        href={APP_STORE_URL}
-        class="rounded-full border border-white/14 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-white/25"
-      >
-        Get the app
-      </a>
-    </div>
-  </header>
+  <SiteHeader />
 
   <!-- ── Hero ────────────────────────────────────────────────────────── -->
   <section class="vrv-glow relative overflow-hidden px-6 pt-16 pb-24 sm:px-10 sm:pt-24 sm:pb-32">

@@ -1,0 +1,32 @@
+/**
+ * The site's fixed addresses and its navigation, in one place.
+ *
+ * The header and the footer both read NAV, so the same four links appear at
+ * the top and the bottom of every page, in the same order. Before this the
+ * App Store address was written into five files and the header on each page
+ * carried a different subset of the links; the footer was the only place all
+ * four appeared.
+ */
+
+export const APP_STORE_URL = "https://apps.apple.com/app/id6760022278";
+export const X_URL = "https://x.com/RoplekarSudeep";
+export const SUBSTACK_URL =
+  "https://substack.com/@roplekarsudeep?r=596iu&utm_campaign=profile&utm_medium=profile-page";
+export const PRIVACY_URL = "https://sdr2107.github.io/verve-privacy/";
+
+export type NavKey = "science" | "my-health" | "x" | "substack";
+
+export interface NavLink {
+  key: NavKey;
+  label: string;
+  href: string;
+  /** Off-site: opens in a new tab. */
+  external?: boolean;
+}
+
+export const NAV: NavLink[] = [
+  { key: "science", label: "Science", href: "/science" },
+  { key: "my-health", label: "My health", href: "/my-health" },
+  { key: "x", label: "X", href: X_URL, external: true },
+  { key: "substack", label: "Substack", href: SUBSTACK_URL, external: true },
+];

@@ -1,6 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Footer from "../components/Footer.astro";
+import SiteHeader from "../components/SiteHeader.astro";
 ---
 
 <!--
@@ -28,22 +29,16 @@ import Footer from "../components/Footer.astro";
   description="Sign in with your Verve account, drop old lab reports, and their values file themselves into your app and your own lab dashboard."
   cardType="summary"
 >
-  <header class="mx-auto flex max-w-6xl items-center justify-between px-6 py-6 sm:px-10">
-    <a href="/" class="flex items-center gap-2.5">
-      <img src="/app-icon.png" alt="" class="h-8 w-8 rounded-lg" />
-      <span class="text-lg font-semibold tracking-tight text-text-primary">Verve</span>
-    </a>
-    <div class="flex items-center gap-3">
-      <!-- No email in the header — a greeting, the way the app does it.
-           (The old span carried sm:inline, which OVERRODE `hidden` at
-           desktop widths — the address stayed visible after sign-out.) -->
-      <span id="who" class="hidden text-sm font-semibold text-text-secondary"></span>
-      <button
-        id="signout"
-        class="hidden rounded-full border border-white/14 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-white/25"
-      >Sign out</button>
-    </div>
-  </header>
+  <SiteHeader current="my-health">
+    <!-- No email in the header: a greeting, the way the app does it. Both
+         stay hidden until a session is found. -->
+    <span slot="extra" id="who" class="hidden text-sm font-semibold text-text-secondary"></span>
+    <button
+      slot="extra"
+      id="signout"
+      class="hidden rounded-full border border-white/14 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-white/25"
+    >Sign out</button>
+  </SiteHeader>
 
   <main class="vrv-glow relative mx-auto max-w-6xl px-6 pb-24 sm:px-10">
 

@@ -1,0 +1,123 @@
+---
+/**
+ * The header, the same on every page: the logo, the four links the footer
+ * has, and the app button. The page you are on is lit; the app button stays
+ * a ghost so the download is the one filled button on the landing page.
+ *
+ * On a phone it is two rows rather than a menu icon. Four short links fit,
+ * and a hidden menu is the one place a first-time visitor will not look for
+ * the science.
+ *
+ * Deeper pages pass a breadcrumb, which takes the logo's row on a desktop; a
+ * link already in the breadcrumb is not repeated in the nav. A topic page
+ * also passes `back`, and on a phone the row becomes a back link and the
+ * topic's place in its subject, which is what a reader mid-way through a
+ * subject needs from the top of the screen.
+ */
+import { NAV, APP_STORE_URL, type NavKey } from "../data/site";
+
+interface Crumb {
+  /** No href: the current page, rendered as text. */
+  href?: string;
+  label: string;
+}
+
+interface Props {
+  /** Which nav link is the page you are on. */
+  current?: NavKey;
+  /** Items after the logo, desktop only. */
+  crumb?: Crumb[];
+  /** Phone only: replaces the logo row with a back link. */
+  back?: { href: string; label: string };
+  /** Phone only, beside the back link: "1 of 5". */
+  position?: string;
+}
+
+const { current, crumb = [], back, position } = Astro.props;
+
+const inCrumb = new Set(crumb.map((c) => c.href));
+const links = NAV.filter((l) => !inCrumb.has(l.href));
+
+const link = (key: NavKey) =>
+  key === current ? "text-text-primary" : "text-text-secondary";
+---
+
+<header class="border-b border-white/[0.06]">
+  <div class="mx-auto max-w-6xl px-6 sm:px-10">
+    <div class="flex items-center justify-between gap-6 py-4 md:py-5">
+      <div class:list={["min-w-0 items-center gap-2.5 text-sm", back ? "hidden md:flex" : "flex"]}>
+        <a href="/" class="flex shrink-0 items-center gap-2.5">
+          <img src="/app-icon.png" alt="" class="h-8 w-8 rounded-lg" />
+          <span class="text-lg font-semibold tracking-tight text-text-primary">Verve</span>
+        </a>
+        {crumb.map((c) => (
+          <>
+            <span class="text-text-muted" aria-hidden="true">/</span>
+            {c.href ? (
+              <a href={c.href} class="truncate text-text-secondary transition-colors hover:text-text-primary">
+                {c.label}
+              </a>
+            ) : (
+              <span class="truncate font-medium text-text-primary" aria-current="page">{c.label}</span>
+            )}
+          </>
+        ))}
+      </div>
+
+      {back && (
+        <a
+          href={back.href}
+          class="flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent-light md:hidden"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+          {back.label}
+        </a>
+      )}
+
+      <div class="flex shrink-0 items-center gap-3 md:gap-6">
+        <nav class="hidden items-center gap-6 md:flex" aria-label="Site">
+          {links.map((l) => (
+            <a
+              href={l.href}
+              target={l.external ? "_blank" : undefined}
+              rel={l.external ? "noopener noreferrer" : undefined}
+              aria-current={l.key === current ? "page" : undefined}
+              class:list={["text-sm font-medium transition-colors hover:text-text-primary", link(l.key)]}
+            >
+              {l.label}
+            </a>
+          ))}
+        </nav>
+        <slot name="extra" />
+        <a
+          href={APP_STORE_URL}
+          class:list={[
+            "whitespace-nowrap rounded-full border border-white/14 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-white/25",
+            back && "hidden md:inline-block",
+          ]}
+        >
+          Get the app
+        </a>
+        {back && position && (
+          <span class="font-mono text-[11px] text-text-tertiary md:hidden">{position}</span>
+        )}
+      </div>
+    </div>
+
+    {!back && (
+      <nav class="flex gap-5 pb-3 md:hidden" aria-label="Site">
+        {NAV.map((l) => (
+          <a
+            href={l.href}
+            target={l.external ? "_blank" : undefined}
+            rel={l.external ? "noopener noreferrer" : undefined}
+            aria-current={l.key === current ? "page" : undefined}
+            class:list={["text-[13px] font-medium transition-colors hover:text-text-primary", link(l.key)]}
+          >
+            {l.label}
+          </a>
+        ))}
+      </nav>
+    )}
+  </div>
+</header>

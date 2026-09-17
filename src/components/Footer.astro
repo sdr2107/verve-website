@@ -3,6 +3,9 @@
  * Footer — shared across every page. Was previously duplicated inline in
  * index.astro and science.astro (already drifting: only one had a "Home"
  * link) — extracted here so a change only ever needs to happen once.
+ *
+ * The links are the header's four, in the header's order, plus Home and the
+ * privacy policy. Both read their addresses from data/site.ts.
  */
 interface Props {
   /** Show the "Home" link — omit on the homepage itself. */
@@ -12,8 +15,7 @@ interface Props {
 }
 const { showHome = true, showScience = true } = Astro.props;
 
-const X_URL = "https://x.com/RoplekarSudeep";
-const SUBSTACK_URL = "https://substack.com/@roplekarsudeep?r=596iu&utm_campaign=profile&utm_medium=profile-page";
+import { X_URL, SUBSTACK_URL, PRIVACY_URL } from "../data/site";
 ---
 
 <footer class="border-t border-white/7 px-6 py-12 sm:px-10">
@@ -32,7 +34,7 @@ const SUBSTACK_URL = "https://substack.com/@roplekarsudeep?r=596iu&utm_campaign=
       <a href={SUBSTACK_URL} target="_blank" rel="noopener noreferrer" class="hover:text-text-primary">
         Substack
       </a>
-      <a href="https://sdr2107.github.io/verve-privacy/" class="hover:text-text-primary">Privacy Policy</a>
+      <a href={PRIVACY_URL} class="hover:text-text-primary">Privacy Policy</a>
     </nav>
   </div>
 </footer>

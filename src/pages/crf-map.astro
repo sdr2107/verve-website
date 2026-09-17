@@ -14,6 +14,7 @@
  */
 import Layout from "../layouts/Layout.astro";
 import Footer from "../components/Footer.astro";
+import SiteHeader from "../components/SiteHeader.astro";
 import tree from "../data/crf-dendrogram.json";
 
 const SOURCE_URL = "https://www.ahajournals.org/doi/10.1161/CIR.0000000000000461";
@@ -27,18 +28,7 @@ const nodeCount = (function count(n: any): number {
   description={`An interactive map of the American Heart Association's scientific statement on cardiorespiratory fitness — ${nodeCount} concepts, from what CRF measures to how to improve it. Pan, zoom, expand.`}
   image="/og-crf-map.png"
 >
-  <header class="mx-auto flex max-w-6xl items-center justify-between px-6 py-5 sm:px-10">
-    <a href="/" class="flex items-center gap-2.5">
-      <img src="/app-icon.png" alt="" class="h-8 w-8 rounded-lg" />
-      <span class="text-lg font-semibold tracking-tight text-text-primary">Verve</span>
-    </a>
-    <a
-      href="/science"
-      class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
-    >
-      Science
-    </a>
-  </header>
+  <SiteHeader current="science" crumb={[{ href: "/science", label: "Science" }, { label: "The CRF map" }]} />
 
   <section class="mx-auto max-w-3xl px-6 pt-4 pb-7 sm:px-10">
     <span class="font-mono text-xs font-semibold uppercase tracking-widest text-accent-light">

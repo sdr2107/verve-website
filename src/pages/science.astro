@@ -15,6 +15,7 @@
  */
 import Layout from "../layouts/Layout.astro";
 import Footer from "../components/Footer.astro";
+import SiteHeader from "../components/SiteHeader.astro";
 import CrfMapPreview from "../components/science/CrfMapPreview.astro";
 import AppGlimpses from "../components/science/AppGlimpses.astro";
 import { SUBJECTS, TOPICS, topicsFor, subjectCounts, COUNTS, ANCHOR_PAGE } from "../data/scienceTopics";
@@ -64,23 +65,7 @@ const figures = [
     })();
   </script>
 
-  <header class="mx-auto flex max-w-6xl items-center justify-between px-6 py-6 sm:px-10">
-    <a href="/" class="flex items-center gap-2.5">
-      <img src="/app-icon.png" alt="" class="h-8 w-8 rounded-lg" />
-      <span class="text-lg font-semibold tracking-tight text-text-primary">Verve</span>
-    </a>
-    <div class="flex items-center gap-6">
-      <a href="/my-health" class="text-sm font-medium text-text-secondary transition-colors hover:text-text-primary">
-        My health
-      </a>
-      <a
-        href="https://apps.apple.com/app/id6760022278"
-        class="rounded-full border border-white/14 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-white/25"
-      >
-        Get the app
-      </a>
-    </div>
-  </header>
+  <SiteHeader current="science" />
 
   <!-- ── The opening ─────────────────────────────────────────────────── -->
   <section class="relative px-6 pt-8 pb-16 sm:px-10">
