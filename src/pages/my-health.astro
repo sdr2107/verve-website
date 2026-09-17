@@ -195,21 +195,39 @@ import SiteHeader from "../components/SiteHeader.astro";
 
       <!-- ═══ OVERVIEW ═══════════════════════════════════════════════════ -->
       <div id="tab-overview" class="mt-6 hidden">
-        <div id="worthwrap" class="mt-6 hidden">
-          <div class="font-mono text-[10px] font-semibold uppercase tracking-widest text-text-tertiary">Worth a look</div>
-          <div id="worth" class="mt-2 grid gap-3 sm:grid-cols-2"></div>
+        <!-- nothing yet: the one call to action, since the drop zone lives on Reports -->
+        <div id="emptycard" class="hidden max-w-3xl rounded-2xl border border-dashed border-accent/40 bg-accent/[0.04] p-6">
+          <p class="text-sm font-semibold text-text-primary">No reports yet</p>
+          <p class="mt-1 text-[13px] leading-relaxed text-text-tertiary">
+            Drop your first lab report and every value in it becomes a trend you keep. PDF, several at once.
+          </p>
+          <button id="emptyadd" class="mt-4 min-h-11 rounded-xl bg-accent px-5 py-2.5 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Add a report</button>
         </div>
 
-        <div id="latestcard" class="mt-6 hidden rounded-2xl border border-white/10 bg-white/[0.03] p-5"></div>
+        <!-- your sections: the same split as Labs, each a way in -->
+        <section id="secwrap" class="hidden">
+          <h2 class="text-[17px] font-bold tracking-tight text-text-primary">Your sections</h2>
+          <p class="mt-0.5 text-[12.5px] text-text-tertiary">In range against each lab&rsquo;s own printed range. Tap one to open it in Labs.</p>
+          <div id="sections" class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"></div>
+        </section>
 
-        <label for="file"
-          class="mt-6 flex max-w-3xl cursor-pointer items-center gap-3 rounded-2xl border-[1.5px] border-dashed border-accent/40 bg-accent/[0.04] px-5 py-4 transition-colors hover:border-accent/70">
-          <svg class="h-5 w-5 shrink-0 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>
-          </svg>
-          <span class="text-sm font-semibold">Drop a report anywhere on this page</span>
-          <span class="ml-auto hidden text-xs text-text-tertiary sm:inline">PDF · or tap to choose</span>
-        </label>
+        <section id="worthwrap" class="mt-7 hidden">
+          <div class="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h2 class="text-[17px] font-bold tracking-tight text-text-primary">Worth a look</h2>
+              <p class="mt-0.5 text-[12.5px] text-text-tertiary">The latest reading outside its range, worst first.</p>
+            </div>
+            <button id="worthall" data-goto="labs" class="text-[13px] font-medium text-accent-light hover:text-text-primary"></button>
+          </div>
+          <div id="worth" class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"></div>
+        </section>
+
+        <section id="latestwrap" class="mt-7 hidden">
+          <h2 class="text-[17px] font-bold tracking-tight text-text-primary">Latest report</h2>
+          <div id="latestcard" class="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5"></div>
+        </section>
+
+        <p class="mt-7 font-mono text-[10.5px] text-text-muted">Drag a PDF anywhere on this page to add it.</p>
       </div>
 
       <!-- ═══ LABS ═══════════════════════════════════════════════════════ -->
@@ -431,10 +449,13 @@ import SiteHeader from "../components/SiteHeader.astro";
     return firstName ? `${tod}, ${firstName}` : tod;
   }
 
-  $("addreport").addEventListener("click", () => {
+  /** The one way to add a report: the Reports tab, and its picker. */
+  function pickReport() {
     setTab("reports");
     $("file").click();
-  });
+  }
+  $("addreport").addEventListener("click", pickReport);
+  $("emptyadd").addEventListener("click", pickReport);
 
   /** Refetch web_labs + imaging_reports once; every surface renders from them. */
   async function refresh() {
@@ -588,23 +609,80 @@ import SiteHeader from "../components/SiteHeader.astro";
   }
 
   // ═══ OVERVIEW ═══════════════════════════════════════════════════════════
+  /** A section's ring: latest readings in range, out of those with a printed range. */
+  function ringSvg(ok: number, judged: number): string {
+    const C = 2 * Math.PI * 22;
+    const frac = judged ? ok / judged : 0;
+    const color = judged === 0 ? "#64748b" : ok === judged ? "#34d399" : "#FBBF24";
+    return `
+      <svg width="52" height="52" viewBox="0 0 56 56" aria-hidden="true">
+        <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="5"/>
+        <circle cx="28" cy="28" r="22" fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round"
+          stroke-dasharray="${(frac * C).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 28 28)"/>
+        <text x="28" y="26.5" text-anchor="middle" font-size="13" font-weight="800" fill="#f1f5f9">${judged ? ok : "–"}</text>
+        <text x="28" y="37" text-anchor="middle" font-size="7.5" fill="#64748b">${judged ? `of ${judged}` : "no range"}</text>
+      </svg>`;
+  }
+
+  /** A tiny trend line for a card: the series on its own scale, last point marked. */
+  function sparkline(rs: any[], color: string): string {
+    const vals = rs.map((r) => Number(r.value));
+    if (vals.length < 2) return "";
+    const lo = Math.min(...vals), hi = Math.max(...vals);
+    const x = (i: number) => 3 + (i / (vals.length - 1)) * 74;
+    const y = (v: number) => hi === lo ? 13 : 23 - ((v - lo) / (hi - lo)) * 20;
+    const pts = vals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+    const last = vals.length - 1;
+    return `<svg width="80" height="26" viewBox="0 0 80 26" class="shrink-0" aria-hidden="true">
+      <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${x(last).toFixed(1)}" cy="${y(vals[last]).toFixed(1)}" r="2.6" fill="${color}"/></svg>`;
+  }
+
   function renderOverview() {
     $("greet").textContent = greeting();
 
     const dates = [...new Set(allLabs.map((r) => r.measured_on))].sort();
     if (dates.length === 0) {
-      $("greetsub").textContent = "Drop your first lab report and every value in it becomes a trend you keep.";
-      show("worthwrap", false); show("latestcard", false);
+      $("greetsub").textContent = "Nothing filed yet.";
+      show("emptycard", true); show("secwrap", false); show("worthwrap", false); show("latestwrap", false);
       return;
     }
+    show("emptycard", false);
     const markers = [...labSecs.values()].reduce((n, m) => n + m.size, 0);
     const reports = new Set(allLabs.map((r) => r.report_path).filter(Boolean)).size || dates.length;
     const monthYear = (d: string) => new Date(d + "T00:00:00").toLocaleDateString(undefined, { month: "short", year: "numeric" });
     $("greetsub").textContent =
       `${reports} report${reports === 1 ? "" : "s"} · ${markers} marker${markers === 1 ? "" : "s"} · ${monthYear(dates[0])} → ${fmtDay(dates[dates.length - 1])}`;
 
-    // Worth a look — latest reading out of its own range, worst first
-    type Finding = { sec: string; name: string; latest: any; n: number; first: any; sev: number };
+    // ── your sections: the same split as Labs, each a way in ─────────────
+    show("secwrap", true);
+    $("sections").innerHTML = SECTION_ORDER.filter((s) => labSecs.has(s)).map((s) => {
+      const series = [...labSecs.get(s)!.values()];
+      let ok = 0, judged = 0;
+      for (const rs of series) {
+        const v = inRange(rs[rs.length - 1]);
+        if (v !== null) judged++;
+        if (v === true) ok++;
+      }
+      const flagged = judged - ok;
+      const status = flagged
+        ? `<span class="text-warning">${flagged} outside range</span>`
+        : judged ? `<span class="text-success">all in range</span>` : `<span class="text-text-tertiary">no printed ranges</span>`;
+      return `
+        <button data-opensec="${s}" class="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/4 px-3.5 py-3 text-left transition-colors hover:border-white/16">
+          ${ringSvg(ok, judged)}
+          <span class="min-w-0 flex-1">
+            <span class="block truncate text-sm font-semibold text-text-primary">${SECTIONS[s]}</span>
+            <span class="block text-xs leading-snug">${series.length} marker${series.length === 1 ? "" : "s"} · ${status}</span>
+          </span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+        </button>`;
+    }).join("");
+    $("sections").querySelectorAll("[data-opensec]").forEach((b) =>
+      b.addEventListener("click", () => openSection((b as HTMLElement).dataset.opensec!)));
+
+    // ── worth a look: the latest reading out of its own range, worst first ──
+    type Finding = { sec: string; name: string; rs: any[]; latest: any; n: number; first: any; sev: number };
     const findings: Finding[] = [];
     let inCount = 0, judged = 0;
     for (const [sec, m] of labSecs) for (const [name2, rs] of m) {
@@ -616,53 +694,62 @@ import SiteHeader from "../components/SiteHeader.astro";
       const lo = latest.ref_low, hi = latest.ref_high;
       const width = lo != null && hi != null ? hi - lo : Math.abs(hi ?? lo ?? 1) || 1;
       const dist = lo != null && latest.value < lo ? lo - latest.value : latest.value - (hi ?? 0);
-      findings.push({ sec, name: name2, latest, n: rs.length, first: rs[0], sev: dist / (width || 1) });
+      findings.push({ sec, name: name2, rs, latest, n: rs.length, first: rs[0], sev: dist / (width || 1) });
     }
     findings.sort((a, b) => b.sev - a.sev);
-    const top = findings.slice(0, 4);
+    const top = findings.slice(0, 3);
 
     show("worthwrap", true);
-    const cards = top.map((f) => {
+    $("worthall").textContent = findings.length > top.length
+      ? `All ${findings.length} outside range in Labs →` : findings.length ? "Open in Labs →" : "";
+    show("worthall", findings.length > 0);
+    $("worth").innerHTML = top.length ? top.map((f) => {
       const dir = f.latest.ref_low != null && f.latest.value < f.latest.ref_low ? "below" : "above";
       const trend = f.n > 1 ? `${f.first.value} → ${f.latest.value} across ${f.n} reports` : `from ${fmtDay(f.latest.measured_on)}`;
       return `
-        <button data-worth="${esc(f.sec)}|${esc(f.name)}" class="rounded-2xl border border-warning/30 bg-warning/[0.05] p-4 text-left transition-colors hover:border-warning/60">
-          <div class="flex items-baseline justify-between gap-2">
-            <span class="min-w-0 truncate text-sm font-bold">${esc(f.name)}</span>
-            <span class="shrink-0 font-mono text-[9px] uppercase tracking-wider text-text-tertiary">${esc(SECTIONS[f.sec])}</span>
-          </div>
-          <div class="mt-1 font-mono text-lg font-bold text-warning">${f.latest.value}${f.latest.unit ? ` <span class="text-xs font-semibold">${esc(f.latest.unit)}</span>` : ""}</div>
-          <div class="mt-0.5 text-xs text-text-tertiary">${dir} the lab's range ${esc(rangeLabel(f.latest))} · ${esc(trend)}</div>
+        <button data-worth="${esc(f.sec)}|${esc(f.name)}" class="flex flex-col gap-1.5 rounded-2xl border border-white/8 bg-white/4 p-4 text-left transition-colors hover:border-warning/40">
+          <span class="flex w-full items-center justify-between gap-2">
+            <span class="min-w-0 truncate text-sm font-semibold text-text-primary">${esc(f.name)}</span>
+            <span class="shrink-0 rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-text-secondary">${esc(SECTIONS[f.sec])}</span>
+          </span>
+          <span class="flex w-full items-end justify-between gap-3">
+            <span class="font-mono text-[26px] font-bold leading-none text-warning">${f.latest.value}${f.latest.unit ? ` <span class="text-xs font-semibold">${esc(f.latest.unit)}</span>` : ""}</span>
+            ${sparkline(f.rs, "#FBBF24")}
+          </span>
+          <span class="text-xs leading-snug text-text-tertiary">${dir} the lab&rsquo;s range ${esc(rangeLabel(f.latest))} · ${esc(trend)}</span>
         </button>`;
-    });
-    if (judged > 0) cards.push(`
-      <button data-goto="labs" class="rounded-2xl border border-success/25 bg-success/[0.05] p-4 text-left transition-colors hover:border-success/50">
-        <div class="text-sm font-bold text-success">${inCount} of ${judged} markers in range</div>
-        <div class="mt-1 text-xs text-text-tertiary">Latest reading of every marker, each judged against its own lab's printed range. Open Labs for all of them.</div>
-      </button>`);
-    $("worth").innerHTML = cards.join("");
+    }).join("") : `
+      <div class="rounded-2xl border border-success/25 bg-success/[0.05] p-4 sm:col-span-2 lg:col-span-3">
+        <div class="text-sm font-semibold text-success">${inCount} of ${judged} markers in range</div>
+        <div class="mt-1 text-xs leading-relaxed text-text-tertiary">Nothing is outside its lab&rsquo;s printed range right now. The full list is in Labs.</div>
+      </div>`;
     $("worth").querySelectorAll("[data-worth]").forEach((b) =>
       b.addEventListener("click", () => {
         const [sec, name3] = (b as HTMLElement).dataset.worth!.split("|");
         openMarker(sec, name3);
       }));
 
-    // latest report card
+    // ── the latest report ───────────────────────────────────────────────
     const lastDate = dates[dates.length - 1];
     const dayRows = allLabs.filter((r) => r.measured_on === lastDate);
     const flaggedN = dayRows.filter((r) => inRange(r) === false).length;
     const path = dayRows.map((r) => r.report_path).filter(Boolean).pop() ?? "";
-    const repName = path ? path.split("/").pop()!.replace(/^\d+-/, "") : "";
-    show("latestcard", true);
+    const repName = path ? path.split("/").pop()!.replace(/^\d+-/, "").replace(/\.pdf$/i, "").replace(/_/g, " ") : "";
+    show("latestwrap", true);
     $("latestcard").innerHTML = `
-      <div class="flex flex-wrap items-center gap-3">
+      <div class="flex flex-wrap items-center gap-3 sm:gap-4">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/[0.14]">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>
+        </span>
         <div class="min-w-0 flex-1">
-          <div class="font-mono text-[10px] font-semibold uppercase tracking-widest text-text-tertiary">Latest report</div>
-          <div class="mt-1 truncate text-sm font-bold">${esc(repName || fmtDay(lastDate))}</div>
-          <div class="mt-0.5 text-xs text-text-tertiary">${fmtDay(lastDate)} · ${dayRows.length} values · ${flaggedN ? `<span class="text-warning">${flaggedN} out of range</span>` : `<span class="text-success">all in range</span>`}</div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="truncate text-sm font-semibold text-text-primary">${esc(repName || fmtDay(lastDate))}</span>
+            <span class="rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-text-secondary">${fmtDay(lastDate)}</span>
+          </div>
+          <div class="mt-1 text-xs text-text-tertiary">${dayRows.length} values · ${flaggedN ? `<span class="text-warning">${flaggedN} outside range</span>` : `<span class="text-success">all in range</span>`} · all on your Labs tab</div>
         </div>
-        <button data-goto="labs" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary hover:border-white/25">Open in Labs</button>
-        ${path ? `<button data-viewpath="${esc(path)}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary hover:border-white/25">View PDF</button>` : ""}
+        ${path ? `<button data-viewpath="${esc(path)}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-white/25 hover:text-text-primary">View PDF</button>` : ""}
+        <button data-goto="reports" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-white/25 hover:text-text-primary">All reports →</button>
       </div>`;
     const vp = $("latestcard").querySelector("[data-viewpath]");
     if (vp) vp.addEventListener("click", () => viewPdf((vp as HTMLElement).dataset.viewpath!));
@@ -676,6 +763,15 @@ import SiteHeader from "../components/SiteHeader.astro";
       el.dataset.wired = "1";
       el.addEventListener("click", () => setTab(el.dataset.goto!));
     });
+  }
+
+  /** Jump from Overview into one section of Labs. */
+  function openSection(sec: string) {
+    labSection = sec;
+    expandedAnalyte = "";
+    mobileSectionOpen = true;
+    setTab("labs");
+    renderLabsRail(); renderLabsPanel();
   }
 
   /** Jump from Overview straight to one marker's chart. */
