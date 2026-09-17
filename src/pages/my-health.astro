@@ -137,11 +137,36 @@ import SiteHeader from "../components/SiteHeader.astro";
 
         <button id="magic"
           class="mt-4 min-h-11 w-full rounded-xl border border-white/14 px-4 py-3 text-sm font-semibold text-text-primary transition-colors hover:border-white/25">
-          Email me a sign-in link
+          Email me a code
         </button>
         <p id="applenote" class="mt-3 text-xs leading-relaxed text-text-tertiary">
-          Signed up with Apple? Use the email link &mdash; it goes to the address on your Apple ID.
+          A six-digit code you can type on any device, so a code read on your phone
+          signs you in on your Mac. Signed up with Apple? The code goes to the
+          address on your Apple ID.
         </p>
+
+        <!-- ── the code step: the card flips to this once the email is sent ── -->
+        <div id="codestep" class="hidden">
+          <span class="font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-accent-light">Check your email</span>
+          <h2 class="mt-2 text-[22px] font-bold tracking-[-0.02em] text-text-primary">Enter the six-digit code</h2>
+          <p class="mt-2 text-[13px] leading-relaxed text-text-secondary">
+            Sent to <strong id="codeto" class="font-semibold text-text-primary"></strong>. It works on any device: read it on your phone, type it here.
+          </p>
+          <form id="codeform" class="mt-4 flex flex-col gap-4">
+            <label for="code" class="sr-only">Six-digit code</label>
+            <input id="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" placeholder="000000"
+              class="w-full rounded-xl border border-white/12 bg-white/[0.04] px-4 py-3 text-center font-mono text-[28px] font-bold tracking-[0.35em] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
+            <button type="submit" id="verify"
+              class="min-h-11 rounded-xl bg-accent px-4 py-3 text-sm font-bold text-canvas transition-opacity hover:opacity-90 disabled:opacity-50">
+              Sign in
+            </button>
+          </form>
+          <div class="mt-3 flex items-center justify-between gap-3">
+            <button type="button" id="resend" class="text-xs font-medium text-text-tertiary hover:text-text-primary disabled:hover:text-text-tertiary" disabled></button>
+            <button type="button" id="usepw" class="text-xs font-medium text-accent-light hover:underline">Use a password instead</button>
+          </div>
+          <p class="mt-3 text-xs leading-relaxed text-text-tertiary">The link in the same email still works, on the device it is opened on.</p>
+        </div>
 
         <p id="authmsg" class="mt-4 hidden text-sm"></p>
       </div>
@@ -550,16 +575,88 @@ import SiteHeader from "../components/SiteHeader.astro";
     else { msg("authmsg", ""); boot(); }
   });
 
-  $("magic").addEventListener("click", async () => {
-    const email = ($("email") as HTMLInputElement).value.trim();
-    if (!email) { msg("authmsg", "Type your email above first.", true); return; }
-    msg("authmsg", "Sending…");
+  // ── the code: one email carries a six-digit code and the link. The code
+  // signs in whichever device it is typed on; the link, the one it is
+  // opened on. Both come from the same Supabase call. ────────────────────
+  let otpEmail = "";
+  let resendTimer: number | undefined;
+
+  async function sendCode(email: string): Promise<boolean> {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { shouldCreateUser: false, emailRedirectTo: window.location.origin + "/my-health/" },
     });
-    if (error) msg("authmsg", error.message, true);
-    else msg("authmsg", "Sent — open the link in that email and you'll land back here, signed in.");
+    if (error) { msg("authmsg", error.message, true); return false; }
+    return true;
+  }
+
+  /** The card flips: the email is out, the six boxes are what is left. */
+  function enterCodeStep(email: string) {
+    otpEmail = email;
+    $("codeto").textContent = email;
+    ["modenote", "pwform", "ordiv", "magic", "applenote"].forEach((id) => show(id, false));
+    document.querySelectorAll("[data-mode]").forEach((b) => (b as HTMLElement).parentElement!.classList.add("hidden"));
+    show("codestep", true);
+    ($("code") as HTMLInputElement).value = "";
+    msg("authmsg", "");
+    $("code").focus();
+    startResendCountdown();
+  }
+
+  function leaveCodeStep() {
+    if (resendTimer) { clearInterval(resendTimer); resendTimer = undefined; }
+    otpEmail = "";
+    show("codestep", false);
+    document.querySelectorAll("[data-mode]").forEach((b) => (b as HTMLElement).parentElement!.classList.remove("hidden"));
+    show("pwform", true);
+    setAuthMode(authMode);
+  }
+
+  function startResendCountdown() {
+    if (resendTimer) clearInterval(resendTimer);
+    let left = 30;
+    const btn = $("resend") as HTMLButtonElement;
+    const tick = () => {
+      if (left > 0) { btn.disabled = true; btn.textContent = `Resend in 0:${String(left).padStart(2, "0")}`; left--; }
+      else { btn.disabled = false; btn.textContent = "Resend the code"; clearInterval(resendTimer); resendTimer = undefined; }
+    };
+    tick();
+    resendTimer = window.setInterval(tick, 1000);
+  }
+
+  $("magic").addEventListener("click", async () => {
+    const email = ($("email") as HTMLInputElement).value.trim();
+    if (!email) { msg("authmsg", "Type your email above first.", true); return; }
+    msg("authmsg", "Sending…");
+    if (await sendCode(email)) enterCodeStep(email);
+  });
+
+  $("resend").addEventListener("click", async () => {
+    msg("authmsg", "Sending again…");
+    if (await sendCode(otpEmail)) { msg("authmsg", "Sent again."); startResendCountdown(); }
+  });
+
+  $("usepw").addEventListener("click", () => leaveCodeStep());
+
+  $("code").addEventListener("input", () => {
+    const el = $("code") as HTMLInputElement;
+    el.value = el.value.replace(/\D/g, "").slice(0, 6);
+  });
+
+  $("codeform").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const token = ($("code") as HTMLInputElement).value.replace(/\D/g, "");
+    if (token.length !== 6) { msg("authmsg", "The code is six digits.", true); return; }
+    const btn = $("verify") as HTMLButtonElement;
+    btn.disabled = true;
+    msg("authmsg", "Checking…");
+    const { error } = await supabase.auth.verifyOtp({ email: otpEmail, token, type: "email" });
+    btn.disabled = false;
+    // Supabase answers a wrong code and a stale one with the same message.
+    if (error) { msg("authmsg", "That code did not match, or has expired. Check it, or send a new one.", true); return; }
+    msg("authmsg", "");
+    leaveCodeStep();
+    boot();
   });
 
   $("signout").addEventListener("click", async () => {
