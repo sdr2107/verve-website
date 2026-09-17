@@ -4,6 +4,9 @@
  * has, and the app button. The page you are on is lit; the app button stays
  * a ghost so the download is the one filled button on the landing page.
  *
+ * The app button carries data-nav="app" so a page with a signed-in state
+ * (My health) can swap it for Sign out from its own script.
+ *
  * On a phone it is two rows rather than a menu icon. Four short links fit,
  * and a hidden menu is the one place a first-time visitor will not look for
  * the science.
@@ -91,6 +94,7 @@ const link = (key: NavKey) =>
         <slot name="extra" />
         <a
           href={APP_STORE_URL}
+          data-nav="app"
           class:list={[
             "whitespace-nowrap rounded-full border border-white/14 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-white/25",
             back && "hidden md:inline-block",

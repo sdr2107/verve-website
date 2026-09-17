@@ -31,9 +31,9 @@ import SiteHeader from "../components/SiteHeader.astro";
   cardType="summary"
 >
   <SiteHeader current="my-health">
-    <!-- No email in the header: a greeting, the way the app does it. Both
-         stay hidden until a session is found. -->
-    <span slot="extra" id="who" class="hidden text-sm font-semibold text-text-secondary"></span>
+    <!-- Signed in, Sign out takes the app button's place; the greeting is
+         the page's heading, not a header ornament. Hidden until a session
+         is found. -->
     <button
       slot="extra"
       id="signout"
@@ -169,8 +169,24 @@ import SiteHeader from "../components/SiteHeader.astro";
     <!-- ── signed in ──────────────────────────────────────────────────── -->
     <section id="home" class="mt-2 hidden">
 
+      <!-- the greeting: the page's heading, first name from the same
+           profile the app greets you with, and the one way to add a report -->
+      <div class="flex flex-wrap items-end justify-between gap-4 pt-5 sm:pt-8">
+        <div class="min-w-0">
+          <h1 id="greet" class="text-[28px] font-extrabold leading-[1.05] tracking-[-0.03em] text-text-primary sm:text-4xl"></h1>
+          <p id="greetsub" class="mt-2 text-[13px] leading-relaxed text-text-secondary"></p>
+        </div>
+        <button
+          id="addreport"
+          class="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/14 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-white/25"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+          Add a report
+        </button>
+      </div>
+
       <!-- tab pills -->
-      <nav id="tabbar" class="flex gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5 sm:w-fit">
+      <nav id="tabbar" class="mt-5 flex gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5 sm:w-fit">
         <button data-tab="overview" class="flex-1 rounded-xl px-4 py-2 text-sm font-semibold sm:flex-none">Overview</button>
         <button data-tab="labs" class="flex-1 rounded-xl px-4 py-2 text-sm font-semibold sm:flex-none">Labs</button>
         <button data-tab="reports" class="flex-1 rounded-xl px-4 py-2 text-sm font-semibold sm:flex-none">Reports</button>
@@ -179,9 +195,6 @@ import SiteHeader from "../components/SiteHeader.astro";
 
       <!-- ═══ OVERVIEW ═══════════════════════════════════════════════════ -->
       <div id="tab-overview" class="mt-6 hidden">
-        <h1 id="greet" class="text-2xl font-extrabold tracking-tight"></h1>
-        <p id="greetsub" class="mt-1 text-sm text-text-secondary"></p>
-
         <div id="worthwrap" class="mt-6 hidden">
           <div class="font-mono text-[10px] font-semibold uppercase tracking-widest text-text-tertiary">Worth a look</div>
           <div id="worth" class="mt-2 grid gap-3 sm:grid-cols-2"></div>
@@ -202,7 +215,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       <!-- ═══ LABS ═══════════════════════════════════════════════════════ -->
       <div id="tab-labs" class="mt-6 hidden">
         <div class="flex items-baseline justify-between">
-          <h1 class="text-xl font-extrabold tracking-tight">Your labs</h1>
+          <h2 class="text-xl font-extrabold tracking-tight">Your labs</h2>
           <span id="labsspan" class="font-mono text-[10px] uppercase tracking-wider text-text-tertiary"></span>
         </div>
         <p class="mt-1 text-xs leading-5 text-text-tertiary">
@@ -346,6 +359,8 @@ import SiteHeader from "../components/SiteHeader.astro";
 
   let userId = "";
   let userEmail = "";
+  /** First name for the greeting, resolved once per session; "" when there is none. */
+  let firstName = "";
   let parsed: { path: string; lpa_unit: string | null; dupKeys: Set<string> } | null = null;
 
   // one fetch feeds Overview, Labs and the Reports cards
@@ -372,30 +387,54 @@ import SiteHeader from "../components/SiteHeader.astro";
     b.addEventListener("click", () => setTab((b as HTMLElement).dataset.tab!)));
 
   // ── session ────────────────────────────────────────────────────────────
+  const appLink = document.querySelector('[data-nav="app"]') as HTMLElement | null;
+
   async function boot() {
     const { data: { session } } = await supabase.auth.getSession();
     show("loading", false);
     if (session?.user) {
       userId = session.user.id;
       userEmail = session.user.email ?? "";
-      $("who").textContent = greeting();
-      show("who", true); show("signout", true); show("home", true); show("auth", false);
+      firstName = await resolveFirstName(session.user);
+      $("greet").textContent = greeting();
+      appLink?.classList.add("hidden");
+      show("signout", true); show("home", true); show("auth", false);
       const wanted = window.location.hash.replace("#", "");
       setTab(["overview", "labs", "reports"].includes(wanted) ? wanted : "overview");
       await refresh();
     } else {
-      $("who").textContent = "";
-      show("auth", true); show("home", false); show("who", false); show("signout", false);
+      firstName = "";
+      appLink?.classList.remove("hidden");
+      show("auth", true); show("home", false); show("signout", false);
     }
   }
 
-  /** "Good evening, Sudeep" — the app's greeting, from the account's name part. */
+  /**
+   * The name the app greets you with, in the same order the app resolves
+   * it: the profile name set in Settings, then the full name Apple gave,
+   * then nothing. Never the email — "roplekarsudeep" is not a name.
+   */
+  async function resolveFirstName(user: { id: string; user_metadata?: Record<string, unknown> }): Promise<string> {
+    let full = "";
+    try {
+      const { data } = await supabase.from("profiles").select("name").eq("user_id", user.id).maybeSingle();
+      full = String(data?.name ?? "").trim();
+    } catch { /* no profile row, or none we may read: fall through */ }
+    if (!full) full = String(user.user_metadata?.full_name ?? "").trim();
+    return full.split(/\s+/)[0] ?? "";
+  }
+
+  /** "Good evening, Sudeep", or just "Good evening" when no name is known. */
   function greeting(): string {
     const hour = new Date().getHours();
     const tod = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-    const name = userEmail.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-    return `${tod}, ${name}`;
+    return firstName ? `${tod}, ${firstName}` : tod;
   }
+
+  $("addreport").addEventListener("click", () => {
+    setTab("reports");
+    $("file").click();
+  });
 
   /** Refetch web_labs + imaging_reports once; every surface renders from them. */
   async function refresh() {
@@ -559,8 +598,10 @@ import SiteHeader from "../components/SiteHeader.astro";
       return;
     }
     const markers = [...labSecs.values()].reduce((n, m) => n + m.size, 0);
+    const reports = new Set(allLabs.map((r) => r.report_path).filter(Boolean)).size || dates.length;
+    const monthYear = (d: string) => new Date(d + "T00:00:00").toLocaleDateString(undefined, { month: "short", year: "numeric" });
     $("greetsub").textContent =
-      `${allLabs.length} values across ${dates.length} report date${dates.length === 1 ? "" : "s"} · ${markers} markers · ${fmtDay(dates[0])} → ${fmtDay(dates[dates.length - 1])}`;
+      `${reports} report${reports === 1 ? "" : "s"} · ${markers} marker${markers === 1 ? "" : "s"} · ${monthYear(dates[0])} → ${fmtDay(dates[dates.length - 1])}`;
 
     // Worth a look — latest reading out of its own range, worst first
     type Finding = { sec: string; name: string; latest: any; n: number; first: any; sev: number };
