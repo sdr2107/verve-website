@@ -470,6 +470,7 @@ import SiteHeader from "../components/SiteHeader.astro";
 <script>
   import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   import { canonName, unitKey } from "../lib/canon.js";
+  import { AUTO_SEND_TO_APP } from "../data/site";
 
   // ── tiny DOM helpers ───────────────────────────────────────────────────
   const $ = (id: string) => document.getElementById(id)!;
@@ -781,11 +782,22 @@ import SiteHeader from "../components/SiteHeader.astro";
   function isSent(date: string, key: string, value: number): boolean {
     return allApp.some((a) => localDay(a.measured_at) === date && Number(a[key]) === value);
   }
-  /** What a report's card says: how many of its app values the app holds. */
+  /** The app's columns a row carries, for counting what a report sent. */
+  const APP_KEYS = Object.keys(LABELS);
+  /** What a report's card says: how many of its app values the app holds, and how many await a look there. */
   function reportAppState(path: string) {
     const { date, values } = appBoundFor(path);
     const pending = values.filter((v) => !isSent(date, v.key, v.value));
-    return { date, total: values.length, sent: values.length - pending.length, pending };
+    const unchecked = allApp
+      .filter((a) => a.report_path === path && a.review_status === "unchecked")
+      .reduce((n, a) => n + APP_KEYS.filter((k) => a[k] != null).length, 0);
+    return { date, total: values.length, sent: values.length - pending.length, pending, unchecked };
+  }
+  /** Values the app holds from reports that nobody has looked at yet, across the archive. */
+  function uncheckedInApp(): number {
+    return allApp
+      .filter((a) => a.review_status === "unchecked")
+      .reduce((n, a) => n + APP_KEYS.filter((k) => a[k] != null).length, 0);
   }
   /** Reports with app values the app does not have yet, newest first. */
   function pendingReports(): string[] {
@@ -1102,13 +1114,18 @@ import SiteHeader from "../components/SiteHeader.astro";
     }
     show("emptycard", false);
     const waiting = pendingReports();
-    show("tosend", waiting.length > 0);
-    $("tosend").classList.toggle("flex", waiting.length > 0);
+    const unchecked = uncheckedInApp();
+    show("tosend", waiting.length > 0 || unchecked > 0);
+    $("tosend").classList.toggle("flex", waiting.length > 0 || unchecked > 0);
+    show("tosendgo", waiting.length > 0);
     if (waiting.length) {
       const n = waiting.reduce((sum, p) => sum + reportAppState(p).pending.length, 0);
       $("tosendtext").textContent = waiting.length === 1
         ? `${n} value${n === 1 ? "" : "s"} for your app from ${pretty(waiting[0].split("/")[1])} ${n === 1 ? "has" : "have"} not been sent.`
         : `${waiting.length} reports have values for your app that have not been sent: ${n} in all.`;
+    } else if (unchecked) {
+      // sent as they were read: the look happens in the app
+      $("tosendtext").textContent = `${unchecked} value${unchecked === 1 ? "" : "s"} from your reports ${unchecked === 1 ? "is" : "are"} in your app, unchecked. Open the app's Body page to look ${unchecked === 1 ? "it" : "them"} over.`;
     }
 
     // ── your sections: the same split as Labs, each a way in ─────────────
@@ -1527,7 +1544,9 @@ import SiteHeader from "../components/SiteHeader.astro";
       const app = o ? reportAppState(d.path) : null;
       const appLine = !app || app.total === 0 ? ""
         : app.pending.length === 0
-          ? `<span class="text-success">${app.total} in your app</span>`
+          ? app.unchecked
+            ? `<span class="text-warning">${app.total} in your app, ${app.unchecked} awaiting your check there</span>`
+            : `<span class="text-success">${app.total} in your app</span>`
           : `<span class="text-warning">${app.pending.length} of ${app.total} for your app not sent</span> <button data-sendrep="${esc(f.name)}" class="ml-1 rounded-md border border-accent/40 bg-accent/10 px-2 py-0.5 text-[11px] font-bold text-accent-light hover:bg-accent/20">Send</button>`;
       return `
         <div class="rounded-2xl border ${flagged ? "border-warning/45" : "border-white/10"} bg-white/[0.03] p-4">
@@ -1775,12 +1794,15 @@ import SiteHeader from "../components/SiteHeader.astro";
         qset(rowId(i), "ARCHIVED", "ok", `Read as: ${out.kind ?? "a medical document"} — kept as a PDF; its type is on the roadmap`);
       } else {
         const filed = await archiveLab(out, path);
+        const auto = await autoSendToApp(filed, path, out.lpa_unit ?? null);
+        auto.forEach((k) => filed.dupKeys.add(k));
+        (filed as any).autoSent = auto;
         if (out.truncated)
           qset(rowId(i), "PART READ", "ok", `${filed.allValues.length} values read before the reader's budget ran out — the rest of this report was not read. Everything read is on Labs.`);
         else if (filed.allValues.length > 0 && filed.fresh.length === 0)
           qset(rowId(i), "A COPY", "ok", `${filed.allValues.length} values, every one already on your Labs tab from ${fmtDay(filed.date)} — this is a copy of a report you have`);
         else
-          qset(rowId(i), "FILED ✓", "ok", `${filed.allValues.length} values → Labs · ${filed.fresh.length} new on your trends`);
+          qset(rowId(i), "FILED ✓", "ok", `${filed.allValues.length} values → Labs · ${filed.fresh.length} new on your trends${auto.size ? ` · ${auto.size} to your app, unchecked` : ""}`);
         filedN++; last = { name: f.name, out, path, filed };
         labsFiled.push(last);
       }
@@ -1902,6 +1924,9 @@ import SiteHeader from "../components/SiteHeader.astro";
       return;
     }
     const filed = await archiveLab(out, path);
+    const auto = await autoSendToApp(filed, path, out.lpa_unit ?? null);
+    auto.forEach((k) => filed.dupKeys.add(k));
+    (filed as any).autoSent = auto;
     if (out.truncated) msg("upmsg", `${filed.allValues.length} values read before the reader's budget ran out — the rest of this report was not read.`);
     await refresh();
     await renderLabReview(out, path, name, filed);
@@ -1951,6 +1976,42 @@ import SiteHeader from "../components/SiteHeader.astro";
     const lpa = values.find((v) => v.key === "lpa_value");
     await renderLabReview({ lpa_unit: lpa?.unit ?? null }, path, path.split("/")[1] ?? path,
       { date, appValues, allValues, fresh: [], dupKeys, nearDays, fromArchive: true });
+  }
+
+  /**
+   * Stage 2: the app's markers go to the app the moment they are read,
+   * marked unchecked with the report they came from, and the app asks the
+   * person to look. A same-day duplicate is not sent; a near-day match is
+   * left to the review, where the person decides. Returns how many went.
+   */
+  async function autoSendToApp(
+    filed: { date: string; appValues: any[]; dupKeys: Set<string>; nearDays: Map<string, number> },
+    path: string, lpaUnit: string | null,
+  ): Promise<Set<string>> {
+    const sent = new Set<string>();
+    if (!AUTO_SEND_TO_APP) return sent;
+    const bySection: Record<string, Record<string, number | string>> = {};
+    for (const v of filed.appValues) {
+      if (filed.dupKeys.has(v.key) || filed.nearDays.has(v.key)) continue;
+      (bySection[LABELS[v.key].section] ??= {})[v.key] = v.value;
+      sent.add(v.key);
+    }
+    if (sent.size === 0) return sent;
+    if (bySection.heart?.lpa_value != null && lpaUnit) bySection.heart.lpa_unit = lpaUnit;
+    const m = bySection.metabolic;
+    if (m && typeof m.glucose_mgdl === "number" && typeof m.fasting_insulin_uiuml === "number") {
+      m.homa_ir = Math.round((m.glucose_mgdl * m.fasting_insulin_uiuml) / 405 * 100) / 100;
+    }
+    const now = new Date().toISOString();
+    const measuredAt = new Date(filed.date + "T09:00:00").toISOString();
+    const rows = Object.entries(bySection).map(([section, cols]) => ({
+      id: crypto.randomUUID(), user_id: userId, source: section,
+      measured_at: measuredAt, updated_at: now,
+      review_status: "unchecked", report_path: path, ...cols,
+    }));
+    const { error } = await supabase.from("lab_readings").insert(rows);
+    if (error) { msg("upmsg", `Filed here, but could not send to the app: ${error.message}`, true); return new Set(); }
+    return sent;
   }
 
   /** Archive a lab report's values — the writes, no DOM. */
@@ -2004,6 +2065,13 @@ import SiteHeader from "../components/SiteHeader.astro";
     $("rvapp").innerHTML = appValues.map((v: any) => {
       const meta = LABELS[v.key];
       const unit = v.key === "lpa_value" ? (out.lpa_unit ?? v.unit ?? "") : meta.unit;
+      const autoSent: Set<string> = (filed as any).autoSent ?? new Set();
+      if (autoSent.has(v.key)) return `
+        <div class="flex items-center gap-3 py-2">
+          <span class="w-20 font-mono text-[10px] uppercase tracking-wider text-text-tertiary">${meta.section}</span>
+          <span class="flex-1 text-sm font-semibold">${esc(meta.label)} · ${v.value} ${esc(unit)}</span>
+          <span class="rounded-md bg-accent/15 px-2 py-0.5 font-mono text-[9px] tracking-wider text-accent-light">IN YOUR APP · CHECK IT THERE</span>
+        </div>`;
       if (dupKeys.has(v.key)) return `
         <div class="flex items-center gap-3 py-2 opacity-50">
           <span class="w-20 font-mono text-[10px] uppercase tracking-wider text-text-tertiary">${meta.section}</span>
@@ -2027,9 +2095,10 @@ import SiteHeader from "../components/SiteHeader.astro";
 
     const sendable = appValues.filter((v: any) => !dupKeys.has(v.key) && nearDays.get(v.key) == null).length;
     const nearOnly = sendable === 0 && [...nearDays.keys()].some((k) => !dupKeys.has(k));
+    const autoCount = ((filed as any).autoSent as Set<string> | undefined)?.size ?? 0;
     $("confirm").textContent = sendable > 0
       ? `Send ${sendable} value${sendable === 1 ? "" : "s"} to the app →`
-      : nearOnly ? "Send ticked values →" : "Nothing new to send";
+      : nearOnly ? "Send ticked values →" : autoCount ? "Everything is in your app" : "Nothing new to send";
     ($("confirm") as HTMLButtonElement).disabled = sendable === 0 && !nearOnly;
 
     // tier 2 — grouped by section, each value against its lab's own range
@@ -2195,9 +2264,11 @@ import SiteHeader from "../components/SiteHeader.astro";
 
     const now = new Date().toISOString();
     const measuredAt = new Date(date + "T09:00:00").toISOString();
+    // Sent by a person who has just read them here: checked, with the report they came from.
     const rows = Object.entries(bySection).map(([section, cols]) => ({
       id: crypto.randomUUID(), user_id: userId, source: section,
-      measured_at: measuredAt, updated_at: now, ...cols,
+      measured_at: measuredAt, updated_at: now,
+      review_status: "checked", reviewed_at: now, report_path: parsed!.path, ...cols,
     }));
     if (rows.length === 0) { msg("rvmsg", "Nothing new to send — these values are already in your app.", true); reEnable(); return; }
 

@@ -17,6 +17,15 @@ export const APP_STORE_URL = "https://apps.apple.com/app/id6760022278";
 export const PLAY_STORE_URL: string | null = null;
 /** The page "Get the app" opens, in a new tab: it routes to the store for the device. */
 export const GET_APP_PATH = "/get";
+
+/**
+ * Stage 2 of the biomarkers: a report's app values go to the app the moment
+ * they are read, marked unchecked, and the app asks the person to look at
+ * them there. Off until the app build that shows the mark is in people's
+ * hands — before that the app would show an unchecked number as a settled
+ * one. Until then a value reaches the app only by Send, as in stage 1.
+ */
+export const AUTO_SEND_TO_APP = false;
 export const X_URL = "https://x.com/RoplekarSudeep";
 export const SUBSTACK_URL =
   "https://substack.com/@roplekarsudeep?r=596iu&utm_campaign=profile&utm_medium=profile-page";
