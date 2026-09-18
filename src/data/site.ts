@@ -9,6 +9,14 @@
  */
 
 export const APP_STORE_URL = "https://apps.apple.com/app/id6760022278";
+/**
+ * Google Play, once the Android app ships: put its address here and /get
+ * starts sending Android visitors to it and shows the second button. Until
+ * then it is null, and /get says Android is coming.
+ */
+export const PLAY_STORE_URL: string | null = null;
+/** The page "Get the app" opens, in a new tab: it routes to the store for the device. */
+export const GET_APP_PATH = "/get";
 export const X_URL = "https://x.com/RoplekarSudeep";
 export const SUBSTACK_URL =
   "https://substack.com/@roplekarsudeep?r=596iu&utm_campaign=profile&utm_medium=profile-page";

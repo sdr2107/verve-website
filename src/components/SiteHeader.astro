@@ -4,8 +4,9 @@
  * then the four links the footer has, and the app button. The page you are on is lit; the app button stays
  * a ghost so the download is the one filled button on the landing page.
  *
- * The app button carries data-nav="app" so a page with a signed-in state
- * (My health) can swap it for Sign out from its own script.
+ * The app button opens /get in a new tab, which sends the visitor to the
+ * store for their device; it carries data-nav="app" so a page with a
+ * signed-in state (My health) can swap it for Sign out from its own script.
  *
  * On a phone it is two rows rather than a menu icon. Four short links fit,
  * and a hidden menu is the one place a first-time visitor will not look for
@@ -17,7 +18,7 @@
  * topic's place in its subject, which is what a reader mid-way through a
  * subject needs from the top of the screen.
  */
-import { NAV, APP_STORE_URL, type NavKey } from "../data/site";
+import { NAV, GET_APP_PATH, type NavKey } from "../data/site";
 
 interface Crumb {
   /** No href: the current page, rendered as text. */
@@ -92,7 +93,9 @@ const link = (key: NavKey) =>
         </nav>
         <slot name="extra" />
         <a
-          href={APP_STORE_URL}
+          href={GET_APP_PATH}
+          target="_blank"
+          rel="noopener"
           data-nav="app"
           class:list={[
             "whitespace-nowrap rounded-full border border-white/14 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-white/25",

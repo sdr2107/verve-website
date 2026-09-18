@@ -1,0 +1,79 @@
+---
+/**
+ * /get — the one address "Get the app" opens, in a new tab.
+ *
+ * It sends the visitor to the store for their device: the App Store today,
+ * and Google Play for an Android visitor once PLAY_STORE_URL is set in
+ * data/site.ts. Until then an Android visitor is not bounced to a store
+ * that has nothing for them: the page stays, says the Android app is
+ * coming, and still offers the App Store link.
+ *
+ * Every link to the app on the site goes through here, so a second store
+ * is one line in site.ts rather than a hunt for every button.
+ */
+import Layout from "../layouts/Layout.astro";
+import { APP_STORE_URL, PLAY_STORE_URL } from "../data/site";
+---
+
+<Layout
+  title="Get Verve"
+  description="Verve for iPhone, on the App Store. The Android app is coming."
+  cardType="summary"
+>
+  <script is:inline define:vars={{ APP_STORE_URL, PLAY_STORE_URL }}>
+    (function () {
+      var android = /android/i.test(navigator.userAgent);
+      if (android && !PLAY_STORE_URL) {
+        // nothing to send them to yet: the page says so
+        document.documentElement.setAttribute("data-android-waiting", "");
+        return;
+      }
+      window.location.replace(android ? PLAY_STORE_URL : APP_STORE_URL);
+    })();
+  </script>
+
+  <main class="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 py-16 text-center">
+    <a href="/" aria-label="Verve, home">
+      <img src="/app-icon.png" alt="" class="h-14 w-14 rounded-2xl" />
+    </a>
+    <h1 class="mt-6 text-[26px] font-bold tracking-[-0.02em] text-text-primary" data-going>
+      Taking you to the App Store&hellip;
+    </h1>
+    <h1 class="mt-6 hidden text-[26px] font-bold tracking-[-0.02em] text-text-primary" data-waiting>
+      Verve is on iPhone today.
+    </h1>
+    <p class="mt-3 text-[15px] leading-relaxed text-text-secondary" data-going>
+      If nothing happens, choose your store below.
+    </p>
+    <p class="mt-3 text-[15px] leading-relaxed text-text-secondary" data-waiting hidden>
+      The Android app is coming. Until then, the science and My health work in any browser.
+    </p>
+    <div class="mt-8 flex w-full flex-col gap-3">
+      <a
+        href={APP_STORE_URL}
+        class="inline-flex min-h-12 items-center justify-center rounded-full bg-text-primary px-6 py-3 text-sm font-semibold text-canvas transition-opacity hover:opacity-90"
+      >
+        App Store &middot; iPhone
+      </a>
+      {PLAY_STORE_URL ? (
+        <a
+          href={PLAY_STORE_URL}
+          class="inline-flex min-h-12 items-center justify-center rounded-full border border-white/14 px-6 py-3 text-sm font-semibold text-text-primary transition-colors hover:border-white/25"
+        >
+          Google Play &middot; Android
+        </a>
+      ) : (
+        <span class="inline-flex min-h-12 items-center justify-center rounded-full border border-white/8 bg-white/4 px-6 py-3 text-sm font-medium text-text-tertiary">
+          Google Play &middot; when the Android app ships
+        </span>
+      )}
+    </div>
+    <a href="/" class="mt-8 text-sm text-text-tertiary transition-colors hover:text-text-primary">&larr; Back to verve-app.health</a>
+  </main>
+
+  <style>
+    /* an Android visitor with no store yet sees the waiting copy instead of the going copy */
+    :global(html[data-android-waiting]) [data-going] { display: none; }
+    :global(html[data-android-waiting]) [data-waiting] { display: block; }
+  </style>
+</Layout>
