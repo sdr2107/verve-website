@@ -242,6 +242,20 @@ import SiteHeader from "../components/SiteHeader.astro";
         </button>
       </div>
 
+      <!-- reading in progress: shown on every tab, since the read carries on
+           whichever tab is open; the bar eases toward the end and jumps when
+           the reader answers -->
+      <button id="busy" class="mt-5 hidden w-full items-center gap-3 rounded-2xl border border-accent/30 bg-accent/[0.06] px-4 py-3 text-left transition-colors hover:border-accent/50">
+        <span id="busyicon" class="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-accent/[0.16]">
+          <svg class="mh-spin h-4 w-4 text-accent-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9"/></svg>
+        </span>
+        <span class="min-w-0 flex-1">
+          <span id="busytext" class="block text-[13px] font-semibold text-text-primary"></span>
+          <span id="busysub" class="block text-xs text-text-tertiary"></span>
+          <span class="mt-2 block h-1 w-full overflow-hidden rounded-full bg-white/[0.07]"><span id="busybar" class="block h-1 rounded-full bg-accent" style="width: 0%"></span></span>
+        </span>
+      </button>
+
       <!-- tab pills -->
       <nav id="tabbar" class="mt-5 flex gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5 sm:w-fit">
         <button data-tab="overview" class="flex-1 rounded-xl px-4 py-2 text-sm font-semibold sm:flex-none">Overview</button>
@@ -431,6 +445,17 @@ import SiteHeader from "../components/SiteHeader.astro";
   /* a value outside its range, the moment a report is read: one pulse, then it settles */
   .mh-pulse { border-radius: 6px; animation: mh-pulse 0.6s ease-out 0.3s 1; }
 
+  /* the reader at work: a turning arc, and a bar that eases toward the end
+     over the time a read usually takes, then jumps when the answer comes */
+  @keyframes mh-spin { to { transform: rotate(360deg); } }
+  .mh-spin { animation: mh-spin 0.9s linear infinite; transform-origin: center; }
+  #busybar { transition: width 0.4s ease-out; }
+  #busybar.mh-creep { transition: width 40s cubic-bezier(0.1, 0.6, 0.2, 1); }
+  @media (prefers-reduced-motion: reduce) {
+    .mh-spin { animation: none; }
+    #busybar, #busybar.mh-creep { transition: none; }
+  }
+
   /* the sign-in card's status line: a quiet row, tinted only when something went wrong */
   .mh-status { border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); padding: 9px 13px; }
   .mh-status.text-danger { border-color: rgba(248,113,113,0.30); background: rgba(248,113,113,0.06); }
@@ -590,6 +615,44 @@ import SiteHeader from "../components/SiteHeader.astro";
     const tod = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
     return firstName ? `${tod}, ${firstName}` : tod;
   }
+
+  // ── the reader at work, shown on every tab ─────────────────────────────
+  // A read is a fetch: it carries on whichever tab is open, and even if the
+  // page is scrolled away. What the person needs is to see that it is
+  // happening and roughly how far along it is. Leaving the page is the one
+  // thing that loses it, so the browser asks first while a read is on.
+  let busyCount = 0;
+  let busyTimer: number | undefined;
+  const busyBar = () => $("busybar") as HTMLElement;
+  function busyStart(text: string, sub = "Verve is reading every value and its printed range — usually 20 to 40 seconds. You can move around the site meanwhile.") {
+    busyCount++;
+    $("busytext").textContent = text;
+    $("busysub").textContent = sub;
+    show("busy", true); $("busy").classList.add("flex");
+    $("busyicon").firstElementChild!.classList.add("mh-spin");
+    if (busyTimer) { clearTimeout(busyTimer); busyTimer = undefined; }
+    busyBar().classList.remove("mh-creep");
+    busyBar().style.width = "0%";
+    void busyBar().offsetWidth;
+    busyBar().classList.add("mh-creep");
+    busyBar().style.width = "90%";
+  }
+  function busyEnd(text: string, sub: string, ok: boolean) {
+    busyCount = Math.max(0, busyCount - 1);
+    if (busyCount > 0) return;
+    busyBar().classList.remove("mh-creep");
+    busyBar().style.width = "100%";
+    $("busyicon").firstElementChild!.classList.remove("mh-spin");
+    $("busytext").textContent = text;
+    $("busysub").textContent = sub;
+    busyBar().classList.toggle("bg-danger", !ok);
+    busyBar().classList.toggle("bg-accent", ok);
+    busyTimer = window.setTimeout(() => { show("busy", false); $("busy").classList.remove("flex"); }, ok ? 6000 : 12000);
+  }
+  $("busy").addEventListener("click", () => setTab("reports"));
+  window.addEventListener("beforeunload", (e) => {
+    if (busyCount > 0) { e.preventDefault(); e.returnValue = ""; }
+  });
 
   /** The one way to add a report: the Reports tab, and its picker. */
   function pickReport() {
@@ -1435,7 +1498,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     }
     dated.sort((x, y) => (y.date || "").localeCompare(x.date || "") || stampOf(y.f.name) - stampOf(x.f.name));
 
-    // a year at a time, newest first, the first year open; inside it, a month at a time
+    // a year at a time, newest first, every year closed until tapped; inside it, a month at a time
     const years = new Map<string, typeof dated>();
     for (const d of dated) {
       const y = d.date ? d.date.slice(0, 4) : "Undated";
@@ -1506,8 +1569,8 @@ import SiteHeader from "../components/SiteHeader.astro";
         </div>`;
     };
 
-    $("repcards").innerHTML = [...years.entries()].map(([y, list], i) => `
-      <details ${i === 0 ? "open" : ""} class="group">
+    $("repcards").innerHTML = [...years.entries()].map(([y, list]) => `
+      <details class="group">
         <summary class="flex cursor-pointer list-none items-center gap-2.5 py-1 text-text-primary [&::-webkit-details-marker]:hidden">
           <span class="font-mono text-[13px] font-bold">${esc(y)}</span>
           <span class="text-xs text-text-tertiary">${list.length} report${list.length === 1 ? "" : "s"}</span>
@@ -1695,9 +1758,14 @@ import SiteHeader from "../components/SiteHeader.astro";
       if (error) { qset(rowId(i), "FAILED", "bad", error.message); failedN++; continue; }
 
       qset(rowId(i), "READING…", "busy", "Verve is reading every value and its printed range — about 20 seconds");
+      busyStart(files.length > 1 ? `Reading ${i + 1} of ${files.length}: ${f.name}` : `Reading ${f.name}…`);
       let out: any;
       try { out = await readReport(path.split("/")[1]); }
-      catch (e: any) { qset(rowId(i), "FAILED", "bad", `${e.message ?? "Could not read this report"} ${kept}`); failedN++; continue; }
+      catch (e: any) {
+        busyEnd(`Could not read ${f.name}`, e.message ?? "Could not read this report", false);
+        qset(rowId(i), "FAILED", "bad", `${e.message ?? "Could not read this report"} ${kept}`); failedN++; continue;
+      }
+      busyEnd(`Read ${f.name}`, "Filed — the queue on the Reports tab has the details.", true);
 
       if (out.doc_type === "echo") {
         const filed = await archiveEcho(out, path);
@@ -1806,19 +1874,22 @@ import SiteHeader from "../components/SiteHeader.astro";
   /** Single-file path — the cards' Read values button. */
   async function parseReport(name: string) {
     setTab("reports");
-    msg("upmsg", "Reading the report — this takes a few seconds…");
+    msg("upmsg", "");
     show("review", false); show("echoreview", false);
     const btns = Array.from($("repcards").querySelectorAll("[data-parse]")) as HTMLButtonElement[];
     btns.forEach((b) => { b.disabled = true; if (b.dataset.parse === name) b.textContent = "Reading…"; });
+    busyStart(`Reading ${pretty(name)}…`);
     let out: any;
     try { out = await readReport(name); }
     catch (e: any) {
       btns.forEach((b) => { b.disabled = false; if (b.dataset.parse === name) b.textContent = "Read values"; });
+      busyEnd(`Could not read ${pretty(name)}`, e.message ?? "Could not read this report", false);
       msg("upmsg", e.message ?? "Could not read this report", true);
       return;
     }
     btns.forEach((b) => { b.disabled = false; if (b.dataset.parse === name) b.textContent = "Read values"; });
-    msg("upmsg", "");
+    const n = out.doc_type === "lab" ? (out.all_values?.length ?? 0) : out.doc_type === "echo" ? (out.echo_values?.length ?? 0) : 0;
+    busyEnd(`Read ${pretty(name)}`, n ? `${n} value${n === 1 ? "" : "s"} read${out.truncated ? ", then the reader's budget ran out" : ""} — the review is on the Reports tab.` : "Filed. The review is on the Reports tab.", true);
     const path = `${userId}/${name}`;
     if (out.doc_type === "echo") {
       await archiveEcho(out, path);
