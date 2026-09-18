@@ -82,6 +82,21 @@ const figures = [
         study it came from.
       </p>
 
+      <!-- Search everything the section says. The index is one file built
+           from the same registry as the pages, fetched on first focus. -->
+      <div class="relative mx-auto mt-8 max-w-xl text-left">
+        <label for="q" class="sr-only">Search the science</label>
+        <svg class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input
+          id="q" type="search" autocomplete="off" spellcheck="false"
+          placeholder="Search a marker, a topic, a study…"
+          aria-controls="results" aria-expanded="false"
+          class="w-full rounded-2xl border border-white/10 bg-white/[0.04] py-3.5 pl-11 pr-12 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent/60 focus:outline-none"
+        />
+        <kbd class="pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 rounded-md border border-white/10 px-1.5 py-0.5 font-mono text-[10px] text-text-muted sm:block" aria-hidden="true">/</kbd>
+        <div id="results" role="listbox" class="absolute left-0 right-0 top-full z-20 mt-2 hidden overflow-hidden rounded-2xl border border-white/10 bg-canvas-2/95 shadow-2xl shadow-black/40 backdrop-blur"></div>
+      </div>
+
       <dl class="mx-auto mt-8 flex items-center justify-center gap-6 sm:gap-10">
         {figures.map((f, i) => (
           <>
@@ -98,6 +113,102 @@ const figures = [
       </dl>
     </div>
   </section>
+
+  {/* ── Search. Terms score against the title first, then the one-line
+       answer, the sub-headings and the prose; a hit links to the page and
+       shows the sentence it was found in. No library: the index is small
+       and the ranking is four lines. ───────────────────────────────────── */}
+  <script is:inline>
+    (function () {
+      var q = document.getElementById("q");
+      var box = document.getElementById("results");
+      if (!q || !box) return;
+      var index = null, loading = null;
+      var KIND = { topic: "Topic", subject: "Subject", marker: "Body marker", study: "Study" };
+
+      function load() {
+        if (index || loading) return loading;
+        loading = fetch("/search-index.json").then(function (r) { return r.json(); }).then(function (j) { index = j; return j; });
+        return loading;
+      }
+      var esc = function (s) { return s.replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
+      var rx = function (s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); };
+
+      function score(e, terms) {
+        var t = e.t.toLowerCase(), d = (e.d || "").toLowerCase(), h = e.h.join(" ").toLowerCase(), x = (e.x || "").toLowerCase(), s = e.s.toLowerCase();
+        var total = 0, hit = 0;
+        for (var i = 0; i < terms.length; i++) {
+          var w = terms[i], n = 0;
+          if (t.indexOf(w) === 0) n += 14; else if (t.indexOf(w) >= 0) n += 10;
+          if (d.indexOf(w) >= 0) n += 4;
+          if (h.indexOf(w) >= 0) n += 4;
+          if (s.indexOf(w) >= 0) n += 2;
+          var c = 0, p = -1;
+          while (c < 3 && (p = x.indexOf(w, p + 1)) >= 0) { c++; }
+          n += c;
+          if (n > 0) hit++;
+          total += n;
+        }
+        if (hit < terms.length) return 0;      // every word must land somewhere
+        return total + (e.k === "topic" ? 3 : e.k === "marker" ? 2 : 0);
+      }
+
+      function snippet(e, terms) {
+        var src = e.d && e.d.length ? e.d + " · " + (e.x || "") : (e.x || "");
+        var low = src.toLowerCase(), at = -1;
+        for (var i = 0; i < terms.length && at < 0; i++) at = low.indexOf(terms[i]);
+        var start = Math.max(0, at - 70), end = Math.min(src.length, (at < 0 ? 0 : at) + 110);
+        var out = (start > 0 ? "…" : "") + src.slice(start, end) + (end < src.length ? "…" : "");
+        out = esc(out);
+        for (var j = 0; j < terms.length; j++) out = out.replace(new RegExp("(" + rx(esc(terms[j])) + ")", "ig"), "<mark>$1</mark>");
+        return out;
+      }
+
+      function render(list, query) {
+        if (!query) { box.classList.add("hidden"); box.innerHTML = ""; q.setAttribute("aria-expanded", "false"); return; }
+        if (!list.length) {
+          box.innerHTML = '<p class="px-4 py-3.5 text-[13px] text-text-tertiary">Nothing for “' + esc(query) + '”. Try a marker’s name, a topic, or an author.</p>';
+        } else {
+          box.innerHTML = list.map(function (e) {
+            return '<a href="' + esc(e.u) + '" role="option" class="block border-b border-white/[0.06] px-4 py-3 transition-colors last:border-b-0 hover:bg-white/[0.05]">' +
+              '<span class="flex items-center gap-2"><span class="text-sm font-semibold text-text-primary">' + esc(e.t) + '</span>' +
+              '<span class="rounded-md bg-white/[0.06] px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-text-secondary">' + KIND[e.k] + '</span>' +
+              '<span class="ml-auto shrink-0 text-[11px] text-text-tertiary">' + esc(e.s) + '</span></span>' +
+              '<span class="mt-1 block text-[12.5px] leading-relaxed text-text-tertiary">' + snippet(e, e._terms) + '</span></a>';
+          }).join("");
+        }
+        box.classList.remove("hidden");
+        q.setAttribute("aria-expanded", "true");
+      }
+
+      var timer;
+      function run() {
+        var query = q.value.trim();
+        if (!query) return render([], "");
+        load().then(function (j) {
+          var terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+          var hits = [];
+          for (var i = 0; i < j.length; i++) {
+            var sc = score(j[i], terms);
+            if (sc > 0) { hits.push({ e: j[i], sc: sc }); }
+          }
+          hits.sort(function (a, b) { return b.sc - a.sc; });
+          render(hits.slice(0, 8).map(function (h) { h.e._terms = terms; return h.e; }), query);
+        });
+      }
+      q.addEventListener("focus", load);
+      q.addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(run, 80); });
+      q.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") { q.value = ""; render([], ""); q.blur(); }
+        if (e.key === "Enter") { var first = box.querySelector("a"); if (first) window.location.href = first.getAttribute("href"); }
+      });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "/" && document.activeElement !== q && !/^(INPUT|TEXTAREA)$/.test(document.activeElement && document.activeElement.tagName)) { e.preventDefault(); q.focus(); }
+      });
+      document.addEventListener("click", function (e) { if (!box.contains(e.target) && e.target !== q) box.classList.add("hidden"); });
+      q.addEventListener("focus", function () { if (q.value.trim()) run(); });
+    })();
+  </script>
 
   <!-- ── Start here: the map. Two columns, because the shape of the thing
        is the argument for opening it — 226 ideas is an abstraction until you

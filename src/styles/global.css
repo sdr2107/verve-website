@@ -89,6 +89,14 @@ input[type="password"] {
   letter-spacing: 0.14em;
 }
 
+/* A search hit's matched word: the accent at low alpha, the text as it was. */
+mark {
+  background: rgba(129, 140, 248, 0.22);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
 /* Tailwind v4's preflight leaves buttons on the arrow cursor — every
    enabled button on the site is clickable and should say so. */
 button:not(:disabled) {
