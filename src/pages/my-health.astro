@@ -1385,8 +1385,8 @@ import SiteHeader from "../components/SiteHeader.astro";
     return await new Promise<Blob>((res, rej) =>
       canvas.toBlob((b) => (b ? res(b) : rej(new Error("encode failed"))), "image/jpeg", 0.85));
   }
-  function qset(i: number, chip: string, tone: "wait" | "busy" | "ok" | "bad", caption: string) {
-    const row = document.getElementById(`q-${i}`);
+  function qset(id: string, chip: string, tone: "wait" | "busy" | "ok" | "bad", caption: string) {
+    const row = document.getElementById(id);
     if (!row) return;
     const tones = {
       wait: "bg-white/[0.06] text-text-tertiary",
@@ -1405,17 +1405,32 @@ import SiteHeader from "../components/SiteHeader.astro";
     msg("upmsg", "");
     show("review", false); show("echoreview", false);
 
+    // Every batch is a block of its own, newest on top, and stays until
+    // cleared: dropping a second report must not erase the first one's row.
+    const batch = String(Date.now());
+    const rowId = (i: number) => `q-${batch}-${i}`;
+    const when = new Date().toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
     show("upqueue", true);
     $("upqueue").classList.add("flex");
-    $("upqueue").scrollIntoView({ block: "start", behavior: "smooth" });
-    $("upqueue").innerHTML = files.map((f, i) => `
-      <div id="q-${i}" class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-        <div class="min-w-0 flex-1">
-          <div class="truncate text-[13px] font-bold">${esc(f.name)}</div>
-          <div data-qcap class="mt-0.5 text-[11px] text-text-tertiary">Waiting its turn</div>
+    $("upqueue").insertAdjacentHTML("afterbegin", `
+      <div data-batch="${batch}" class="flex flex-col gap-2">
+        <div class="flex items-center justify-between">
+          <span class="font-mono text-[10px] font-semibold uppercase tracking-widest text-text-tertiary">${files.length} file${files.length === 1 ? "" : "s"} · ${esc(when)}</span>
+          <button data-clearqueue class="text-xs font-medium text-text-tertiary hover:text-text-primary">Clear</button>
         </div>
-        <span data-qchip class="rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-text-tertiary">QUEUED</span>
-      </div>`).join("");
+        ${files.map((f, i) => `
+        <div id="${rowId(i)}" class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+          <div class="min-w-0 flex-1">
+            <div class="truncate text-[13px] font-bold">${esc(f.name)}</div>
+            <div data-qcap class="mt-0.5 text-[11px] leading-relaxed text-text-tertiary">Waiting its turn</div>
+          </div>
+          <span data-qchip class="shrink-0 rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-text-tertiary">QUEUED</span>
+        </div>`).join("")}
+        <p data-summary class="hidden text-xs text-text-tertiary"></p>
+      </div>`);
+    $("upqueue").querySelectorAll("[data-clearqueue]").forEach((b) =>
+      b.addEventListener("click", () => { $("upqueue").innerHTML = ""; show("upqueue", false); }));
+    $("upqueue").scrollIntoView({ block: "start", behavior: "smooth" });
 
     // the archive as it stands, so a file already in it is spotted before
     // it is uploaded again: same bytes (size) and the same name
@@ -1423,50 +1438,63 @@ import SiteHeader from "../components/SiteHeader.astro";
     const already = new Set((existing ?? []).map((e) => `${e.metadata?.size ?? "?"}|${pretty(e.name).toLowerCase()}`));
 
     let last: { name: string; out: any; path: string; filed: any } | null = null;
-    let filedN = 0;
+    let filedN = 0, failedN = 0, skippedN = 0;
+    const kept = "The PDF is in your archive under this year, not read yet: its card's Read again retries, the bin deletes it.";
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
       const isPdf = f.type === "application/pdf" || /\.pdf$/i.test(f.name);
       const isPhoto = PHOTO_TYPES.has(f.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name);
-      if (!isPdf && !isPhoto) { qset(i, "SKIPPED", "bad", "Not a PDF or a photo (JPG, PNG, WebP)"); continue; }
-      if (f.size > 15 * 1024 * 1024) { qset(i, "SKIPPED", "bad", "Over 15 MB"); continue; }
+      if (!isPdf && !isPhoto) { qset(rowId(i), "SKIPPED", "bad", "Not a PDF or a photo (JPG, PNG, WebP)"); skippedN++; continue; }
+      if (f.size > 15 * 1024 * 1024) { qset(rowId(i), "SKIPPED", "bad", "Over 15 MB"); skippedN++; continue; }
       const asStored = `${f.size}|${pretty(f.name.replace(/[^\w.\-]+/g, "_")).toLowerCase()}`;
-      if (isPdf && already.has(asStored)) { qset(i, "ALREADY HERE", "ok", "This file is in your archive. Its card's Read again re-reads it."); continue; }
+      if (isPdf && already.has(asStored)) { qset(rowId(i), "ALREADY HERE", "ok", "This file is in your archive. Its card's Read again re-reads it."); skippedN++; continue; }
 
       // a photo is shrunk to what the reader keeps anyway, and always lands as a JPEG
       let blob: Blob = f, ext = "pdf", contentType = "application/pdf";
       if (isPhoto) {
-        qset(i, "PREPARING…", "busy", "Shrinking the photo to what the reader needs");
+        qset(rowId(i), "PREPARING…", "busy", "Shrinking the photo to what the reader needs");
         try { blob = await shrinkPhoto(f); }
-        catch { qset(i, "SKIPPED", "bad", "This browser cannot read that photo format — save it as a JPEG and try again"); continue; }
+        catch { qset(rowId(i), "SKIPPED", "bad", "This browser cannot read that photo format — save it as a JPEG and try again"); skippedN++; continue; }
         ext = "jpg"; contentType = "image/jpeg";
       }
 
-      qset(i, "UPLOADING…", "busy", "Saving the original to your private archive");
+      qset(rowId(i), "UPLOADING…", "busy", "Saving the original to your private archive");
       const base = f.name.replace(/\.[^.]+$/, "").replace(/[^\w.\-]+/g, "_") || "report";
       const path = `${userId}/${Date.now()}-${base}.${ext}`;
       const { error } = await supabase.storage.from("reports").upload(path, blob, { contentType });
-      if (error) { qset(i, "FAILED", "bad", error.message); continue; }
+      if (error) { qset(rowId(i), "FAILED", "bad", error.message); failedN++; continue; }
 
-      qset(i, "READING…", "busy", "Verve is reading every value and its printed range — about 20 seconds");
+      qset(rowId(i), "READING…", "busy", "Verve is reading every value and its printed range — about 20 seconds");
       let out: any;
       try { out = await readReport(path.split("/")[1]); }
-      catch (e: any) { qset(i, "FAILED", "bad", e.message ?? "Could not read this report"); continue; }
+      catch (e: any) { qset(rowId(i), "FAILED", "bad", `${e.message ?? "Could not read this report"} ${kept}`); failedN++; continue; }
 
       if (out.doc_type === "echo") {
         const filed = await archiveEcho(out, path);
-        qset(i, "FILED ✓", "ok", `Echo report · ${filed.values.length} measurements → Labs · Imaging`);
+        qset(rowId(i), "FILED ✓", "ok", `Echo report · ${filed.values.length} measurements → Labs · Imaging`);
         filedN++; last = { name: f.name, out, path, filed };
       } else if (out.doc_type === "other") {
-        qset(i, "ARCHIVED", "ok", `Read as: ${out.kind ?? "a medical document"} — kept as a PDF; its type is on the roadmap`);
+        qset(rowId(i), "ARCHIVED", "ok", `Read as: ${out.kind ?? "a medical document"} — kept as a PDF; its type is on the roadmap`);
       } else {
         const filed = await archiveLab(out, path);
-        if (filed.allValues.length > 0 && filed.fresh.length === 0)
-          qset(i, "A COPY", "ok", `${filed.allValues.length} values, every one already on your Labs tab from ${fmtDay(filed.date)} — this is a copy of a report you have`);
+        if (out.truncated)
+          qset(rowId(i), "PART READ", "ok", `${filed.allValues.length} values read before the reader's budget ran out — the rest of this report was not read. Everything read is on Labs.`);
+        else if (filed.allValues.length > 0 && filed.fresh.length === 0)
+          qset(rowId(i), "A COPY", "ok", `${filed.allValues.length} values, every one already on your Labs tab from ${fmtDay(filed.date)} — this is a copy of a report you have`);
         else
-          qset(i, "FILED ✓", "ok", `${filed.allValues.length} values → Labs · ${filed.fresh.length} new on your trends`);
+          qset(rowId(i), "FILED ✓", "ok", `${filed.allValues.length} values → Labs · ${filed.fresh.length} new on your trends`);
         filedN++; last = { name: f.name, out, path, filed };
       }
+    }
+
+    // the batch's one-line result, under its rows
+    const summary = $("upqueue").querySelector(`[data-batch="${batch}"] [data-summary]`) as HTMLElement | null;
+    if (summary) {
+      const parts = [`${filedN} of ${files.length} filed`];
+      if (failedN) parts.push(`${failedN} failed`);
+      if (skippedN) parts.push(`${skippedN} skipped`);
+      summary.textContent = parts.join(" · ") + (filedN ? " · every filed value is on your Labs tab" : "");
+      summary.classList.remove("hidden");
     }
 
     await refresh();
@@ -1568,6 +1596,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       return;
     }
     const filed = await archiveLab(out, path);
+    if (out.truncated) msg("upmsg", `${filed.allValues.length} values read before the reader's budget ran out — the rest of this report was not read.`);
     await refresh();
     await renderLabReview(out, path, name, filed);
   }
@@ -1628,7 +1657,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     const { date, appValues, allValues, fresh, dupKeys, nearDays } = filed;
     parsed = { path, lpa_unit: out.lpa_unit ?? null, dupKeys };
     $("rvtitle").textContent = name.replace(/^\d+-/, "");
-    $("rvcount").textContent = `${allValues.length} VALUES READ`;
+    $("rvcount").textContent = `${allValues.length} VALUES READ${out.truncated ? " · CUT SHORT" : ""}`;
     ($("rvdate") as HTMLInputElement).value = date;
 
     // tier 1 rows — duplicates struck through, excluded from the send
