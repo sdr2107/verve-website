@@ -248,6 +248,14 @@ import SiteHeader from "../components/SiteHeader.astro";
 
       <!-- ═══ OVERVIEW ═══════════════════════════════════════════════════ -->
       <div id="tab-overview" class="mt-6 hidden">
+        <!-- values for the app that were read but never sent: one line, until it is done -->
+        <div id="tosend" class="mb-5 hidden flex-wrap items-center gap-3 rounded-2xl border border-accent/30 bg-accent/[0.06] px-4 py-3.5">
+          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-accent/[0.16]">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg>
+          </span>
+          <span id="tosendtext" class="min-w-0 flex-1 text-[13px] leading-relaxed text-text-secondary"></span>
+          <button id="tosendgo" class="min-h-10 rounded-full bg-accent px-4 py-2 text-[13px] font-semibold text-canvas transition-opacity hover:opacity-90">Review and send &rarr;</button>
+        </div>
         <!-- nothing yet: the one call to action, since the drop zone lives on Reports -->
         <div id="emptycard" class="hidden max-w-3xl rounded-2xl border border-dashed border-accent/40 bg-accent/[0.04] p-6">
           <p class="text-sm font-semibold text-text-primary">No reports yet</p>
@@ -323,6 +331,7 @@ import SiteHeader from "../components/SiteHeader.astro";
           <div class="flex flex-wrap items-center gap-3">
             <h2 id="rvtitle" class="text-base font-extrabold"></h2>
             <span id="rvcount" class="rounded-md bg-warning/15 px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wider text-warning"></span>
+            <span id="rvpos" class="hidden rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wider text-text-secondary"></span>
             <div class="ml-auto flex items-center gap-2">
               <span class="font-mono text-[10px] uppercase tracking-wider text-text-tertiary">Report date</span>
               <input id="rvdate" type="date"
@@ -484,6 +493,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   // one fetch feeds Overview, Labs and the Reports cards
   let allLabs: any[] = [];
   let allImaging: any[] = [];   // imaging_reports — the narrative half of a study
+  let allApp: any[] = [];       // lab_readings — what the app holds, to say what was sent
   let labSecs: Map<string, Map<string, any[]>> = new Map();
   let labSection = "";
   let expandedAnalyte = "";          // one chart open at a time
@@ -564,6 +574,14 @@ import SiteHeader from "../components/SiteHeader.astro";
     $("file").click();
   }
   $("addreport").addEventListener("click", pickReport);
+  $("tosendgo").addEventListener("click", () => {
+    const paths = pendingReports();
+    if (!paths.length) return;
+    setTab("reports");
+    reviewPos = { n: 1, of: paths.length };
+    reviewQueue = paths.slice(1).map((p) => () => reviewFromArchive(p));
+    reviewFromArchive(paths[0]);
+  });
 
   // ── a name for an account that has none: saved with the account, so the
   // app's setup reads it too ─────────────────────────────────────────────
@@ -586,20 +604,87 @@ import SiteHeader from "../components/SiteHeader.astro";
 
   /** Refetch web_labs + imaging_reports once; every surface renders from them. */
   async function refresh() {
-    const [{ data: rows }, { data: imaging }] = await Promise.all([
+    const [{ data: rows }, { data: imaging }, { data: app }] = await Promise.all([
       supabase.from("web_labs")
         .select("analyte, value, unit, ref_low, ref_high, ref_text, section, measured_on, report_path")
         .eq("user_id", userId).order("measured_on", { ascending: true }).limit(4000),
       supabase.from("imaging_reports")
         .select("modality, report_date, report_path, impression, findings")
         .eq("user_id", userId).order("report_date", { ascending: true }).limit(200),
+      supabase.from("lab_readings")
+        .select("*").eq("user_id", userId).is("deleted_at", null).limit(2000),
     ]);
     allLabs = rows ?? [];
     allImaging = imaging ?? [];
+    allApp = app ?? [];
     groupLabs();
     renderOverview();
     renderLabsRail(); renderLabsPanel();
     await renderReports();
+  }
+
+  // ═══ THE APP'S SHARE OF A REPORT ═════════════════════════════════════════
+  // Every value of a report is filed here. The app's markers reach the app
+  // only when they are sent, and until now nothing remembered which reports
+  // had been sent. This reads it from the two tables: a report's app-bound
+  // values are the archived rows whose canonical name is one of the app's
+  // markers, in the app's unit; one is "sent" when a lab_readings row on the
+  // same day carries that value.
+
+  /** Canonical analyte name (letters and digits only) → the app's column. */
+  const APP_KEY_BY_NAME: Record<string, string> = {
+    fastingglucose: "glucose_mgdl", glucosefasting: "glucose_mgdl", fastingbloodsugar: "glucose_mgdl", fbs: "glucose_mgdl", glucosef: "glucose_mgdl",
+    hba1c: "hba1c_pct", hemoglobina1c: "hba1c_pct", glycatedhemoglobin: "hba1c_pct", glycosylatedhemoglobin: "hba1c_pct",
+    postmealglucose: "post_meal_glucose_mgdl", postprandialglucose: "post_meal_glucose_mgdl", ppglucose: "post_meal_glucose_mgdl", glucosepp: "post_meal_glucose_mgdl", glucosepostprandial: "post_meal_glucose_mgdl",
+    fastinginsulin: "fasting_insulin_uiuml", insulinfasting: "fasting_insulin_uiuml", insulin: "fasting_insulin_uiuml",
+    triglycerides: "triglycerides_mgdl", hdl: "hdl_mgdl", hdlcholesterol: "hdl_mgdl",
+    waist: "waist_cm", waistcircumference: "waist_cm",
+    systolicbp: "sbp", systolicbloodpressure: "sbp", diastolicbp: "dbp", diastolicbloodpressure: "dbp",
+    apob: "apo_b_mgdl", apolipoproteinb: "apo_b_mgdl", ldl: "ldl_mgdl", ldlcholesterol: "ldl_mgdl",
+    lpa: "lpa_value", lipoproteina: "lpa_value",
+    hscrp: "hs_crp_mgl", highsensitivitycrp: "hs_crp_mgl", crphs: "hs_crp_mgl", hscreactiveprotein: "hs_crp_mgl",
+    bodyfat: "body_fat_pct", bodyfatpercentage: "body_fat_pct", skeletalmuscle: "skel_musc_pct", skeletalmusclepercentage: "skel_musc_pct",
+  };
+  const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  function appKeyFor(analyte: string): string | null {
+    return APP_KEY_BY_NAME[squash(canonName(String(analyte)))] ?? null;
+  }
+  /** The app stores one unit per marker; a value in another unit is not sent from the archive. */
+  function unitFits(key: string, unit: string | null): boolean {
+    if (key === "lpa_value") return true;
+    const want = LABELS[key].unit;
+    if (!want) return true;
+    return unitKey(unit ?? "") === unitKey(want);
+  }
+  const localDay = (iso: string) => new Date(iso).toLocaleDateString("en-CA");
+
+  type AppBound = { key: string; value: number; unit: string | null; name: string };
+  /** A report's app-bound values, one per marker, from its archived rows. */
+  function appBoundFor(path: string): { date: string; values: AppBound[] } {
+    const rows = allLabs.filter((r) => r.report_path === path);
+    const values: AppBound[] = [];
+    for (const r of rows) {
+      const key = appKeyFor(r.analyte);
+      if (!key || values.some((v) => v.key === key) || !unitFits(key, r.unit) || !Number.isFinite(Number(r.value))) continue;
+      values.push({ key, value: Number(r.value), unit: r.unit ?? null, name: String(r.analyte) });
+    }
+    return { date: rows[0]?.measured_on ?? "", values };
+  }
+  function isSent(date: string, key: string, value: number): boolean {
+    return allApp.some((a) => localDay(a.measured_at) === date && Number(a[key]) === value);
+  }
+  /** What a report's card says: how many of its app values the app holds. */
+  function reportAppState(path: string) {
+    const { date, values } = appBoundFor(path);
+    const pending = values.filter((v) => !isSent(date, v.key, v.value));
+    return { date, total: values.length, sent: values.length - pending.length, pending };
+  }
+  /** Reports with app values the app does not have yet, newest first. */
+  function pendingReports(): string[] {
+    const paths = [...new Set(allLabs.map((r) => r.report_path).filter(Boolean))] as string[];
+    return paths
+      .filter((p) => reportAppState(p).pending.length > 0)
+      .sort((a, b) => (appBoundFor(b).date || "").localeCompare(appBoundFor(a).date || ""));
   }
 
   // ── two modes, one card: the same account works here and in the app ────
@@ -908,6 +993,15 @@ import SiteHeader from "../components/SiteHeader.astro";
       return;
     }
     show("emptycard", false);
+    const waiting = pendingReports();
+    show("tosend", waiting.length > 0);
+    $("tosend").classList.toggle("flex", waiting.length > 0);
+    if (waiting.length) {
+      const n = waiting.reduce((sum, p) => sum + reportAppState(p).pending.length, 0);
+      $("tosendtext").textContent = waiting.length === 1
+        ? `${n} value${n === 1 ? "" : "s"} for your app from ${pretty(waiting[0].split("/")[1])} ${n === 1 ? "has" : "have"} not been sent.`
+        : `${waiting.length} reports have values for your app that have not been sent: ${n} in all.`;
+    }
 
     // ── your sections: the same split as Labs, each a way in ─────────────
     show("secwrap", true);
@@ -1322,6 +1416,11 @@ import SiteHeader from "../components/SiteHeader.astro";
         ? `${o.n} values · ${o.flagged ? `<span class="text-warning">${o.flagged} outside range</span>` : `<span class="text-success">all in range</span>`}`
         : im ? "the report's own words, on Labs · Imaging"
         : flagged ? "" : `<span class="text-accent-light">not read yet</span>`;
+      const app = o ? reportAppState(d.path) : null;
+      const appLine = !app || app.total === 0 ? ""
+        : app.pending.length === 0
+          ? `<span class="text-success">${app.total} in your app</span>`
+          : `<span class="text-warning">${app.pending.length} of ${app.total} for your app not sent</span> <button data-sendrep="${esc(f.name)}" class="ml-1 rounded-md border border-accent/40 bg-accent/10 px-2 py-0.5 text-[11px] font-bold text-accent-light hover:bg-accent/20">Send</button>`;
       return `
         <div class="rounded-2xl border ${flagged ? "border-warning/45" : "border-white/10"} bg-white/[0.03] p-4">
           <div class="flex items-center gap-3">
@@ -1337,7 +1436,7 @@ import SiteHeader from "../components/SiteHeader.astro";
                   <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
                 </button>
               </div>
-              <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-tertiary">${dateChip}${modChip}${outcome ? `<span>${outcome}</span>` : ""}</div>
+              <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-tertiary">${dateChip}${modChip}${outcome ? `<span>${outcome}</span>` : ""}${appLine ? `<span>· ${appLine}</span>` : ""}</div>
             </div>
             <div class="hidden shrink-0 items-center gap-2 sm:flex">
               <button data-view="${esc(f.name)}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-white/25 hover:text-text-primary">View</button>
@@ -1391,6 +1490,8 @@ import SiteHeader from "../components/SiteHeader.astro";
       }));
     $("repcards").querySelectorAll("[data-keep]").forEach((b) =>
       b.addEventListener("click", () => { keepBoth((b as HTMLElement).dataset.keep!); renderReports(); }));
+    $("repcards").querySelectorAll("[data-sendrep]").forEach((b) =>
+      b.addEventListener("click", () => { reviewQueue = []; reviewPos = { n: 0, of: 0 }; reviewFromArchive(`${userId}/${(b as HTMLElement).dataset.sendrep}`); }));
     $("repcards").querySelectorAll("[data-ren]").forEach((b) =>
       b.addEventListener("click", () => renameUI(b as HTMLElement)));
   }
@@ -1521,6 +1622,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     const already = new Set((existing ?? []).map((e) => `${e.metadata?.size ?? "?"}|${pretty(e.name).toLowerCase()}`));
 
     let last: { name: string; out: any; path: string; filed: any } | null = null;
+    const labsFiled: { name: string; out: any; path: string; filed: any }[] = [];
     let filedN = 0, failedN = 0, skippedN = 0;
     const kept = "The PDF is in your archive under this year, not read yet: its card's Read again retries, the bin deletes it.";
     for (let i = 0; i < files.length; i++) {
@@ -1567,6 +1669,7 @@ import SiteHeader from "../components/SiteHeader.astro";
         else
           qset(rowId(i), "FILED ✓", "ok", `${filed.allValues.length} values → Labs · ${filed.fresh.length} new on your trends`);
         filedN++; last = { name: f.name, out, path, filed };
+        labsFiled.push(last);
       }
     }
 
@@ -1586,12 +1689,16 @@ import SiteHeader from "../components/SiteHeader.astro";
       const card = $("repcards").querySelector(`[data-view="${CSS.escape(last.path.split("/")[1])}"]`)?.closest("details > div > div");
       card?.classList.add("mh-rise");
     }
-    // the review opens once, for the last report that filed — every other
-    // file's values are already on the Labs tab regardless
-    if (last) {
-      if (last.out.doc_type === "echo") renderEchoReview(last.out, last.path, last.name);
-      else await renderLabReview(last.out, last.path, last.name, last.filed);
-      if (files.length > 1) msg("upmsg", `${filedN} of ${files.length} reports filed — reviewing the last one below. Any card's "Read again" reopens its review.`);
+    // every lab report with something for the app gets its review, one after
+    // another; an echo report's review shows when it was the last file
+    const toReview = labsFiled.filter((r) => r.filed.appValues.some((v: any) => !r.filed.dupKeys.has(v.key)));
+    if (toReview.length) {
+      reviewPos = { n: 1, of: toReview.length };
+      reviewQueue = toReview.slice(1).map((r) => () => renderLabReview(r.out, r.path, r.name, r.filed));
+      await renderLabReview(toReview[0].out, toReview[0].path, toReview[0].name, toReview[0].filed);
+      if (toReview.length > 1) msg("upmsg", `${toReview.length} reports have values for your app — reviewing them one at a time below.`);
+    } else if (last && last.out.doc_type === "echo") {
+      renderEchoReview(last.out, last.path, last.name);
     }
   }
 
@@ -1684,6 +1791,52 @@ import SiteHeader from "../components/SiteHeader.astro";
     await renderLabReview(out, path, name, filed);
   }
 
+  /**
+   * The same-day and near-day check against the app's rows, shared by a
+   * fresh parse and a review opened from the archive.
+   */
+  async function appDuplicates(date: string, appValues: { key: string; value: number }[]) {
+    const day0 = new Date(date + "T00:00:00").getTime();
+    const winStart = new Date(day0 - 7 * 86400000).toISOString();
+    const winEnd = new Date(day0 + 8 * 86400000).toISOString();
+    const { data: appExisting } = await supabase.from("lab_readings")
+      .select("*").eq("user_id", userId).gte("measured_at", winStart).lt("measured_at", winEnd).is("deleted_at", null);
+    const dupKeys = new Set<string>();
+    const nearDays = new Map<string, number>();
+    for (const v of appValues) {
+      for (const r of appExisting ?? []) {
+        if (Number(r[v.key]) !== v.value) continue;
+        const dd = Math.round((new Date(r.measured_at).getTime() - day0) / 86400000);
+        if (dd === 0) { dupKeys.add(v.key); nearDays.delete(v.key); break; }
+        const prev = nearDays.get(v.key);
+        if (prev == null || Math.abs(dd) < Math.abs(prev)) nearDays.set(v.key, dd);
+      }
+    }
+    return { dupKeys, nearDays };
+  }
+
+  /** Reviews still to open after this one — the rest of a batch, or of the Overview's list. */
+  let reviewQueue: Array<() => Promise<void> | void> = [];
+  let reviewPos = { n: 0, of: 0 };
+
+  /**
+   * A report's review built from what is already filed: its app-bound
+   * values against the app's rows, and its full list. Nothing is read
+   * again, so it costs nothing and needs no PDF.
+   */
+  async function reviewFromArchive(path: string) {
+    setTab("reports");
+    const { date, values } = appBoundFor(path);
+    const rows = allLabs.filter((r) => r.report_path === path);
+    if (!date || rows.length === 0) { msg("upmsg", "Nothing filed from this report yet — Read again reads it.", true); return; }
+    const appValues = values.map((v) => ({ key: v.key, value: v.value, unit: v.unit, label: v.name }));
+    const allValues = rows.map((r) => ({ name: r.analyte, value: Number(r.value), unit: r.unit, ref_low: r.ref_low, ref_high: r.ref_high, ref_text: r.ref_text, section: r.section }));
+    const { dupKeys, nearDays } = await appDuplicates(date, appValues);
+    const lpa = values.find((v) => v.key === "lpa_value");
+    await renderLabReview({ lpa_unit: lpa?.unit ?? null }, path, path.split("/")[1] ?? path,
+      { date, appValues, allValues, fresh: [], dupKeys, nearDays, fromArchive: true });
+  }
+
   /** Archive a lab report's values — the writes, no DOM. */
   async function archiveLab(out: any, path: string) {
     const date = out.report_date ?? new Date().toISOString().slice(0, 10);
@@ -1715,32 +1868,20 @@ import SiteHeader from "../components/SiteHeader.astro";
     // Same value on a NEARBY date (±7 days) is the hand-entered-then-uploaded
     // case — the row a user typed on Aug 1 from a Jul 31 report — so those
     // start UNTICKED with a note, and the user decides.
-    const day0 = new Date(date + "T00:00:00").getTime();
-    const winStart = new Date(day0 - 7 * 86400000).toISOString();
-    const winEnd = new Date(day0 + 8 * 86400000).toISOString();
-    const { data: appExisting } = await supabase.from("lab_readings")
-      .select("*").eq("user_id", userId).gte("measured_at", winStart).lt("measured_at", winEnd).is("deleted_at", null);
-    const dupKeys = new Set<string>();
-    const nearDays = new Map<string, number>();
-    for (const v of appValues) {
-      for (const r of appExisting ?? []) {
-        if (Number(r[v.key]) !== v.value) continue;
-        const dd = Math.round((new Date(r.measured_at).getTime() - day0) / 86400000);
-        if (dd === 0) { dupKeys.add(v.key); nearDays.delete(v.key); break; }
-        const prev = nearDays.get(v.key);
-        if (prev == null || Math.abs(dd) < Math.abs(prev)) nearDays.set(v.key, dd);
-      }
-    }
+    const { dupKeys, nearDays } = await appDuplicates(date, appValues);
     return { date, appValues, allValues, fresh, dupKeys, nearDays };
   }
 
   /** The two-tier review — DOM only; `filed` comes from archiveLab. */
   async function renderLabReview(out: any, path: string, name: string,
-    filed: { date: string; appValues: any[]; allValues: any[]; fresh: any[]; dupKeys: Set<string>; nearDays: Map<string, number> }) {
+    filed: { date: string; appValues: any[]; allValues: any[]; fresh: any[]; dupKeys: Set<string>; nearDays: Map<string, number>; fromArchive?: boolean }) {
     const { date, appValues, allValues, fresh, dupKeys, nearDays } = filed;
     parsed = { path, lpa_unit: out.lpa_unit ?? null, dupKeys };
-    $("rvtitle").textContent = name.replace(/^\d+-/, "");
-    $("rvcount").textContent = `${allValues.length} VALUES READ${out.truncated ? " · CUT SHORT" : ""}`;
+    $("rvtitle").textContent = pretty(name);
+    $("rvcount").textContent = filed.fromArchive ? `${allValues.length} VALUES ON LABS` : `${allValues.length} VALUES READ${out.truncated ? " · CUT SHORT" : ""}`;
+    show("rvpos", reviewPos.of > 1);
+    $("rvpos").textContent = `REPORT ${reviewPos.n} OF ${reviewPos.of}`;
+    $("discard").textContent = reviewQueue.length ? "Next report →" : "Close review";
     ($("rvdate") as HTMLInputElement).value = date;
 
     // tier 1 rows — duplicates struck through, excluded from the send
@@ -1782,8 +1923,9 @@ import SiteHeader from "../components/SiteHeader.astro";
       const s = SECTIONS[v.section] ? v.section : "other";
       (bySec.get(s) ?? bySec.set(s, []).get(s)!).push(v);
     }
-    $("rvwebnote").textContent =
-      `${webOnly.length} values · ${fresh.length} new saved to your dashboard${allValues.length - fresh.length > 0 ? ` · ${allValues.length - fresh.length} already there` : ""}`;
+    $("rvwebnote").textContent = filed.fromArchive
+      ? `${webOnly.length} value${webOnly.length === 1 ? "" : "s"}, all on your Labs tab`
+      : `${webOnly.length} values · ${fresh.length} new saved to your dashboard${allValues.length - fresh.length > 0 ? ` · ${allValues.length - fresh.length} already there` : ""}`;
     $("rvweb").innerHTML = SECTION_ORDER.filter((s) => bySec.has(s)).map((s) => `
       <div class="mt-3 font-mono text-[10px] uppercase tracking-widest text-text-tertiary">${SECTIONS[s]}</div>
       <div class="divide-y divide-white/[0.05]">
@@ -1886,7 +2028,14 @@ import SiteHeader from "../components/SiteHeader.astro";
   }
 
   // ── send the app tier → lab_readings, the app's own table ──────────────
-  $("discard").addEventListener("click", () => { show("review", false); $("review").classList.remove("flex"); parsed = null; });
+  /** Close, or open the next review in the run. */
+  function closeReview() {
+    show("review", false); $("review").classList.remove("flex"); parsed = null;
+    const next = reviewQueue.shift();
+    if (next) { reviewPos = { n: reviewPos.n + 1, of: reviewPos.of }; next(); }
+    else reviewPos = { n: 0, of: 0 };
+  }
+  $("discard").addEventListener("click", closeReview);
 
   $("confirm").addEventListener("click", async () => {
     if (!parsed) return;
@@ -1938,9 +2087,11 @@ import SiteHeader from "../components/SiteHeader.astro";
 
     const { error } = await supabase.from("lab_readings").insert(rows);
     if (error) { msg("rvmsg", `Could not send: ${error.message}`, true); reEnable(); return; }
-    msg("rvmsg", "Sent. Open the Verve app and these values will be there.");
+    msg("rvmsg", reviewQueue.length ? "Sent. Open the Verve app and these values will be there. Next report below." : "Sent. Open the Verve app and these values will be there.");
     ($("confirm") as HTMLButtonElement).disabled = true;
     $("confirm").textContent = "Sent to the app ✓";
+    // the cards and the Overview's line follow what the app holds now
+    refresh();
   });
 
   boot();
