@@ -117,7 +117,7 @@ import SiteHeader from "../components/SiteHeader.astro";
           <div>
             <div class="mb-1.5 flex items-baseline justify-between">
               <label for="password" class="text-xs font-semibold text-text-secondary">Password</label>
-              <button type="button" id="forgot" class="text-xs font-medium text-accent-light hover:underline">Forgot?</button>
+              <button type="button" id="forgot" class="text-xs font-medium text-accent-light hover:underline">Forgot password</button>
             </div>
             <div class="relative">
               <input id="password" type="password" placeholder="Password" autocomplete="current-password"
@@ -217,17 +217,21 @@ import SiteHeader from "../components/SiteHeader.astro";
            profile the app greets you with, and the one way to add a report -->
       <div class="flex flex-wrap items-end justify-between gap-4 pt-5 sm:pt-8">
         <div class="min-w-0">
-          <h1 id="greet" class="text-[28px] font-extrabold leading-[1.05] tracking-[-0.03em] text-text-primary sm:text-4xl"></h1>
-          <!-- an account with no name yet: one quiet offer, then an inline field -->
-          <div id="namewrap" class="mt-2 hidden">
-            <button type="button" id="nameadd" class="text-[13px] font-medium text-accent-light hover:text-text-primary">Add your name, so the app can greet you &rarr;</button>
-            <form id="nameform" class="hidden items-center gap-2">
-              <label for="namein" class="sr-only">Your name</label>
-              <input id="namein" type="text" autocomplete="name" placeholder="Your name"
-                class="w-56 max-w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none sm:text-sm" />
-              <button type="submit" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Save</button>
-            </form>
+          <div class="flex items-center gap-2.5">
+            <h1 id="greet" class="text-[28px] font-extrabold leading-[1.05] tracking-[-0.03em] text-text-primary sm:text-4xl"></h1>
+            <button type="button" id="namechange" aria-label="Change your name" title="Change your name" class="hidden text-text-muted transition-colors hover:text-text-primary">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+            </button>
           </div>
+          <!-- no name on the account yet: the greeting asks, prefilled when the
+               email is clearly a name, and the answer goes to the app too -->
+          <form id="nameform" class="mt-3 hidden flex-wrap items-center gap-2">
+            <label for="namein" class="text-[13px] text-text-secondary">What should we call you?</label>
+            <input id="namein" type="text" autocomplete="given-name" placeholder="Your first name"
+              class="w-44 max-w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none sm:text-sm" />
+            <button type="submit" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Save</button>
+            <button type="button" id="namelater" class="text-xs font-medium text-text-tertiary hover:text-text-primary">Not now</button>
+          </form>
         </div>
         <button
           id="addreport"
@@ -486,7 +490,8 @@ import SiteHeader from "../components/SiteHeader.astro";
 
   let userId = "";
   let userEmail = "";
-  /** First name for the greeting, resolved once per session; "" when there is none. */
+  /** The name on the account, and its first word for the greeting; "" when there is none. */
+  let fullName = "";
   let firstName = "";
   let parsed: { path: string; lpa_unit: string | null; dupKeys: Set<string> } | null = null;
 
@@ -532,8 +537,10 @@ import SiteHeader from "../components/SiteHeader.astro";
       userEmail = session.user.email ?? "";
       firstName = await resolveFirstName(session.user);
       $("greet").textContent = greeting();
-      $("greet").parentElement!.parentElement!.classList.add("mh-rise");
-      show("namewrap", !firstName);
+      $("greet").closest(".flex.flex-wrap")!.classList.add("mh-rise");
+      show("namechange", !!firstName);
+      if (!firstName) askForName(guessNameFromEmail(userEmail));
+      else hideNameForm();
       appLink?.classList.add("hidden");
       show("signout", true); show("home", true); show("auth", false);
       const wanted = window.location.hash.replace("#", "");
@@ -558,7 +565,23 @@ import SiteHeader from "../components/SiteHeader.astro";
       full = String(data?.name ?? "").trim();
     } catch { /* no profile row, or none we may read: fall through */ }
     if (!full) full = String(user.user_metadata?.full_name ?? "").trim();
+    fullName = full;
     return full.split(/\s+/)[0] ?? "";
+  }
+
+  /**
+   * A first name from an email, only when the address is plainly a name:
+   * "sadiya.naik@" gives Sadiya, "roplekarsudeep@" gives nothing, because a
+   * wrong guess in a greeting is worse than a question. The guess is only
+   * ever a prefilled field the person confirms with a tap.
+   */
+  function guessNameFromEmail(email: string): string {
+    const local = email.split("@")[0] ?? "";
+    const parts = local.split(/[._-]/).filter(Boolean);
+    if (parts.length < 2) return "";
+    const first = parts[0];
+    if (!/^[a-z]{2,20}$/i.test(first)) return "";
+    return first[0].toUpperCase() + first.slice(1).toLowerCase();
   }
 
   /** "Good evening, Sudeep", or just "Good evening" when no name is known. */
@@ -583,22 +606,44 @@ import SiteHeader from "../components/SiteHeader.astro";
     reviewFromArchive(paths[0]);
   });
 
-  // ── a name for an account that has none: saved with the account, so the
-  // app's setup reads it too ─────────────────────────────────────────────
-  $("nameadd").addEventListener("click", () => {
-    show("nameadd", false);
+  // ── a name for an account that has none: the greeting asks, once. The
+  // answer is saved with the account (where the app's setup reads it) and
+  // into the app's own profile when that has no name, so the app greets by
+  // it too after its next sync. ──────────────────────────────────────────
+  const LATER_KEY = "mh-name-later";
+  function askForName(prefill: string) {
+    let later = false;
+    try { later = sessionStorage.getItem(LATER_KEY) === "1"; } catch { /* no storage: ask */ }
+    if (later) return;
+    ($("namein") as HTMLInputElement).value = prefill;
+    $("nameform").classList.remove("hidden"); $("nameform").classList.add("flex");
+  }
+  function hideNameForm() { $("nameform").classList.add("hidden"); $("nameform").classList.remove("flex"); }
+  $("namelater").addEventListener("click", () => {
+    try { sessionStorage.setItem(LATER_KEY, "1"); } catch { /* fine */ }
+    hideNameForm();
+  });
+  $("namechange").addEventListener("click", () => {
+    ($("namein") as HTMLInputElement).value = fullName;
     $("nameform").classList.remove("hidden"); $("nameform").classList.add("flex");
     $("namein").focus();
   });
   $("nameform").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const name = ($("namein") as HTMLInputElement).value.trim();
+    const name = ($("namein") as HTMLInputElement).value.trim().replace(/\s+/g, " ");
     if (!name) return;
     const { error } = await supabase.auth.updateUser({ data: { full_name: name } });
     if (error) { msg("upmsg", `Could not save your name: ${error.message}`, true); return; }
+    // the app's profile, only where it has no name of its own
+    try {
+      await supabase.from("profiles").update({ name, updated_at: new Date().toISOString() })
+        .eq("user_id", userId).or("name.is.null,name.eq.");
+    } catch { /* no profile row yet: the app's setup will read full_name */ }
+    fullName = name;
     firstName = name.split(/\s+/)[0] ?? "";
     $("greet").textContent = greeting();
-    show("namewrap", false);
+    show("namechange", true);
+    hideNameForm();
   });
   $("emptyadd").addEventListener("click", pickReport);
 
