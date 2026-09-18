@@ -2,7 +2,8 @@
   Supabase → Authentication → Email Templates → Magic Link.
   Subject line (set in the same screen): Your Verve sign-in code
 
-  One template sends both: {{ .Token }} is the six-digit code the site
+  One template sends both: {{ .Token }} is the code (its length is the
+  project's "Email OTP length" setting; the site takes six to ten digits) the site
   verifies with verifyOtp(type "email"); {{ .ConfirmationURL }} is the link,
   which still signs in the device it is opened on. {{ .Data.full_name }} is
   the account's full name where Apple gave one; the greeting drops the name
