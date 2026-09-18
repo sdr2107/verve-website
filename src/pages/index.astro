@@ -23,7 +23,6 @@ import SiteHeader from "../components/SiteHeader.astro";
 import Footer from "../components/Footer.astro";
 import Ascent from "../components/Ascent.astro";
 import AppGlimpses from "../components/science/AppGlimpses.astro";
-import { APP_STORE_URL } from "../data/site";
 import { SUBJECTS, COUNTS, type SubjectSlug } from "../data/scienceTopics";
 import { BODY_MARKERS } from "../data/bodyMarkers";
 
@@ -110,17 +109,9 @@ const apoSource = apoB.citation.split(". ")[0];
           the thresholds clinicians use, shows how each one moves over weeks and
           months, and names the study behind every line it draws.
         </p>
-        <div class="mt-1 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-[18px]">
-          <a
-            href={APP_STORE_URL}
-            class="inline-flex items-center justify-center rounded-full bg-text-primary px-[22px] py-3 text-sm font-semibold text-canvas transition-opacity hover:opacity-90"
-          >
-            Download on the App Store
-          </a>
-          <a href="/science" class="text-center text-sm font-medium text-text-secondary transition-colors hover:text-text-primary">
-            See the evidence &rarr;
-          </a>
-        </div>
+        <!-- No buttons here. The header carries the app and the science on
+             every page, and on a phone they pushed the week's climb below
+             the fold, so the one animation on the site went unseen. -->
       </div>
 
       <Ascent />
