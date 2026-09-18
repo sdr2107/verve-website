@@ -1,7 +1,7 @@
 ---
 /**
- * The header, the same on every page: the logo, the four links the footer
- * has, and the app button. The page you are on is lit; the app button stays
+ * The header, the same on every page: the mark alone, as the app draws it,
+ * then the four links the footer has, and the app button. The page you are on is lit; the app button stays
  * a ghost so the download is the one filled button on the landing page.
  *
  * The app button carries data-nav="app" so a page with a signed-in state
@@ -49,9 +49,8 @@ const link = (key: NavKey) =>
   <div class="mx-auto max-w-6xl px-6 sm:px-10">
     <div class="flex items-center justify-between gap-6 py-4 md:py-5">
       <div class:list={["min-w-0 items-center gap-2.5 text-sm", back ? "hidden md:flex" : "flex"]}>
-        <a href="/" class="flex shrink-0 items-center gap-2.5">
+        <a href="/" class="flex shrink-0 items-center" aria-label="Verve, home">
           <img src="/app-icon.png" alt="" class="h-8 w-8 rounded-lg" />
-          <span class="text-lg font-semibold tracking-tight text-text-primary">Verve</span>
         </a>
         {crumb.map((c) => (
           <>
