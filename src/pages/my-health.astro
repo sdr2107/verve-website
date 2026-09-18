@@ -267,17 +267,20 @@ import SiteHeader from "../components/SiteHeader.astro";
 
       <!-- ═══ REPORTS ════════════════════════════════════════════════════ -->
       <div id="tab-reports" class="mt-6 hidden">
-        <!-- the one place to add a report; dragging anywhere on the page lands here too -->
+        <!-- ── the archive first: a timeline, one card per original PDF, a year and a month at a time ── -->
+        <div id="repcards" class="flex max-w-3xl flex-col gap-3"></div>
+
+        <!-- ── then the one place to add a report; dragging anywhere on the page lands here too ── -->
         <label id="drop" for="file"
-          class="flex max-w-3xl cursor-pointer items-center gap-4 rounded-2xl border-[1.5px] border-dashed border-accent/45 bg-accent/[0.05] px-5 py-4 transition-colors hover:border-accent/70">
+          class="mt-6 flex max-w-3xl cursor-pointer items-center gap-4 rounded-2xl border-[1.5px] border-dashed border-accent/45 bg-accent/[0.05] px-5 py-4 transition-colors hover:border-accent/70">
           <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent/[0.14]">
             <svg class="h-5 w-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/>
             </svg>
           </span>
           <span class="min-w-0 flex-1">
-            <span class="block text-sm font-semibold text-text-primary">Drop old reports here, or tap to choose</span>
-            <span class="mt-0.5 block text-xs leading-relaxed text-text-tertiary">PDF &middot; several at once is fine &middot; originals stay in your private archive &middot; a file you already have is spotted before it is filed</span>
+            <span class="block text-sm font-semibold text-text-primary">Add older reports: drop them here, or tap to choose</span>
+            <span class="mt-0.5 block text-xs leading-relaxed text-text-tertiary">PDF only, up to 15 MB each &middot; several at once &middot; originals stay in your private archive &middot; a file you already have is spotted before it is filed</span>
           </span>
           <span class="hidden shrink-0 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-bold text-accent-light sm:inline-block">Choose files</span>
           <input id="file" type="file" accept="application/pdf" multiple class="hidden" />
@@ -335,8 +338,6 @@ import SiteHeader from "../components/SiteHeader.astro";
         <!-- ── echo review: numbers → Labs, the doctor's words kept apart ── -->
         <div id="echoreview" class="mt-6 hidden rounded-2xl border border-accent/40 bg-white/[0.03] p-5"></div>
 
-        <!-- ── the archive: a timeline, one card per original PDF, a year at a time ── -->
-        <div id="repcards" class="mt-6 flex max-w-3xl flex-col gap-3"></div>
       </div>
 
       <p class="mt-10 text-xs leading-5 text-text-muted">
@@ -1178,12 +1179,21 @@ import SiteHeader from "../components/SiteHeader.astro";
     }
     dated.sort((x, y) => (y.date || "").localeCompare(x.date || "") || stampOf(y.f.name) - stampOf(x.f.name));
 
-    // a year at a time, newest first, the first year open
+    // a year at a time, newest first, the first year open; inside it, a month at a time
     const years = new Map<string, typeof dated>();
     for (const d of dated) {
       const y = d.date ? d.date.slice(0, 4) : "Undated";
       (years.get(y) ?? years.set(y, []).get(y)!).push(d);
     }
+    const monthName = (d: string) => new Date(d.slice(0, 7) + "-01T00:00:00").toLocaleDateString(undefined, { month: "long" });
+    const byMonth = (list: typeof dated) => {
+      const months = new Map<string, typeof dated>();
+      for (const d of list) {
+        const m = d.date ? d.date.slice(0, 7) : "";
+        (months.get(m) ?? months.set(m, []).get(m)!).push(d);
+      }
+      return [...months.entries()];
+    };
 
     const card = (d: (typeof dated)[number]) => {
       const { f, o, im } = d;
@@ -1240,7 +1250,11 @@ import SiteHeader from "../components/SiteHeader.astro";
           <span class="text-xs text-text-tertiary">${list.length} report${list.length === 1 ? "" : "s"}</span>
           <svg class="h-3.5 w-3.5 text-text-tertiary transition-transform group-open:rotate-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
         </summary>
-        <div class="mt-2 flex flex-col gap-2.5">${list.map(card).join("")}</div>
+        <div class="mt-2 flex flex-col gap-2.5">
+          ${byMonth(list).map(([m, cards]) => `
+            ${m ? `<div class="mt-2 font-mono text-[10px] font-semibold uppercase tracking-widest text-text-tertiary first:mt-0">${esc(monthName(m))}</div>` : ""}
+            ${cards.map(card).join("")}`).join("")}
+        </div>
       </details>`).join("");
 
     $("repcards").querySelectorAll("[data-parse]").forEach((b) =>
@@ -1335,6 +1349,7 @@ import SiteHeader from "../components/SiteHeader.astro";
 
     show("upqueue", true);
     $("upqueue").classList.add("flex");
+    $("upqueue").scrollIntoView({ block: "start", behavior: "smooth" });
     $("upqueue").innerHTML = files.map((f, i) => `
       <div id="q-${i}" class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
         <div class="min-w-0 flex-1">
@@ -1599,6 +1614,7 @@ import SiteHeader from "../components/SiteHeader.astro";
 
     show("review", true);
     $("review").classList.add("flex");
+    $("review").scrollIntoView({ block: "start", behavior: "smooth" });
   }
 
   /**
@@ -1682,6 +1698,7 @@ import SiteHeader from "../components/SiteHeader.astro";
         <span class="text-xs text-text-muted">Numbers are read from the report's printed text — never measured from images. Ranges shown only when the report prints them.</span>
       </div>`;
     show("echoreview", true);
+    $("echoreview").scrollIntoView({ block: "start", behavior: "smooth" });
     $("echoclose").addEventListener("click", () => show("echoreview", false));
   }
 
