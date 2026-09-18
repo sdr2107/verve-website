@@ -80,6 +80,15 @@ body {
   pointer-events: none;
 }
 
+/* A password field masks its characters with the font's bullet, and the
+   page's font draws a small square that is hard to see. The system font
+   draws round dots, spaced so each keystroke is visible. Once the eye
+   button shows the text, the field is type=text and the page font returns. */
+input[type="password"] {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  letter-spacing: 0.14em;
+}
+
 /* Tailwind v4's preflight leaves buttons on the arrow cursor — every
    enabled button on the site is clickable and should say so. */
 button:not(:disabled) {
