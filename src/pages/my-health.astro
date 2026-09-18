@@ -123,6 +123,11 @@ import SiteHeader from "../components/SiteHeader.astro";
               </button>
             </div>
           </div>
+          <!-- consent, affirmative and unticked: an account is not a newsletter -->
+          <label id="newsletterrow" class="hidden items-start gap-2.5 text-xs leading-relaxed text-text-secondary">
+            <input id="newsletter" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0 accent-[#818cf8]" />
+            <span>Send me the Verve newsletter: an email now and then on the science, and what changed in the app. Unsubscribe any time.</span>
+          </label>
           <button type="submit" id="authsubmit"
             class="min-h-11 rounded-xl bg-accent px-4 py-3 text-sm font-bold text-canvas transition-opacity hover:opacity-90">
             Sign in
@@ -148,10 +153,8 @@ import SiteHeader from "../components/SiteHeader.astro";
         <!-- ── the code step: the card flips to this once the email is sent ── -->
         <div id="codestep" class="hidden">
           <span class="font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-accent-light">Check your email</span>
-          <h2 class="mt-2 text-[22px] font-bold tracking-[-0.02em] text-text-primary">Enter the code from the email</h2>
-          <p class="mt-2 text-[13px] leading-relaxed text-text-secondary">
-            Sent to <strong id="codeto" class="font-semibold text-text-primary"></strong>. It works on any device: read it on your phone, type it here. It expires in one hour.
-          </p>
+          <h2 id="codehead" class="mt-2 text-[22px] font-bold tracking-[-0.02em] text-text-primary">Enter the code from the email</h2>
+          <p id="codelead" class="mt-2 text-[13px] leading-relaxed text-text-secondary"></p>
           <form id="codeform" class="mt-4 flex flex-col gap-4">
             <label for="code" class="sr-only">Sign-in code</label>
             <input id="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="10"
@@ -163,7 +166,7 @@ import SiteHeader from "../components/SiteHeader.astro";
           </form>
           <div class="mt-3 flex items-center justify-between gap-3">
             <button type="button" id="resend" class="text-xs font-medium text-text-tertiary hover:text-text-primary disabled:hover:text-text-tertiary" disabled></button>
-            <button type="button" id="usepw" class="text-xs font-medium text-accent-light hover:underline">Use a password instead</button>
+            <button type="button" id="usepw" class="text-xs font-medium text-accent-light hover:underline"></button>
           </div>
           <p class="mt-3 text-xs leading-relaxed text-text-tertiary">The link in the same email still works, on the device it is opened on.</p>
         </div>
@@ -576,6 +579,8 @@ import SiteHeader from "../components/SiteHeader.astro";
     show("magic", m === "signin");
     show("ordiv", m === "signin");
     show("applenote", m === "signin");
+    $("newsletterrow").classList.toggle("hidden", m !== "signup");
+    $("newsletterrow").classList.toggle("flex", m === "signup");
     msg("authmsg", "");
   }
   document.querySelectorAll("[data-mode]").forEach((b) =>
@@ -589,9 +594,14 @@ import SiteHeader from "../components/SiteHeader.astro";
     if (authMode === "signup") {
       if (password.length < 8) { msg("authmsg", "Choose a password of at least 8 characters.", true); return; }
       msg("authmsg", "Creating your account…");
+      const optIn = ($("newsletter") as HTMLInputElement).checked;
       const { data, error } = await supabase.auth.signUp({
         email, password,
-        options: { emailRedirectTo: window.location.origin + "/my-health/" },
+        options: {
+          emailRedirectTo: window.location.origin + "/my-health/",
+          // consent travels with the account: user_metadata, exportable later
+          data: { newsletter_opt_in: optIn, newsletter_opt_in_at: optIn ? new Date().toISOString() : null },
+        },
       });
       if (error) { msg("authmsg", error.message, true); return; }
       // Supabase answers an existing address with a userless success — say so
@@ -601,7 +611,9 @@ import SiteHeader from "../components/SiteHeader.astro";
         return;
       }
       if (data.session) { msg("authmsg", ""); boot(); return; }
-      msg("authmsg", "Almost there — confirm from the email we just sent, and the link lands you back here, signed in.");
+      // No session: the project requires the email to be confirmed first. The
+      // confirmation email carries a code and a link; the code is entered here.
+      enterCodeStep(email, "signup");
       return;
     }
     msg("authmsg", "Signing in…");
@@ -614,6 +626,8 @@ import SiteHeader from "../components/SiteHeader.astro";
   // signs in whichever device it is typed on; the link, the one it is
   // opened on. Both come from the same Supabase call. ────────────────────
   let otpEmail = "";
+  /** What the code proves: a sign-in, or a new account's email. */
+  let codeMode: "signin" | "signup" = "signin";
   let resendTimer: number | undefined;
 
   async function sendCode(email: string): Promise<boolean> {
@@ -625,10 +639,15 @@ import SiteHeader from "../components/SiteHeader.astro";
     return true;
   }
 
-  /** The card flips: the email is out, the six boxes are what is left. */
-  function enterCodeStep(email: string) {
+  /** The card flips: the email is out, the code is what is left. */
+  function enterCodeStep(email: string, mode: "signin" | "signup" = "signin") {
     otpEmail = email;
-    $("codeto").textContent = email;
+    codeMode = mode;
+    $("codehead").textContent = mode === "signup" ? "Confirm your email" : "Enter the code from the email";
+    $("codelead").innerHTML = mode === "signup"
+      ? `We sent a code to <strong class="font-semibold text-text-primary">${esc(email)}</strong>. Enter it here to finish creating your account. It expires in one hour.`
+      : `Sent to <strong class="font-semibold text-text-primary">${esc(email)}</strong>. It works on any device: read it on your phone, type it here. It expires in one hour.`;
+    $("usepw").textContent = mode === "signup" ? "Back" : "Use a password instead";
     ["modenote", "pwform", "ordiv", "magic", "applenote"].forEach((id) => show(id, false));
     document.querySelectorAll("[data-mode]").forEach((b) => (b as HTMLElement).parentElement!.classList.add("hidden"));
     show("codestep", true);
@@ -669,7 +688,11 @@ import SiteHeader from "../components/SiteHeader.astro";
 
   $("resend").addEventListener("click", async () => {
     msg("authmsg", "Sending again…");
-    if (await sendCode(otpEmail)) { msg("authmsg", "A new code is on its way."); startResendCountdown(); }
+    const ok = codeMode === "signup"
+      ? !(await supabase.auth.resend({ type: "signup", email: otpEmail, options: { emailRedirectTo: window.location.origin + "/my-health/" } })).error
+      : await sendCode(otpEmail);
+    if (ok) { msg("authmsg", "A new code is on its way."); startResendCountdown(); }
+    else if (codeMode === "signup") msg("authmsg", "Could not send another code just now. Try again in a minute.", true);
   });
 
   $("usepw").addEventListener("click", () => leaveCodeStep());
@@ -687,7 +710,8 @@ import SiteHeader from "../components/SiteHeader.astro";
     const btn = $("verify") as HTMLButtonElement;
     btn.disabled = true;
     msg("authmsg", "Checking…");
-    const { error } = await supabase.auth.verifyOtp({ email: otpEmail, token, type: "email" });
+    // "signup" proves a new account's address; "email" is a sign-in code.
+    const { error } = await supabase.auth.verifyOtp({ email: otpEmail, token, type: codeMode === "signup" ? "signup" : "email" });
     btn.disabled = false;
     // Supabase answers a wrong code and a stale one with the same message.
     if (error) { msg("authmsg", "That code did not match, or has expired. Check it, or send a new one.", true); return; }
