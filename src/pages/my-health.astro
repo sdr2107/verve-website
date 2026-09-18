@@ -223,7 +223,7 @@ import SiteHeader from "../components/SiteHeader.astro";
         <div id="emptycard" class="hidden max-w-3xl rounded-2xl border border-dashed border-accent/40 bg-accent/[0.04] p-6">
           <p class="text-sm font-semibold text-text-primary">No reports yet</p>
           <p class="mt-1 text-[13px] leading-relaxed text-text-tertiary">
-            Drop your first lab report and every value in it becomes a trend you keep. PDF, several at once.
+            Drop your first lab report and every value in it becomes a trend you keep. A PDF or a photo, several at once.
           </p>
           <button id="emptyadd" class="mt-4 min-h-11 rounded-xl bg-accent px-5 py-2.5 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Add a report</button>
         </div>
@@ -280,10 +280,10 @@ import SiteHeader from "../components/SiteHeader.astro";
           </span>
           <span class="min-w-0 flex-1">
             <span class="block text-sm font-semibold text-text-primary">Add older reports: drop them here, or tap to choose</span>
-            <span class="mt-0.5 block text-xs leading-relaxed text-text-tertiary">PDF only, up to 15 MB each &middot; several at once &middot; originals stay in your private archive &middot; a file you already have is spotted before it is filed</span>
+            <span class="mt-0.5 block text-xs leading-relaxed text-text-tertiary">A PDF, or a photo of the report as JPG, PNG or WebP &middot; up to 15 MB each &middot; several at once &middot; originals stay in your private archive &middot; a file you already have is spotted before it is filed</span>
           </span>
           <span class="hidden shrink-0 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-bold text-accent-light sm:inline-block">Choose files</span>
-          <input id="file" type="file" accept="application/pdf" multiple class="hidden" />
+          <input id="file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif" multiple class="hidden" />
         </label>
 
         <!-- the batch queue: one row per dropped file, each with its stage -->
@@ -357,7 +357,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       </span>
       <p class="text-[26px] font-extrabold tracking-[-0.02em] text-text-primary">Drop to add</p>
       <p class="max-w-[380px] text-[13px] leading-relaxed text-text-secondary">
-        PDF reports, several at once. They land on the Reports tab, and any that you already have is spotted before it is filed.
+        PDF reports, or photos of them, several at once. They land on the Reports tab, and any that you already have is spotted before it is filed.
       </p>
     </div>
   </div>
@@ -875,7 +875,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     const dayRows = allLabs.filter((r) => r.measured_on === lastDate);
     const flaggedN = dayRows.filter((r) => inRange(r) === false).length;
     const path = dayRows.map((r) => r.report_path).filter(Boolean).pop() ?? "";
-    const repName = path ? path.split("/").pop()!.replace(/^\d+-/, "").replace(/\.pdf$/i, "").replace(/_/g, " ") : "";
+    const repName = path ? pretty(path.split("/").pop()!) : "";
     show("latestwrap", true);
     $("latestcard").innerHTML = `
       <div class="mh-rise flex flex-wrap items-center gap-3 sm:gap-4" style="--i: 7">
@@ -889,7 +889,7 @@ import SiteHeader from "../components/SiteHeader.astro";
           </div>
           <div class="mt-1 text-xs text-text-tertiary">${dayRows.length} values · ${flaggedN ? `<span class="text-warning">${flaggedN} outside range</span>` : `<span class="text-success">all in range</span>`} · all on your Labs tab</div>
         </div>
-        ${path ? `<button data-viewpath="${esc(path)}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-white/25 hover:text-text-primary">View PDF</button>` : ""}
+        ${path ? `<button data-viewpath="${esc(path)}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-white/25 hover:text-text-primary">View report</button>` : ""}
         <button data-goto="reports" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-white/25 hover:text-text-primary">All reports →</button>
       </div>`;
     const vp = $("latestcard").querySelector("[data-viewpath]");
@@ -1108,8 +1108,11 @@ import SiteHeader from "../components/SiteHeader.astro";
   }
 
   // ═══ REPORTS ═════════════════════════════════════════════════════════════
-  /** The stored name, as a title: the upload stamp off, underscores as spaces, no .pdf. */
-  const pretty = (name: string) => name.replace(/^\d+-/, "").replace(/\.pdf$/i, "").replace(/_/g, " ");
+  /** The kinds of file the archive holds: a PDF, or a photo of a report. */
+  const REPORT_EXT = /\.(pdf|jpe?g|png|webp)$/i;
+  const isPhotoName = (name: string) => /\.(jpe?g|png|webp)$/i.test(name);
+  /** The stored name, as a title: the upload stamp off, underscores as spaces, no extension. */
+  const pretty = (name: string) => name.replace(/^\d+-/, "").replace(REPORT_EXT, "").replace(/_/g, " ");
   /** The upload time, from the stamp the upload put in front of the name. */
   const stampOf = (name: string) => Number((name.match(/^(\d+)-/) ?? [])[1] ?? 0);
 
@@ -1147,7 +1150,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     const { data } = await supabase.storage.from("reports").list(userId, {
       sortBy: { column: "created_at", order: "desc" }, limit: 200,
     });
-    const files = (data ?? []).filter((f) => f.name.toLowerCase().endsWith(".pdf"));
+    const files = (data ?? []).filter((f) => REPORT_EXT.test(f.name));
 
     // what each report yielded, from the one web_labs fetch
     const outcomes = new Map<string, { date: string; n: number; flagged: number }>();
@@ -1209,7 +1212,9 @@ import SiteHeader from "../components/SiteHeader.astro";
         <div class="rounded-2xl border ${flagged ? "border-warning/45" : "border-white/10"} bg-white/[0.03] p-4">
           <div class="flex items-center gap-3">
             <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-accent/[0.12]">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
+              ${isPhotoName(f.name)
+                ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>`
+                : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>`}
             </span>
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-2" data-namewrap>
@@ -1289,9 +1294,10 @@ import SiteHeader from "../components/SiteHeader.astro";
    */
   async function renameReport(oldName: string, label: string) {
     const stamp = (oldName.match(/^(\d+)-/) ?? [, String(Date.now())])[1];
-    const safe = label.trim().replace(/\.pdf$/i, "").replace(/[^\w.\- ]+/g, "").replace(/\s+/g, "_").slice(0, 80);
+    const ext = (oldName.match(REPORT_EXT) ?? [, ".pdf"])[0];
+    const safe = label.trim().replace(REPORT_EXT, "").replace(/[^\w.\- ]+/g, "").replace(/\s+/g, "_").slice(0, 80);
     if (!safe) { msg("upmsg", "Give the report a name first.", true); return; }
-    const newName = `${stamp}-${safe}.pdf`;
+    const newName = `${stamp}-${safe}${ext}`;
     if (newName === oldName) { await renderReports(); return; }
     const oldPath = `${userId}/${oldName}`, newPath = `${userId}/${newName}`;
     const { error } = await supabase.storage.from("reports").move(oldPath, newPath);
@@ -1308,7 +1314,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   function renameUI(btn: HTMLElement) {
     const name = btn.dataset.ren!;
     const wrap = btn.closest("[data-namewrap]") as HTMLElement;
-    const current = name.replace(/^\d+-/, "").replace(/\.pdf$/i, "").replace(/_/g, " ");
+    const current = pretty(name);
     wrap.innerHTML = `
       <input data-reninput value="${esc(current)}" maxlength="80"
         class="w-full min-w-0 flex-1 rounded-lg border border-accent/50 bg-white/[0.04] px-2.5 py-1 text-sm font-bold text-text-primary focus:outline-none" />
@@ -1327,6 +1333,27 @@ import SiteHeader from "../components/SiteHeader.astro";
 
   // ── upload — drop several at once; one visible queue, files read one
   // after another so a failure in one never takes the others down ────────
+  const PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
+
+  /**
+   * A photo of a report, shrunk to 2048 px on its long edge and encoded as
+   * a JPEG. The reader downsizes anything larger itself, so nothing it would
+   * see is lost, and a 4 MB phone photo becomes a few hundred KB. HEIC from
+   * an iPhone decodes in Safari; a browser that cannot decode it throws,
+   * and the queue says to save it as a JPEG first.
+   */
+  async function shrinkPhoto(file: File): Promise<Blob> {
+    const bmp = await createImageBitmap(file);
+    const MAX = 2048;
+    const scale = Math.min(1, MAX / Math.max(bmp.width, bmp.height));
+    const w = Math.max(1, Math.round(bmp.width * scale)), h = Math.max(1, Math.round(bmp.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    canvas.getContext("2d")!.drawImage(bmp, 0, 0, w, h);
+    bmp.close();
+    return await new Promise<Blob>((res, rej) =>
+      canvas.toBlob((b) => (b ? res(b) : rej(new Error("encode failed"))), "image/jpeg", 0.85));
+  }
   function qset(i: number, chip: string, tone: "wait" | "busy" | "ok" | "bad", caption: string) {
     const row = document.getElementById(`q-${i}`);
     if (!row) return;
@@ -1368,14 +1395,26 @@ import SiteHeader from "../components/SiteHeader.astro";
     let filedN = 0;
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
-      if (f.type !== "application/pdf") { qset(i, "SKIPPED", "bad", "Not a PDF"); continue; }
+      const isPdf = f.type === "application/pdf" || /\.pdf$/i.test(f.name);
+      const isPhoto = PHOTO_TYPES.has(f.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name);
+      if (!isPdf && !isPhoto) { qset(i, "SKIPPED", "bad", "Not a PDF or a photo (JPG, PNG, WebP)"); continue; }
       if (f.size > 15 * 1024 * 1024) { qset(i, "SKIPPED", "bad", "Over 15 MB"); continue; }
       const asStored = `${f.size}|${pretty(f.name.replace(/[^\w.\-]+/g, "_")).toLowerCase()}`;
-      if (already.has(asStored)) { qset(i, "ALREADY HERE", "ok", "This file is in your archive. Its card's Read again re-reads it."); continue; }
+      if (isPdf && already.has(asStored)) { qset(i, "ALREADY HERE", "ok", "This file is in your archive. Its card's Read again re-reads it."); continue; }
+
+      // a photo is shrunk to what the reader keeps anyway, and always lands as a JPEG
+      let blob: Blob = f, ext = "pdf", contentType = "application/pdf";
+      if (isPhoto) {
+        qset(i, "PREPARING…", "busy", "Shrinking the photo to what the reader needs");
+        try { blob = await shrinkPhoto(f); }
+        catch { qset(i, "SKIPPED", "bad", "This browser cannot read that photo format — save it as a JPEG and try again"); continue; }
+        ext = "jpg"; contentType = "image/jpeg";
+      }
 
       qset(i, "UPLOADING…", "busy", "Saving the original to your private archive");
-      const path = `${userId}/${Date.now()}-${f.name.replace(/[^\w.\-]+/g, "_")}`;
-      const { error } = await supabase.storage.from("reports").upload(path, f, { contentType: "application/pdf" });
+      const base = f.name.replace(/\.[^.]+$/, "").replace(/[^\w.\-]+/g, "_") || "report";
+      const path = `${userId}/${Date.now()}-${base}.${ext}`;
+      const { error } = await supabase.storage.from("reports").upload(path, blob, { contentType });
       if (error) { qset(i, "FAILED", "bad", error.message); continue; }
 
       qset(i, "READING…", "busy", "Verve is reading every value and its printed range — about 20 seconds");
@@ -1463,6 +1502,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       throw new Error(
         out.error === "not_a_lab_report" || out.error === "not_a_medical_report" ? "That file doesn't look like a medical report." :
         out.error === "report_too_dense" ? (out.detail ?? "The report is too long to read in one go.") :
+        out.error === "unsupported_type" || out.error === "photo_too_large" ? (out.detail ?? "That file type cannot be read.") :
         out.error === "subscription_required" ? (out.detail ?? "Your free reports are used — a subscription keeps the drop zone open.") :
         `Could not read it${out.detail ? ` — ${out.detail}` : `: ${out.error ?? resp.status}`}`);
     }
