@@ -177,21 +177,32 @@ import SiteHeader from "../components/SiteHeader.astro";
     </section>
 
     <!-- ── set a new password (arrived from a reset email) ──────────────── -->
-    <section id="pwreset" class="mt-6 hidden max-w-3xl rounded-2xl border border-accent/40 bg-white/[0.03] p-7">
-      <h2 class="text-lg font-bold">Set a new password</h2>
-      <p class="mt-1 text-sm text-text-secondary">You followed a reset link — choose the password you'll use in the app and here.</p>
-      <div class="relative mt-5">
-        <input id="newpw" type="password" placeholder="New password (8+ characters)" autocomplete="new-password"
-          class="w-full rounded-xl border border-white/12 bg-white/[0.04] px-4 py-3 pr-12 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
-        <button type="button" data-eye="newpw" aria-label="Show password"
-          class="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-text-tertiary hover:text-text-primary">
-          <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+    <section id="pwreset" class="mt-6 hidden max-w-md rounded-[20px] border border-white/10 bg-white/[0.03] p-5 sm:p-7 lg:mt-8">
+      <span class="font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-accent-light">Reset your password</span>
+      <h2 class="mt-2 text-[22px] font-bold tracking-[-0.02em] text-text-primary">Choose a new password</h2>
+      <p class="mt-2 text-[13px] leading-relaxed text-text-secondary">It works here and in the Verve app. Eight characters or more.</p>
+      <form id="pwform2" class="mt-4 flex flex-col gap-4">
+        <div>
+          <label for="newpw" class="mb-1.5 block text-xs font-semibold text-text-secondary">New password</label>
+          <div class="relative">
+            <input id="newpw" type="password" autocomplete="new-password"
+              class="w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-3 pr-12 text-[15px] text-text-primary focus:border-accent focus:outline-none sm:text-sm" />
+            <button type="button" data-eye="newpw" aria-label="Show password"
+              class="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-text-tertiary hover:text-text-primary">
+              <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div>
+          <label for="newpw2" class="mb-1.5 block text-xs font-semibold text-text-secondary">Repeat it</label>
+          <input id="newpw2" type="password" autocomplete="new-password"
+            class="w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-3 text-[15px] text-text-primary focus:border-accent focus:outline-none sm:text-sm" />
+        </div>
+        <button type="submit" id="savepw" class="min-h-11 rounded-xl bg-accent px-4 py-3 text-sm font-bold text-canvas transition-opacity hover:opacity-90 disabled:opacity-50">
+          Save password
         </button>
-      </div>
-      <button id="savepw" class="mt-3 w-full rounded-xl bg-accent px-4 py-3 text-sm font-bold text-canvas transition-opacity hover:opacity-90">
-        Save password
-      </button>
-      <p id="pwmsg" class="mt-4 hidden text-sm"></p>
+      </form>
+      <p id="pwmsg" class="mh-status mt-4 hidden text-[13px] leading-relaxed"></p>
     </section>
 
     <!-- ── signed in ──────────────────────────────────────────────────── -->
@@ -626,8 +637,10 @@ import SiteHeader from "../components/SiteHeader.astro";
   // signs in whichever device it is typed on; the link, the one it is
   // opened on. Both come from the same Supabase call. ────────────────────
   let otpEmail = "";
-  /** What the code proves: a sign-in, or a new account's email. */
-  let codeMode: "signin" | "signup" = "signin";
+  /** What the code proves: a sign-in, a new account's email, or a password reset. */
+  let codeMode: "signin" | "signup" | "recovery" = "signin";
+  /** True from a recovery code being checked until the new password is saved. */
+  let recovering = false;
   let resendTimer: number | undefined;
 
   async function sendCode(email: string): Promise<boolean> {
@@ -640,14 +653,17 @@ import SiteHeader from "../components/SiteHeader.astro";
   }
 
   /** The card flips: the email is out, the code is what is left. */
-  function enterCodeStep(email: string, mode: "signin" | "signup" = "signin") {
+  function enterCodeStep(email: string, mode: "signin" | "signup" | "recovery" = "signin") {
     otpEmail = email;
     codeMode = mode;
-    $("codehead").textContent = mode === "signup" ? "Confirm your email" : "Enter the code from the email";
-    $("codelead").innerHTML = mode === "signup"
-      ? `We sent a code to <strong class="font-semibold text-text-primary">${esc(email)}</strong>. Enter it here to finish creating your account. It expires in one hour.`
-      : `Sent to <strong class="font-semibold text-text-primary">${esc(email)}</strong>. It works on any device: read it on your phone, type it here. It expires in one hour.`;
-    $("usepw").textContent = mode === "signup" ? "Back" : "Use a password instead";
+    $("codehead").textContent =
+      mode === "signup" ? "Confirm your email" : mode === "recovery" ? "Reset your password" : "Enter the code from the email";
+    const to = `<strong class="font-semibold text-text-primary">${esc(email)}</strong>`;
+    $("codelead").innerHTML =
+      mode === "signup" ? `We sent a code to ${to}. Enter it here to finish creating your account. It expires in one hour.`
+      : mode === "recovery" ? `We sent a code to ${to}. Enter it here, then choose a new password. It expires in one hour.`
+      : `Sent to ${to}. It works on any device: read it on your phone, type it here. It expires in one hour.`;
+    $("usepw").textContent = mode === "signin" ? "Use a password instead" : "Back";
     ["modenote", "pwform", "ordiv", "magic", "applenote"].forEach((id) => show(id, false));
     document.querySelectorAll("[data-mode]").forEach((b) => (b as HTMLElement).parentElement!.classList.add("hidden"));
     show("codestep", true);
@@ -660,6 +676,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   function leaveCodeStep() {
     if (resendTimer) { clearInterval(resendTimer); resendTimer = undefined; }
     otpEmail = "";
+    codeMode = "signin";
     show("codestep", false);
     document.querySelectorAll("[data-mode]").forEach((b) => (b as HTMLElement).parentElement!.classList.remove("hidden"));
     show("pwform", true);
@@ -688,11 +705,14 @@ import SiteHeader from "../components/SiteHeader.astro";
 
   $("resend").addEventListener("click", async () => {
     msg("authmsg", "Sending again…");
+    const redirect = { emailRedirectTo: window.location.origin + "/my-health/" };
     const ok = codeMode === "signup"
-      ? !(await supabase.auth.resend({ type: "signup", email: otpEmail, options: { emailRedirectTo: window.location.origin + "/my-health/" } })).error
-      : await sendCode(otpEmail);
+      ? !(await supabase.auth.resend({ type: "signup", email: otpEmail, options: redirect })).error
+      : codeMode === "recovery"
+        ? !(await supabase.auth.resetPasswordForEmail(otpEmail, { redirectTo: redirect.emailRedirectTo })).error
+        : await sendCode(otpEmail);
     if (ok) { msg("authmsg", "A new code is on its way."); startResendCountdown(); }
-    else if (codeMode === "signup") msg("authmsg", "Could not send another code just now. Try again in a minute.", true);
+    else if (codeMode !== "signin") msg("authmsg", "Could not send another code just now. Try again in a minute.", true);
   });
 
   $("usepw").addEventListener("click", () => leaveCodeStep());
@@ -710,15 +730,32 @@ import SiteHeader from "../components/SiteHeader.astro";
     const btn = $("verify") as HTMLButtonElement;
     btn.disabled = true;
     msg("authmsg", "Checking…");
-    // "signup" proves a new account's address; "email" is a sign-in code.
-    const { error } = await supabase.auth.verifyOtp({ email: otpEmail, token, type: codeMode === "signup" ? "signup" : "email" });
+    // "signup" proves a new account's address, "recovery" a password reset,
+    // "email" is a sign-in code.
+    const type = codeMode === "signup" ? "signup" : codeMode === "recovery" ? "recovery" : "email";
+    // A recovery code signs in as it is checked; the flag keeps the reset
+    // card in front of the dashboard until the new password is saved.
+    recovering = codeMode === "recovery";
+    const { error } = await supabase.auth.verifyOtp({ email: otpEmail, token, type });
     btn.disabled = false;
     // Supabase answers a wrong code and a stale one with the same message.
-    if (error) { msg("authmsg", "That code did not match, or has expired. Check it, or send a new one.", true); return; }
+    if (error) { recovering = false; msg("authmsg", "That code did not match, or has expired. Check it, or send a new one.", true); return; }
     msg("authmsg", "");
+    const wasRecovery = codeMode === "recovery";
     leaveCodeStep();
+    if (wasRecovery) { showReset(); return; }
     boot();
   });
+
+  /** The reset card, alone on the page. */
+  function showReset() {
+    show("loading", false); show("auth", false); show("home", false);
+    show("pwreset", true);
+    ($("newpw") as HTMLInputElement).value = "";
+    ($("newpw2") as HTMLInputElement).value = "";
+    msg("pwmsg", "");
+    $("newpw").focus();
+  }
 
   $("signout").addEventListener("click", async () => {
     await supabase.auth.signOut();
@@ -735,26 +772,35 @@ import SiteHeader from "../components/SiteHeader.astro";
       (b as HTMLElement).classList.toggle("text-accent-light", !showing);
     }));
 
-  // ── forgot password → reset email → the set-a-new-password card ───────
+  // ── forgot password → a code by email → the code opens the reset card.
+  // The email's link is kept for the device it is opened on; the code is
+  // what works from any device, and what a mail scanner cannot use up. ──
   $("forgot").addEventListener("click", async () => {
     const email = ($("email") as HTMLInputElement).value.trim();
     if (!email) { msg("authmsg", "Type your email above first.", true); return; }
-    msg("authmsg", "Sending a reset link…");
+    msg("authmsg", "Sending…");
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: window.location.origin + "/my-health/",
     });
-    if (error) msg("authmsg", error.message, true);
-    else msg("authmsg", "Sent — the link in that email brings you back here to set a new password.");
+    if (error) { msg("authmsg", error.message, true); return; }
+    enterCodeStep(email, "recovery");
   });
 
-  $("savepw").addEventListener("click", async () => {
+  $("pwform2").addEventListener("submit", async (e) => {
+    e.preventDefault();
     const pw = ($("newpw") as HTMLInputElement).value;
-    if (pw.length < 8) { msg("pwmsg", "At least 8 characters.", true); return; }
+    const pw2 = ($("newpw2") as HTMLInputElement).value;
+    if (pw.length < 8) { msg("pwmsg", "Eight characters or more.", true); return; }
+    if (pw !== pw2) { msg("pwmsg", "The two passwords do not match.", true); return; }
+    const btn = $("savepw") as HTMLButtonElement;
+    btn.disabled = true;
     msg("pwmsg", "Saving…");
     const { error } = await supabase.auth.updateUser({ password: pw });
+    btn.disabled = false;
     if (error) { msg("pwmsg", error.message, true); return; }
-    msg("pwmsg", "Saved — this password now works in the app and here.");
-    setTimeout(() => { show("pwreset", false); boot(); }, 1800);
+    recovering = false;
+    msg("pwmsg", "Saved. This password now works in the app and here.");
+    setTimeout(() => { show("pwreset", false); boot(); }, 1400);
   });
 
   // ── range helpers — every value against ITS OWN printed range ─────────
@@ -1862,11 +1908,11 @@ import SiteHeader from "../components/SiteHeader.astro";
 
   boot();
   supabase.auth.onAuthStateChange((event) => {
-    // A reset link lands with a recovery session: show the new-password card
-    // instead of dropping the user on the dashboard mid-reset.
-    if (event === "PASSWORD_RECOVERY") {
-      show("loading", false); show("auth", false); show("home", false);
-      show("pwreset", true);
+    // A reset link lands with a recovery session, and a recovery code signs
+    // in as it is checked: either way the reset card stays in front of the
+    // dashboard until the new password is saved.
+    if (event === "PASSWORD_RECOVERY" || recovering) {
+      showReset();
       return;
     }
     boot();
