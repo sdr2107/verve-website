@@ -269,6 +269,35 @@ import SiteHeader from "../components/SiteHeader.astro";
           <textarea id="personnote" rows="2" placeholder="On metformin since June. Next HbA1c due December."
             class="mt-1 w-full resize-none rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[14px] leading-relaxed text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"></textarea>
         </div>
+
+        <!-- invitations waiting for you: someone asked you to look at their page -->
+        <div id="invites" class="mt-3 hidden max-w-3xl flex-col gap-3"></div>
+
+        <!-- who can see this person: yours to change, closed until opened -->
+        <details id="sharewrap" class="mt-3 hidden max-w-3xl rounded-2xl border border-white/10 bg-white/[0.03]">
+          <summary class="cursor-pointer list-none px-4 py-3 text-[13px] font-semibold text-text-secondary hover:text-text-primary">
+            <span id="sharesummary">Who can see this page</span>
+          </summary>
+          <div class="border-t border-white/[0.06] px-4 py-3">
+            <div id="sharelist" class="flex flex-col gap-2"></div>
+            <form id="shareform" class="mt-4 flex flex-wrap items-end gap-x-3 gap-y-2">
+              <label class="flex flex-col gap-1 text-[12px] text-text-secondary">Their email
+                <input id="shareemail" type="email" required autocomplete="off" placeholder="coach@example.com"
+                  class="w-60 max-w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
+              </label>
+              <fieldset class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-text-primary">
+                <legend class="mb-1 text-[12px] text-text-secondary">What they see</legend>
+                <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-scope="labs" checked class="h-4 w-4 accent-[#818cf8]" />Labs</label>
+                <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-scope="imaging" checked class="h-4 w-4 accent-[#818cf8]" />Imaging</label>
+                <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-scope="activity" class="h-4 w-4 accent-[#818cf8]" />Activity and fitness</label>
+                <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-scope="body" class="h-4 w-4 accent-[#818cf8]" />Body measurements</label>
+              </fieldset>
+              <button type="submit" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Invite</button>
+              <p class="basis-full text-[12px] leading-relaxed text-text-tertiary">They can look, not change. You can stop, or change what they see, at any time. Activity and body measurements come from the app, so they are offered only for a person with an account.</p>
+            </form>
+            <p id="sharemsg" class="mt-2 hidden text-[13px]"></p>
+          </div>
+        </details>
       </div>
 
       <!-- reading in progress: shown on every tab, since the read carries on
@@ -608,6 +637,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     const w = canWrite(), self = isSelf();
     show("addreport", w); show("drop", w); show("emptyadd", w);
     show("personnotewrap", w && !self && !!person?.id);
+    show("sharewrap", w && !!person?.id);
     show("namechange", self && !!firstName);
     if (!self) hideNameForm();
     renderPeople();
@@ -651,11 +681,12 @@ import SiteHeader from "../components/SiteHeader.astro";
     if (!p || p.id === person?.id) return;
     person = p;
     try { sessionStorage.setItem(PERSON_KEY, id); } catch { /* fine */ }
-    msg("upmsg", "");
+    msg("upmsg", ""); msg("sharemsg", "");
     show("review", false); show("echoreview", false); show("namecheck", false);
     $("upqueue").innerHTML = ""; show("upqueue", false);
     applyPersonMode();
-    await Promise.all([refresh(), loadPersonNote()]);
+    if (!p.mine && p.id) supabase.rpc("note_grant_view", { person: p.id }).then(() => {}, () => {});   // they can see when you last looked
+    await Promise.all([refresh(), loadPersonNote(), loadSharing()]);
   }
 
   // ── add, edit, remove someone you look after ──────────────────────────
@@ -782,6 +813,115 @@ import SiteHeader from "../components/SiteHeader.astro";
     } catch { /* the table may not exist yet */ }
   }
 
+  // ── sharing: who can see this person, and invitations waiting for you ──
+  const SCOPE_LABEL: Record<string, string> = { labs: "Labs", imaging: "Imaging", activity: "Activity and fitness", body: "Body measurements", notes: "Notes" };
+  const scopeList = (xs: string[]) => xs.map((x) => SCOPE_LABEL[x] ?? x).join(" · ");
+  const dayOf = (iso: string) => fmtDay(String(iso).slice(0, 10));
+
+  /** The grants on the open person: theirs to see, stop or cancel. */
+  async function loadSharing() {
+    const p = person;
+    if (!p?.id || !p.mine) return;
+    // activity and body come from the app, which only a person with an account has
+    $("shareform").querySelectorAll<HTMLInputElement>("[data-scope]").forEach((c) => {
+      const appOnly = c.dataset.scope === "activity" || c.dataset.scope === "body";
+      c.closest("label")!.classList.toggle("hidden", appOnly && !p.account_id);
+      if (appOnly && !p.account_id) c.checked = false;
+    });
+    const { data, error } = await supabase.from("grants")
+      .select("id, viewer_email, viewer_id, scopes, status, invited_at, accepted_at, last_viewed_at")
+      .eq("person_id", p.id).neq("status", "stopped").order("invited_at", { ascending: true });
+    if (person?.id !== p.id) return;   // switched away meanwhile
+    const rows = error ? [] : (data ?? []);
+    $("sharesummary").textContent = rows.length ? `Who can see this page · ${rows.length}` : "Who can see this page · only you";
+    $("sharelist").innerHTML = rows.length ? rows.map((g: any) => `
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-white/[0.08] px-3 py-2 text-[13px]">
+        <span class="font-semibold text-text-primary">${esc(g.viewer_email)}</span>
+        <span class="rounded-md px-1.5 py-0.5 font-mono text-[9px] tracking-wider ${g.status === "active" ? "bg-success/15 text-success-light" : "bg-warning/15 text-warning"}">${g.status === "active" ? "SEES" : "WAITING"}</span>
+        <span class="text-text-tertiary">${esc(scopeList(g.scopes ?? []))}</span>
+        <span class="text-text-muted">${g.status === "active"
+          ? (g.last_viewed_at ? `last looked ${dayOf(g.last_viewed_at)}` : "has not looked yet")
+          : `invited ${dayOf(g.invited_at)}`}</span>
+        <button type="button" data-stop="${g.id}" class="ml-auto min-h-9 text-[12px] font-semibold text-text-tertiary hover:text-danger">${g.status === "active" ? "Stop" : "Cancel"}</button>
+      </div>`).join("")
+      : `<p class="text-[13px] text-text-tertiary">Nobody else. Invite a doctor or a coach below: they see what you tick, and nothing else.</p>`;
+    $("sharelist").querySelectorAll("[data-stop]").forEach((b) => b.addEventListener("click", async () => {
+      const { error: e } = await supabase.from("grants")
+        .update({ status: "stopped", stopped_at: new Date().toISOString() }).eq("id", (b as HTMLElement).dataset.stop);
+      if (e) msg("sharemsg", `Could not stop: ${e.message}`, true);
+      else { msg("sharemsg", ""); await loadSharing(); }
+    }));
+  }
+
+  $("shareform").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const p = person;
+    if (!p?.id || !p.mine) return;
+    const email = ($("shareemail") as HTMLInputElement).value.trim().toLowerCase();
+    const scopes = [...$("shareform").querySelectorAll<HTMLInputElement>("[data-scope]")]
+      .filter((c) => c.checked && !c.closest("label")!.classList.contains("hidden")).map((c) => c.dataset.scope!);
+    if (!email) return;
+    if (email === userEmail.toLowerCase()) { msg("sharemsg", "That is you.", true); return; }
+    if (!scopes.length) { msg("sharemsg", "Tick at least one thing for them to see.", true); return; }
+    const { data, error } = await supabase.from("grants").insert({
+      person_id: p.id, owner_id: userId, viewer_email: email, scopes,
+      person_name: p.self ? (fullName || "their page") : p.name,
+      inviter_name: fullName || userEmail,
+    }).select("id").maybeSingle();
+    if (error || !data) {
+      msg("sharemsg", error?.code === "23505" ? `${email} already has an invitation to this page.` : `Could not invite: ${error?.message ?? "no row came back"}`, true);
+      return;
+    }
+    ($("shareemail") as HTMLInputElement).value = "";
+    const sent = await sendInvite(data.id);
+    msg("sharemsg", sent
+      ? `Invited. ${email} gets an email; the moment they accept, they see what you ticked, and you see it here.`
+      : `Invited. The email could not be sent just now; ${email} still finds the invitation under their greeting when they sign in with that address.`);
+    await loadSharing();
+  });
+
+  /** The email, through the share-invite function; false when it could not go. */
+  async function sendInvite(grantId: string): Promise<boolean> {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/share-invite`, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${session?.access_token}`, apikey: SUPABASE_ANON_KEY },
+        body: JSON.stringify({ grant_id: grantId }),
+      });
+      return resp.ok;
+    } catch { return false; }
+  }
+
+  /** Invitations to your address, answered through respond_to_grant. */
+  async function loadInvites() {
+    if (!people.some((p) => !!p.id)) return;   // no tables yet
+    const { data, error } = await supabase.from("grants")
+      .select("id, person_id, person_name, inviter_name, scopes, invited_at")
+      .eq("status", "invited").eq("viewer_email", userEmail.toLowerCase());
+    const rows = error ? [] : (data ?? []);
+    show("invites", rows.length > 0); $("invites").classList.toggle("flex", rows.length > 0);
+    // "their own page" when the inviter shares themselves, else whose page it is
+    const whose = (g: any) => g.person_name && g.person_name !== g.inviter_name ? `${g.person_name}'s page` : "their own page";
+    $("invites").innerHTML = rows.map((g: any) => `
+      <div class="flex flex-col gap-2 rounded-2xl border border-accent/40 bg-accent/[0.06] px-4 py-3.5">
+        <p class="text-[14px] text-text-primary"><strong>${esc(g.inviter_name || "Someone")}</strong> asks you to look at ${esc(whose(g))}: ${esc(scopeList(g.scopes ?? []))}.</p>
+        <p class="text-[12.5px] text-text-tertiary">You can look, not change. They can stop at any time, and see when you last looked.</p>
+        <div class="flex gap-2">
+          <button type="button" data-accept="${g.id}" data-open="${g.person_id}" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas">Accept</button>
+          <button type="button" data-decline="${g.id}" class="min-h-10 rounded-xl border border-white/14 px-4 py-2 text-sm font-semibold text-text-secondary">Decline</button>
+        </div>
+      </div>`).join("");
+    $("invites").querySelectorAll("[data-accept],[data-decline]").forEach((b) => b.addEventListener("click", async () => {
+      const el = b as HTMLElement, accept = el.dataset.accept != null;
+      const { error: e } = await supabase.rpc("respond_to_grant", { grant_id: el.dataset.accept ?? el.dataset.decline, accept });
+      if (e) { msg("upmsg", `Could not answer: ${e.message}`, true); return; }
+      await loadPeople(); renderPeople();
+      await loadInvites();
+      if (accept && el.dataset.open) await switchPerson(el.dataset.open);
+    }));
+  }
+
   // one fetch feeds Overview, Labs and the Reports cards
   let allLabs: any[] = [];
   let allImaging: any[] = [];   // imaging_reports — the narrative half of a study
@@ -834,7 +974,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       setTab(["overview", "labs", "reports"].includes(wanted) ? wanted : "overview");
       await loadPeople();
       applyPersonMode();
-      await Promise.all([refresh(), loadPersonNote()]);
+      await Promise.all([refresh(), loadPersonNote(), loadSharing(), loadInvites()]);
     } else {
       firstName = "";
       people = []; person = null;
