@@ -21,11 +21,12 @@ export const GET_APP_PATH = "/get";
 /**
  * Stage 2 of the biomarkers: a report's app values go to the app the moment
  * they are read, marked unchecked, and the app asks the person to look at
- * them there. Off until the app build that shows the mark is in people's
- * hands — before that the app would show an unchecked number as a settled
- * one. Until then a value reaches the app only by Send, as in stage 1.
+ * them there. Kept off until the app build that shows the mark was on
+ * phones, because an older build would show an unchecked number as a
+ * settled one; that build went out on 2026-09-19. Set this back to false and
+ * a value reaches the app only by Send, as in stage 1.
  */
-export const AUTO_SEND_TO_APP = false;
+export const AUTO_SEND_TO_APP = true;
 export const X_URL = "https://x.com/RoplekarSudeep";
 export const SUBSTACK_URL =
   "https://substack.com/@roplekarsudeep?r=596iu&utm_campaign=profile&utm_medium=profile-page";
