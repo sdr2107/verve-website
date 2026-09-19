@@ -10,7 +10,10 @@
     {{ .Data.pending_share_person }}  whose page: "Amma's page", or "their own page"
     {{ .Data.pending_share_scopes }}  what they see, e.g. "Labs, Imaging"
   The button carries a token_hash the site verifies with type "invite", so
-  it signs in the device it is opened on, from any device. The code is
+  it signs in the device it is opened on, from any device. Its address is
+  written out in full rather than built from {{ .SiteURL }}: the project's
+  Site URL is the app's own callback (verve://auth-callback), which the app
+  needs, and this email must never depend on it. The code is
   typed at verve-app.health/my-health under "Email me a code", like any
   sign-in code. "One hour" must match Authentication → Providers → Email →
   "Email OTP expiration" (3600 s is the default).
@@ -32,7 +35,7 @@
       You can look; you cannot change anything. They can stop at any time, and can see when you last looked.
     </p>
     <p style="margin:22px 0 0;text-align:center;">
-      <a href="{{ .SiteURL }}/my-health?token_hash={{ .TokenHash }}&amp;type=invite" style="display:inline-block;border-radius:12px;background:#818cf8;padding:14px 22px;font-size:15px;font-weight:700;color:#0D0D1C;text-decoration:none;">Open and accept</a>
+      <a href="https://verve-app.health/my-health/?token_hash={{ .TokenHash }}&amp;type=invite" style="display:inline-block;border-radius:12px;background:#818cf8;padding:14px 22px;font-size:15px;font-weight:700;color:#0D0D1C;text-decoration:none;">Open and accept</a>
     </p>
     <p style="margin:22px 0 0;font-size:12px;color:#64748b;text-align:center;">or, on another device, sign in with this code</p>
     <div style="margin:10px 0 0;border-radius:16px;border:1px solid rgba(129,140,248,0.30);background:rgba(129,140,248,0.08);padding:22px;text-align:center;">
