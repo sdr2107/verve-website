@@ -248,17 +248,25 @@ import SiteHeader from "../components/SiteHeader.astro";
       <div id="peoplewrap" class="mt-5 hidden">
         <div id="people" class="flex flex-wrap items-center gap-2"></div>
         <form id="personform" class="mt-3 hidden max-w-3xl flex-wrap items-end gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-          <label class="flex flex-col gap-1 text-[12px] text-text-secondary">Their name
+          <div id="personmodes" class="flex basis-full flex-wrap gap-1.5" role="group" aria-label="Who is this">
+            <button type="button" data-pmode="care" class="min-h-9 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold">Someone I look after</button>
+            <button type="button" data-pmode="ask" class="min-h-9 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold">Someone with their own email</button>
+          </div>
+          <label id="personnamewrap" class="flex flex-col gap-1 text-[12px] text-text-secondary">Their name
             <input id="personname" type="text" autocomplete="off" placeholder="Amma" maxlength="60" required
               class="w-48 max-w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
           </label>
-          <label class="flex flex-col gap-1 text-[12px] text-text-secondary">Born, year (optional)
+          <label id="personbornwrap" class="flex flex-col gap-1 text-[12px] text-text-secondary">Born, year (optional)
             <input id="personborn" type="number" inputmode="numeric" min="1900" max="2100" placeholder="1958"
               class="w-28 rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
           </label>
+          <label id="personemailwrap" class="hidden flex-col gap-1 text-[12px] text-text-secondary">Their email
+            <input id="personemail" type="email" autocomplete="off" placeholder="umar@example.com"
+              class="w-64 max-w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
+          </label>
           <button type="submit" id="personsave" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Add</button>
           <button type="button" id="personcancel" class="min-h-10 px-2 text-xs font-medium text-text-tertiary hover:text-text-primary">Cancel</button>
-          <p id="personformnote" class="basis-full text-[12px] leading-relaxed text-text-tertiary">Someone you look after, without a login of their own. Their reports are filed under their name, and only you can see them.</p>
+          <p id="personformnote" class="basis-full text-[12px] leading-relaxed text-text-tertiary"></p>
         </form>
         <div id="personhead" class="mt-3 hidden flex-wrap items-center gap-x-4 gap-y-1">
           <span id="personkicker" class="font-mono text-[10px] font-semibold tracking-[0.14em] text-accent-light"></span>
@@ -272,6 +280,10 @@ import SiteHeader from "../components/SiteHeader.astro";
 
         <!-- invitations waiting for you: someone asked you to look at their page -->
         <div id="invites" class="mt-3 hidden max-w-3xl flex-col gap-3"></div>
+        <!-- people you asked to share their page with you: waiting until they decide -->
+        <p id="asked" class="mt-2 hidden max-w-3xl text-[12.5px] leading-relaxed text-text-tertiary"></p>
+        <!-- someone asks to see your page: nothing is shared until you say so -->
+        <div id="requests" class="mt-3 hidden max-w-3xl flex-col gap-3"></div>
 
         <!-- who can see this person: yours to change, closed until opened -->
         <details id="sharewrap" class="mt-3 hidden max-w-3xl rounded-2xl border border-white/10 bg-white/[0.03]">
@@ -740,12 +752,42 @@ import SiteHeader from "../components/SiteHeader.astro";
 
   // ── add, edit, remove someone you look after ──────────────────────────
   let editingPerson: Person | null = null;
+  /**
+   * Two ways to add a person. Someone you look after — a child, or anyone
+   * without a login — is yours to add, since there is nobody else to ask.
+   * Someone with their own email is asked: they get an email, sign in, and
+   * choose what you may see, or decline. Nothing is shared until they do.
+   */
+  let personMode: "care" | "ask" = "care";
+  function setPersonMode(mode: "care" | "ask") {
+    personMode = mode;
+    $("personform").querySelectorAll<HTMLButtonElement>("[data-pmode]").forEach((b) => {
+      const on = b.dataset.pmode === mode;
+      b.className = `min-h-9 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${
+        on ? "border-accent/70 bg-accent/15 text-text-primary" : "border-white/14 text-text-secondary hover:text-text-primary"}`;
+    });
+    const care = mode === "care";
+    show("personnamewrap", care); $("personnamewrap").classList.toggle("flex", care);
+    show("personbornwrap", care); $("personbornwrap").classList.toggle("flex", care);
+    show("personemailwrap", !care); $("personemailwrap").classList.toggle("flex", !care);
+    ($("personname") as HTMLInputElement).required = care;
+    ($("personemail") as HTMLInputElement).required = !care;
+    $("personsave").textContent = editingPerson ? "Save" : care ? "Add" : "Ask them";
+    $("personformnote").textContent = editingPerson ? "" : care
+      ? "A child, or anyone without a login of their own. Their reports are filed under their name, and only you can see them."
+      : "An adult with their own email. They get an email, sign in, and choose what you may see, or decline. Nothing is shared until they say so.";
+    show("personformnote", !editingPerson);
+  }
+  $("personform").querySelectorAll("[data-pmode]").forEach((b) =>
+    b.addEventListener("click", () => setPersonMode((b as HTMLElement).dataset.pmode as "care" | "ask")));
+
   function openPersonForm(p: Person | null) {
     editingPerson = p;
     ($("personname") as HTMLInputElement).value = p?.name ?? "";
     ($("personborn") as HTMLInputElement).value = p?.born_year ? String(p.born_year) : "";
-    $("personsave").textContent = p ? "Save" : "Add";
-    show("personformnote", !p);
+    ($("personemail") as HTMLInputElement).value = "";
+    show("personmodes", !p);
+    setPersonMode("care");
     show("personform", true); $("personform").classList.add("flex");
     $("personname").focus();
   }
@@ -761,6 +803,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   $("personcancel").addEventListener("click", closePersonForm);
   $("personform").addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (!editingPerson && personMode === "ask") { await askToShare(($("personemail") as HTMLInputElement).value.trim().toLowerCase()); return; }
     const name = ($("personname") as HTMLInputElement).value.trim();
     const bornRaw = ($("personborn") as HTMLInputElement).value.trim();
     const born = bornRaw ? Number(bornRaw) : null;
@@ -930,24 +973,104 @@ import SiteHeader from "../components/SiteHeader.astro";
       return;
     }
     ($("shareemail") as HTMLInputElement).value = "";
-    const sent = await sendInvite(data.id);
+    const sent = await sendInvite({ grant_id: data.id });
     msg("sharemsg", sent
       ? `Invited. ${email} gets an email; the moment they accept, they see what you ticked, and you see it here.`
       : `Invited. The email could not be sent just now; ${email} still finds the invitation under their greeting when they sign in with that address.`);
     await loadSharing();
   });
 
-  /** The email, through the share-invite function; false when it could not go. */
-  async function sendInvite(grantId: string): Promise<boolean> {
+  /** The email, through the share-invite function, for an invitation or a request; false when it could not go. */
+  async function sendInvite(body: { grant_id?: string; request_id?: string }): Promise<boolean> {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const resp = await fetch(`${SUPABASE_URL}/functions/v1/share-invite`, {
         method: "POST",
         headers: { "content-type": "application/json", authorization: `Bearer ${session?.access_token}`, apikey: SUPABASE_ANON_KEY },
-        body: JSON.stringify({ grant_id: grantId }),
+        body: JSON.stringify(body),
       });
       return resp.ok;
     } catch { return false; }
+  }
+
+  /** Ask an adult to share their page with you. The grant is theirs to make, when they accept. */
+  async function askToShare(email: string) {
+    if (!email) return;
+    if (email === userEmail.toLowerCase()) { msg("upmsg", "That is you.", true); return; }
+    const { data, error } = await supabase.from("share_requests").insert({
+      requester_id: userId, requester_email: userEmail.toLowerCase(), requester_name: fullName || userEmail, target_email: email,
+    }).select("id").maybeSingle();
+    if (error || !data) {
+      msg("upmsg", error?.code === "23505" ? `You already asked ${email}; they have not answered yet.` : `Could not ask: ${error?.message ?? "no row came back"}`, true);
+      return;
+    }
+    closePersonForm();
+    const sent = await sendInvite({ request_id: data.id });
+    msg("upmsg", sent
+      ? `Asked. ${email} gets an email and decides what you may see; their page appears here when they do.`
+      : `Asked. The email could not be sent just now; ${email} still finds the request under their greeting when they sign in with that address.`);
+    await loadAsked();
+  }
+
+  /** The people you asked, still waiting. */
+  async function loadAsked() {
+    if (!people.some((p) => !!p.id)) return;
+    const { data, error } = await supabase.from("share_requests").select("id, target_email, created_at")
+      .eq("requester_id", userId).eq("status", "requested").order("created_at", { ascending: true });
+    const rows = error ? [] : (data ?? []);
+    show("asked", rows.length > 0);
+    $("asked").innerHTML = rows.length ? "Asked to share their page with you: " + rows.map((r: any) =>
+      `<span class="text-text-secondary">${esc(r.target_email)}</span> (waiting since ${esc(dayOf(r.created_at))}) <button type="button" data-unask="${r.id}" class="text-accent-light hover:text-danger">cancel</button>`).join(" · ") : "";
+    $("asked").querySelectorAll("[data-unask]").forEach((b) => b.addEventListener("click", async () => {
+      await supabase.from("share_requests").update({ status: "cancelled", answered_at: new Date().toISOString() }).eq("id", (b as HTMLElement).dataset.unask);
+      await loadAsked();
+    }));
+  }
+
+  /** Requests to see your page, answered through answer_share_request: nothing is shared until you tick and allow. */
+  async function loadRequests() {
+    if (!people.some((p) => !!p.id)) return;
+    const { data, error } = await supabase.from("share_requests").select("id, requester_name, requester_email, created_at")
+      .eq("status", "requested").eq("target_email", userEmail.toLowerCase());
+    const rows = error ? [] : (data ?? []);
+    show("requests", rows.length > 0); $("requests").classList.toggle("flex", rows.length > 0);
+    $("requests").innerHTML = rows.map((r: any) => `
+      <form data-request="${r.id}" class="flex flex-col gap-2.5 rounded-2xl border border-accent/40 bg-accent/[0.06] px-4 py-3.5">
+        <p class="text-[14px] text-text-primary"><strong>${esc(r.requester_name || r.requester_email)}</strong> asks to see your My health page.</p>
+        <p class="text-[12.5px] text-text-tertiary">Nothing is shared until you say so. Tick what they may see; you can change or stop it later under "Who can see this page".</p>
+        <div class="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-text-primary">
+          <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-rscope="labs" class="h-4 w-4 accent-[#818cf8]" />Labs</label>
+          <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-rscope="imaging" class="h-4 w-4 accent-[#818cf8]" />Imaging</label>
+          <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-rscope="activity" class="h-4 w-4 accent-[#818cf8]" />Activity and fitness</label>
+          <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-rscope="body" class="h-4 w-4 accent-[#818cf8]" />Body measurements</label>
+        </div>
+        <div class="flex gap-2">
+          <button type="submit" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas">Allow</button>
+          <button type="button" data-rdecline class="min-h-10 rounded-xl border border-white/14 px-4 py-2 text-sm font-semibold text-text-secondary">Decline</button>
+        </div>
+        <p data-rmsg class="hidden text-[12.5px] text-danger"></p>
+      </form>`).join("");
+    const clearNames = () => supabase.auth.updateUser({ data: { pending_share_from: null, pending_share_person: null, pending_share_scopes: null, pending_share_request: null } }).then(() => {}, () => {});
+    $("requests").querySelectorAll("form[data-request]").forEach((f) => {
+      const id = (f as HTMLElement).dataset.request!;
+      const note = f.querySelector("[data-rmsg]") as HTMLElement;
+      f.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const wanted = [...f.querySelectorAll<HTMLInputElement>("[data-rscope]")].filter((c) => c.checked).map((c) => c.dataset.rscope!);
+        if (!wanted.length) { note.textContent = "Tick at least one thing for them to see, or decline."; note.classList.remove("hidden"); return; }
+        const { error: e2 } = await supabase.rpc("answer_share_request", { request_id: id, allow: true, wanted });
+        if (e2) { note.textContent = `Could not answer: ${e2.message}`; note.classList.remove("hidden"); return; }
+        clearNames();
+        msg("upmsg", "Allowed. They see what you ticked, and it is listed under \"Who can see this page\" on your own page.");
+        await Promise.all([loadRequests(), loadSharing()]);
+      });
+      f.querySelector("[data-rdecline]")!.addEventListener("click", async () => {
+        const { error: e2 } = await supabase.rpc("answer_share_request", { request_id: id, allow: false, wanted: [] });
+        if (e2) { msg("upmsg", `Could not answer: ${e2.message}`, true); return; }
+        clearNames();
+        await loadRequests();
+      });
+    });
   }
 
   /** Invitations to your address, answered through respond_to_grant. */
@@ -974,7 +1097,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       const { error: e } = await supabase.rpc("respond_to_grant", { grant_id: el.dataset.accept ?? el.dataset.decline, accept });
       if (e) { msg("upmsg", `Could not answer: ${e.message}`, true); return; }
       // the invitation's names were put on the account for the email; done with them
-      supabase.auth.updateUser({ data: { pending_share_from: null, pending_share_person: null, pending_share_scopes: null } }).then(() => {}, () => {});
+      supabase.auth.updateUser({ data: { pending_share_from: null, pending_share_person: null, pending_share_scopes: null, pending_share_request: null } }).then(() => {}, () => {});
       await loadPeople(); renderPeople();
       await loadInvites();
       if (accept && el.dataset.open) await switchPerson(el.dataset.open);
@@ -1331,7 +1454,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       setTab(["overview", "labs", "reports"].includes(wanted) ? wanted : "overview");
       await loadPeople();
       applyPersonMode();
-      await Promise.all([refresh(), loadPersonNote(), loadSharing(), loadInvites(), loadGlance()]);
+      await Promise.all([refresh(), loadPersonNote(), loadSharing(), loadInvites(), loadAsked(), loadRequests(), loadGlance()]);
     } else {
       firstName = "";
       people = []; person = null;

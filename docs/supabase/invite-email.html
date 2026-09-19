@@ -1,7 +1,7 @@
 <!--
   Supabase → Authentication → Email Templates → Invite user.
-  Subject line (set in the same screen):
-    {{ .Data.pending_share_from }} wants to share a Verve My health page with you
+  Subject line (set in the same screen), one wording for both kinds:
+    A Verve My health invitation from {{ .Data.pending_share_from }}
 
   Sent by the share-invite function when the invited address has no Verve
   account yet: the account is made, and this is its first email. The names
@@ -18,6 +18,11 @@
   sign-in code. "One hour" must match Authentication → Providers → Email →
   "Email OTP expiration" (3600 s is the default).
 
+  Two kinds share this template. An INVITATION: someone is sharing a page
+  with the reader. A REQUEST: someone asks the reader to share their own
+  page, and nothing is shared until the reader says so. The function sets
+  {{ .Data.pending_share_request }} for a request; the wording follows it.
+
   Someone who already has an account gets the Magic Link template instead,
   with its own guarded invitation paragraph — see magic-link-email.html.
 
@@ -27,6 +32,19 @@
 <div style="margin:0;padding:32px 16px;background:#e9e9ee;font-family:'Hanken Grotesk',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;">
   <div style="max-width:560px;margin:0 auto;border-radius:20px;background:#0D0D1C;border:1px solid rgba(255,255,255,0.10);padding:36px 40px;color:#f1f5f9;">
     <div style="font-size:16px;font-weight:600;color:#a5b4fc;">Verve</div>
+    {{ if .Data.pending_share_request }}
+    <h1 style="margin:18px 0 0;font-size:24px;line-height:1.2;font-weight:700;letter-spacing:-0.02em;color:#f1f5f9;">
+      {{ .Data.pending_share_from }} asks to see your Verve My health page.
+    </h1>
+    <p style="margin:14px 0 0;font-size:15px;line-height:1.6;color:#94a3b8;">
+      My health is where you keep your lab and imaging reports and the numbers from the Verve app.
+      Nothing is shared until you say so: open, sign in, and choose what they may see, or decline.
+      Whatever you allow, you can stop at any time.
+    </p>
+    <p style="margin:22px 0 0;text-align:center;">
+      <a href="https://verve-app.health/my-health/?token_hash={{ .TokenHash }}&amp;type=invite" style="display:inline-block;border-radius:12px;background:#818cf8;padding:14px 22px;font-size:15px;font-weight:700;color:#0D0D1C;text-decoration:none;">Open and decide</a>
+    </p>
+    {{ else }}
     <h1 style="margin:18px 0 0;font-size:24px;line-height:1.2;font-weight:700;letter-spacing:-0.02em;color:#f1f5f9;">
       {{ .Data.pending_share_from }} wants to share {{ .Data.pending_share_person }} on Verve with you.
     </h1>
@@ -37,12 +55,13 @@
     <p style="margin:22px 0 0;text-align:center;">
       <a href="https://verve-app.health/my-health/?token_hash={{ .TokenHash }}&amp;type=invite" style="display:inline-block;border-radius:12px;background:#818cf8;padding:14px 22px;font-size:15px;font-weight:700;color:#0D0D1C;text-decoration:none;">Open and accept</a>
     </p>
+    {{ end }}
     <p style="margin:22px 0 0;font-size:12px;color:#64748b;text-align:center;">or, on another device, sign in with this code</p>
     <div style="margin:10px 0 0;border-radius:16px;border:1px solid rgba(129,140,248,0.30);background:rgba(129,140,248,0.08);padding:22px;text-align:center;">
       <span style="font-family:'JetBrains Mono',Menlo,Consolas,monospace;font-size:40px;font-weight:700;letter-spacing:0.22em;color:#f1f5f9;">{{ .Token }}</span>
     </div>
     <p style="margin:18px 0 0;font-size:14px;line-height:1.6;color:#94a3b8;">
-      Go to verve-app.health/my-health, choose &ldquo;Email me a code&rdquo;, and type it. The invitation waits under your greeting.
+      Go to verve-app.health/my-health, choose &ldquo;Email me a code&rdquo;, and type it. The {{ if .Data.pending_share_request }}request{{ else }}invitation{{ end }} waits under your greeting.
       Both the button and the code expire in one hour. If you were not expecting this, ignore it and nothing happens.
     </p>
     <p style="margin:24px 0 0;border-top:1px solid rgba(255,255,255,0.07);padding-top:14px;font-size:11.5px;line-height:1.5;color:#64748b;">
