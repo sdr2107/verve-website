@@ -916,6 +916,8 @@ import SiteHeader from "../components/SiteHeader.astro";
       const el = b as HTMLElement, accept = el.dataset.accept != null;
       const { error: e } = await supabase.rpc("respond_to_grant", { grant_id: el.dataset.accept ?? el.dataset.decline, accept });
       if (e) { msg("upmsg", `Could not answer: ${e.message}`, true); return; }
+      // the invitation's names were put on the account for the email; done with them
+      supabase.auth.updateUser({ data: { pending_share_from: null, pending_share_person: null, pending_share_scopes: null } }).then(() => {}, () => {});
       await loadPeople(); renderPeople();
       await loadInvites();
       if (accept && el.dataset.open) await switchPerson(el.dataset.open);
@@ -957,6 +959,15 @@ import SiteHeader from "../components/SiteHeader.astro";
   const appLink = document.querySelector('[data-nav="app"]') as HTMLElement | null;
 
   async function boot() {
+    // an invitation's button: the link carries a token the site verifies
+    // here, so it signs in the device it is opened on, from any device
+    const url = new URL(location.href);
+    const tokenHash = url.searchParams.get("token_hash"), linkType = url.searchParams.get("type");
+    if (tokenHash && (linkType === "invite" || linkType === "magiclink" || linkType === "email")) {
+      try { await supabase.auth.verifyOtp({ token_hash: tokenHash, type: linkType as any }); }
+      catch { /* an old or used link: the sign-in card below still works */ }
+      history.replaceState(null, "", location.pathname + location.hash);
+    }
     const { data: { session } } = await supabase.auth.getSession();
     show("loading", false);
     if (session?.user) {
