@@ -366,7 +366,7 @@ import SiteHeader from "../components/SiteHeader.astro";
         <div id="emptycard" class="hidden max-w-3xl rounded-2xl border border-dashed border-accent/40 bg-accent/[0.04] p-6">
           <p class="text-sm font-semibold text-text-primary">No reports yet</p>
           <p class="mt-1 text-[13px] leading-relaxed text-text-tertiary">
-            Drop your first lab report and every value in it becomes a trend you keep. A PDF or a photo, several at once.
+            Drop your first lab report and every value in it becomes a trend you keep. A PDF or a photo, several at once, or the JSON file your Verve app exports.
           </p>
           <button id="emptyadd" class="mt-4 min-h-11 rounded-xl bg-accent px-5 py-2.5 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Add a report</button>
         </div>
@@ -376,6 +376,22 @@ import SiteHeader from "../components/SiteHeader.astro";
           <h2 class="text-[17px] font-bold tracking-tight text-text-primary">Your sections</h2>
           <p class="mt-0.5 text-[12.5px] text-text-tertiary">In range against each lab&rsquo;s own printed range. Tap one to open it in Labs.</p>
           <div id="sections" class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"></div>
+        </section>
+
+        <!-- ═══ ACTIVITY AND FITNESS: the app's weeks, with a marker on top ═══ -->
+        <section id="activitywrap" class="mt-7 hidden">
+          <div class="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h2 class="text-[17px] font-bold tracking-tight text-text-primary">Fitness and a marker</h2>
+              <p id="activitysub" class="mt-0.5 text-[12.5px] text-text-tertiary"></p>
+            </div>
+            <div id="markerpick" class="flex flex-wrap gap-1.5"></div>
+          </div>
+          <div class="mt-3 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <svg id="activitychart" viewBox="0 0 1000 300" class="block h-auto w-full min-w-[560px]" role="img" aria-label="Weekly MET-hours, with a marker's measurements on the days they were taken"></svg>
+          </div>
+          <div id="activitystats" class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[12.5px] text-text-tertiary"></div>
+          <p class="mt-1 text-[12px] text-text-muted">Two things on one timeline, with no claim about which moved the other.</p>
         </section>
 
         <section id="worthwrap" class="mt-7 hidden">
@@ -423,10 +439,10 @@ import SiteHeader from "../components/SiteHeader.astro";
           </span>
           <span class="min-w-0 flex-1">
             <span class="block text-sm font-semibold text-text-primary">Add older reports: drop them here, or tap to choose</span>
-            <span class="mt-0.5 block text-xs leading-relaxed text-text-tertiary">A PDF, or a photo of the report as JPG, PNG or WebP &middot; up to 15 MB each &middot; several at once &middot; originals stay in your private archive &middot; a file you already have is spotted before it is filed</span>
+            <span class="mt-0.5 block text-xs leading-relaxed text-text-tertiary">A PDF, a photo of the report as JPG, PNG or WebP, or the JSON your Verve app exports &middot; up to 15 MB each &middot; several at once &middot; originals stay in your private archive &middot; a file you already have is spotted before it is filed</span>
           </span>
           <span class="hidden shrink-0 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-bold text-accent-light sm:inline-block">Choose files</span>
-          <input id="file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif" multiple class="hidden" />
+          <input id="file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif,application/json,.json" multiple class="hidden" />
         </label>
 
         <!-- the report names someone else: held here, nothing filed, until you say whose it is -->
@@ -434,6 +450,8 @@ import SiteHeader from "../components/SiteHeader.astro";
 
         <!-- the batch queue: one row per dropped file, each with its stage -->
         <div id="upqueue" class="mt-6 hidden max-w-3xl flex-col gap-2"></div>
+        <!-- an import of the app's export: what came in, and the way back -->
+        <div id="importcard" class="mt-3 hidden max-w-3xl flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-success/40 bg-success/[0.06] px-4 py-3 text-[13px] text-text-secondary"></div>
 
         <!-- ── the review: two tiers ─────────────────────────────────────── -->
         <div id="review" class="mt-6 hidden flex-col gap-4">
@@ -954,6 +972,207 @@ import SiteHeader from "../components/SiteHeader.astro";
     }));
   }
 
+  // ── the app's export: read in the browser, kept per person ─────────────
+  // Settings → Export → JSON in the app writes one file with the profile,
+  // every activity, the fitness tests, waist readings, lab readings and a
+  // weekly summary. Dropped here it lands on the open person: weeks →
+  // web_weeks, fitness tests → web_crf, waist → web_body, lab readings →
+  // web_labs like any report's values. Every row carries the import's tag,
+  // so the whole import can be undone in one press. The app's own tables
+  // are never written from here.
+  const isExport = (f: File) => f.type === "application/json" || /\.json$/i.test(f.name);
+  /** The export's camelCase reading fields → the app's column names the site already knows. */
+  const EXPORT_KEYS: Record<string, string> = {
+    glucoseMgdl: "glucose_mgdl", hba1cPct: "hba1c_pct", postMealGlucoseMgdl: "post_meal_glucose_mgdl",
+    fastingInsulinUIUmL: "fasting_insulin_uiuml", triglyceridesMgdl: "triglycerides_mgdl", hdlMgdl: "hdl_mgdl",
+    waistCm: "waist_cm", sbp: "sbp", dbp: "dbp", apoBMgdl: "apo_b_mgdl", ldlMgdl: "ldl_mgdl", lpaValue: "lpa_value",
+    hsCrpMgL: "hs_crp_mgl", bodyFatPct: "body_fat_pct", skelMuscPct: "skel_musc_pct",
+  };
+  const LAB_SECTION: Record<string, string> = { metabolic: "metabolic", heart: "heart", sarcopenia: "muscle" };
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+  const int = (v: unknown) => Math.round(num(v) ?? 0);
+
+  async function importExport(file: File, rid: string): Promise<"ok" | "bad" | "skip"> {
+    const who = person!;
+    qset(rid, "READING…", "busy", "Reading the export");
+    let data: any;
+    try { data = JSON.parse(await file.text()); }
+    catch { qset(rid, "FAILED", "bad", "Not a readable JSON file"); return "bad"; }
+    const looks = data && typeof data === "object" &&
+      (Array.isArray(data.activities) || Array.isArray(data.labReadings) || Array.isArray(data.weeklySummaries) || Array.isArray(data.crfEntries));
+    if (!looks) { qset(rid, "SKIPPED", "bad", "Not a Verve export: no activities, readings or weeks in it"); return "skip"; }
+    if (!who.id) { qset(rid, "SKIPPED", "bad", "The people tables are not set up yet, so there is nowhere to keep this"); return "skip"; }
+    const tag = `export:${Date.now()}`;
+    const exportedOn = String(data.exportedAt ?? "").slice(0, 10) || new Date().toISOString().slice(0, 10);
+
+    // weeks: the app's own summary, else built from the activities the same way
+    const byWeek = new Map<string, any>();
+    for (const w of Array.isArray(data.weeklySummaries) ? data.weeklySummaries : []) {
+      const start = String(w?.weekStart ?? "").slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) continue;
+      byWeek.set(start, { met_hours: num(w.totalMETHours) ?? 0, minutes: int(w.totalMinutes), light_min: int(w.lightMinutes), moderate_min: int(w.modMinutes), vigorous_min: int(w.vigMinutes), workouts: int(w.workouts) });
+    }
+    if (!byWeek.size) for (const a of Array.isArray(data.activities) ? data.activities : []) {
+      if (!a?.timestamp) continue;
+      const start = mondayOf(new Date(a.timestamp));
+      const w = byWeek.get(start) ?? { met_hours: 0, minutes: 0, light_min: 0, moderate_min: 0, vigorous_min: 0, workouts: 0 };
+      w.met_hours += num(a.metHours) ?? 0; w.minutes += int(a.durationMinutes);
+      w.light_min += int(a.lightMinutes); w.moderate_min += int(a.moderateMinutes); w.vigorous_min += int(a.vigorousMinutes); w.workouts += 1;
+      byWeek.set(start, w);
+    }
+    const weeks = [...byWeek].map(([week_start, w]) => ({ user_id: userId, person_id: who.id, week_start, ...w, met_hours: Math.round(w.met_hours * 100) / 100, source: "export", import_tag: tag }));
+
+    const byDay = <T,>(rows: T[], key: (r: T) => string) => [...new Map(rows.map((r) => [key(r), r])).values()];
+    const crf = byDay((Array.isArray(data.crfEntries) ? data.crfEntries : []).filter((c: any) => c?.timestamp).map((c: any) => ({
+      user_id: userId, person_id: who.id, measured_on: localDay(c.timestamp),
+      met_capacity: num(c.metCapacity),
+      vo2max: num(c.vo2MaxEstimate) ?? (num(c.metCapacity) != null ? Math.round(c.metCapacity * 3.5 * 10) / 10 : null),
+      method: c.estimationMethod ?? null, category: c.performanceCategory ?? null, source: "export", import_tag: tag,
+    })), (r: any) => r.measured_on);
+    const body = byDay((Array.isArray(data.waistReadings) ? data.waistReadings : []).filter((w: any) => w?.measuredAt && num(w.waistCm) != null).map((w: any) => ({
+      user_id: userId, person_id: who.id, measured_on: localDay(w.measuredAt), waist_cm: w.waistCm, source: "export", import_tag: tag,
+    })), (r: any) => r.measured_on);
+
+    // lab readings: each known marker becomes a value on Labs, in the app's unit
+    const labRows: any[] = [];
+    for (const r of Array.isArray(data.labReadings) ? data.labReadings : []) {
+      if (!r?.measuredAt) continue;
+      const date = localDay(r.measuredAt);
+      for (const [field, key] of Object.entries(EXPORT_KEYS)) {
+        const v = num(r[field]);
+        if (v == null || !LABELS[key]) continue;
+        labRows.push({
+          id: crypto.randomUUID(), user_id: userId, person_id: who.id,
+          analyte: canonName(LABELS[key].label), value: v,
+          unit: key === "lpa_value" ? (r.lpaUnit ?? null) : (LABELS[key].unit || null),
+          ref_low: null, ref_high: null, ref_text: null,
+          section: LAB_SECTION[LABELS[key].section] ?? "other", measured_on: date, report_path: tag,
+        });
+      }
+    }
+    // the same value on the same day is one measurement, however it arrived
+    const dates = [...new Set(labRows.map((r) => r.measured_on))];
+    const { data: existing } = dates.length
+      ? await scopeRows(supabase.from("web_labs").select("analyte, value, measured_on"), who).in("measured_on", dates)
+      : { data: [] as any[] };
+    const have = new Set((existing ?? []).map((r: any) => `${canonName(String(r.analyte)).toLowerCase()}|${r.measured_on}|${r.value}`));
+    const freshLabs = labRows.filter((r) => !have.has(`${r.analyte.toLowerCase()}|${r.measured_on}|${r.value}`));
+
+    qset(rid, "FILING…", "busy", `${weeks.length} weeks · ${crf.length} fitness tests · ${body.length} waist readings · ${freshLabs.length} lab values`);
+    const errs: string[] = [];
+    if (weeks.length) { const { error } = await supabase.from("web_weeks").upsert(weeks, { onConflict: "person_id,week_start" }); if (error) errs.push(`weeks: ${error.message}`); }
+    if (crf.length) { const { error } = await supabase.from("web_crf").upsert(crf, { onConflict: "person_id,measured_on" }); if (error) errs.push(`fitness: ${error.message}`); }
+    if (body.length) { const { error } = await supabase.from("web_body").upsert(body, { onConflict: "person_id,measured_on" }); if (error) errs.push(`waist: ${error.message}`); }
+    if (freshLabs.length) {
+      const { error } = await supabase.from("web_labs").insert(freshLabs);
+      if (error) for (const r of freshLabs) { const { error: e } = await supabase.from("web_labs").insert(r); if (e && e.code !== "23505") errs.push(`labs: ${e.message}`); }
+    }
+    if (errs.length) { qset(rid, "PART FILED", "bad", errs.join(" · ")); return "bad"; }
+    const under = who.self ? "" : ` · under ${who.name}`;
+    const parts = [`${weeks.length} week${weeks.length === 1 ? "" : "s"} of activity`, `${crf.length} fitness test${crf.length === 1 ? "" : "s"}`, `${body.length} waist reading${body.length === 1 ? "" : "s"}`, `${freshLabs.length} lab value${freshLabs.length === 1 ? "" : "s"}${labRows.length > freshLabs.length ? ` (${labRows.length - freshLabs.length} already here)` : ""}`];
+    qset(rid, "IMPORTED ✓", "ok", `Verve export from ${fmtDay(exportedOn)} · ${parts.join(" · ")}${under}`);
+    $("importcard").innerHTML = `<span class="min-w-0 flex-1">Imported the app's export from ${esc(fmtDay(exportedOn))}${esc(under)}: ${esc(parts.join(", "))}. The Overview now has your weeks.</span>
+      <button type="button" data-undo="${tag}" class="min-h-9 rounded-lg border border-white/14 px-3 py-1.5 text-xs font-semibold text-text-secondary hover:text-danger">Undo this import</button>`;
+    show("importcard", true); $("importcard").classList.add("flex");
+    $("importcard").querySelector("[data-undo]")!.addEventListener("click", async () => {
+      await Promise.all([
+        supabase.from("web_weeks").delete().eq("person_id", who.id).eq("import_tag", tag),
+        supabase.from("web_crf").delete().eq("person_id", who.id).eq("import_tag", tag),
+        supabase.from("web_body").delete().eq("person_id", who.id).eq("import_tag", tag),
+        supabase.from("web_labs").delete().eq("user_id", userId).eq("report_path", tag),
+      ]);
+      show("importcard", false); $("importcard").classList.remove("flex");
+      msg("upmsg", "The import is undone; nothing from that file remains.");
+      await refresh();
+    });
+    return "ok";
+  }
+
+  // ── activity and fitness on the Overview: the app's weeks, a marker on top ─
+  let allWeeks: any[] = [], allCrf: any[] = [], allBody: any[] = [];
+  let pickedMarker = "";
+  async function loadActivity() {
+    const p = person;
+    if (!p?.id) { show("activitywrap", false); return; }
+    const [w, c, b] = await Promise.all([
+      supabase.from("web_weeks").select("week_start, met_hours, minutes, moderate_min, vigorous_min, workouts").eq("person_id", p.id).order("week_start", { ascending: true }).limit(260),
+      supabase.from("web_crf").select("measured_on, vo2max, met_capacity, method").eq("person_id", p.id).order("measured_on", { ascending: true }).limit(100),
+      supabase.from("web_body").select("measured_on, waist_cm, weight_kg").eq("person_id", p.id).order("measured_on", { ascending: true }).limit(400),
+    ]);
+    if (person?.id !== p.id) return;   // switched away meanwhile
+    allWeeks = w.data ?? []; allCrf = c.data ?? []; allBody = b.data ?? [];
+    renderActivity();
+  }
+  /** The app's markers this person has on Labs, whatever brought them: the choices for the overlay. */
+  function markersOnFile(): { key: string; label: string; rows: any[] }[] {
+    const by = new Map<string, any[]>();
+    for (const r of allLabs) { const k = appKeyFor(String(r.analyte)); if (k && LABELS[k]) (by.get(k) ?? by.set(k, []).get(k)!).push(r); }
+    return [...by].map(([key, rows]) => ({ key, label: LABELS[key].label, rows: rows.sort((a, b) => String(a.measured_on).localeCompare(String(b.measured_on))) }));
+  }
+  function renderActivity() {
+    const weeks = allWeeks.slice(-52);
+    show("activitywrap", weeks.length > 0);
+    if (!weeks.length) return;
+    const markers = markersOnFile();
+    if (!markers.some((m) => m.key === pickedMarker)) pickedMarker = markers.find((m) => m.key === "apo_b_mgdl")?.key ?? markers[0]?.key ?? "";
+    $("markerpick").innerHTML = markers.map((m) => `<button type="button" data-marker="${m.key}" class="min-h-8 rounded-full border px-3 py-1 text-[12px] font-semibold transition-colors ${
+      m.key === pickedMarker ? "border-accent/70 bg-accent/15 text-text-primary" : "border-white/12 text-text-secondary hover:text-text-primary"}">${esc(m.label)}</button>`).join("");
+    $("markerpick").querySelectorAll("[data-marker]").forEach((b) =>
+      b.addEventListener("click", () => { pickedMarker = (b as HTMLElement).dataset.marker!; renderActivity(); }));
+    const m = markers.find((x) => x.key === pickedMarker) ?? null;
+    $("activitysub").textContent = m ? `Weekly MET-hours from the app, with ${m.label} on the days it was measured.` : "Weekly MET-hours from the app.";
+
+    const W = 1000, H = 300, L = 44, R = 16, T = 30, B = 44;
+    const x0 = L, x1 = W - R, plotW = x1 - x0, plotH = H - T - B;
+    const at = (iso: string) => new Date(String(iso).slice(0, 10) + "T00:00:00").getTime();
+    const WEEK = 7 * 86400000;
+    const first = at(weeks[0].week_start), last = at(weeks[weeks.length - 1].week_start) + WEEK;
+    const span = Math.max(last - first, WEEK);
+    const xAt = (iso: string) => x0 + ((at(iso) - first) / span) * plotW;
+    const barW = Math.max(3, plotW / Math.max(1, span / WEEK) - 2);
+    const maxMet = Math.max(1, ...weeks.map((w) => Number(w.met_hours)));
+    const yMet = (v: number) => T + plotH - (v / maxMet) * plotH;
+    let svg = "";
+    for (const f of [0, 0.5, 1]) {
+      const y = T + plotH - f * plotH;
+      svg += `<line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}" stroke="rgba(255,255,255,${f === 0 ? 0.14 : 0.06})"/><text x="${x0 - 8}" y="${y + 4}" text-anchor="end" fill="#94a3b8" font-size="11" font-family="JetBrains Mono, ui-monospace, monospace">${Math.round(maxMet * f)}</text>`;
+    }
+    for (const w of weeks) {
+      const x = xAt(w.week_start), y = yMet(Number(w.met_hours));
+      svg += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${(T + plotH - y).toFixed(1)}" rx="2" fill="#f97316" fill-opacity="0.85"><title>Week of ${esc(fmtDay(String(w.week_start).slice(0, 10)))}: ${Number(w.met_hours).toFixed(1)} MET-hours, ${w.workouts} workout${Number(w.workouts) === 1 ? "" : "s"}</title></rect>`;
+    }
+    let lastMonth = "";
+    for (const w of weeks) {
+      const mo = String(w.week_start).slice(0, 7);
+      if (mo === lastMonth) continue;
+      lastMonth = mo;
+      svg += `<text x="${xAt(w.week_start).toFixed(1)}" y="${H - B + 18}" fill="#94a3b8" font-size="11" font-family="JetBrains Mono, ui-monospace, monospace">${new Date(at(w.week_start)).toLocaleDateString(undefined, { month: "short" }).toUpperCase()}</text>`;
+    }
+    if (m) {
+      const pts = m.rows.filter((r) => at(r.measured_on) >= first - 2 * WEEK && at(r.measured_on) <= last + 2 * WEEK);
+      const vals = pts.map((r) => Number(r.value));
+      const lo = Math.min(...vals), hi = Math.max(...vals), pad = (hi - lo) || Math.max(1, Math.abs(hi) * 0.2);
+      const yM = (v: number) => T + 14 + (1 - (v - (lo - pad * 0.5)) / ((hi + pad * 0.5) - (lo - pad * 0.5))) * (plotH * 0.6);
+      const coords = pts.map((r) => ({ x: Math.min(x1, Math.max(x0, xAt(r.measured_on))), y: yM(Number(r.value)), v: Number(r.value), d: r.measured_on }));
+      if (coords.length > 1) svg += `<polyline points="${coords.map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(" ")}" fill="none" stroke="#a5b4fc" stroke-width="2" stroke-dasharray="4 4"/>`;
+      for (const c of coords) svg += `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="6" fill="#818cf8" stroke="#0D0D1C" stroke-width="2"><title>${esc(fmtDay(c.d))}: ${esc(m.label)} ${c.v}</title></circle><text x="${c.x.toFixed(1)}" y="${(c.y - 12).toFixed(1)}" text-anchor="middle" fill="#c7d2fe" font-size="12" font-weight="700">${c.v}</text>`;
+      if (!coords.length) svg += `<text x="${x1}" y="${T + 6}" text-anchor="end" fill="#64748b" font-size="11">no ${esc(m.label)} in these weeks</text>`;
+    }
+    svg += `<rect x="${x0}" y="${H - 14}" width="12" height="8" fill="#f97316"/><text x="${x0 + 18}" y="${H - 6}" fill="#94a3b8" font-size="11">MET-hours per week, from the app</text>`;
+    if (m) svg += `<circle cx="${x0 + 270}" cy="${H - 10}" r="5" fill="#818cf8"/><text x="${x0 + 282}" y="${H - 6}" fill="#94a3b8" font-size="11">${esc(m.label)}, from reports and the app</text>`;
+    $("activitychart").innerHTML = svg;
+
+    const avg = weeks.reduce((sum, w) => sum + Number(w.met_hours), 0) / weeks.length;
+    const crf = allCrf.filter((c) => c.vo2max != null).slice(-1)[0];
+    const body = allBody.filter((b) => b.waist_cm != null).slice(-1)[0];
+    $("activitystats").innerHTML = [
+      `<span>${weeks.length} week${weeks.length === 1 ? "" : "s"}</span>`,
+      `<span>average <strong class="font-semibold text-text-secondary">${avg.toFixed(1)}</strong> MET-hours a week</span>`,
+      crf ? `<span>VO₂max <strong class="font-semibold text-text-secondary">${Math.round(Number(crf.vo2max))}</strong> on ${esc(fmtDay(String(crf.measured_on).slice(0, 10)))}</span>` : "",
+      body ? `<span>waist <strong class="font-semibold text-text-secondary">${body.waist_cm}</strong> cm on ${esc(fmtDay(String(body.measured_on).slice(0, 10)))}</span>` : "",
+    ].filter(Boolean).join("");
+  }
+
   // ── people at a glance: every person you can see, one line each ────────
   // The same table serves a family and a coach. Activity and fitness come
   // from web_weeks and web_crf (an app export, or later the app's sync);
@@ -1268,6 +1487,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     renderOverview();
     renderLabsRail(); renderLabsPanel();
     await renderReports();
+    await loadActivity();
   }
 
   // ═══ THE APP'S SHARE OF A REPORT ═════════════════════════════════════════
@@ -2295,6 +2515,11 @@ import SiteHeader from "../components/SiteHeader.astro";
     const kept = "The PDF is in your archive under this year, not read yet: its card's Read again retries, the bin deletes it.";
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
+      if (isExport(f)) {
+        const r = await importExport(f, rowId(i));
+        if (r === "ok") filedN++; else if (r === "bad") failedN++; else skippedN++;
+        continue;
+      }
       const isPdf = f.type === "application/pdf" || /\.pdf$/i.test(f.name);
       const isPhoto = PHOTO_TYPES.has(f.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name);
       if (!isPdf && !isPhoto) { qset(rowId(i), "SKIPPED", "bad", "Not a PDF or a photo (JPG, PNG, WebP)"); skippedN++; continue; }
