@@ -287,8 +287,8 @@ import SiteHeader from "../components/SiteHeader.astro";
               </label>
               <fieldset class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-text-primary">
                 <legend class="mb-1 text-[12px] text-text-secondary">What they see</legend>
-                <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-scope="labs" checked class="h-4 w-4 accent-[#818cf8]" />Labs</label>
-                <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-scope="imaging" checked class="h-4 w-4 accent-[#818cf8]" />Imaging</label>
+                <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-scope="labs" class="h-4 w-4 accent-[#818cf8]" />Labs</label>
+                <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-scope="imaging" class="h-4 w-4 accent-[#818cf8]" />Imaging</label>
                 <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-scope="activity" class="h-4 w-4 accent-[#818cf8]" />Activity and fitness</label>
                 <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-scope="body" class="h-4 w-4 accent-[#818cf8]" />Body measurements</label>
               </fieldset>
@@ -726,7 +726,8 @@ import SiteHeader from "../components/SiteHeader.astro";
 
   async function switchPerson(id: string) {
     const p = people.find((x) => x.id === id);
-    if (!p || p.id === person?.id) return;
+    if (!p) return;
+    if (p.id === person?.id) { closePersonForm(); ($("sharewrap") as HTMLDetailsElement).open = false; return; }
     person = p;
     try { sessionStorage.setItem(PERSON_KEY, id); } catch { /* fine */ }
     msg("upmsg", ""); msg("sharemsg", "");
@@ -749,6 +750,14 @@ import SiteHeader from "../components/SiteHeader.astro";
     $("personname").focus();
   }
   function closePersonForm() { show("personform", false); $("personform").classList.remove("flex"); editingPerson = null; }
+  // a click anywhere else closes the add-a-person form and the sharing card
+  document.addEventListener("click", (e) => {
+    const t = e.target as HTMLElement | null;
+    if (!t) return;
+    if (!$("personform").classList.contains("hidden") && !t.closest("#personform") && !t.closest("#personadd") && !t.closest("[data-pedit]")) closePersonForm();
+    const sw = $("sharewrap") as HTMLDetailsElement;
+    if (sw.open && !t.closest("#sharewrap")) sw.open = false;
+  });
   $("personcancel").addEventListener("click", closePersonForm);
   $("personform").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -1529,6 +1538,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   /** A report's app-bound values, one per marker, from its archived rows. */
   function appBoundFor(path: string): { date: string; values: AppBound[] } {
     if (!isSelf()) return { date: "", values: [] };   // the app tier is yours alone
+    if (path.startsWith("export:")) return { date: "", values: [] };   // came from the app: nothing to send back
     const rows = allLabs.filter((r) => r.report_path === path);
     const values: AppBound[] = [];
     for (const r of rows) {
@@ -1881,7 +1891,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     if (waiting.length) {
       const n = waiting.reduce((sum, p) => sum + reportAppState(p).pending.length, 0);
       $("tosendtext").textContent = waiting.length === 1
-        ? `${n} value${n === 1 ? "" : "s"} for your app from ${pretty(waiting[0].split("/")[1])} ${n === 1 ? "has" : "have"} not been sent.`
+        ? `${n} value${n === 1 ? "" : "s"} for your app from ${pretty(waiting[0].split("/").pop()!)} ${n === 1 ? "has" : "have"} not been sent.`
         : `${waiting.length} reports have values for your app that have not been sent: ${n} in all.`;
     } else if (unchecked) {
       // sent as they were read: the look happens in the app
@@ -2205,7 +2215,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   const REPORT_EXT = /\.(pdf|jpe?g|png|webp)$/i;
   const isPhotoName = (name: string) => /\.(jpe?g|png|webp)$/i.test(name);
   /** The stored name, as a title: the upload stamp off, underscores as spaces, no extension. */
-  const pretty = (name: string) => name.replace(/^\d+-/, "").replace(REPORT_EXT, "").replace(/_/g, " ");
+  const pretty = (name: string | undefined) => (name ?? "").replace(/^\d+-/, "").replace(REPORT_EXT, "").replace(/_/g, " ");
   /** The upload time, from the stamp the upload put in front of the name. */
   const stampOf = (name: string) => Number((name.match(/^(\d+)-/) ?? [])[1] ?? 0);
 
