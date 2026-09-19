@@ -242,6 +242,35 @@ import SiteHeader from "../components/SiteHeader.astro";
         </button>
       </div>
 
+      <!-- ═══ PEOPLE: whose page this is ═══════════════════════════════════
+           Every row belongs to a person: you, someone you look after, or
+           someone who shares with you. The chips switch the whole page. -->
+      <div id="peoplewrap" class="mt-5 hidden">
+        <div id="people" class="flex flex-wrap items-center gap-2"></div>
+        <form id="personform" class="mt-3 hidden max-w-3xl flex-wrap items-end gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <label class="flex flex-col gap-1 text-[12px] text-text-secondary">Their name
+            <input id="personname" type="text" autocomplete="off" placeholder="Amma" maxlength="60" required
+              class="w-48 max-w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
+          </label>
+          <label class="flex flex-col gap-1 text-[12px] text-text-secondary">Born, year (optional)
+            <input id="personborn" type="number" inputmode="numeric" min="1900" max="2100" placeholder="1958"
+              class="w-28 rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
+          </label>
+          <button type="submit" id="personsave" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Add</button>
+          <button type="button" id="personcancel" class="min-h-10 px-2 text-xs font-medium text-text-tertiary hover:text-text-primary">Cancel</button>
+          <p id="personformnote" class="basis-full text-[12px] leading-relaxed text-text-tertiary">Someone you look after, without a login of their own. Their reports are filed under their name, and only you can see them.</p>
+        </form>
+        <div id="personhead" class="mt-3 hidden flex-wrap items-center gap-x-4 gap-y-1">
+          <span id="personkicker" class="font-mono text-[10px] font-semibold tracking-[0.14em] text-accent-light"></span>
+          <span id="personactions" class="flex items-center gap-3 text-[13px] font-medium"></span>
+        </div>
+        <div id="personnotewrap" class="mt-3 hidden max-w-3xl">
+          <label for="personnote" class="font-mono text-[10px] font-semibold tracking-wider text-text-tertiary">NOTE &middot; ONLY YOU SEE THIS</label>
+          <textarea id="personnote" rows="2" placeholder="On metformin since June. Next HbA1c due December."
+            class="mt-1 w-full resize-none rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[14px] leading-relaxed text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"></textarea>
+        </div>
+      </div>
+
       <!-- reading in progress: shown on every tab, since the read carries on
            whichever tab is open; the bar eases toward the end and jumps when
            the reader answers -->
@@ -340,6 +369,9 @@ import SiteHeader from "../components/SiteHeader.astro";
           <span class="hidden shrink-0 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-bold text-accent-light sm:inline-block">Choose files</span>
           <input id="file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif" multiple class="hidden" />
         </label>
+
+        <!-- the report names someone else: held here, nothing filed, until you say whose it is -->
+        <div id="namecheck" class="mt-6 hidden max-w-3xl flex-col gap-3 rounded-2xl border border-warning/50 bg-warning/[0.06] p-5"></div>
 
         <!-- the batch queue: one row per dropped file, each with its stage -->
         <div id="upqueue" class="mt-6 hidden max-w-3xl flex-col gap-2"></div>
@@ -521,6 +553,235 @@ import SiteHeader from "../components/SiteHeader.astro";
   let firstName = "";
   let parsed: { path: string; lpa_unit: string | null; dupKeys: Set<string> } | null = null;
 
+  // ── people: whose page this is ─────────────────────────────────────────
+  // Every row belongs to a person. A person is one of three things: your own
+  // self (account_id = you), someone you look after (no account of their
+  // own; owner_id = you), or someone else's self seen through a grant they
+  // accepted. Before the people table exists the page runs as before, with
+  // a stand-in self whose id is empty: queries then fall back to user_id.
+  type Person = { id: string; owner_id: string; account_id: string | null; name: string; born_year: number | null; mine: boolean; self: boolean; scopes: string[] };
+  let people: Person[] = [];
+  let person: Person | null = null;
+  const PERSON_KEY = "mh-person";
+  const ALL_SCOPES = ["labs", "imaging", "activity", "body", "notes"];
+  /** Where a person's files live: an account's own at <account>/, someone looked after at <account>/people/<id>/. */
+  const folderOf = (p: Person) => p.account_id ? p.account_id : `${p.owner_id}/people/${p.id}`;
+  const folder = () => folderOf(person!);
+  const canWrite = () => !!person?.mine;
+  const isSelf = () => !!person?.self;
+  /** A query on web_labs / imaging_reports, scoped to one person (or, before the table exists, to the account). */
+  const scopeRows = (q: any, who: Person | null = person) => who?.id ? q.eq("person_id", who.id) : q.eq("user_id", userId);
+  const personCol = (who: Person | null = person) => who?.id ? { person_id: who.id } : {};
+  const standIn = (): Person => ({ id: "", owner_id: userId, account_id: userId, name: fullName, born_year: null, mine: true, self: true, scopes: ALL_SCOPES });
+
+  async function loadPeople() {
+    const [{ data: rows, error }, { data: grants }] = await Promise.all([
+      supabase.from("people").select("id, owner_id, account_id, name, born_year").order("created_at", { ascending: true }),
+      supabase.from("grants").select("person_id, scopes").eq("viewer_id", userId).eq("status", "active"),
+    ]);
+    let list = (error ? [] : rows ?? []) as any[];
+    if (!error && !list.some((p) => p.account_id === userId)) {
+      // the account's own person, when the database has not made one yet
+      const { data: made } = await supabase.from("people")
+        .insert({ owner_id: userId, account_id: userId, name: fullName })
+        .select("id, owner_id, account_id, name, born_year").maybeSingle();
+      if (made) list = [made, ...list];
+    }
+    const mine = list.find((p) => p.account_id === userId);
+    if (mine && !mine.name && fullName) { mine.name = fullName; supabase.from("people").update({ name: fullName }).eq("id", mine.id).then(() => {}); }
+    const scopesBy = new Map<string, string[]>((grants ?? []).map((g: any) => [g.person_id, g.scopes ?? []]));
+    people = list.map((p) => ({
+      ...p, name: p.name ?? "", born_year: p.born_year ?? null,
+      mine: p.owner_id === userId, self: p.account_id === userId,
+      scopes: p.owner_id === userId ? ALL_SCOPES : (scopesBy.get(p.id) ?? []),
+    }));
+    if (!people.some((p) => p.self)) people = [standIn(), ...people];
+    // you first, then the people you look after, then those who share with you
+    people.sort((a, b) => Number(b.self) - Number(a.self) || Number(b.mine) - Number(a.mine) || a.name.localeCompare(b.name));
+    let wanted = "";
+    try { wanted = sessionStorage.getItem(PERSON_KEY) ?? ""; } catch { /* fine */ }
+    person = people.find((p) => p.id && p.id === wanted) ?? people.find((p) => p.self) ?? people[0];
+  }
+
+  /** What the page lets you do depends on whose page it is. */
+  function applyPersonMode() {
+    const w = canWrite(), self = isSelf();
+    show("addreport", w); show("drop", w); show("emptyadd", w);
+    show("personnotewrap", w && !self && !!person?.id);
+    show("namechange", self && !!firstName);
+    if (!self) hideNameForm();
+    renderPeople();
+  }
+
+  function renderPeople() {
+    const has = people.some((p) => !!p.id);   // the people table exists
+    show("peoplewrap", has);
+    if (!has) return;
+    $("people").innerHTML = people.map((p) => {
+      const on = p.id === person?.id;
+      const label = p.self ? "You" : esc(p.name || "Unnamed");
+      const hint = p.self ? "Your own page" : p.mine ? "Someone you look after" : `Shares ${p.scopes.join(", ") || "nothing yet"} with you`;
+      const tag = p.mine || p.self ? "" : `<span class="ml-1.5 font-mono text-[9px] tracking-wider text-accent-light">SHARED</span>`;
+      return `<button type="button" data-person="${p.id}" title="${esc(hint)}" aria-current="${on ? "page" : "false"}"
+        class="min-h-9 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${on
+          ? "border-accent/70 bg-accent/15 text-text-primary"
+          : "border-white/14 text-text-secondary hover:border-white/30 hover:text-text-primary"}">${label}${tag}</button>`;
+    }).join("") + `<button type="button" id="personadd" class="min-h-9 rounded-full px-3 py-1.5 text-[13px] font-bold text-accent-light hover:text-text-primary">+ Add a person</button>`;
+    $("people").querySelectorAll("[data-person]").forEach((b) =>
+      b.addEventListener("click", () => switchPerson((b as HTMLElement).dataset.person!)));
+    $("personadd").addEventListener("click", () => openPersonForm(null));
+
+    // the line under the chips: whose page, and what you may do here
+    const p = person!;
+    show("personhead", !p.self); $("personhead").classList.toggle("flex", !p.self);
+    if (p.self) { $("personkicker").textContent = ""; $("personactions").innerHTML = ""; return; }
+    $("personkicker").textContent = p.mine
+      ? `YOU LOOK AFTER${p.born_year ? ` · BORN ${p.born_year}` : ""}`
+      : `SHARES WITH YOU · ${p.scopes.map((x) => x.toUpperCase()).join(" · ") || "NOTHING YET"} · YOU CAN LOOK, NOT CHANGE`;
+    $("personactions").innerHTML = p.mine
+      ? `<button type="button" data-pedit class="text-accent-light hover:text-text-primary">Edit details</button>
+         <button type="button" data-premove class="text-text-tertiary hover:text-danger">Remove person</button>`
+      : "";
+    $("personactions").querySelector("[data-pedit]")?.addEventListener("click", () => openPersonForm(p));
+    $("personactions").querySelector("[data-premove]")?.addEventListener("click", () => removePerson(p));
+  }
+
+  async function switchPerson(id: string) {
+    const p = people.find((x) => x.id === id);
+    if (!p || p.id === person?.id) return;
+    person = p;
+    try { sessionStorage.setItem(PERSON_KEY, id); } catch { /* fine */ }
+    msg("upmsg", "");
+    show("review", false); show("echoreview", false); show("namecheck", false);
+    $("upqueue").innerHTML = ""; show("upqueue", false);
+    applyPersonMode();
+    await Promise.all([refresh(), loadPersonNote()]);
+  }
+
+  // ── add, edit, remove someone you look after ──────────────────────────
+  let editingPerson: Person | null = null;
+  function openPersonForm(p: Person | null) {
+    editingPerson = p;
+    ($("personname") as HTMLInputElement).value = p?.name ?? "";
+    ($("personborn") as HTMLInputElement).value = p?.born_year ? String(p.born_year) : "";
+    $("personsave").textContent = p ? "Save" : "Add";
+    show("personformnote", !p);
+    show("personform", true); $("personform").classList.add("flex");
+    $("personname").focus();
+  }
+  function closePersonForm() { show("personform", false); $("personform").classList.remove("flex"); editingPerson = null; }
+  $("personcancel").addEventListener("click", closePersonForm);
+  $("personform").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = ($("personname") as HTMLInputElement).value.trim();
+    const bornRaw = ($("personborn") as HTMLInputElement).value.trim();
+    const born = bornRaw ? Number(bornRaw) : null;
+    if (!name) return;
+    if (editingPerson) {
+      const { error } = await supabase.from("people").update({ name, born_year: born }).eq("id", editingPerson.id);
+      if (error) { msg("upmsg", `Could not save: ${error.message}`, true); return; }
+      closePersonForm();
+      await loadPeople(); applyPersonMode(); renderOverview();
+      return;
+    }
+    const made = await addPerson(name, born);
+    closePersonForm();
+    if (made) await switchPerson(made.id);
+  });
+  /** A new person you look after; returns them, or null with the reason shown. */
+  async function addPerson(name: string, born: number | null): Promise<Person | null> {
+    const { data, error } = await supabase.from("people")
+      .insert({ owner_id: userId, account_id: null, name, born_year: born })
+      .select("id, owner_id, account_id, name, born_year").maybeSingle();
+    if (error || !data) { msg("upmsg", `Could not add ${name}: ${error?.message ?? "no row came back"}`, true); return null; }
+    await loadPeople();
+    renderPeople();
+    return people.find((p) => p.id === data.id) ?? null;
+  }
+  async function removePerson(p: Person) {
+    if (!confirm(`Remove ${p.name} and everything filed under them? Their reports and every value read from them are deleted. This cannot be undone.`)) return;
+    const { data: files } = await supabase.storage.from("reports").list(folderOf(p), { limit: 500 });
+    const names = (files ?? []).filter((f) => f.metadata).map((f) => `${folderOf(p)}/${f.name}`);
+    if (names.length) await supabase.storage.from("reports").remove(names);
+    const { error } = await supabase.from("people").delete().eq("id", p.id);
+    if (error) { msg("upmsg", `Could not remove ${p.name}: ${error.message}`, true); return; }
+    person = null;
+    await loadPeople();
+    const self = people.find((x) => x.self)!;
+    person = self;
+    try { sessionStorage.setItem(PERSON_KEY, self.id); } catch { /* fine */ }
+    applyPersonMode();
+    await refresh();
+  }
+
+  // ── the note on someone you look after: yours alone ───────────────────
+  async function loadPersonNote() {
+    const p = person;
+    ($("personnote") as HTMLTextAreaElement).value = "";
+    if (!p?.id || !p.mine || p.self) return;
+    const { data } = await supabase.from("person_notes").select("note").eq("person_id", p.id).maybeSingle();
+    if (person?.id === p.id) ($("personnote") as HTMLTextAreaElement).value = data?.note ?? "";
+  }
+  $("personnote").addEventListener("blur", async () => {
+    const p = person;
+    if (!p?.id || !p.mine || p.self) return;
+    const note = ($("personnote") as HTMLTextAreaElement).value.trim();
+    const { error } = await supabase.from("person_notes")
+      .upsert({ person_id: p.id, owner_id: userId, note, updated_at: new Date().toISOString() }, { onConflict: "person_id" });
+    if (error) msg("upmsg", `Could not save the note: ${error.message}`, true);
+  });
+
+  // ── the name printed on a report, against the person it is filed under ─
+  const TITLES = new Set(["MR", "MRS", "MS", "MISS", "MX", "DR", "PROF", "MASTER", "BABY", "SHRI", "SRI", "SMT", "KUMARI", "KUMAR", "MOHD", "MD"]);
+  const nameWords = (v: unknown) => String(v ?? "").toUpperCase().replace(/[^A-Z ]+/g, " ").split(/\s+/).filter((w) => w && !TITLES.has(w));
+  /** Loose on purpose: "Sadiya" matches "MRS SADIYA ROPLEKAR". No name on either side is no verdict. */
+  function nameVerdict(printed: unknown, p: Person): "match" | "mismatch" | "unknown" {
+    const a = nameWords(printed), b = nameWords(p.name);
+    if (!a.length || !b.length) return "unknown";
+    const long = (w: string) => w.length >= 3;
+    return b.some((w) => long(w) && a.includes(w)) || a.some((w) => long(w) && b.includes(w)) ? "match" : "mismatch";
+  }
+  const titleCase = (v: unknown) => nameWords(v).map((w) => w[0] + w.slice(1).toLowerCase()).join(" ");
+  /**
+   * The report names someone else: nothing is filed until the person says
+   * whose it is. Resolves with what they chose; the card then closes.
+   */
+  function askWhose(printed: string, fileName: string): Promise<{ kind: "add"; name: string } | { kind: "file" } | { kind: "remove" }> {
+    const who = person!;
+    const first = titleCase(printed).split(" ")[0] || "them";
+    $("namecheck").innerHTML = `
+      <div class="flex items-center gap-2.5">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3 22 20H2Z"/><path d="M12 9v5M12 17v.5"/></svg>
+        <p class="text-[15px] font-extrabold text-text-primary">This report names ${esc(printed)}, not ${esc(who.self ? "you" : who.name)}.</p>
+      </div>
+      <p class="text-[13px] leading-relaxed text-text-secondary">${esc(fileName)} was read but not filed. Nothing has gone to any timeline. Whose is it?</p>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" data-whose="add" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas">Add ${esc(first)} as a person</button>
+        <button type="button" data-whose="file" class="min-h-10 rounded-xl border border-white/14 px-4 py-2 text-sm font-semibold text-text-primary">It is ${esc(who.self ? "mine" : who.name + "'s")}, file it</button>
+        <button type="button" data-whose="remove" class="min-h-10 rounded-xl border border-white/14 px-4 py-2 text-sm font-semibold text-text-tertiary">Remove it</button>
+      </div>`;
+    show("namecheck", true); $("namecheck").classList.add("flex");
+    $("namecheck").scrollIntoView({ block: "center", behavior: "smooth" });
+    return new Promise((resolve) => {
+      $("namecheck").querySelectorAll("[data-whose]").forEach((b) => b.addEventListener("click", () => {
+        show("namecheck", false); $("namecheck").classList.remove("flex");
+        const k = (b as HTMLElement).dataset.whose;
+        resolve(k === "add" ? { kind: "add", name: titleCase(printed) } : k === "file" ? { kind: "file" } : { kind: "remove" });
+      }));
+    });
+  }
+  /** What the reader learned about the document itself, one row per stored report. */
+  async function rememberReport(path: string, who: Person, out: any, match: string | null) {
+    if (!who.id) return;   // no people table yet, so no web_reports either
+    try {
+      await supabase.from("web_reports").upsert({
+        path, owner_id: userId, person_id: who.id,
+        doc_type: out?.doc_type ?? null, kind: out?.kind ?? null, report_date: out?.report_date ?? null,
+        patient_name: out?.patient_name ?? null, name_match: match, updated_at: new Date().toISOString(),
+      }, { onConflict: "path" });
+    } catch { /* the table may not exist yet */ }
+  }
+
   // one fetch feeds Overview, Labs and the Reports cards
   let allLabs: any[] = [];
   let allImaging: any[] = [];   // imaging_reports — the narrative half of a study
@@ -571,9 +832,13 @@ import SiteHeader from "../components/SiteHeader.astro";
       show("signout", true); show("home", true); show("auth", false);
       const wanted = window.location.hash.replace("#", "");
       setTab(["overview", "labs", "reports"].includes(wanted) ? wanted : "overview");
-      await refresh();
+      await loadPeople();
+      applyPersonMode();
+      await Promise.all([refresh(), loadPersonNote()]);
     } else {
       firstName = "";
+      people = []; person = null;
+      show("peoplewrap", false);
       appLink?.classList.remove("hidden");
       show("auth", true); show("home", false); show("signout", false);
     }
@@ -612,6 +877,7 @@ import SiteHeader from "../components/SiteHeader.astro";
 
   /** "Good evening, Sudeep", or just "Good evening" when no name is known. */
   function greeting(): string {
+    if (person && !person.self) return person.name || "Unnamed";
     const hour = new Date().getHours();
     const tod = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
     return firstName ? `${tod}, ${firstName}` : tod;
@@ -702,6 +968,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     try {
       await supabase.from("profiles").update({ name, updated_at: new Date().toISOString() })
         .eq("user_id", userId).or("name.is.null,name.eq.");
+      if (person?.self && person.id) await supabase.from("people").update({ name }).eq("id", person.id);
     } catch { /* no profile row yet: the app's setup will read full_name */ }
     fullName = name;
     firstName = name.split(/\s+/)[0] ?? "";
@@ -714,14 +981,16 @@ import SiteHeader from "../components/SiteHeader.astro";
   /** Refetch web_labs + imaging_reports once; every surface renders from them. */
   async function refresh() {
     const [{ data: rows }, { data: imaging }, { data: app }] = await Promise.all([
-      supabase.from("web_labs")
-        .select("analyte, value, unit, ref_low, ref_high, ref_text, section, measured_on, report_path")
-        .eq("user_id", userId).order("measured_on", { ascending: true }).limit(4000),
-      supabase.from("imaging_reports")
-        .select("modality, report_date, report_path, impression, findings")
-        .eq("user_id", userId).order("report_date", { ascending: true }).limit(200),
-      supabase.from("lab_readings")
-        .select("*").eq("user_id", userId).is("deleted_at", null).limit(2000),
+      scopeRows(supabase.from("web_labs")
+        .select("analyte, value, unit, ref_low, ref_high, ref_text, section, measured_on, report_path"))
+        .order("measured_on", { ascending: true }).limit(4000),
+      scopeRows(supabase.from("imaging_reports")
+        .select("modality, report_date, report_path, impression, findings"))
+        .order("report_date", { ascending: true }).limit(200),
+      // the app's rows exist only for a person with an account of their own
+      person?.account_id
+        ? supabase.from("lab_readings").select("*").eq("user_id", person.account_id).is("deleted_at", null).limit(2000)
+        : Promise.resolve({ data: [] as any[] }),
     ]);
     allLabs = rows ?? [];
     allImaging = imaging ?? [];
@@ -770,6 +1039,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   type AppBound = { key: string; value: number; unit: string | null; name: string };
   /** A report's app-bound values, one per marker, from its archived rows. */
   function appBoundFor(path: string): { date: string; values: AppBound[] } {
+    if (!isSelf()) return { date: "", values: [] };   // the app tier is yours alone
     const rows = allLabs.filter((r) => r.report_path === path);
     const values: AppBound[] = [];
     for (const r of rows) {
@@ -795,6 +1065,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   }
   /** Values the app holds from reports that nobody has looked at yet, across the archive. */
   function uncheckedInApp(): number {
+    if (!isSelf()) return 0;
     return allApp
       .filter((a) => a.review_status === "unchecked")
       .reduce((n, a) => n + APP_KEYS.filter((k) => a[k] != null).length, 0);
@@ -1480,7 +1751,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   }
 
   async function renderReports() {
-    const { data } = await supabase.storage.from("reports").list(userId, {
+    const { data } = await supabase.storage.from("reports").list(folder(), {
       sortBy: { column: "created_at", order: "desc" }, limit: 200,
     });
     const files = (data ?? []).filter((f) => REPORT_EXT.test(f.name));
@@ -1502,7 +1773,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     // upload's. A copy has no filed values of its own, so it takes its
     // original's date and sits beside it.
     const dated = files.map((f) => {
-      const path = `${userId}/${f.name}`;
+      const path = `${folder()}/${f.name}`;
       const o = outcomes.get(path);
       const im = imagingByPath.get(path);
       const uploaded = stampOf(f.name) ? new Date(stampOf(f.name)).toISOString().slice(0, 10) : "";
@@ -1602,23 +1873,24 @@ import SiteHeader from "../components/SiteHeader.astro";
         </div>
       </details>`).join("");
 
+    if (!canWrite()) $("repcards").querySelectorAll("[data-parse],[data-del],[data-ren],[data-sendrep],[data-keep]").forEach((b) => b.remove());
     $("repcards").querySelectorAll("[data-parse]").forEach((b) =>
       b.addEventListener("click", () => parseReport((b as HTMLElement).dataset.parse!)));
     $("repcards").querySelectorAll("[data-view]").forEach((b) =>
-      b.addEventListener("click", () => viewPdf(`${userId}/${(b as HTMLElement).dataset.view}`)));
+      b.addEventListener("click", () => viewPdf(`${folder()}/${(b as HTMLElement).dataset.view}`)));
     $("repcards").querySelectorAll("[data-del]").forEach((b) =>
       b.addEventListener("click", async () => {
         const el = b as HTMLElement;
         // Removing a copy needs no question; deleting a report does. Its
         // values stay on Labs either way — only the PDF goes.
         if (el.dataset.quiet == null && !confirm(`Delete "${pretty(el.dataset.del!)}"? The PDF is removed; its values stay on your Labs tab.`)) return;
-        await supabase.storage.from("reports").remove([`${userId}/${el.dataset.del}`]);
+        await supabase.storage.from("reports").remove([`${folder()}/${el.dataset.del}`]);
         renderReports();
       }));
     $("repcards").querySelectorAll("[data-keep]").forEach((b) =>
       b.addEventListener("click", () => { keepBoth((b as HTMLElement).dataset.keep!); renderReports(); }));
     $("repcards").querySelectorAll("[data-sendrep]").forEach((b) =>
-      b.addEventListener("click", () => { reviewQueue = []; reviewPos = { n: 0, of: 0 }; reviewFromArchive(`${userId}/${(b as HTMLElement).dataset.sendrep}`); }));
+      b.addEventListener("click", () => { reviewQueue = []; reviewPos = { n: 0, of: 0 }; reviewFromArchive(`${folder()}/${(b as HTMLElement).dataset.sendrep}`); }));
     $("repcards").querySelectorAll("[data-ren]").forEach((b) =>
       b.addEventListener("click", () => renameUI(b as HTMLElement)));
   }
@@ -1641,7 +1913,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     if (!safe) { msg("upmsg", "Give the report a name first.", true); return; }
     const newName = `${stamp}-${safe}${ext}`;
     if (newName === oldName) { await renderReports(); return; }
-    const oldPath = `${userId}/${oldName}`, newPath = `${userId}/${newName}`;
+    const oldPath = `${folder()}/${oldName}`, newPath = `${folder()}/${newName}`;
     const { error } = await supabase.storage.from("reports").move(oldPath, newPath);
     if (error) { msg("upmsg", `Could not rename: ${error.message}`, true); return; }
     const [{ error: e1 }, { error: e2 }] = await Promise.all([
@@ -1745,7 +2017,7 @@ import SiteHeader from "../components/SiteHeader.astro";
 
     // the archive as it stands, so a file already in it is spotted before
     // it is uploaded again: same bytes (size) and the same name
-    const { data: existing } = await supabase.storage.from("reports").list(userId, { limit: 200 });
+    const { data: existing } = await supabase.storage.from("reports").list(folder(), { limit: 200 });
     const already = new Set((existing ?? []).map((e) => `${e.metadata?.size ?? "?"}|${pretty(e.name).toLowerCase()}`));
 
     let last: { name: string; out: any; path: string; filed: any } | null = null;
@@ -1772,29 +2044,54 @@ import SiteHeader from "../components/SiteHeader.astro";
 
       qset(rowId(i), "UPLOADING…", "busy", "Saving the original to your private archive");
       const base = f.name.replace(/\.[^.]+$/, "").replace(/[^\w.\-]+/g, "_") || "report";
-      const path = `${userId}/${Date.now()}-${base}.${ext}`;
+      let path = `${folder()}/${Date.now()}-${base}.${ext}`;
       const { error } = await supabase.storage.from("reports").upload(path, blob, { contentType });
       if (error) { qset(rowId(i), "FAILED", "bad", error.message); failedN++; continue; }
 
       qset(rowId(i), "READING…", "busy", "Verve is reading every value and its printed range — about 20 seconds");
       busyStart(files.length > 1 ? `Reading ${i + 1} of ${files.length}: ${f.name}` : `Reading ${f.name}…`);
       let out: any;
-      try { out = await readReport(path.split("/")[1]); }
+      try { out = await readReport(path); }
       catch (e: any) {
         busyEnd(`Could not read ${f.name}`, e.message ?? "Could not read this report", false);
         qset(rowId(i), "FAILED", "bad", `${e.message ?? "Could not read this report"} ${kept}`); failedN++; continue;
       }
       busyEnd(`Read ${f.name}`, "Filed — the queue on the Reports tab has the details.", true);
 
+      // the name printed on it, against the person this page is about:
+      // a mismatch holds the file until you say whose it is
+      let filedUnder = person!;
+      const verdict = nameVerdict(out.patient_name, filedUnder);
+      let match: string | null = verdict;
+      if (verdict === "mismatch") {
+        qset(rowId(i), "WHOSE?", "wait", `This report names ${out.patient_name}. Waiting for your answer above.`);
+        const choice = await askWhose(String(out.patient_name), f.name);
+        if (choice.kind === "remove") {
+          await supabase.storage.from("reports").remove([path]);
+          qset(rowId(i), "REMOVED", "ok", "Not filed. The file is gone."); skippedN++; continue;
+        }
+        if (choice.kind === "add") {
+          const made = await addPerson(choice.name, null);
+          if (made) {
+            const moved = `${folderOf(made)}/${path.split("/").pop()}`;
+            const { error: mvErr } = await supabase.storage.from("reports").move(path, moved);
+            if (!mvErr) { path = moved; filedUnder = made; }
+          }
+        }
+        match = "confirmed";
+      }
+      await rememberReport(path, filedUnder, out, match);
+      const under = filedUnder.id === person?.id ? "" : ` · filed under ${filedUnder.name}`;
+
       if (out.doc_type === "echo") {
-        const filed = await archiveEcho(out, path);
-        qset(rowId(i), "FILED ✓", "ok", `Echo report · ${filed.values.length} measurements → Labs · Imaging`);
+        const filed = await archiveEcho(out, path, filedUnder);
+        qset(rowId(i), "FILED ✓", "ok", `Echo report · ${filed.values.length} measurements → Labs · Imaging${under}`);
         filedN++; last = { name: f.name, out, path, filed };
       } else if (out.doc_type === "other") {
         qset(rowId(i), "ARCHIVED", "ok", `Read as: ${out.kind ?? "a medical document"} — kept as a PDF; its type is on the roadmap`);
       } else {
-        const filed = await archiveLab(out, path);
-        const auto = await autoSendToApp(filed, path, out.lpa_unit ?? null);
+        const filed = await archiveLab(out, path, filedUnder);
+        const auto = await autoSendToApp(filed, path, out.lpa_unit ?? null, filedUnder);
         auto.forEach((k) => filed.dupKeys.add(k));
         (filed as any).autoSent = auto;
         if (out.truncated)
@@ -1802,9 +2099,9 @@ import SiteHeader from "../components/SiteHeader.astro";
         else if (filed.allValues.length > 0 && filed.fresh.length === 0)
           qset(rowId(i), "A COPY", "ok", `${filed.allValues.length} values, every one already on your Labs tab from ${fmtDay(filed.date)} — this is a copy of a report you have`);
         else
-          qset(rowId(i), "FILED ✓", "ok", `${filed.allValues.length} values → Labs · ${filed.fresh.length} new on your trends${auto.size ? ` · ${auto.size} to your app, unchecked` : ""}`);
+          qset(rowId(i), "FILED ✓", "ok", `${filed.allValues.length} values → Labs · ${filed.fresh.length} new on ${filedUnder.self ? "your" : filedUnder.name + "'s"} trends${auto.size ? ` · ${auto.size} to your app, unchecked` : ""}`);
         filedN++; last = { name: f.name, out, path, filed };
-        labsFiled.push(last);
+        if (filedUnder.self) labsFiled.push(last);   // the app tier is yours alone
       }
     }
 
@@ -1821,7 +2118,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     await refresh();
     // the report just filed: its card rises into the timeline
     if (last) {
-      const card = $("repcards").querySelector(`[data-view="${CSS.escape(last.path.split("/")[1])}"]`)?.closest("details > div > div");
+      const card = $("repcards").querySelector(`[data-view="${CSS.escape(last.path.split("/").pop()!)}"]`)?.closest("details > div > div");
       card?.classList.add("mh-rise");
     }
     // every lab report with something for the app gets its review, one after
@@ -1840,7 +2137,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   $("file").addEventListener("change", () => {
     const fs = Array.from(($("file") as HTMLInputElement).files ?? []);
     ($("file") as HTMLInputElement).value = "";
-    if (fs.length) uploadBatch(fs);
+    if (fs.length && person) uploadBatch(fs);
   });
   // Drag a file over ANY part of the page and the veil says where it will
   // land. dragenter/dragleave fire for every element crossed, so a depth
@@ -1849,16 +2146,16 @@ import SiteHeader from "../components/SiteHeader.astro";
   const veil = (on: boolean) => { $("veil").classList.toggle("hidden", !on); $("veil").classList.toggle("flex", on); };
   const hasFiles = (e: Event) => Array.from((e as DragEvent).dataTransfer?.types ?? []).includes("Files");
   document.addEventListener("dragenter", (e) => {
-    if (!userId || !hasFiles(e)) return;
+    if (!userId || !canWrite() || !hasFiles(e)) return;
     e.preventDefault();
     if (dragDepth++ === 0) veil(true);
   });
   document.addEventListener("dragover", (e) => {
-    if (!userId || !hasFiles(e)) return;
+    if (!userId || !canWrite() || !hasFiles(e)) return;
     e.preventDefault();
   });
   document.addEventListener("dragleave", (e) => {
-    if (!userId || !hasFiles(e)) return;
+    if (!userId || !canWrite() || !hasFiles(e)) return;
     if (--dragDepth <= 0) { dragDepth = 0; veil(false); }
   });
   document.addEventListener("drop", (e) => {
@@ -1874,12 +2171,12 @@ import SiteHeader from "../components/SiteHeader.astro";
   // every stage instead of each doing it their own way. ──────────────────
 
   /** Call the parser. Throws with a user-facing message on any failure. */
-  async function readReport(name: string): Promise<any> {
+  async function readReport(path: string): Promise<any> {
     const { data: { session } } = await supabase.auth.getSession();
     const resp = await fetch(`${SUPABASE_URL}/functions/v1/report-parser`, {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${session?.access_token}`, apikey: SUPABASE_ANON_KEY },
-      body: JSON.stringify({ path: `${userId}/${name}` }),
+      body: JSON.stringify({ path }),
     });
     const out = await resp.json().catch(() => ({ error: "Unreadable response" }));
     if (!resp.ok || out.error) {
@@ -1901,8 +2198,9 @@ import SiteHeader from "../components/SiteHeader.astro";
     const btns = Array.from($("repcards").querySelectorAll("[data-parse]")) as HTMLButtonElement[];
     btns.forEach((b) => { b.disabled = true; if (b.dataset.parse === name) b.textContent = "Reading…"; });
     busyStart(`Reading ${pretty(name)}…`);
+    const path = `${folder()}/${name}`;
     let out: any;
-    try { out = await readReport(name); }
+    try { out = await readReport(path); }
     catch (e: any) {
       btns.forEach((b) => { b.disabled = false; if (b.dataset.parse === name) b.textContent = "Read values"; });
       busyEnd(`Could not read ${pretty(name)}`, e.message ?? "Could not read this report", false);
@@ -1912,7 +2210,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     btns.forEach((b) => { b.disabled = false; if (b.dataset.parse === name) b.textContent = "Read values"; });
     const n = out.doc_type === "lab" ? (out.all_values?.length ?? 0) : out.doc_type === "echo" ? (out.echo_values?.length ?? 0) : 0;
     busyEnd(`Read ${pretty(name)}`, n ? `${n} value${n === 1 ? "" : "s"} read${out.truncated ? ", then the reader's budget ran out" : ""} — the review is on the Reports tab.` : "Filed. The review is on the Reports tab.", true);
-    const path = `${userId}/${name}`;
+    await rememberReport(path, person!, out, nameVerdict(out.patient_name, person!));
     if (out.doc_type === "echo") {
       await archiveEcho(out, path);
       renderEchoReview(out, path, name);
@@ -1929,19 +2227,20 @@ import SiteHeader from "../components/SiteHeader.astro";
     (filed as any).autoSent = auto;
     if (out.truncated) msg("upmsg", `${filed.allValues.length} values read before the reader's budget ran out — the rest of this report was not read.`);
     await refresh();
-    await renderLabReview(out, path, name, filed);
+    if (isSelf()) await renderLabReview(out, path, name, filed);
   }
 
   /**
    * The same-day and near-day check against the app's rows, shared by a
    * fresh parse and a review opened from the archive.
    */
-  async function appDuplicates(date: string, appValues: { key: string; value: number }[]) {
+  async function appDuplicates(date: string, appValues: { key: string; value: number }[], who: Person = person!) {
+    if (!who?.account_id) return { dupKeys: new Set<string>(), nearDays: new Map<string, number>() };
     const day0 = new Date(date + "T00:00:00").getTime();
     const winStart = new Date(day0 - 7 * 86400000).toISOString();
     const winEnd = new Date(day0 + 8 * 86400000).toISOString();
     const { data: appExisting } = await supabase.from("lab_readings")
-      .select("*").eq("user_id", userId).gte("measured_at", winStart).lt("measured_at", winEnd).is("deleted_at", null);
+      .select("*").eq("user_id", who.account_id).gte("measured_at", winStart).lt("measured_at", winEnd).is("deleted_at", null);
     const dupKeys = new Set<string>();
     const nearDays = new Map<string, number>();
     for (const v of appValues) {
@@ -1986,10 +2285,10 @@ import SiteHeader from "../components/SiteHeader.astro";
    */
   async function autoSendToApp(
     filed: { date: string; appValues: any[]; dupKeys: Set<string>; nearDays: Map<string, number> },
-    path: string, lpaUnit: string | null,
+    path: string, lpaUnit: string | null, who: Person = person!,
   ): Promise<Set<string>> {
     const sent = new Set<string>();
-    if (!AUTO_SEND_TO_APP) return sent;
+    if (!AUTO_SEND_TO_APP || !who?.self) return sent;
     const bySection: Record<string, Record<string, number | string>> = {};
     for (const v of filed.appValues) {
       if (filed.dupKeys.has(v.key) || filed.nearDays.has(v.key)) continue;
@@ -2015,7 +2314,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   }
 
   /** Archive a lab report's values — the writes, no DOM. */
-  async function archiveLab(out: any, path: string) {
+  async function archiveLab(out: any, path: string, who: Person = person!) {
     const date = out.report_date ?? new Date().toISOString().slice(0, 10);
     const appValues = (out.values ?? []).filter((v: any) => LABELS[v.key] && Number.isFinite(v.value));
     const allValues = (out.all_values ?? [])
@@ -2025,13 +2324,13 @@ import SiteHeader from "../components/SiteHeader.astro";
     // ① EVERYTHING → the website's own archive, deduped against what is
     // already there (same canonical analyte + date + value). The unique
     // index in the database is the backstop.
-    const { data: existing } = await supabase.from("web_labs")
-      .select("analyte, value").eq("user_id", userId).eq("measured_on", date);
+    const { data: existing } = await scopeRows(supabase.from("web_labs")
+      .select("analyte, value"), who).eq("measured_on", date);
     const have = new Set((existing ?? []).map((r) => `${canonName(String(r.analyte)).toLowerCase()}|${r.value}`));
     const fresh = allValues.filter((v: any) => !have.has(`${v.name.toLowerCase()}|${v.value}`));
     if (fresh.length > 0) {
       await supabase.from("web_labs").insert(fresh.map((v: any) => ({
-        id: crypto.randomUUID(), user_id: userId,
+        id: crypto.randomUUID(), user_id: userId, ...personCol(who),
         analyte: v.name, value: v.value, unit: v.unit ?? null,
         ref_low: Number.isFinite(v.ref_low) ? v.ref_low : null,
         ref_high: Number.isFinite(v.ref_high) ? v.ref_high : null,
@@ -2045,7 +2344,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     // Same value on a NEARBY date (±7 days) is the hand-entered-then-uploaded
     // case — the row a user typed on Aug 1 from a Jul 31 report — so those
     // start UNTICKED with a note, and the user decides.
-    const { dupKeys, nearDays } = await appDuplicates(date, appValues);
+    const { dupKeys, nearDays } = await appDuplicates(date, appValues, who);
     return { date, appValues, allValues, fresh, dupKeys, nearDays };
   }
 
@@ -2140,18 +2439,18 @@ import SiteHeader from "../components/SiteHeader.astro";
       .map((v: any) => ({ ...v, name: canonName(v.name) }));
   }
 
-  async function archiveEcho(out: any, path: string) {
+  async function archiveEcho(out: any, path: string, who: Person = person!) {
     const date = out.report_date ?? new Date().toISOString().slice(0, 10);
     const values = echoValues(out);
 
     // dedup + archive, same contract as lab analytes
-    const { data: existing } = await supabase.from("web_labs")
-      .select("analyte, value").eq("user_id", userId).eq("measured_on", date);
+    const { data: existing } = await scopeRows(supabase.from("web_labs")
+      .select("analyte, value"), who).eq("measured_on", date);
     const have = new Set((existing ?? []).map((r) => `${canonName(String(r.analyte)).toLowerCase()}|${r.value}`));
     const fresh = values.filter((v: any) => !have.has(`${v.name.toLowerCase()}|${v.value}`));
     if (fresh.length > 0) {
       await supabase.from("web_labs").insert(fresh.map((v: any) => ({
-        id: crypto.randomUUID(), user_id: userId,
+        id: crypto.randomUUID(), user_id: userId, ...personCol(who),
         analyte: v.name, value: v.value, unit: v.unit ?? null,
         ref_low: Number.isFinite(v.ref_low) ? v.ref_low : null,
         ref_high: Number.isFinite(v.ref_high) ? v.ref_high : null,
@@ -2162,7 +2461,7 @@ import SiteHeader from "../components/SiteHeader.astro";
 
     // one narrative row per PDF — re-reading replaces, never stacks
     const { error: imgErr } = await supabase.from("imaging_reports").upsert({
-      id: crypto.randomUUID(), user_id: userId, modality: "echo",
+      id: crypto.randomUUID(), user_id: userId, ...personCol(who), modality: "echo",
       report_date: date, report_path: path,
       impression: out.impression ?? null, findings: out.findings ?? null,
     }, { onConflict: "user_id,report_path" });
