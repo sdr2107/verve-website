@@ -324,6 +324,36 @@ import SiteHeader from "../components/SiteHeader.astro";
 
       <!-- ═══ OVERVIEW ═══════════════════════════════════════════════════ -->
       <div id="tab-overview" class="mt-6 hidden">
+        <!-- ═══ PEOPLE AT A GLANCE: one line per person you can see ═══════════
+             Only on your own page, only when there is more than you. A coach's
+             clients and a family are the same table; the heading follows which
+             you have. Tap a row to open that person. -->
+        <section id="glance" class="mb-7 hidden">
+          <div class="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h2 id="glancetitle" class="text-[17px] font-bold tracking-tight text-text-primary">People</h2>
+              <p id="glancesub" class="mt-0.5 text-[12.5px] text-text-tertiary"></p>
+            </div>
+            <p class="text-[12px] text-text-tertiary">People share with you at <span id="glanceaddr" class="font-mono text-[11px] text-text-secondary"></span></p>
+          </div>
+          <div id="glancecards" class="mt-3 hidden gap-3 sm:grid-cols-3"></div>
+          <div class="mt-3 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03]">
+            <table class="w-full min-w-[640px] text-[13px]">
+              <thead>
+                <tr class="text-left font-mono text-[10px] tracking-wider text-text-tertiary">
+                  <th class="px-3 py-2.5 font-semibold">PERSON</th>
+                  <th class="px-3 py-2.5 font-semibold">SEES</th>
+                  <th class="px-3 py-2.5 font-semibold">THIS WEEK</th>
+                  <th class="px-3 py-2.5 font-semibold">FITNESS</th>
+                  <th class="px-3 py-2.5 font-semibold">LATEST LABS</th>
+                  <th class="px-3 py-2.5 font-semibold">UNCHECKED</th>
+                </tr>
+              </thead>
+              <tbody id="glancerows" class="divide-y divide-white/[0.06]"></tbody>
+            </table>
+          </div>
+        </section>
+
         <!-- values for the app that were read but never sent: one line, until it is done -->
         <div id="tosend" class="mb-5 hidden flex-wrap items-center gap-3 rounded-2xl border border-accent/30 bg-accent/[0.06] px-4 py-3.5">
           <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-accent/[0.16]">
@@ -686,7 +716,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     $("upqueue").innerHTML = ""; show("upqueue", false);
     applyPersonMode();
     if (!p.mine && p.id) supabase.rpc("note_grant_view", { person: p.id }).then(() => {}, () => {});   // they can see when you last looked
-    await Promise.all([refresh(), loadPersonNote(), loadSharing()]);
+    await Promise.all([refresh(), loadPersonNote(), loadSharing(), loadGlance()]);
   }
 
   // ── add, edit, remove someone you look after ──────────────────────────
@@ -924,6 +954,94 @@ import SiteHeader from "../components/SiteHeader.astro";
     }));
   }
 
+  // ── people at a glance: every person you can see, one line each ────────
+  // The same table serves a family and a coach. Activity and fitness come
+  // from web_weeks and web_crf (an app export, or later the app's sync);
+  // labs from web_labs; unchecked from the app's rows a labs scope lets
+  // you read. Anything a scope does not cover shows as a dash.
+  const mondayOf = (d: Date) => { const x = new Date(d); const day = x.getDay() === 0 ? 7 : x.getDay(); x.setDate(x.getDate() - day + 1); return x.toLocaleDateString("en-CA"); };
+  const daysBetween = (a: string, b: string) => Math.round((new Date(b + "T00:00:00").getTime() - new Date(a + "T00:00:00").getTime()) / 86400000);
+
+  async function loadGlance() {
+    const others = people.filter((p) => p.id && !p.self);
+    const on = isSelf() && others.length > 0;
+    show("glance", on);
+    if (!on) return;
+    const managed = others.filter((p) => p.mine).length, shared = others.length - managed;
+    const coach = shared > 0 && managed === 0;
+    $("glancetitle").textContent = coach ? "Clients" : "People";
+    $("glancesub").textContent = coach
+      ? `${shared} ${shared === 1 ? "person shares" : "people share"} with you. You see what each chose, and nothing else. Tap a row to open them.`
+      : [managed ? `${managed} you look after` : "", shared ? `${shared} sharing with you` : ""].filter(Boolean).join(", ") + ". Tap a row to open them.";
+    $("glanceaddr").textContent = userEmail;
+
+    const ids = people.filter((p) => p.id).map((p) => p.id);
+    const accounts = people.filter((p) => p.account_id).map((p) => p.account_id!);
+    const [labs, app, weeks, crf] = await Promise.all([
+      supabase.from("web_labs").select("person_id, analyte, value, ref_low, ref_high, ref_text, measured_on")
+        .in("person_id", ids).order("measured_on", { ascending: false }).limit(6000),
+      supabase.from("lab_readings").select("user_id").in("user_id", accounts).eq("review_status", "unchecked").is("deleted_at", null).limit(1000),
+      supabase.from("web_weeks").select("person_id, week_start, met_hours, workouts").in("person_id", ids).order("week_start", { ascending: false }).limit(ids.length * 12),
+      supabase.from("web_crf").select("person_id, measured_on, vo2max").in("person_id", ids).order("measured_on", { ascending: false }).limit(ids.length * 6),
+    ]);
+    if (!isSelf()) return;   // switched away meanwhile
+    const thisMonday = mondayOf(new Date()), today = new Date().toLocaleDateString("en-CA");
+    type Line = { p: Person; sees: string; week: string; weekTone: string; fit: string; labs: string; labsTone: string; unchecked: number; quietDays: number | null; worst: { name: string; value: number; ratio: number } | null };
+    const lines: Line[] = people.filter((p) => p.id).map((p) => {
+      const L = (labs.data ?? []).filter((r: any) => r.person_id === p.id);
+      const latestDay = L[0]?.measured_on ?? "";
+      const latest = L.filter((r: any) => r.measured_on === latestDay);
+      const out = latest.filter((r: any) => inRange(r) === false);
+      // how far the worst value sits outside its range, as a share of the range's edge
+      let worst: Line["worst"] = null;
+      for (const r of out) {
+        const v = Number(r.value), hi = Number(r.ref_high), lo = Number(r.ref_low);
+        const ratio = Number.isFinite(hi) && v > hi ? (v - hi) / hi : Number.isFinite(lo) && v < lo && lo > 0 ? (lo - v) / lo : 0;
+        if (!worst || ratio > worst.ratio) worst = { name: String(r.analyte), value: v, ratio };
+      }
+      const W = (weeks.data ?? []).filter((r: any) => r.person_id === p.id);
+      const cur = W.find((r: any) => r.week_start === thisMonday);
+      const lastActive = W.find((r: any) => Number(r.workouts) > 0)?.week_start ?? "";
+      const quietDays = W.length ? daysBetween(lastActive || W[W.length - 1].week_start, today) : null;
+      const C = (crf.data ?? []).filter((r: any) => r.person_id === p.id && r.vo2max != null);
+      const trend = C.length > 1 ? Number(C[0].vo2max) - Number(C[1].vo2max) : 0;
+      const unchecked = p.account_id ? (app.data ?? []).filter((r: any) => r.user_id === p.account_id).length : 0;
+      return {
+        p,
+        sees: p.self ? "you" : p.mine ? "you look after" : scopeList(p.scopes).toLowerCase() || "nothing yet",
+        week: cur ? `${Number(cur.met_hours).toFixed(1)} MET-h` : W.length ? `0 MET-h` : "—",
+        weekTone: cur ? "text-met-hero" : W.length ? "text-danger" : "text-text-muted",
+        fit: C.length ? `VO₂max ${Math.round(Number(C[0].vo2max))}${C.length > 1 ? (trend >= 1 ? " · rising" : trend <= -1 ? " · falling" : " · flat") : ""}` : "—",
+        labs: latestDay ? `${fmtDay(latestDay)}${out.length ? ` · ${out.length} outside range` : " · all in range"}` : "—",
+        labsTone: out.length ? "text-warning" : "text-text-secondary",
+        unchecked, quietDays, worst,
+      };
+    });
+    $("glancerows").innerHTML = lines.map((l) => `
+      <tr data-open="${l.p.id}" class="cursor-pointer transition-colors hover:bg-white/[0.03]">
+        <td class="px-3 py-2.5 font-semibold text-text-primary">${l.p.self ? "You" : esc(l.p.name || "Unnamed")}</td>
+        <td class="px-3 py-2.5 text-text-tertiary">${esc(l.sees)}</td>
+        <td class="px-3 py-2.5 font-semibold ${l.weekTone}">${esc(l.week)}</td>
+        <td class="px-3 py-2.5 text-text-secondary">${esc(l.fit)}</td>
+        <td class="px-3 py-2.5 ${l.labsTone}">${esc(l.labs)}</td>
+        <td class="px-3 py-2.5 ${l.unchecked ? "text-text-secondary" : "text-text-muted"}">${l.unchecked || "—"}</td>
+      </tr>`).join("");
+    $("glancerows").querySelectorAll("[data-open]").forEach((tr) =>
+      tr.addEventListener("click", () => switchPerson((tr as HTMLElement).dataset.open!)));
+
+    // worth a look, across everyone: the furthest value outside its range,
+    // the longest quiet spell, and values waiting to be checked
+    const cards: string[] = [];
+    const worstLine = lines.filter((l) => l.worst).sort((a, b) => b.worst!.ratio - a.worst!.ratio)[0];
+    if (worstLine) cards.push(`<div class="rounded-2xl border border-warning/40 bg-warning/[0.06] p-4"><div class="font-mono text-[10px] tracking-wider text-warning">OUTSIDE RANGE</div><div class="mt-1 text-[14px] font-bold text-text-primary">${esc(worstLine.p.self ? "Your" : worstLine.p.name + "'s")} ${esc(worstLine.worst!.name)} is ${worstLine.worst!.value}</div><div class="mt-0.5 text-[12.5px] text-text-secondary">${Math.round(worstLine.worst!.ratio * 100)}% past the lab's own range, in the latest report.</div></div>`);
+    const quiet = lines.filter((l) => l.quietDays != null && l.quietDays >= 14 && !l.p.self).sort((a, b) => b.quietDays! - a.quietDays!)[0];
+    if (quiet) cards.push(`<div class="rounded-2xl border border-danger/40 bg-danger/[0.06] p-4"><div class="font-mono text-[10px] tracking-wider text-danger">QUIET</div><div class="mt-1 text-[14px] font-bold text-text-primary">${esc(quiet.p.name)} has logged nothing for ${quiet.quietDays} days</div><div class="mt-0.5 text-[12.5px] text-text-secondary">A message from you, not from Verve.</div></div>`);
+    const un = lines.filter((l) => l.unchecked > 0 && !l.p.self).sort((a, b) => b.unchecked - a.unchecked)[0];
+    if (un) cards.push(`<div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4"><div class="font-mono text-[10px] tracking-wider text-text-tertiary">UNCHECKED</div><div class="mt-1 text-[14px] font-bold text-text-primary">${esc(un.p.name)} has ${un.unchecked} value${un.unchecked === 1 ? "" : "s"} to confirm</div><div class="mt-0.5 text-[12.5px] text-text-secondary">Read from a report, not yet confirmed in the app. Grey until then.</div></div>`);
+    $("glancecards").innerHTML = cards.join("");
+    show("glancecards", cards.length > 0); $("glancecards").classList.toggle("grid", cards.length > 0);
+  }
+
   // one fetch feeds Overview, Labs and the Reports cards
   let allLabs: any[] = [];
   let allImaging: any[] = [];   // imaging_reports — the narrative half of a study
@@ -985,7 +1103,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       setTab(["overview", "labs", "reports"].includes(wanted) ? wanted : "overview");
       await loadPeople();
       applyPersonMode();
-      await Promise.all([refresh(), loadPersonNote(), loadSharing(), loadInvites()]);
+      await Promise.all([refresh(), loadPersonNote(), loadSharing(), loadInvites(), loadGlance()]);
     } else {
       firstName = "";
       people = []; person = null;
