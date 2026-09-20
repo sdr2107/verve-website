@@ -331,6 +331,7 @@ import SiteHeader from "../components/SiteHeader.astro";
         <button data-tab="overview" class="flex-1 rounded-xl px-4 py-2 text-sm font-semibold sm:flex-none">Overview</button>
         <button data-tab="labs" class="flex-1 rounded-xl px-4 py-2 text-sm font-semibold sm:flex-none">Labs</button>
         <button data-tab="reports" class="flex-1 rounded-xl px-4 py-2 text-sm font-semibold sm:flex-none">Reports</button>
+        <button data-tab="depth" class="flex-1 rounded-xl px-4 py-2 text-sm font-semibold sm:flex-none">In depth</button>
       </nav>
       <p id="upmsg" class="mt-3 hidden text-sm"></p>
 
@@ -429,6 +430,25 @@ import SiteHeader from "../components/SiteHeader.astro";
       </div>
 
       <!-- ═══ LABS ═══════════════════════════════════════════════════════ -->
+      <!-- ═══ IN DEPTH: one person, at the depth a coach wants ═══════════════
+           Four cards that answer "how is this person doing", then the four
+           panels behind them: activity, fitness, labs, body. Every number
+           here is computed from rows the page already reads, so a person
+           you look after gets the same page from their exports, and a
+           client's page shows only what their scopes let you read. -->
+      <div id="tab-depth" class="mt-6 hidden">
+        <p id="dp-empty" class="hidden max-w-3xl text-[13.5px] leading-relaxed text-text-tertiary"></p>
+        <div id="dp-cards" class="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4"></div>
+        <div id="dp-panels" class="mt-5 grid gap-4 lg:grid-cols-2">
+          <section id="dp-activity" class="rounded-2xl border border-white/10 bg-white/[0.03] p-5"></section>
+          <section id="dp-fitness" class="rounded-2xl border border-white/10 bg-white/[0.03] p-5"></section>
+          <section id="dp-labs" class="rounded-2xl border border-white/10 bg-white/[0.03] p-5"></section>
+          <section id="dp-body" class="rounded-2xl border border-white/10 bg-white/[0.03] p-5"></section>
+        </div>
+        <div id="dp-changed" class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-2xl border border-white/10 px-5 py-3.5 text-[13px] text-text-secondary"></div>
+        <p class="mt-2 text-[12px] text-text-muted">Ranges are each lab's own. Cadences are the cited ones on the marker pages in the science section; the fitness-test and body-assessment cadences are the app's. None of it is a diagnosis.</p>
+      </div>
+
       <div id="tab-labs" class="mt-6 hidden">
         <div id="labsempty" class="mt-6 hidden rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-text-tertiary">
           Nothing here yet — drop a report on the <button data-goto="reports" class="font-semibold text-accent-light hover:underline">Reports</button> tab and every value in it lands here.
@@ -1297,15 +1317,16 @@ import SiteHeader from "../components/SiteHeader.astro";
   // body scopes they ticked. An export is then only for what sync does
   // not have: weeks from before sync was on, or a person with no account.
   async function loadSynced(accountId: string) {
-    const [a, c, w] = await Promise.all([
-      supabase.from("activities").select("timestamp, duration_minutes, met_hours, intensity_category")
+    const [a, c, w, pr] = await Promise.all([
+      supabase.from("activities").select("timestamp, duration_minutes, met_hours, intensity_category, activity_name, zone2_minutes")
         .eq("user_id", accountId).is("deleted_at", null).order("timestamp", { ascending: true }).limit(6000),
       supabase.from("crf_entries").select("timestamp, met_capacity, performance_category, estimation_method, vo2_max_estimate")
         .eq("user_id", accountId).is("deleted_at", null).order("timestamp", { ascending: true }).limit(300),
       supabase.from("waist_readings").select("measured_at, waist_cm")
         .eq("user_id", accountId).is("deleted_at", null).order("measured_at", { ascending: true }).limit(600),
+      supabase.from("profiles").select("weekly_met_hours_goal, height_cm, sex, age").eq("user_id", accountId).maybeSingle(),
     ]);
-    return { activities: a.data ?? [], crf: c.data ?? [], waist: w.data ?? [] };
+    return { activities: a.data ?? [], crf: c.data ?? [], waist: w.data ?? [], profile: pr.data ?? null };
   }
   /** The app's weeks from its workouts, bucketed the way the app does: by the Monday, in local time. */
   function weeksFrom(activities: any[]): any[] {
@@ -1350,8 +1371,11 @@ import SiteHeader from "../components/SiteHeader.astro";
     allWeeks = mergeBy("week_start", synced ? weeksFrom(synced.activities) : [], w.data ?? []);
     allCrf = mergeBy("measured_on", synced ? crfFromSync(synced.crf) : [], c.data ?? []);
     allBody = mergeBy("measured_on", synced ? bodyFromSync(synced.waist) : [], b.data ?? []);
+    syncActs = synced?.activities ?? [];
+    syncProfile = synced?.profile ?? null;
     renderActivity();
     renderAppImports();
+    renderDepth();
   }
 
   // ── the 21 markers, in the three sections the landing page counts ──────
@@ -1568,6 +1592,251 @@ import SiteHeader from "../components/SiteHeader.astro";
     ].filter(Boolean).join("");
   }
 
+  // ═══ IN DEPTH ════════════════════════════════════════════════════════════
+  // The four questions a coach asks of one person, answered from rows the
+  // page already holds. Nothing here is written anywhere.
+  let syncActs: any[] = [];
+  let syncProfile: any = null;
+
+  /**
+   * The cited retest cadences, in days, from the app's own threshold table:
+   * one figure while the latest reading is in range, a shorter one once it
+   * is outside. The lipid panel shares one draw and one interval.
+   */
+  const RETEST: Record<string, { ok: number; out: number; text: string; source: string }> = {
+    glucose_mgdl:       { ok: 1095, out: 365,  text: "every 3 years · yearly from 100 mg/dL",            source: "ADA Standards of Care 2026" },
+    hba1c_pct:          { ok: 1095, out: 365,  text: "every 3 years · yearly from 5.7%",                 source: "ADA Standards of Care 2026" },
+    bp:                 { ok: 365,  out: 91,   text: "yearly under 120/80 · 3 to 6 months once above",   source: "AHA/ACC 2017" },
+    triglycerides_mgdl: { ok: 1461, out: 1461, text: "every 4 to 6 years · one draw for the panel",       source: "AHA · USPSTF" },
+    hdl_mgdl:           { ok: 1461, out: 1461, text: "every 4 to 6 years · one draw for the panel",       source: "AHA · USPSTF" },
+    apo_b_mgdl:         { ok: 1461, out: 1461, text: "every 4 to 6 years · one draw for the panel",       source: "AHA · USPSTF" },
+    ldl_mgdl:           { ok: 1461, out: 1461, text: "every 4 to 6 years · one draw for the panel",       source: "AHA · USPSTF" },
+    alm_kg:             { ok: 182,  out: 182,  text: "every 6 months",                                   source: "Verve's own cadence, anchored to EWGSOP2" },
+  };
+  const CRF_RETEST = { due: 56, overdue: 112 };          // the app's own reminder: eight weeks, overdue at sixteen
+  const BODY_RETEST = 182;                               // a body assessment every six months, the app's cadence
+  const METHOD_LABEL: Record<string, string> = { cpet: "CPET", "treadmill-test": "treadmill test", "bruce-protocol": "Bruce protocol", "cooper-run": "Cooper run", "1.5-mile-run": "1.5-mile run", "six-minute-walk": "six-minute walk", "one-mile-walk": "one-mile walk" };
+  const MAXIMAL = new Set(["cpet", "treadmill-test", "bruce-protocol", "cooper-run", "1.5-mile-run"]);
+  const methodLabel = (m: unknown) => METHOD_LABEL[String(m ?? "")] ?? String(m ?? "").replace(/-/g, " ");
+  const ORD = ["", "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth"];
+  const ordinal = (n: number) => ORD[n] ?? `${n}th`;
+  const monthOf = (d: string) => new Date(d + "T00:00:00").toLocaleDateString(undefined, { month: "short" });
+  const monthYearOf = (d: string) => new Date(d + "T00:00:00").toLocaleDateString(undefined, { month: "short", year: "numeric" });
+  const addDays = (d: string, n: number) => { const x = new Date(d + "T00:00:00"); x.setDate(x.getDate() + n); return x.toLocaleDateString("en-CA"); };
+  const fmt1 = (v: number) => (Math.round(v * 10) / 10).toString();
+  const signed = (v: number, digits = 1) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(Math.round(v * 10 ** digits) / 10 ** digits)}`;
+  const kicker = (t: string, tone = "text-text-tertiary") => `<div class="font-mono text-[10px] font-semibold tracking-[0.12em] ${tone}">${t}</div>`;
+  const rangeText = (pt: Pt | null) => !pt ? "" : pt.lo != null && pt.hi != null ? `${pt.lo} to ${pt.hi}` : pt.hi != null ? `below ${pt.hi}` : pt.lo != null ? `above ${pt.lo}` : "";
+
+  type Due = { what: string; on: string; days: number; why: string };
+  /** When a marker is next due, from its latest reading and whether that reading sits in the lab's range. */
+  function dueFor(key: string, pts: Pt[]): Due | null {
+    const r = RETEST[key]; if (!r || !pts.length) return null;
+    const last = pts[pts.length - 1];
+    const ranged = [...pts].reverse().find((p) => p.lo != null || p.hi != null) ?? null;
+    const out = ranged ? inRange({ value: last.v, ref_low: ranged.lo, ref_high: ranged.hi }) === false : false;
+    const on = addDays(last.d, out ? r.out : r.ok);
+    return { what: CHART_MARKERS.find((m) => m.key === key)?.label ?? key, on, days: daysBetween(new Date().toLocaleDateString("en-CA"), on), why: r.text };
+  }
+  const dueWord = (d: Due) => d.days < 0 ? `overdue ${Math.abs(d.days) < 14 ? `${Math.abs(d.days)} days` : `${Math.round(Math.abs(d.days) / 7)} weeks`}` : d.days === 0 ? "due today" : d.days < 45 ? `due ${fmtDay(d.on)}` : `due ${monthYearOf(d.on)}`;
+  const dueTone = (d: Due) => d.days < 0 ? "text-danger" : d.days <= 30 ? "text-warning" : "text-text-secondary";
+
+  function renderDepth() {
+    const p = person;
+    if (!p) return;
+    const today = new Date().toLocaleDateString("en-CA"), thisMonday = mondayOf(new Date());
+    const by = markerPoints();
+    const weeks = allWeeks;
+    const nothing = !weeks.length && !allCrf.length && !by.size;
+    show("dp-empty", nothing); show("dp-cards", !nothing); show("dp-panels", !nothing); show("dp-changed", !nothing);
+    $("dp-panels").classList.toggle("grid", !nothing); $("dp-cards").classList.toggle("grid", !nothing); $("dp-changed").classList.toggle("flex", !nothing);
+    if (nothing) {
+      $("dp-empty").textContent = p.self
+        ? "Nothing to go deep on yet. Turn on Cloud Sync in the app, or drop a report or the app's export on the Reports tab, and this page fills itself."
+        : p.mine ? `Nothing on file for ${p.name} yet. Drop a report or an export for them on the Reports tab.`
+        : `${p.name} has not shared anything this page can read yet.`;
+      return;
+    }
+
+    // ── activity ───────────────────────────────────────────────────────────
+    const goal = Number(syncProfile?.weekly_met_hours_goal) || 7.5;
+    const complete = weeks.filter((w) => w.week_start < thisMonday);
+    const recent = (complete.length ? complete : weeks).slice(-4), prior = complete.slice(-8, -4);
+    const sum = (xs: any[], k: string) => xs.reduce((t, w) => t + (Number(w[k]) || 0), 0);
+    const recentAvg = recent.length ? sum(recent, "met_hours") / recent.length : 0;
+    const priorAvg = prior.length ? sum(prior, "met_hours") / prior.length : null;
+    const change = priorAvg && priorAvg > 0 ? (recentAvg - priorAvg) / priorAvg : null;
+    let streak = 0; for (let i = complete.length - 1; i >= 0 && Number(complete[i].met_hours) >= goal; i--) streak++;
+    const lastWorkoutDay = syncActs.length ? localDay(syncActs[syncActs.length - 1].timestamp) : ([...weeks].reverse().find((w) => Number(w.workouts) > 0)?.week_start ?? "");
+    const quietDays = lastWorkoutDay ? daysBetween(lastWorkoutDay, today) : null;
+    const recentActs = syncActs.filter((a) => recent.length && localDay(a.timestamp) >= recent[0].week_start && localDay(a.timestamp) < addDays(recent[recent.length - 1].week_start, 7));
+    const kinds = new Map<string, number>();
+    for (const a of recentActs) { const k = String(a.activity_name ?? "workout").split(/[,(]/)[0].trim().toLowerCase(); kinds.set(k, (kinds.get(k) ?? 0) + 1); }
+    const perWeek = recent.length ? sum(recent, "workouts") / recent.length : 0;
+    const minutes = sum(recent, "minutes"), vig = sum(recent, "vigorous_min");
+    const zone2 = recentActs.length ? recentActs.reduce((t, a) => t + (Number(a.zone2_minutes) || 0), 0) / recent.length : null;
+    const twelve = weeks.slice(-12);
+    const maxW = Math.max(goal, ...twelve.map((w) => Number(w.met_hours)));
+    const bw = 30, gap = 12, left = 24;
+    const ySv = (v: number) => 120 - (v / maxW) * 100;
+    let asvg = `<line x1="${left}" y1="120" x2="528" y2="120" stroke="rgba(255,255,255,0.14)"/>`;
+    asvg += `<line x1="${left}" y1="${ySv(goal).toFixed(1)}" x2="528" y2="${ySv(goal).toFixed(1)}" stroke="#a5b4fc" stroke-opacity="0.7" stroke-dasharray="4 4"/><text x="528" y="${(ySv(goal) - 5).toFixed(1)}" text-anchor="end" fill="#a5b4fc" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">GOAL ${goal}</text>`;
+    twelve.forEach((w, i) => {
+      const x = left + 6 + i * (bw + gap), y = ySv(Number(w.met_hours));
+      const dim = i < twelve.length - Math.min(4, recent.length) || w.week_start >= thisMonday;
+      asvg += `<rect x="${x}" y="${y.toFixed(1)}" width="${bw}" height="${(120 - y).toFixed(1)}" rx="2" fill="#f97316" fill-opacity="${dim ? 0.5 : 1}"><title>Week of ${esc(fmtDay(w.week_start))}: ${fmt1(Number(w.met_hours))} MET-hours, ${w.workouts} workout${Number(w.workouts) === 1 ? "" : "s"}</title></rect>`;
+    });
+    let lastM = "";
+    twelve.forEach((w, i) => { const mo = w.week_start.slice(0, 7); if (mo === lastM) return; lastM = mo; asvg += `<text x="${left + 6 + i * (bw + gap)}" y="134" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${monthOf(w.week_start).toUpperCase()}</text>`; });
+    const kindText = [...kinds].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, n]) => `${k} ${Math.round(n / Math.max(1, recent.length))}`).join(", ");
+    $("dp-activity").innerHTML = `
+      <div class="flex flex-wrap items-baseline justify-between gap-2"><h2 class="text-[17px] font-extrabold text-text-primary">Activity</h2><span class="text-[12.5px] text-text-tertiary">${twelve.length} week${twelve.length === 1 ? "" : "s"} from the app · goal ${goal} MET-hours</span></div>
+      <svg viewBox="0 0 540 140" class="mt-3 block h-auto w-full" role="img" aria-label="Twelve weeks of MET-hours as bars, the latest four brighter, with the goal line">${asvg}</svg>
+      <div class="mt-2 flex flex-col gap-1.5 text-[13px] leading-relaxed text-text-secondary">
+        <div><strong class="text-text-primary">${fmt1(recentAvg)} MET-hours</strong> a week over the last ${recent.length === 1 ? "week" : `${recent.length} weeks`}${change != null ? `, ${change >= 0 ? "up" : "down"} ${Math.round(Math.abs(change) * 100)}% on the ${prior.length} before` : ""}${streak ? ` · ${streak} week${streak === 1 ? "" : "s"} at goal in a row` : " · not at goal last week"}</div>
+        <div>Last workout <strong class="text-text-primary">${quietDays == null ? "none on file" : quietDays === 0 ? "today" : quietDays === 1 ? "yesterday" : `${quietDays} days ago`}</strong>${perWeek ? ` · ${Math.round(perWeek)} a week${kindText ? `: ${esc(kindText)}` : ""}` : ""}</div>
+        <div>${minutes ? `Vigorous share <strong class="text-text-primary">${Math.round((vig / minutes) * 100)}%</strong>` : "No minutes on file"}${zone2 != null ? ` · Zone 2 <strong class="text-text-primary">${Math.round(zone2)} min</strong> a week, scored against each day's own band` : ""}</div>
+      </div>`;
+
+    // ── fitness ────────────────────────────────────────────────────────────
+    const tests = allCrf.filter((c) => c.vo2max != null).map((c) => ({ ...c, v: Number(c.vo2max), max: MAXIMAL.has(String(c.method)) }));
+    const latest = tests[tests.length - 1] ?? null;
+    const prevSame = latest ? [...tests.slice(0, -1)].reverse().find((t) => t.method === latest.method) ?? null : null;
+    const within = latest && prevSame ? latest.v - prevSame.v : null;
+    const trendWord = within == null ? "" : within >= 1 ? "rising" : within <= -1 ? "falling" : "flat";
+    const crfDue: Due | null = latest ? { what: "Fitness test", on: addDays(latest.measured_on, CRF_RETEST.due), days: daysBetween(today, addDays(latest.measured_on, CRF_RETEST.due)), why: "the app's own reminder, eight weeks" } : null;
+    let fsvg = "";
+    if (tests.length) {
+      const vs = tests.map((t) => t.v); const lo = Math.min(...vs) - 2, hi = Math.max(...vs) + 2;
+      const t0 = new Date(tests[0].measured_on + "T00:00:00").getTime(), t1 = Math.max(new Date(tests[tests.length - 1].measured_on + "T00:00:00").getTime(), t0 + 86400000);
+      const xf = (d: string) => 40 + ((new Date(d + "T00:00:00").getTime() - t0) / (t1 - t0)) * 470;
+      const yf = (v: number) => 120 - ((v - lo) / (hi - lo)) * 100;
+      fsvg += `<line x1="24" y1="120" x2="528" y2="120" stroke="rgba(255,255,255,0.14)"/><text x="8" y="124" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${Math.round(lo)}</text><text x="8" y="24" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${Math.round(hi)}</text>`;
+      for (const grp of [false, true]) {
+        const g = tests.filter((t) => t.max === grp);
+        if (g.length > 1) fsvg += `<polyline points="${g.map((t) => `${xf(t.measured_on).toFixed(1)},${yf(t.v).toFixed(1)}`).join(" ")}" fill="none" stroke="${grp ? "#a5b4fc" : "#64748b"}" stroke-width="2"${grp ? "" : ' stroke-dasharray="3 4"'}/>`;
+      }
+      for (const t of tests) fsvg += `<circle cx="${xf(t.measured_on).toFixed(1)}" cy="${yf(t.v).toFixed(1)}" r="${t.max ? 6 : 5}" fill="${t.max ? "#818cf8" : "#64748b"}" stroke="#0D0D1C" stroke-width="2"><title>${esc(fmtDay(t.measured_on))}: ${fmt1(t.v)} by ${esc(methodLabel(t.method))}</title></circle><text x="${xf(t.measured_on).toFixed(1)}" y="${(yf(t.v) - 11).toFixed(1)}" text-anchor="middle" fill="${t.max ? "#c7d2fe" : "#94a3b8"}" font-size="12" font-weight="700">${fmt1(t.v)}</text><text x="${xf(t.measured_on).toFixed(1)}" y="134" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${monthOf(t.measured_on).toUpperCase()}</text>`;
+    }
+    $("dp-fitness").innerHTML = `
+      <div class="flex flex-wrap items-baseline justify-between gap-2"><h2 class="text-[17px] font-extrabold text-text-primary">Fitness</h2><span class="text-[12.5px] text-text-tertiary">Every test, compared only within its method</span></div>
+      ${tests.length ? `<svg viewBox="0 0 540 140" class="mt-3 block h-auto w-full" role="img" aria-label="Fitness tests over time, maximal tests in colour and submaximal in grey">${fsvg}</svg>` : `<p class="mt-3 text-[13px] text-text-tertiary">No fitness test on file.</p>`}
+      ${latest ? `<div class="mt-2 flex flex-col gap-1.5 text-[13px] leading-relaxed text-text-secondary">
+        <div><strong class="text-text-primary">${fmt1(latest.v)} mL/kg/min</strong> by ${esc(methodLabel(latest.method))} on ${esc(fmtDay(latest.measured_on))}${within != null ? ` · ${within >= 0 ? "up" : "down"} ${fmt1(Math.abs(within))} on the ${esc(methodLabel(latest.method))} of ${esc(monthYearOf(prevSame!.measured_on))}` : " · the first of its method"}</div>
+        <div>${tests.some((t) => !t.max) ? "Submaximal tests are shown in grey, never compared with a maximal one" : "All tests on file are maximal"}</div>
+        <div>${latest.category ? `Category <strong class="text-text-primary">${esc(String(latest.category).replace(/-/g, " "))}</strong> · ` : ""}retest <strong class="${crfDue ? dueTone(crfDue) : ""}">${crfDue ? dueWord(crfDue) : ""}</strong>, the app's own reminder</div>
+      </div>` : ""}`;
+
+    // ── labs ───────────────────────────────────────────────────────────────
+    type LabRow = { key: string; label: string; latest: string; tone: string; range: string; since: string; sinceTone: string; retest: string; retestTone: string; out: boolean; d: string; due: Due | null; noFollow: number | null };
+    const labRows: LabRow[] = [];
+    for (const m of CHART_MARKERS) {
+      if (m.section === "muscle" || m.key === "waist_cm") continue;
+      if (m.pair) {
+        const S = by.get("sbp") ?? [], D = by.get("dbp") ?? [];
+        if (!S.length) continue;
+        const s1 = S[S.length - 1], d1 = D.find((x) => x.d === s1.d) ?? D[D.length - 1] ?? null;
+        const s0 = S[S.length - 2] ?? null, d0 = s0 ? (D.find((x) => x.d === s0.d) ?? null) : null;
+        const out = s1.v >= 120 || (d1 ? d1.v >= 80 : false);
+        const due = RETEST.bp ? { what: "Blood pressure", on: addDays(s1.d, out ? RETEST.bp.out : RETEST.bp.ok), days: 0, why: RETEST.bp.text } : null;
+        if (due) due.days = daysBetween(today, due.on);
+        labRows.push({ key: "bp", label: "Blood pressure", latest: `${s1.v}/${d1 ? d1.v : "?"} mmHg`, tone: out ? "text-warning" : "text-text-primary", range: "under 120/80", since: s0 ? `${signed(s1.v - s0.v, 0)}/${d0 && d1 ? signed(d1.v - d0.v, 0) : "?"} since ${monthOf(s0.d)}` : "measured once", sinceTone: out ? "text-warning" : "text-text-secondary", retest: due ? `${dueWord(due)} · ${due.why}` : "—", retestTone: due ? dueTone(due) : "text-text-muted", out, d: s1.d, due, noFollow: null });
+        continue;
+      }
+      const pts = by.get(m.key) ?? [];
+      if (!pts.length) continue;
+      const last = pts[pts.length - 1], prev = pts[pts.length - 2] ?? null;
+      const ranged = [...pts].reverse().find((x) => x.lo != null || x.hi != null) ?? null;
+      const out = ranged ? inRange({ value: last.v, ref_low: ranged.lo, ref_high: ranged.hi }) === false : false;
+      const due = dueFor(m.key, pts);
+      const months = Math.floor(daysBetween(last.d, today) / 30);
+      const noFollow = out && months >= 3 ? months : null;
+      labRows.push({ key: m.key, label: m.label, latest: `${last.v}${last.unit ? ` ${last.unit}` : ""}`, tone: out ? "text-warning" : "text-text-primary", range: ranged ? rangeText(ranged) : "no range on file", since: prev ? `${signed(last.v - prev.v, Number.isInteger(last.v) && Number.isInteger(prev.v) ? 0 : 1)} since ${monthOf(prev.d)}` : "measured once", sinceTone: out ? "text-warning" : prev && ranged && inRange({ value: prev.v, ref_low: ranged.lo, ref_high: ranged.hi }) === false ? "text-success-light" : "text-text-secondary", retest: noFollow ? `outside range, no follow-up in ${noFollow} months` : due ? `${dueWord(due)} · ${due.why}` : "—", retestTone: noFollow ? "text-warning" : due ? dueTone(due) : "text-text-muted", out, d: last.d, due, noFollow });
+    }
+    labRows.sort((a, b) => Number(b.out) - Number(a.out) || b.d.localeCompare(a.d));
+    $("dp-labs").innerHTML = `
+      <div class="flex flex-wrap items-baseline justify-between gap-2"><h2 class="text-[17px] font-extrabold text-text-primary">Labs</h2><span class="text-[12.5px] text-text-tertiary">Against each lab's own printed range</span></div>
+      ${labRows.length ? `<div class="mt-3 overflow-x-auto"><table class="w-full min-w-[520px] border-collapse text-[12.5px]">
+        <thead><tr class="text-left font-mono text-[10px] tracking-[0.1em] text-text-tertiary"><th class="border-b border-white/10 pb-1.5 pr-2 font-semibold">MARKER</th><th class="border-b border-white/10 px-2 pb-1.5 font-semibold">LATEST</th><th class="border-b border-white/10 px-2 pb-1.5 font-semibold">LAB'S RANGE</th><th class="border-b border-white/10 px-2 pb-1.5 font-semibold">SINCE LAST</th><th class="border-b border-white/10 pb-1.5 pl-2 font-semibold">RETEST</th></tr></thead>
+        <tbody>${labRows.map((r) => `<tr><td class="py-1.5 pr-2 font-bold text-text-primary">${esc(r.label)}</td><td class="px-2 py-1.5 font-bold ${r.tone}">${esc(r.latest)}</td><td class="px-2 py-1.5 text-text-tertiary">${esc(r.range)}</td><td class="px-2 py-1.5 ${r.sinceTone}">${esc(r.since)}</td><td class="py-1.5 pl-2 ${r.retestTone}">${esc(r.retest)}</td></tr>`).join("")}</tbody></table></div>`
+        : `<p class="mt-3 text-[13px] text-text-tertiary">No lab values on file.</p>`}`;
+
+    // ── body ───────────────────────────────────────────────────────────────
+    const waist = by.get("waist_cm") ?? [];
+    const wl = waist[waist.length - 1] ?? null;
+    const height = Number(syncProfile?.height_cm) || null;
+    const fat = (by.get("body_fat_pct") ?? []).slice(-1)[0] ?? null, musc = (by.get("skel_musc_pct") ?? []).slice(-1)[0] ?? null;
+    const method = [...allApp].reverse().find((r) => r.body_comp_method)?.body_comp_method ?? null;
+    const female = String(syncProfile?.sex ?? "") === "female";
+    const fn: Array<{ label: string; key: string; unit: string; judge: (v: number) => [string, boolean] }> = [
+      { label: "Grip strength", key: "handgrip_kg", unit: "kg", judge: (v) => [v >= (female ? 16 : 27) ? `above ${female ? 16 : 27}` : `below ${female ? 16 : 27}`, v >= (female ? 16 : 27)] },
+      { label: "Chair stand, 5 rises", key: "chair_stand_seconds", unit: "s", judge: (v) => [v <= 15 ? "under 15" : "over 15", v <= 15] },
+      { label: "Walk speed", key: "gait_speed_ms", unit: "m/s", judge: (v) => [v >= 0.8 ? "above 0.8" : "below 0.8", v >= 0.8] },
+      { label: "Single-leg balance", key: "single_leg_balance_seconds", unit: "s", judge: (v) => [v >= 10 ? "held" : "under 10 s", v >= 10] },
+    ];
+    const fnRows = fn.map((f) => ({ ...f, pt: (by.get(f.key) ?? []).slice(-1)[0] ?? null })).filter((f) => f.pt);
+    const fnDay = fnRows.map((f) => f.pt!.d).sort().pop() ?? "";
+    const muscleDays = [...(by.get("alm_kg") ?? []), ...(by.get("body_fat_pct") ?? []), ...(by.get("skel_musc_pct") ?? []), ...fnRows.map((f) => f.pt!)].map((x) => x.d).sort();
+    const bodyDue: Due | null = muscleDays.length ? { what: "Body assessment", on: addDays(muscleDays[muscleDays.length - 1], BODY_RETEST), days: daysBetween(today, addDays(muscleDays[muscleDays.length - 1], BODY_RETEST)), why: "every 6 months, Verve's own cadence anchored to EWGSOP2" } : null;
+    let wsvg = "";
+    if (waist.length) {
+      const W3 = waist.slice(-6); const vs = W3.map((x) => x.v); const lo = Math.min(...vs) - 1, hi = Math.max(...vs) + 1;
+      const xw = (i: number) => 14 + (W3.length > 1 ? (i / (W3.length - 1)) * 222 : 111), yw = (v: number) => 62 - ((v - lo) / Math.max(1, hi - lo)) * 44;
+      if (W3.length > 1) wsvg += `<polyline points="${W3.map((x, i) => `${xw(i).toFixed(1)},${yw(x.v).toFixed(1)}`).join(" ")}" fill="none" stroke="#a5b4fc" stroke-width="2"/>`;
+      W3.forEach((x, i) => { wsvg += `<circle cx="${xw(i).toFixed(1)}" cy="${yw(x.v).toFixed(1)}" r="5" fill="#818cf8" stroke="#0D0D1C" stroke-width="2"><title>${esc(fmtDay(x.d))}: ${x.v} cm</title></circle><text x="${xw(i).toFixed(1)}" y="${(yw(x.v) - 10).toFixed(1)}" text-anchor="middle" fill="#c7d2fe" font-size="11" font-weight="700">${x.v}</text><text x="${xw(i).toFixed(1)}" y="78" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${monthOf(x.d).toUpperCase()}</text>`; });
+    }
+    $("dp-body").innerHTML = `
+      <div class="flex flex-wrap items-baseline justify-between gap-2"><h2 class="text-[17px] font-extrabold text-text-primary">Body</h2><span class="text-[12.5px] text-text-tertiary">Waist, composition, function</span></div>
+      <div class="mt-3 grid gap-4 sm:grid-cols-2">
+        <div class="flex flex-col gap-2">
+          ${waist.length ? `<svg viewBox="0 0 250 82" class="block h-auto w-full max-w-[250px]" role="img" aria-label="Waist over the last measurements">${wsvg}</svg>` : `<p class="text-[13px] text-text-tertiary">No waist on file.</p>`}
+          ${wl ? `<div class="text-[13px] leading-relaxed text-text-secondary">Waist <strong class="text-text-primary">${wl.v} cm</strong> on ${esc(fmtDay(wl.d))}${height ? ` · waist-to-height <strong class="text-text-primary">${(wl.v / height).toFixed(2)}</strong> at ${height} cm` : ""}</div>` : ""}
+          ${fat || musc ? `<div class="text-[13px] leading-relaxed text-text-secondary">${fat ? `Body fat <strong class="text-text-primary">${fat.v}%</strong>` : ""}${fat && musc ? " · " : ""}${musc ? `muscle mass <strong class="text-text-primary">${musc.v}%</strong>` : ""}${method ? ` · ${esc(String(method).toUpperCase())}` : ""}, ${esc(fmtDay((fat ?? musc)!.d))}</div>` : ""}
+        </div>
+        <div class="flex flex-col gap-1.5">
+          ${fnRows.length ? `${kicker(`FUNCTION · ${fnDay ? esc(fmtDay(fnDay)).toUpperCase() : ""} · AGAINST THE CUT-OFFS THE APP USES`)}${fnRows.map((f) => { const [word, ok] = f.judge(f.pt!.v); return `<div class="flex justify-between gap-3 text-[13px]"><span class="text-text-secondary">${esc(f.label)}</span><span><strong class="text-text-primary">${f.pt!.v} ${f.unit}</strong> <span class="${ok ? "text-success-light" : "text-warning"}">${esc(word)}</span></span></div>`; }).join("")}` : `<p class="text-[13px] text-text-tertiary">No function tests on file: grip, chair stand, walk speed, balance.</p>`}
+          ${bodyDue ? `<div class="mt-1 text-[12px] text-text-muted">Next body assessment <span class="${dueTone(bodyDue)}">${dueWord(bodyDue)}</span>: ${bodyDue.why}</div>` : ""}
+        </div>
+      </div>`;
+
+    // ── the four cards ─────────────────────────────────────────────────────
+    const moving = change == null ? { k: "ACTIVITY", v: recent.length ? `${fmt1(recentAvg)} MET-h` : "—", tone: "", sub: recent.length ? `a week over the last ${recent.length === 1 ? "week" : `${recent.length} weeks`}; not enough weeks before to compare` : "no weeks on file" }
+      : change >= 0.05 ? { k: "MOVING", v: `${signed(change * 100, 0)}%`, tone: "success", sub: `${recent.length}-week MET-hours against the ${prior.length} before` }
+      : change <= -0.05 ? { k: "DECLINING", v: `${signed(change * 100, 0)}%`, tone: "danger", sub: `${recent.length}-week MET-hours against the ${prior.length} before` }
+      : { k: "STEADY", v: `${signed(change * 100, 0)}%`, tone: "", sub: `${recent.length}-week MET-hours against the ${prior.length} before` };
+    const outRows = labRows.filter((r) => r.out);
+    const oldest = outRows.filter((r) => r.noFollow != null).sort((a, b) => b.noFollow! - a.noFollow!)[0];
+    const dues: Due[] = [...labRows.map((r) => r.due).filter((d): d is Due => !!d), ...(crfDue ? [crfDue] : []), ...(bodyDue ? [bodyDue] : [])].sort((a, b) => a.days - b.days);
+    const nextDue = dues[0] ?? null;
+    const card = (k: string, v: string, sub: string, tone = "") => `<div class="flex flex-col gap-1 rounded-2xl border p-4 ${tone === "success" ? "border-success/40 bg-success/[0.06]" : tone === "warning" ? "border-warning/45 bg-warning/[0.06]" : tone === "danger" ? "border-danger/40 bg-danger/[0.06]" : "border-white/10 bg-white/[0.03]"}">${kicker(k, tone === "success" ? "text-success-light" : tone === "warning" ? "text-warning" : tone === "danger" ? "text-danger" : "text-text-tertiary")}<div class="text-[22px] font-extrabold leading-tight text-text-primary">${v}</div><div class="text-[12.5px] leading-snug text-text-tertiary">${sub}</div></div>`;
+    $("dp-cards").innerHTML = [
+      card(moving.k, moving.v, moving.sub, moving.tone),
+      card("FITNESS", latest ? `${fmt1(latest.v)} <span class="text-[13px] font-semibold ${trendWord === "rising" ? "text-success-light" : trendWord === "falling" ? "text-danger" : "text-text-tertiary"}">${trendWord}</span>` : "—", latest ? `VO₂max by ${esc(methodLabel(latest.method))}${within != null ? `, ${within >= 0 ? "up" : "down"} ${fmt1(Math.abs(within))} within the method` : ", first of its method"}` : "no fitness test on file"),
+      card("LABS", labRows.length ? `${outRows.length} <span class="text-[13px] font-semibold ${outRows.length ? "text-warning" : "text-success-light"}">${outRows.length ? "outside range" : "all in range"}</span>` : "—", labRows.length ? (outRows.length ? `${esc(outRows.slice(0, 2).map((r) => r.label).join(" and "))}${outRows.length > 2 ? ` and ${outRows.length - 2} more` : ""}${oldest ? `, no follow-up in ${oldest.noFollow} months` : ""}` : `${labRows.length} marker${labRows.length === 1 ? "" : "s"} on file, latest ${esc(fmtDay(labRows[0].d))}`) : "no lab values on file", outRows.length ? "warning" : ""),
+      card("RETEST DUE", nextDue ? esc(nextDue.what) : "Nothing due", nextDue ? `${esc(nextDue.why)} · ${dueWord(nextDue)}` : "in the cited cadences", nextDue && nextDue.days < 0 ? "danger" : nextDue && nextDue.days <= 30 ? "warning" : ""),
+    ].join("");
+
+    // ── what changed this week ─────────────────────────────────────────────
+    const weekAgo = addDays(today, -7);
+    const events: Array<{ d: string; text: string }> = [];
+    const filedThisWeek = allLabs.filter((r) => String(r.created_at ?? "").slice(0, 10) >= weekAgo);
+    const byDayFiled = new Map<string, any[]>();
+    for (const r of filedThisWeek) { const d = String(r.created_at).slice(0, 10); (byDayFiled.get(d) ?? byDayFiled.set(d, []).get(d)!).push(r); }
+    for (const [d, rows] of byDayFiled) {
+      const named = rows.map((r) => ({ r, key: chartKeyFor(String(r.analyte)) })).filter((x) => x.key && labRows.some((l) => l.key === x.key || (l.key === "bp" && (x.key === "sbp" || x.key === "dbp"))));
+      const pick = named.find((x) => labRows.find((l) => l.key === x.key)?.out) ?? named[0];
+      if (pick) { const l = labRows.find((x) => x.key === pick.key); events.push({ d, text: `${esc(String(pick.r.analyte))} ${pick.r.value} read from a report${l && l.since !== "measured once" ? `, ${esc(l.since)}` : ""}${l?.out ? ", above the lab's range" : ""}` }); }
+      else events.push({ d, text: `${rows.length} value${rows.length === 1 ? "" : "s"} read from a report` });
+    }
+    for (const t of tests.filter((t) => t.measured_on >= weekAgo)) events.push({ d: t.measured_on, text: `${esc(methodLabel(t.method))} ${fmt1(t.v)}${t === latest && within != null ? `, ${within >= 0 ? "up" : "down"} ${fmt1(Math.abs(within))} within the method` : ""}` });
+    if (streak >= 2 && complete.length) events.push({ d: addDays(complete[complete.length - 1].week_start, 6), text: `${ordinal(streak)} week at goal in a row` });
+    if (quietDays != null && quietDays >= 14) events.push({ d: today, text: `${quietDays} days without a workout` });
+    events.sort((a, b) => b.d.localeCompare(a.d));
+    $("dp-changed").innerHTML = kicker("WHAT CHANGED THIS WEEK") + (events.length
+      ? events.slice(0, 4).map((e) => `<span><span class="text-text-muted">${esc(new Date(e.d + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", day: "numeric" }))}</span> ${e.text}</span>`).join("")
+      : `<span class="text-text-tertiary">Nothing new this week.</span>`);
+  }
+
   // ── people at a glance: every person you can see, one line each ────────
   // The same table serves a family and a coach. Activity and fitness come
   // from web_weeks and web_crf (an app export, or later the app's sync);
@@ -1679,7 +1948,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   function setTab(t: string) {
     const switching = activeTab !== t;
     activeTab = t;
-    ["overview", "labs", "reports"].forEach((x) => show("tab-" + x, x === t));
+    ["overview", "labs", "reports", "depth"].forEach((x) => show("tab-" + x, x === t));
     if (switching) {
       const el = $("tab-" + t);
       el.classList.remove("mh-fade");
@@ -1723,7 +1992,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       appLink?.classList.add("hidden");
       show("signout", true); show("home", true); show("auth", false);
       const wanted = window.location.hash.replace("#", "");
-      setTab(["overview", "labs", "reports"].includes(wanted) ? wanted : "overview");
+      setTab(["overview", "labs", "reports", "depth"].includes(wanted) ? wanted : "overview");
       await loadPeople();
       applyPersonMode();
       await Promise.all([refresh(), loadPersonNote(), loadSharing(), loadInvites(), loadAsked(), loadRequests(), loadGlance()]);
