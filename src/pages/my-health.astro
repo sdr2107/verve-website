@@ -338,6 +338,18 @@ import SiteHeader from "../components/SiteHeader.astro";
         <button data-tab="depth" class="flex-1 rounded-xl px-4 py-2 text-sm font-semibold sm:flex-none">In depth</button>
       </nav>
       <p id="upmsg" class="mt-3 hidden text-sm"></p>
+      <!-- search: on Reports, a report by its name, its date, a value read from it or its study;
+           on Labs, a marker by name or section. Every word typed must land. -->
+      <div id="mhsearchwrap" class="mt-3 hidden max-w-3xl">
+        <label for="mhsearch" class="sr-only">Search reports and markers</label>
+        <div class="flex items-center gap-2 rounded-xl border border-white/12 bg-white/[0.04] px-3 focus-within:border-accent/60">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="shrink-0 text-text-muted" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="mhsearch" type="search" autocomplete="off" spellcheck="false" placeholder="Search: ApoB, echo, March 2024, a report's name…"
+            class="min-h-10 w-full bg-transparent text-[14px] text-text-primary placeholder:text-text-muted focus:outline-none" />
+          <button type="button" id="mhsearchclear" class="hidden shrink-0 text-xs font-semibold text-text-tertiary hover:text-text-primary">Clear</button>
+        </div>
+        <p id="mhsearchnote" class="mt-1.5 hidden text-[12px] text-text-tertiary"></p>
+      </div>
 
       <!-- ═══ OVERVIEW ═══════════════════════════════════════════════════ -->
       <div id="tab-overview" class="mt-6 hidden">
@@ -476,6 +488,7 @@ import SiteHeader from "../components/SiteHeader.astro";
         <div id="labsempty" class="mt-6 hidden rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-text-tertiary">
           Nothing here yet — drop a report on the <button data-goto="reports" class="font-semibold text-accent-light hover:underline">Reports</button> tab and every value in it lands here.
         </div>
+        <p id="labsnomatch" class="mt-6 hidden rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-text-tertiary"></p>
         <div class="mt-4 flex flex-col gap-4 md:flex-row">
           <nav id="labsrail" class="flex flex-col gap-1.5 md:w-56 md:shrink-0"></nav>
           <div id="labspanel" class="hidden min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/[0.03] p-5 md:block"></div>
@@ -2082,12 +2095,48 @@ import SiteHeader from "../components/SiteHeader.astro";
   let expandedAnalyte = "";          // one chart open at a time
   let mobileSectionOpen = false;     // phone: section list ⇄ section page
 
+  // ── search: every word typed must land ──────────────────────────────────
+  let searchQuery = "";
+  const searchTerms = () => searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
+  const landsAll = (hay: string, terms: string[]) => terms.every((t) => hay.includes(t));
+  /** A date, every way someone might type it: 2026-09-12, Sep 12, September, 2026. */
+  function dateHay(d: string): string {
+    if (!d) return "undated";
+    const dt = new Date(d.slice(0, 10) + "T00:00:00");
+    return `${d.slice(0, 10)} ${fmtDay(d.slice(0, 10))} ${dt.toLocaleDateString(undefined, { month: "long" })} ${dt.toLocaleDateString(undefined, { month: "short" })} ${dt.getFullYear()}`.toLowerCase();
+  }
+  /** The Labs sections with only the markers the search lands on; all of them when nothing is typed. */
+  function filteredSecs(): Map<string, Map<string, any[]>> {
+    const terms = searchTerms();
+    if (!terms.length) return labSecs;
+    const out = new Map<string, Map<string, any[]>>();
+    for (const [sec, analytes] of labSecs) {
+      for (const [name, rows] of analytes) {
+        if (landsAll(`${name} ${SECTIONS[sec] ?? ""} ${sec}`.toLowerCase(), terms)) (out.get(sec) ?? out.set(sec, new Map()).get(sec)!).set(name, rows);
+      }
+    }
+    return out;
+  }
+  const searchNote = (text: string) => { const el = $("mhsearchnote"); el.textContent = text; el.classList.toggle("hidden", !text); };
+  let searchTimer = 0;
+  $("mhsearch").addEventListener("input", () => {
+    window.clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(() => {
+      searchQuery = ($("mhsearch") as HTMLInputElement).value.trim();
+      show("mhsearchclear", !!searchQuery);
+      if (!searchQuery) searchNote("");
+      renderLabsRail(); renderLabsPanel(); renderReports();
+    }, 120);
+  });
+  $("mhsearchclear").addEventListener("click", () => { ($("mhsearch") as HTMLInputElement).value = ""; $("mhsearch").dispatchEvent(new Event("input")); $("mhsearch").focus(); });
+
   // ── tabs ───────────────────────────────────────────────────────────────
   let activeTab = "overview";
   function setTab(t: string) {
     const switching = activeTab !== t;
     activeTab = t;
     ["overview", "labs", "reports", "depth"].forEach((x) => show("tab-" + x, x === t));
+    show("mhsearchwrap", t === "labs" || t === "reports");
     if (switching) {
       const el = $("tab-" + t);
       el.classList.remove("mh-fade");
@@ -2842,14 +2891,24 @@ import SiteHeader from "../components/SiteHeader.astro";
   function renderLabsRail() {
     const empty = allLabs.length === 0;
     show("labsempty", empty);
-    if (empty) { $("labsrail").innerHTML = ""; $("labspanel").innerHTML = ""; wireGoto(); return; }
+    if (empty) { $("labsrail").innerHTML = ""; $("labspanel").innerHTML = ""; show("labsnomatch", false); wireGoto(); return; }
+    const view = filteredSecs();
+    const terms = searchTerms();
+    if (terms.length) {
+      const n = [...view.values()].reduce((t, m) => t + m.size, 0);
+      if (activeTab === "labs") searchNote(n ? `${n} marker${n === 1 ? " matches" : "s match"}` : "");
+      $("labsnomatch").textContent = `No marker matches "${searchQuery}". Try a section, like liver, or part of a name.`;
+      show("labsnomatch", n === 0);
+      if (n === 0) { $("labsrail").innerHTML = ""; $("labspanel").innerHTML = ""; return; }
+    } else show("labsnomatch", false);
+    if (!view.has(labSection)) labSection = SECTION_ORDER.find((x) => view.has(x)) ?? "";
 
     // phone: the section list IS the page until a section opens
     $("labsrail").className = `${mobileSectionOpen ? "hidden md:flex" : "flex"} flex-col gap-1.5 md:w-56 md:shrink-0`;
     $("labspanel").className = `${mobileSectionOpen ? "" : "hidden md:block"} min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/[0.03] p-5`;
 
-    $("labsrail").innerHTML = SECTION_ORDER.filter((s) => labSecs.has(s)).map((s) => {
-      const analytes = [...labSecs.get(s)!.values()];
+    $("labsrail").innerHTML = SECTION_ORDER.filter((s) => view.has(s)).map((s) => {
+      const analytes = [...view.get(s)!.values()];
       const flagged = analytes.filter((rs) => inRange(rs[rs.length - 1]) === false).length;
       const on = s === labSection;
       return `
@@ -2869,7 +2928,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   }
 
   function renderLabsPanel() {
-    const sec = labSecs.get(labSection);
+    const sec = filteredSecs().get(labSection);
     if (!sec) { $("labspanel").innerHTML = ""; return; }
     const analytes = [...sec.entries()];
     const flagged = analytes.filter(([, rs]) => inRange(rs[rs.length - 1]) === false).length;
@@ -3096,9 +3155,21 @@ import SiteHeader from "../components/SiteHeader.astro";
     }
     dated.sort((x, y) => (y.date || "").localeCompare(x.date || "") || stampOf(y.f.name) - stampOf(x.f.name));
 
+    // the search: a report matches when every word lands in its name, its date, a value read from it, or its study
+    const terms = searchTerms();
+    const hayByPath = new Map<string, string>();
+    if (terms.length) {
+      for (const r of allLabs) if (r.report_path) hayByPath.set(r.report_path, `${hayByPath.get(r.report_path) ?? ""} ${canonName(String(r.analyte))} ${r.value}${r.unit ? ` ${r.unit}` : ""}`.toLowerCase());
+      for (const im of allImaging) if (im.report_path) hayByPath.set(im.report_path, `${hayByPath.get(im.report_path) ?? ""} ${im.modality} imaging ${im.modality === "echo" ? "2d echo echocardiogram" : ""} ${im.impression ?? ""}`.toLowerCase());
+    }
+    const shown = terms.length
+      ? dated.filter((d) => landsAll(`${pretty(d.f.name)} ${dateHay(d.date)} ${hayByPath.get(d.path) ?? ""}${d.im ? "" : ""}`.toLowerCase(), terms))
+      : dated;
+    if (terms.length && activeTab === "reports") searchNote(`${shown.length} of ${dated.length} report${dated.length === 1 ? "" : "s"} ${shown.length === 1 ? "matches" : "match"}`);
+
     // a year at a time, newest first, every year closed until tapped; inside it, a month at a time
     const years = new Map<string, typeof dated>();
-    for (const d of dated) {
+    for (const d of shown) {
       const y = d.date ? d.date.slice(0, 4) : "Undated";
       (years.get(y) ?? years.set(y, []).get(y)!).push(d);
     }
@@ -3169,7 +3240,7 @@ import SiteHeader from "../components/SiteHeader.astro";
         </div>`;
     };
 
-    $("repcards").innerHTML = [...years.entries()].map(([y, list]) => `
+    $("repcards").innerHTML = (terms.length && !shown.length ? `<p class="rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm text-text-tertiary">No report matches "${esc(searchQuery)}". A report matches by its name, its date, a value read from it, or its study.</p>` : "") + [...years.entries()].map(([y, list]) => `
       <details class="group">
         <summary class="flex cursor-pointer list-none items-center gap-2.5 py-1 text-text-primary [&::-webkit-details-marker]:hidden">
           <span class="font-mono text-[13px] font-bold">${esc(y)}</span>
