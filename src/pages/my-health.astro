@@ -278,6 +278,10 @@ import SiteHeader from "../components/SiteHeader.astro";
             class="mt-1 w-full resize-none rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[14px] leading-relaxed text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"></textarea>
         </div>
 
+        <!-- the plan this account holds, and the way to the plans page; only once plans are open -->
+        <p id="planline" class="mt-2 hidden text-[12px] text-text-tertiary"></p>
+        <!-- over the plan's people: the next person is not added, and this says why -->
+        <div id="planpeople" class="mt-3 hidden max-w-3xl flex-col gap-2 rounded-2xl border border-warning/50 bg-warning/[0.06] p-4"></div>
         <!-- invitations waiting for you: someone asked you to look at their page -->
         <div id="invites" class="mt-3 hidden max-w-3xl flex-col gap-3"></div>
         <!-- people you asked to share their page with you: waiting until they decide -->
@@ -341,6 +345,8 @@ import SiteHeader from "../components/SiteHeader.astro";
              Only on your own page, only when there is more than you. A coach's
              clients and a family are the same table; the heading follows which
              you have. Tap a row to open that person. -->
+        <!-- the plan gate: the group view is on Max -->
+        <div id="glancelocked" class="mb-7 hidden max-w-2xl flex-col gap-3 rounded-2xl border border-dashed border-accent/50 bg-accent/[0.05] p-5"></div>
         <section id="glance" class="mb-7 hidden">
           <div class="flex flex-wrap items-end justify-between gap-2">
             <div>
@@ -452,6 +458,8 @@ import SiteHeader from "../components/SiteHeader.astro";
            you look after gets the same page from their exports, and a
            client's page shows only what their scopes let you read. -->
       <div id="tab-depth" class="mt-6 hidden">
+        <!-- the plan gate: in depth is on Pro for yourself, on Max for everyone you see -->
+        <div id="dp-locked" class="hidden max-w-2xl flex-col gap-3 rounded-2xl border border-dashed border-accent/50 bg-accent/[0.05] p-5"></div>
         <p id="dp-empty" class="hidden max-w-3xl text-[13.5px] leading-relaxed text-text-tertiary"></p>
         <div id="dp-cards" class="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4"></div>
         <div id="dp-panels" class="mt-5 grid gap-4 lg:grid-cols-2">
@@ -637,6 +645,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   import { canonName, unitKey } from "../lib/canon.js";
   import { AUTO_SEND_TO_APP } from "../data/site";
+  import { PLANS_ENFORCED, PLANS_OPEN, entitlements, planOf, type PlanKey } from "../data/plans";
 
   // ── tiny DOM helpers ───────────────────────────────────────────────────
   const $ = (id: string) => document.getElementById(id)!;
@@ -692,6 +701,49 @@ import SiteHeader from "../components/SiteHeader.astro";
   let fullName = "";
   let firstName = "";
   let parsed: { path: string; lpa_unit: string | null; dupKeys: Set<string> } | null = null;
+
+  // ── the plan this account holds ─────────────────────────────────────────
+  // One login, three plans. The plan sits on whoever pays and decides how
+  // many people they can see and how deep; consent is free on every plan.
+  // Read once at sign-in from my_plan(), which folds in the grace period
+  // and the VIP list. Nothing is held to a plan until PLANS_ENFORCED is on;
+  // the owner can preview the gate with sessionStorage mh-plans-enforce=1,
+  // which can only make the page stricter, never looser.
+  let plan: PlanKey = "free";
+  let ent = entitlements("free");
+  const enforced = (() => { try { return PLANS_ENFORCED || sessionStorage.getItem("mh-plans-enforce") === "1"; } catch { return PLANS_ENFORCED; } })();
+  async function loadPlan() {
+    plan = "free";
+    try {
+      const { data, error } = await supabase.rpc("my_plan");
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!error && row?.plan && ["free", "pro", "max", "enterprise"].includes(row.plan)) plan = row.plan;
+    } catch { /* the function may not exist yet: free */ }
+    ent = entitlements(plan);
+    show("planline", PLANS_OPEN);
+    if (PLANS_OPEN) $("planline").innerHTML = plan === "free"
+      ? `Free plan · <a href="/plans" class="font-semibold text-accent-light hover:text-text-primary">see the plans</a>`
+      : `${esc(planOf(plan).name)} plan · <a href="/plans" class="font-semibold text-accent-light hover:text-text-primary">plans</a>`;
+  }
+  const lockCard = (title: string, body: string, cta = "See the plans") => `
+    <div class="text-[17px] font-extrabold text-text-primary">${title}</div>
+    <p class="text-[13.5px] leading-relaxed text-text-secondary">${body}</p>
+    <div class="flex flex-wrap gap-2"><a href="/plans" class="inline-flex min-h-10 items-center rounded-xl bg-accent px-4 text-sm font-bold text-canvas">${cta}</a><button type="button" data-goto="overview" class="min-h-10 px-3 text-sm font-semibold text-text-secondary hover:text-text-primary">Not now</button></div>`;
+  /** People besides you that count against the plan: looked after, or sharing with you. */
+  const peopleCount = () => people.filter((p) => p.id && !p.self).length;
+  /** Whether one more person may be added, and if not, why. */
+  function roomForOneMore(): { ok: boolean; why: string } {
+    if (!enforced) return { ok: true, why: "" };
+    const max = ent.peopleMax;
+    const n = peopleCount() + 1;   // you included
+    if (max != null && n >= max) {
+      const name = planOf(plan).name;
+      return { ok: false, why: plan === "free"
+        ? `The free plan lets you see one other person. Pro is the same; Max holds five in all, and Enterprise has no family limit.`
+        : `${name} holds ${max} people, and you have ${n}. To add another, remove someone, or move to ${plan === "max" ? "Enterprise, which has no family limit" : "Max"}.` };
+    }
+    return { ok: true, why: "" };
+  }
 
   // ── people: whose page this is ─────────────────────────────────────────
   // Every row belongs to a person. A person is one of three things: your own
@@ -852,8 +904,14 @@ import SiteHeader from "../components/SiteHeader.astro";
     if (sw.open && !t.closest("#sharewrap")) sw.open = false;
   });
   $("personcancel").addEventListener("click", closePersonForm);
+  function showPlanPeople(why: string) {
+    $("planpeople").innerHTML = lockCard("No room on this plan for one more.", why, plan === "max" ? "See Enterprise" : "See the plans");
+    show("planpeople", true); $("planpeople").classList.add("flex");
+    $("planpeople").querySelector("[data-goto]")?.addEventListener("click", () => { show("planpeople", false); $("planpeople").classList.remove("flex"); });
+  }
   $("personform").addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (!editingPerson) { const room = roomForOneMore(); if (!room.ok) { closePersonForm(); showPlanPeople(room.why); return; } }
     if (!editingPerson && personMode === "ask") { await askToShare(($("personemail") as HTMLInputElement).value.trim().toLowerCase()); return; }
     const name = ($("personname") as HTMLInputElement).value.trim();
     const bornRaw = ($("personborn") as HTMLInputElement).value.trim();
@@ -1187,6 +1245,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       (Array.isArray(data.activities) || Array.isArray(data.labReadings) || Array.isArray(data.weeklySummaries) || Array.isArray(data.crfEntries));
     if (!looks) { qset(rid, "SKIPPED", "bad", "Not a Verve export: no activities, readings or weeks in it"); return "skip"; }
     if (!who.id) { qset(rid, "SKIPPED", "bad", "The people tables are not set up yet, so there is nowhere to keep this"); return "skip"; }
+    if (enforced && !ent.importExport) { qset(rid, "ON PRO", "bad", "The app's export is imported on Pro and above. The file was not kept; the plans page has the details."); return "skip"; }
     const exportedOn = String(data.exportedAt ?? "").slice(0, 10) || new Date().toISOString().slice(0, 10);
     const tag = `export:${exportedOn}:${Date.now()}`;   // which export, and when it was dropped here
 
@@ -1758,6 +1817,16 @@ import SiteHeader from "../components/SiteHeader.astro";
   function renderDepth() {
     const p = person;
     if (!p) return;
+    const locked = enforced && (p.self ? !ent.depthSelf : !ent.depthOthers);
+    show("dp-locked", locked); $("dp-locked").classList.toggle("flex", locked);
+    if (locked) {
+      $("dp-locked").innerHTML = p.self
+        ? lockCard("In depth is on Pro.", "Four cards that say how you are doing, then activity, fitness, labs and body with the working shown. Your Overview, Labs and Reports stay as they are.")
+        : lockCard("In depth on other people is on Max.", `${esc(p.name || "This person")}'s Overview, Labs and Reports are here as before. In depth on everyone you see, and the group ranked by movement, come with Max; Enterprise adds clients without a family limit.`);
+      $("dp-locked").querySelector("[data-goto]")?.addEventListener("click", () => setTab("overview"));
+      ["dp-empty", "dp-cards", "dp-panels", "dp-changed"].forEach((id) => show(id, false));
+      return;
+    }
     const today = new Date().toLocaleDateString("en-CA"), thisMonday = mondayOf(new Date());
     const by = markerPoints();
     const nothing = !allWeeks.length && !allCrf.length && !by.size;
@@ -1904,8 +1973,14 @@ import SiteHeader from "../components/SiteHeader.astro";
   async function loadGlance() {
     const others = people.filter((p) => p.id && !p.self);
     const on = isSelf() && others.length > 0;
-    show("glance", on);
-    if (!on) return;
+    const locked = on && enforced && !ent.depthOthers;
+    show("glancelocked", locked); $("glancelocked").classList.toggle("flex", locked);
+    if (locked) {
+      $("glancelocked").innerHTML = lockCard("The group is on Max.", `${others.length === 1 ? "The person" : `The ${others.length} people`} you can see ${others.length === 1 ? "is" : "are"} in the chips above, each with their own page. One table across everyone, ranked by movement, with this week and retest due, comes with Max; Enterprise adds clients without a family limit.`);
+      $("glancelocked").querySelector("[data-goto]")?.addEventListener("click", () => { show("glancelocked", false); $("glancelocked").classList.remove("flex"); });
+    }
+    show("glance", on && !locked);
+    if (!on || locked) return;
     const managed = others.filter((p) => p.mine).length, shared = others.length - managed;
     const coach = shared > 0 && managed === 0;
     $("glancetitle").textContent = coach ? "Clients" : "People";
@@ -2057,7 +2132,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       show("signout", true); show("home", true); show("auth", false);
       const wanted = window.location.hash.replace("#", "");
       setTab(["overview", "labs", "reports", "depth"].includes(wanted) ? wanted : "overview");
-      await loadPeople();
+      await Promise.all([loadPeople(), loadPlan()]);
       applyPersonMode();
       await Promise.all([refresh(), loadPersonNote(), loadSharing(), loadInvites(), loadAsked(), loadRequests(), loadGlance()]);
     } else {
@@ -3311,7 +3386,9 @@ import SiteHeader from "../components/SiteHeader.astro";
           qset(rowId(i), "REMOVED", "ok", "Not filed. The file is gone."); skippedN++; continue;
         }
         if (choice.kind === "add") {
-          const made = await addPerson(choice.name, null);
+          const room = roomForOneMore();
+          const made = room.ok ? await addPerson(choice.name, null) : null;
+          if (!room.ok) { showPlanPeople(room.why); qset(rowId(i), "FILED HERE", "ok", `${out.patient_name}: no room on your plan for one more person, so it is filed under ${person!.self ? "you" : person!.name}.`); }
           if (made) {
             const moved = `${folderOf(made)}/${path.split("/").pop()}`;
             const { error: mvErr } = await supabase.storage.from("reports").move(path, moved);

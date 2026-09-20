@@ -8,6 +8,8 @@
  * four appeared.
  */
 
+import { PLANS_OPEN } from "./plans";
+
 export const APP_STORE_URL = "https://apps.apple.com/app/id6760022278";
 /**
  * Google Play, once the Android app ships: put its address here and /get
@@ -32,7 +34,7 @@ export const SUBSTACK_URL =
   "https://substack.com/@roplekarsudeep?r=596iu&utm_campaign=profile&utm_medium=profile-page";
 export const PRIVACY_URL = "https://sdr2107.github.io/verve-privacy/";
 
-export type NavKey = "science" | "my-health" | "x" | "substack";
+export type NavKey = "science" | "my-health" | "plans" | "x" | "substack";
 
 export interface NavLink {
   key: NavKey;
@@ -45,6 +47,8 @@ export interface NavLink {
 export const NAV: NavLink[] = [
   { key: "science", label: "Science", href: "/science" },
   { key: "my-health", label: "My health", href: "/my-health" },
+  // the plans page joins the nav when plans open; until then it is a preview at /plans
+  ...(PLANS_OPEN ? [{ key: "plans" as const, label: "Plans", href: "/plans" }] : []),
   { key: "x", label: "X", href: X_URL, external: true },
   { key: "substack", label: "Substack", href: SUBSTACK_URL, external: true },
 ];
