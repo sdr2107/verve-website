@@ -1259,9 +1259,9 @@ import SiteHeader from "../components/SiteHeader.astro";
       by.set(tag, imp);
       return imp;
     };
-    for (const w of allWeeks) if (isTag(w.import_tag)) get(w.import_tag).weeks++;
-    for (const c of allCrf) if (isTag(c.import_tag)) get(c.import_tag).crf++;
-    for (const b of allBody) if (isTag(b.import_tag)) get(b.import_tag).body++;
+    for (const w of exportRows.weeks) if (isTag(w.import_tag)) get(w.import_tag).weeks++;
+    for (const c of exportRows.crf) if (isTag(c.import_tag)) get(c.import_tag).crf++;
+    for (const b of exportRows.body) if (isTag(b.import_tag)) get(b.import_tag).body++;
     for (const r of allLabs) if (isTag(r.report_path)) get(r.report_path).labs++;
     const imps = [...by.values()].sort((a, b) => b.tag.localeCompare(a.tag));
     show("appimports", imps.length > 0);
@@ -1285,17 +1285,71 @@ import SiteHeader from "../components/SiteHeader.astro";
 
   // ── activity and fitness on the Overview: the app's weeks, a marker on top ─
   let allWeeks: any[] = [], allCrf: any[] = [], allBody: any[] = [];
+  /** The export tables' own rows, before sync overrides any: what each import brought, for the list on Reports. */
+  let exportRows: { weeks: any[]; crf: any[]; body: any[] } = { weeks: [], crf: [], body: [] };
   let pickedMarker = "";
+
+  // ── the app's sync: the source for anyone with an account ──────────────
+  // Cloud Sync in the app is free and automatic, and it already carries
+  // every workout, fitness test and waist reading. For a person with an
+  // account those rows are read straight from the app's tables, yours
+  // through your own policies and a client's through the activity and
+  // body scopes they ticked. An export is then only for what sync does
+  // not have: weeks from before sync was on, or a person with no account.
+  async function loadSynced(accountId: string) {
+    const [a, c, w] = await Promise.all([
+      supabase.from("activities").select("timestamp, duration_minutes, met_hours, intensity_category")
+        .eq("user_id", accountId).is("deleted_at", null).order("timestamp", { ascending: true }).limit(6000),
+      supabase.from("crf_entries").select("timestamp, met_capacity, performance_category, estimation_method, vo2_max_estimate")
+        .eq("user_id", accountId).is("deleted_at", null).order("timestamp", { ascending: true }).limit(300),
+      supabase.from("waist_readings").select("measured_at, waist_cm")
+        .eq("user_id", accountId).is("deleted_at", null).order("measured_at", { ascending: true }).limit(600),
+    ]);
+    return { activities: a.data ?? [], crf: c.data ?? [], waist: w.data ?? [] };
+  }
+  /** The app's weeks from its workouts, bucketed the way the app does: by the Monday, in local time. */
+  function weeksFrom(activities: any[]): any[] {
+    const by = new Map<string, any>();
+    for (const a of activities) {
+      if (!a?.timestamp) continue;
+      const start = mondayOf(new Date(a.timestamp));
+      const w = by.get(start) ?? { week_start: start, met_hours: 0, minutes: 0, light_min: 0, moderate_min: 0, vigorous_min: 0, workouts: 0, source: "sync" };
+      const mins = Number(a.duration_minutes) || 0;
+      w.met_hours += Number(a.met_hours) || 0; w.minutes += mins; w.workouts += 1;
+      const cat = String(a.intensity_category ?? "");
+      if (cat === "vigorous") w.vigorous_min += mins; else if (cat === "moderate") w.moderate_min += mins; else w.light_min += mins;
+      by.set(start, w);
+    }
+    return [...by.values()].map((w) => ({ ...w, met_hours: Math.round(w.met_hours * 100) / 100 })).sort((x, y) => x.week_start.localeCompare(y.week_start));
+  }
+  const crfFromSync = (rows: any[]) => rows.filter((c) => c?.timestamp).map((c) => ({
+    measured_on: localDay(c.timestamp),
+    vo2max: c.vo2_max_estimate ?? (c.met_capacity != null ? Math.round(Number(c.met_capacity) * 3.5 * 10) / 10 : null),
+    met_capacity: c.met_capacity ?? null, method: c.estimation_method ?? null, category: c.performance_category ?? null, source: "sync",
+  }));
+  const bodyFromSync = (rows: any[]) => rows.filter((w) => w?.measured_at && w.waist_cm != null).map((w) => ({ measured_on: localDay(w.measured_at), waist_cm: w.waist_cm, source: "sync" }));
+  /** Sync rows first; a fallback row only for a key sync does not have. Within sync, the last row for a key wins. */
+  function mergeBy(key: string, primary: any[], fallback: any[]): any[] {
+    const out = new Map<string, any>();
+    for (const r of fallback) out.set(String(r[key]), r);
+    for (const r of primary) out.set(String(r[key]), r);
+    return [...out.values()].sort((x, y) => String(x[key]).localeCompare(String(y[key])));
+  }
+
   async function loadActivity() {
     const p = person;
     if (!p?.id) { show("activitywrap", false); show("appimports", false); return; }
-    const [w, c, b] = await Promise.all([
+    const [w, c, b, synced] = await Promise.all([
       supabase.from("web_weeks").select("week_start, met_hours, minutes, moderate_min, vigorous_min, workouts, import_tag").eq("person_id", p.id).order("week_start", { ascending: true }).limit(260),
       supabase.from("web_crf").select("measured_on, vo2max, met_capacity, method, import_tag").eq("person_id", p.id).order("measured_on", { ascending: true }).limit(100),
       supabase.from("web_body").select("measured_on, waist_cm, weight_kg, import_tag").eq("person_id", p.id).order("measured_on", { ascending: true }).limit(400),
+      p.account_id ? loadSynced(p.account_id) : Promise.resolve(null),
     ]);
     if (person?.id !== p.id) return;   // switched away meanwhile
-    allWeeks = w.data ?? []; allCrf = c.data ?? []; allBody = b.data ?? [];
+    exportRows = { weeks: w.data ?? [], crf: c.data ?? [], body: b.data ?? [] };
+    allWeeks = mergeBy("week_start", synced ? weeksFrom(synced.activities) : [], w.data ?? []);
+    allCrf = mergeBy("measured_on", synced ? crfFromSync(synced.crf) : [], c.data ?? []);
+    allBody = mergeBy("measured_on", synced ? bodyFromSync(synced.waist) : [], b.data ?? []);
     renderActivity();
     renderAppImports();
   }
@@ -1537,15 +1591,21 @@ import SiteHeader from "../components/SiteHeader.astro";
 
     const ids = people.filter((p) => p.id).map((p) => p.id);
     const accounts = people.filter((p) => p.account_id).map((p) => p.account_id!);
-    const [labs, app, weeks, crf] = await Promise.all([
+    const thisMonday = mondayOf(new Date()), today = new Date().toLocaleDateString("en-CA");
+    const since = new Date(new Date(thisMonday + "T00:00:00").getTime() - 12 * 7 * 86400000).toISOString();
+    const [labs, app, weeks, crf, acts, tests] = await Promise.all([
       supabase.from("web_labs").select("person_id, analyte, value, ref_low, ref_high, ref_text, measured_on")
         .in("person_id", ids).order("measured_on", { ascending: false }).limit(6000),
       supabase.from("lab_readings").select("user_id").in("user_id", accounts).eq("review_status", "unchecked").is("deleted_at", null).limit(1000),
       supabase.from("web_weeks").select("person_id, week_start, met_hours, workouts").in("person_id", ids).order("week_start", { ascending: false }).limit(ids.length * 12),
       supabase.from("web_crf").select("person_id, measured_on, vo2max").in("person_id", ids).order("measured_on", { ascending: false }).limit(ids.length * 6),
+      // the app's own rows, for everyone with an account: the last twelve weeks of workouts, and every fitness test
+      supabase.from("activities").select("user_id, timestamp, duration_minutes, met_hours, intensity_category")
+        .in("user_id", accounts).is("deleted_at", null).gte("timestamp", since).order("timestamp", { ascending: false }).limit(accounts.length * 400),
+      supabase.from("crf_entries").select("user_id, timestamp, met_capacity, vo2_max_estimate")
+        .in("user_id", accounts).is("deleted_at", null).order("timestamp", { ascending: false }).limit(accounts.length * 40),
     ]);
     if (!isSelf()) return;   // switched away meanwhile
-    const thisMonday = mondayOf(new Date()), today = new Date().toLocaleDateString("en-CA");
     type Line = { p: Person; sees: string; week: string; weekTone: string; fit: string; labs: string; labsTone: string; unchecked: number; quietDays: number | null; worst: { name: string; value: number; ratio: number } | null };
     const lines: Line[] = people.filter((p) => p.id).map((p) => {
       const L = (labs.data ?? []).filter((r: any) => r.person_id === p.id);
@@ -1559,11 +1619,14 @@ import SiteHeader from "../components/SiteHeader.astro";
         const ratio = Number.isFinite(hi) && v > hi ? (v - hi) / hi : Number.isFinite(lo) && v < lo && lo > 0 ? (lo - v) / lo : 0;
         if (!worst || ratio > worst.ratio) worst = { name: String(r.analyte), value: v, ratio };
       }
-      const W = (weeks.data ?? []).filter((r: any) => r.person_id === p.id);
+      // sync where there is an account, the export tables where there is not
+      const mine = p.account_id ? (acts.data ?? []).filter((a: any) => a.user_id === p.account_id) : [];
+      const W = mine.length ? weeksFrom(mine).reverse() : (weeks.data ?? []).filter((r: any) => r.person_id === p.id);
       const cur = W.find((r: any) => r.week_start === thisMonday);
-      const lastActive = W.find((r: any) => Number(r.workouts) > 0)?.week_start ?? "";
-      const quietDays = W.length ? daysBetween(lastActive || W[W.length - 1].week_start, today) : null;
-      const C = (crf.data ?? []).filter((r: any) => r.person_id === p.id && r.vo2max != null);
+      const lastActive = mine.length ? localDay(mine[0].timestamp) : (W.find((r: any) => Number(r.workouts) > 0)?.week_start ?? "");
+      const quietDays = mine.length ? daysBetween(lastActive, today) : W.length ? daysBetween(lastActive || W[W.length - 1].week_start, today) : null;
+      const myTests = p.account_id ? crfFromSync((tests.data ?? []).filter((t: any) => t.user_id === p.account_id)) : [];   // newest first, as the export table's are
+      const C = myTests.length ? myTests.filter((r: any) => r.vo2max != null) : (crf.data ?? []).filter((r: any) => r.person_id === p.id && r.vo2max != null);
       const trend = C.length > 1 ? Number(C[0].vo2max) - Number(C[1].vo2max) : 0;
       const unchecked = p.account_id ? (app.data ?? []).filter((r: any) => r.user_id === p.account_id).length : 0;
       return {
