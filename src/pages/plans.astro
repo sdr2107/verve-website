@@ -1,0 +1,169 @@
+---
+/**
+ * /plans — the chart, like a pricing page should be: every plan side by
+ * side, one row per thing it includes, monthly or yearly.
+ *
+ * Until PLANS_OPEN is on, the page is not in the nav and the buttons say
+ * plans open soon; the prices print "price to be set" while they are null.
+ * When it is on, Choose asks the checkout function for a payment link and
+ * sends the person there: Razorpay in India, Stripe elsewhere. Nothing
+ * about a card ever touches this site.
+ */
+import Layout from "../layouts/Layout.astro";
+import Footer from "../components/Footer.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import { PLANS, FEATURE_ROWS, PLANS_OPEN, YEARLY_MONTHS_FREE, priceText, extraText } from "../data/plans";
+
+const CURRENCIES = ["inr", "usd"] as const;
+---
+
+<Layout
+  title="Plans"
+  description="One login, three plans. A plan on whoever pays decides how many people they can see, and how deep. Consent is free on every plan."
+  cardType="summary"
+>
+  <SiteHeader crumb={[{ label: "Plans" }]} />
+
+  <main class="mx-auto max-w-6xl px-4 pb-20 pt-8 sm:px-6" data-period="yearly" data-currency="inr" data-open={PLANS_OPEN ? "" : undefined}>
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div class="max-w-2xl">
+        <div class="font-mono text-[10px] font-semibold tracking-[0.14em] text-accent-light">PLANS</div>
+        <h1 class="mt-2 text-[30px] font-extrabold leading-[1.05] tracking-[-0.02em] text-text-primary sm:text-4xl">One login. Three plans.</h1>
+        <p class="mt-3 text-[15px] leading-relaxed text-text-secondary">Every person has their own login. A plan sits on whoever pays and decides how many people they can see, and how deep. Sharing your page, and stopping it, is free on every plan.</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="flex items-center gap-1 rounded-full border border-white/12 p-1" role="group" aria-label="Billing period">
+          <button type="button" data-set-period="monthly" class="min-h-9 rounded-full px-4 text-[13px] font-semibold text-text-secondary transition-colors">Monthly</button>
+          <button type="button" data-set-period="yearly" class="min-h-9 rounded-full px-4 text-[13px] font-semibold text-text-secondary transition-colors">Yearly · {YEARLY_MONTHS_FREE === 1 ? "one month" : `${YEARLY_MONTHS_FREE} months`} free</button>
+        </div>
+        <button type="button" data-toggle-currency class="min-h-9 rounded-full border border-white/12 px-3 text-[12px] font-semibold text-text-tertiary transition-colors hover:text-text-primary">Prices in $</button>
+      </div>
+    </div>
+
+    <!-- the plans, side by side; on a phone, stacked -->
+    <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {PLANS.map((p) => (
+        <div class={`flex flex-col gap-2 rounded-2xl border p-5 ${p.highlight ? "border-accent/70 bg-accent/[0.09]" : "border-white/10 bg-white/[0.03]"}`}>
+          <div class="text-[20px] font-extrabold text-text-primary">{p.name}</div>
+          <div class="text-[12.5px] text-text-tertiary">{p.tagline}</div>
+          <div class="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            {CURRENCIES.map((c) => (
+              <span data-price data-currency={c} data-monthly={priceText(p, "monthly", c)} data-yearly={priceText(p, "yearly", c)} class="text-[26px] font-extrabold tracking-[-0.01em] text-text-primary">{priceText(p, "yearly", c)}</span>
+            ))}
+            <span data-per class="text-[12px] text-text-tertiary">{p.monthly.inr === 0 ? "always" : "a year"}</span>
+          </div>
+          <div class="text-[12.5px] leading-relaxed text-text-tertiary">
+            {p.peopleIncluded === 1 ? "You." : p.peopleMax ? `You and ${p.peopleIncluded} others, up to ${p.peopleMax} in all.` : `You and ${p.peopleIncluded} ${p.peopleWord}s.`}
+            {p.extra.inr !== undefined && (p.key === "max" || p.key === "enterprise") ? (
+              <span> Each further {p.peopleWord}: {CURRENCIES.map((c) => <span data-extra data-currency={c}>{extraText(p, c)}</span>)} a month.</span>
+            ) : null}
+          </div>
+          <button type="button" data-choose={p.key} class={`mt-3 min-h-11 rounded-xl px-4 text-sm font-bold transition-opacity hover:opacity-90 ${p.highlight ? "bg-accent text-canvas" : "border border-white/18 text-text-primary"}`}>{p.cta}</button>
+        </div>
+      ))}
+    </div>
+    <p id="plansmsg" class="mt-3 hidden text-[13px] text-text-secondary"></p>
+
+    <!-- the chart: one row per thing, a tick, a dash or a phrase per plan -->
+    <div class="mt-10 overflow-x-auto">
+      <table class="w-full min-w-[720px] border-collapse text-[13.5px]">
+        <thead>
+          <tr class="text-left">
+            <th class="w-[34%] pb-2 font-mono text-[10px] font-semibold tracking-[0.12em] text-text-tertiary">WHAT YOU GET</th>
+            {PLANS.map((p) => <th class="pb-2 text-center text-[13px] font-extrabold text-text-primary">{p.name}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {FEATURE_ROWS.map((g) => (
+            <>
+              <tr><td colSpan={5} class="pb-1 pt-5 font-mono text-[10px] font-semibold tracking-[0.12em] text-accent-light">{g.section.toUpperCase()}</td></tr>
+              {g.rows.map((r) => (
+                <tr class="border-t border-white/[0.06]">
+                  <td class="py-2.5 pr-3 text-text-secondary">{r.label}</td>
+                  {r.cells.map((c, i) => (
+                    <td class="py-2.5 px-2 text-center">
+                      {c === true ? (
+                        <svg class="inline-block" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#34d399" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-label="Included"><polyline points="3,8.5 6.5,12 13,4.5" /></svg>
+                      ) : c === false ? (
+                        <svg class="inline-block" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" aria-label="Not included"><line x1="4" y1="8" x2="12" y2="8" /></svg>
+                      ) : typeof c === "string" && c.startsWith("@extra") ? (
+                        <span class="text-[12.5px] text-text-secondary">{CURRENCIES.map((cur) => <span data-extra data-currency={cur}>{extraText(PLANS[i], cur)}</span>)}{c.replace("@extra", "")}</span>
+                      ) : (
+                        <span class="text-[12.5px] text-text-secondary">{c}</span>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mt-8 grid gap-3 sm:grid-cols-3">
+      <div class="rounded-2xl border border-white/10 p-4">
+        <div class="font-mono text-[10px] font-semibold tracking-[0.12em] text-text-tertiary">BILLED WHERE</div>
+        <p class="mt-1 text-[13px] leading-relaxed text-text-secondary">On the website: Razorpay in India, Stripe elsewhere. Prices in ₹ include GST. The app's Pro is a separate purchase in the App Store, and the app never mentions these plans.</p>
+      </div>
+      <div class="rounded-2xl border border-white/10 p-4">
+        <div class="font-mono text-[10px] font-semibold tracking-[0.12em] text-text-tertiary">CONSENT IS NEVER PAID</div>
+        <p class="mt-1 text-[13px] leading-relaxed text-text-secondary">Sharing your page, and stopping it, is free on every plan. A plan changes what the payer can see and how deep, never what anyone else must allow.</p>
+      </div>
+      <div class="rounded-2xl border border-white/10 p-4">
+        <div class="font-mono text-[10px] font-semibold tracking-[0.12em] text-text-tertiary">FREE STAYS FREE</div>
+        <p class="mt-1 text-[13px] leading-relaxed text-text-secondary">Your own page, your first two reports read, values sent to the app, sharing with anyone. Nothing you have is taken away by a plan you do not buy.</p>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+
+  <script>
+    import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
+    const main = document.querySelector("main")!;
+    const open = main.hasAttribute("data-open");
+    const apply = () => {
+      const period = main.dataset.period!, currency = main.dataset.currency!;
+      document.querySelectorAll<HTMLElement>("[data-set-period]").forEach((b) => {
+        const on = b.dataset.setPeriod === period;
+        b.className = `min-h-9 rounded-full px-4 text-[13px] font-semibold transition-colors ${on ? "bg-accent text-canvas" : "text-text-secondary hover:text-text-primary"}`;
+        b.setAttribute("aria-pressed", String(on));
+      });
+      document.querySelectorAll<HTMLElement>("[data-price]").forEach((el) => {
+        el.classList.toggle("hidden", el.dataset.currency !== currency);
+        el.textContent = period === "monthly" ? el.dataset.monthly! : el.dataset.yearly!;
+      });
+      document.querySelectorAll<HTMLElement>("[data-extra]").forEach((el) => el.classList.toggle("hidden", el.dataset.currency !== currency));
+      document.querySelectorAll<HTMLElement>("[data-per]").forEach((el) => { if (el.textContent !== "always") el.textContent = period === "monthly" ? "a month" : "a year"; });
+      const cur = document.querySelector<HTMLElement>("[data-toggle-currency]")!;
+      cur.textContent = currency === "inr" ? "Prices in $" : "Prices in ₹";
+    };
+    document.querySelectorAll<HTMLElement>("[data-set-period]").forEach((b) => b.addEventListener("click", () => { main.dataset.period = b.dataset.setPeriod; apply(); }));
+    document.querySelector("[data-toggle-currency]")!.addEventListener("click", () => { main.dataset.currency = main.dataset.currency === "inr" ? "usd" : "inr"; apply(); });
+    // a visitor outside India sees dollars first
+    try { if (!/Kolkata|Calcutta/.test(Intl.DateTimeFormat().resolvedOptions().timeZone)) main.dataset.currency = "usd"; } catch { /* keep rupees */ }
+    apply();
+
+    const msg = (t: string) => { const el = document.getElementById("plansmsg")!; el.textContent = t; el.classList.toggle("hidden", !t); };
+    document.querySelectorAll<HTMLElement>("[data-choose]").forEach((b) => b.addEventListener("click", async () => {
+      const plan = b.dataset.choose!, period = main.dataset.period!;
+      if (plan === "free") { location.href = "/my-health/"; return; }
+      if (!open) { msg("Plans open soon. Until then everything here is free: your own page, your first two reports read, sharing with anyone."); return; }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { msg("Sign in on My health first, then choose a plan; it is tied to your account."); return; }
+      b.setAttribute("disabled", ""); msg("One moment…");
+      try {
+        const resp = await fetch(`${SUPABASE_URL}/functions/v1/checkout`, {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: `Bearer ${session.access_token}`, apikey: SUPABASE_ANON_KEY },
+          body: JSON.stringify({ plan, period, currency: main.dataset.currency }),
+        });
+        const out = await resp.json().catch(() => ({}));
+        if (resp.ok && out.url) { location.href = out.url; return; }
+        msg(out.error === "billing_not_open" ? "Plans are not open for payment yet." : `Could not start checkout${out.detail ? `: ${out.detail}` : ""}.`);
+      } catch { msg("Could not reach checkout. Try again in a moment."); }
+      b.removeAttribute("disabled");
+    }));
+  </script>
+</Layout>
