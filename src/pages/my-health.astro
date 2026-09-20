@@ -441,6 +441,13 @@ import SiteHeader from "../components/SiteHeader.astro";
         <!-- ── the archive first: a timeline, one card per original PDF, a year and a month at a time ── -->
         <div id="repcards" class="flex max-w-3xl flex-col gap-3"></div>
 
+        <!-- the app's exports dropped here: one line each, rebuilt from the rows they left, with the way back -->
+        <section id="appimports" class="mt-6 hidden max-w-3xl rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <div class="font-mono text-[10px] font-semibold tracking-widest text-text-tertiary">FROM THE VERVE APP</div>
+          <div id="appimportrows" class="mt-2 flex flex-col gap-2"></div>
+          <p class="mt-2 text-[12px] text-text-muted">The weeks, fitness tests and waist readings are on the Overview; the lab values are on Labs with everything else.</p>
+        </section>
+
         <!-- ── then the one place to add a report; dragging anywhere on the page lands here too ── -->
         <label id="drop" for="file"
           class="mt-6 flex max-w-3xl cursor-pointer items-center gap-4 rounded-2xl border-[1.5px] border-dashed border-accent/45 bg-accent/[0.05] px-5 py-4 transition-colors hover:border-accent/70">
@@ -1134,8 +1141,8 @@ import SiteHeader from "../components/SiteHeader.astro";
       (Array.isArray(data.activities) || Array.isArray(data.labReadings) || Array.isArray(data.weeklySummaries) || Array.isArray(data.crfEntries));
     if (!looks) { qset(rid, "SKIPPED", "bad", "Not a Verve export: no activities, readings or weeks in it"); return "skip"; }
     if (!who.id) { qset(rid, "SKIPPED", "bad", "The people tables are not set up yet, so there is nowhere to keep this"); return "skip"; }
-    const tag = `export:${Date.now()}`;
     const exportedOn = String(data.exportedAt ?? "").slice(0, 10) || new Date().toISOString().slice(0, 10);
+    const tag = `export:${exportedOn}:${Date.now()}`;   // which export, and when it was dropped here
 
     // weeks: the app's own summary, else built from the activities the same way
     const byWeek = new Map<string, any>();
@@ -1203,16 +1210,11 @@ import SiteHeader from "../components/SiteHeader.astro";
     const under = who.self ? "" : ` · under ${who.name}`;
     const parts = [`${weeks.length} week${weeks.length === 1 ? "" : "s"} of activity`, `${crf.length} fitness test${crf.length === 1 ? "" : "s"}`, `${body.length} waist reading${body.length === 1 ? "" : "s"}`, `${freshLabs.length} lab value${freshLabs.length === 1 ? "" : "s"}${labRows.length > freshLabs.length ? ` (${labRows.length - freshLabs.length} already here)` : ""}`];
     qset(rid, "IMPORTED ✓", "ok", `Verve export from ${fmtDay(exportedOn)} · ${parts.join(" · ")}${under}`);
-    $("importcard").innerHTML = `<span class="min-w-0 flex-1">Imported the app's export from ${esc(fmtDay(exportedOn))}${esc(under)}: ${esc(parts.join(", "))}. The Overview now has your weeks.</span>
+    $("importcard").innerHTML = `<span class="min-w-0 flex-1">Imported the app's export from ${esc(fmtDay(exportedOn))}${esc(under)}: ${esc(parts.join(", "))}. The Overview has the weeks; this tab lists the export under From the Verve app.</span>
       <button type="button" data-undo="${tag}" class="min-h-9 rounded-lg border border-white/14 px-3 py-1.5 text-xs font-semibold text-text-secondary hover:text-danger">Undo this import</button>`;
     show("importcard", true); $("importcard").classList.add("flex");
     $("importcard").querySelector("[data-undo]")!.addEventListener("click", async () => {
-      await Promise.all([
-        supabase.from("web_weeks").delete().eq("person_id", who.id).eq("import_tag", tag),
-        supabase.from("web_crf").delete().eq("person_id", who.id).eq("import_tag", tag),
-        supabase.from("web_body").delete().eq("person_id", who.id).eq("import_tag", tag),
-        supabase.from("web_labs").delete().eq("user_id", userId).eq("report_path", tag),
-      ]);
+      await removeImport(tag, who);
       show("importcard", false); $("importcard").classList.remove("flex");
       msg("upmsg", "The import is undone; nothing from that file remains.");
       await refresh();
@@ -1220,20 +1222,71 @@ import SiteHeader from "../components/SiteHeader.astro";
     return "ok";
   }
 
+  /** Everything one export brought, gone: its weeks, fitness tests, waist readings and lab values. The app is untouched. */
+  async function removeImport(tag: string, who: Person) {
+    await Promise.all([
+      supabase.from("web_weeks").delete().eq("person_id", who.id).eq("import_tag", tag),
+      supabase.from("web_crf").delete().eq("person_id", who.id).eq("import_tag", tag),
+      supabase.from("web_body").delete().eq("person_id", who.id).eq("import_tag", tag),
+      supabase.from("web_labs").delete().eq("user_id", userId).eq("report_path", tag),
+    ]);
+  }
+
+  /** The exports dropped on this person, rebuilt from the rows they left: one line each, with Remove. */
+  function renderAppImports() {
+    type Imp = { tag: string; exported: string; imported: string; weeks: number; crf: number; body: number; labs: number };
+    const by = new Map<string, Imp>();
+    const isTag = (t: unknown): t is string => typeof t === "string" && t.startsWith("export:");
+    const get = (tag: string) => {
+      if (by.has(tag)) return by.get(tag)!;
+      const [, exported = "", stamp = ""] = tag.split(":");
+      const imp: Imp = {
+        tag, exported: /^\d{4}-\d{2}-\d{2}$/.test(exported) ? exported : "",
+        imported: /^\d{10,}$/.test(stamp) ? new Date(Number(stamp)).toLocaleDateString("en-CA") : "",
+        weeks: 0, crf: 0, body: 0, labs: 0,
+      };
+      by.set(tag, imp);
+      return imp;
+    };
+    for (const w of allWeeks) if (isTag(w.import_tag)) get(w.import_tag).weeks++;
+    for (const c of allCrf) if (isTag(c.import_tag)) get(c.import_tag).crf++;
+    for (const b of allBody) if (isTag(b.import_tag)) get(b.import_tag).body++;
+    for (const r of allLabs) if (isTag(r.report_path)) get(r.report_path).labs++;
+    const imps = [...by.values()].sort((a, b) => b.tag.localeCompare(a.tag));
+    show("appimports", imps.length > 0);
+    if (!imps.length) return;
+    const n = (k: number, one: string, many: string) => k ? `${k} ${k === 1 ? one : many}` : "";
+    $("appimportrows").innerHTML = imps.map((im) => `
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-white/[0.08] px-3 py-2 text-[13px]">
+        <span class="font-semibold text-text-primary">Export of ${esc(im.exported ? fmtDay(im.exported) : "an unknown date")}</span>
+        ${im.imported ? `<span class="text-text-muted">dropped here ${esc(fmtDay(im.imported))}</span>` : ""}
+        <span class="text-text-tertiary">${esc([n(im.weeks, "week", "weeks"), n(im.crf, "fitness test", "fitness tests"), n(im.body, "waist day", "waist days"), n(im.labs, "lab value", "lab values")].filter(Boolean).join(" · "))}</span>
+        ${canWrite() ? `<button type="button" data-rmimport="${esc(im.tag)}" class="ml-auto min-h-9 text-[12px] font-semibold text-text-tertiary hover:text-danger">Remove</button>` : ""}
+      </div>`).join("");
+    $("appimportrows").querySelectorAll("[data-rmimport]").forEach((b) => b.addEventListener("click", async () => {
+      if (!confirm("Remove everything this export brought? Its weeks, fitness tests, waist readings and lab values are deleted from this page. The app itself is untouched.")) return;
+      await removeImport((b as HTMLElement).dataset.rmimport!, person!);
+      show("importcard", false); $("importcard").classList.remove("flex");
+      msg("upmsg", "Removed; nothing from that export remains here.");
+      await refresh();
+    }));
+  }
+
   // ── activity and fitness on the Overview: the app's weeks, a marker on top ─
   let allWeeks: any[] = [], allCrf: any[] = [], allBody: any[] = [];
   let pickedMarker = "";
   async function loadActivity() {
     const p = person;
-    if (!p?.id) { show("activitywrap", false); return; }
+    if (!p?.id) { show("activitywrap", false); show("appimports", false); return; }
     const [w, c, b] = await Promise.all([
-      supabase.from("web_weeks").select("week_start, met_hours, minutes, moderate_min, vigorous_min, workouts").eq("person_id", p.id).order("week_start", { ascending: true }).limit(260),
-      supabase.from("web_crf").select("measured_on, vo2max, met_capacity, method").eq("person_id", p.id).order("measured_on", { ascending: true }).limit(100),
-      supabase.from("web_body").select("measured_on, waist_cm, weight_kg").eq("person_id", p.id).order("measured_on", { ascending: true }).limit(400),
+      supabase.from("web_weeks").select("week_start, met_hours, minutes, moderate_min, vigorous_min, workouts, import_tag").eq("person_id", p.id).order("week_start", { ascending: true }).limit(260),
+      supabase.from("web_crf").select("measured_on, vo2max, met_capacity, method, import_tag").eq("person_id", p.id).order("measured_on", { ascending: true }).limit(100),
+      supabase.from("web_body").select("measured_on, waist_cm, weight_kg, import_tag").eq("person_id", p.id).order("measured_on", { ascending: true }).limit(400),
     ]);
     if (person?.id !== p.id) return;   // switched away meanwhile
     allWeeks = w.data ?? []; allCrf = c.data ?? []; allBody = b.data ?? [];
     renderActivity();
+    renderAppImports();
   }
   /** The app's markers this person has on Labs, whatever brought them: the choices for the overlay. */
   function markersOnFile(): { key: string; label: string; rows: any[] }[] {
@@ -2101,7 +2154,8 @@ import SiteHeader from "../components/SiteHeader.astro";
     const dayRows = allLabs.filter((r) => r.measured_on === lastDate);
     const flaggedN = dayRows.filter((r) => inRange(r) === false).length;
     const path = dayRows.map((r) => r.report_path).filter(Boolean).pop() ?? "";
-    const repName = path ? pretty(path.split("/").pop()!) : "";
+    const fromApp = path.startsWith("export:");   // brought by the app's export: no PDF behind it
+    const repName = fromApp ? "From the Verve app" : path ? pretty(path.split("/").pop()!) : "";
     show("latestwrap", true);
     $("latestcard").innerHTML = `
       <div class="mh-rise flex flex-wrap items-center gap-3 sm:gap-4" style="--i: 7">
@@ -2115,7 +2169,7 @@ import SiteHeader from "../components/SiteHeader.astro";
           </div>
           <div class="mt-1 text-xs text-text-tertiary">${dayRows.length} values · ${flaggedN ? `<span class="text-warning">${flaggedN} outside range</span>` : `<span class="text-success">all in range</span>`} · all on your Labs tab</div>
         </div>
-        ${path ? `<button data-viewpath="${esc(path)}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-white/25 hover:text-text-primary">View report</button>` : ""}
+        ${path && !fromApp ? `<button data-viewpath="${esc(path)}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-white/25 hover:text-text-primary">View report</button>` : ""}
         <button data-goto="reports" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-white/25 hover:text-text-primary">All reports →</button>
       </div>`;
     const vp = $("latestcard").querySelector("[data-viewpath]");
