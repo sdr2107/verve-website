@@ -397,11 +397,14 @@ import SiteHeader from "../components/SiteHeader.astro";
               <h2 class="text-[17px] font-bold tracking-tight text-text-primary">Fitness and a marker</h2>
               <p id="activitysub" class="mt-0.5 text-[12.5px] text-text-tertiary"></p>
             </div>
-            <div id="markerpick" class="flex flex-wrap gap-1.5"></div>
+            <p id="markercount" class="text-[12.5px] text-text-tertiary"></p>
           </div>
+          <!-- the 21 markers in their three sections; a dashed chip has no reading yet -->
+          <div id="markerpick" class="mt-3 flex flex-col gap-2"></div>
           <div class="mt-3 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-            <svg id="activitychart" viewBox="0 0 1000 300" class="block h-auto w-full min-w-[560px]" role="img" aria-label="Weekly MET-hours, with a marker's measurements on the days they were taken"></svg>
+            <svg id="activitychart" viewBox="0 0 1150 352" class="block h-auto w-full min-w-[640px]" role="img" aria-label="A marker's readings in their own lane, the lab's range shaded, above weekly MET-hours as bars"></svg>
           </div>
+          <div id="activitylegend" class="mt-2.5 flex flex-wrap gap-x-7 gap-y-1.5 text-[12.5px] text-text-tertiary"></div>
           <div id="activitystats" class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[12.5px] text-text-tertiary"></div>
           <p class="mt-1 text-[12px] text-text-muted">Two things on one timeline, with no claim about which moved the other.</p>
         </section>
@@ -632,6 +635,12 @@ import SiteHeader from "../components/SiteHeader.astro";
     hs_crp_mgl:             { label: "hs-CRP",            unit: "mg/L",   section: "heart" },
     body_fat_pct:           { label: "Body fat",          unit: "%",      section: "sarcopenia" },
     skel_musc_pct:          { label: "Skeletal muscle",   unit: "%",      section: "sarcopenia" },
+    alm_kg:                     { label: "Lean mass, arms and legs", unit: "kg",  section: "sarcopenia" },
+    ffm_kg:                     { label: "Whole-body lean mass",     unit: "kg",  section: "sarcopenia" },
+    handgrip_kg:                { label: "Grip strength",            unit: "kg",  section: "sarcopenia" },
+    single_leg_balance_seconds: { label: "Single-leg balance",       unit: "s",   section: "sarcopenia" },
+    chair_stand_seconds:        { label: "Chair stand",              unit: "s",   section: "sarcopenia" },
+    gait_speed_ms:              { label: "Walk speed",               unit: "m/s", section: "sarcopenia" },
   };
 
   const SECTIONS: Record<string, string> = {
@@ -1126,6 +1135,8 @@ import SiteHeader from "../components/SiteHeader.astro";
     fastingInsulinUIUmL: "fasting_insulin_uiuml", triglyceridesMgdl: "triglycerides_mgdl", hdlMgdl: "hdl_mgdl",
     waistCm: "waist_cm", sbp: "sbp", dbp: "dbp", apoBMgdl: "apo_b_mgdl", ldlMgdl: "ldl_mgdl", lpaValue: "lpa_value",
     hsCrpMgL: "hs_crp_mgl", bodyFatPct: "body_fat_pct", skelMuscPct: "skel_musc_pct",
+    almKg: "alm_kg", ffmKg: "ffm_kg", handgripKg: "handgrip_kg", singleLegBalanceSeconds: "single_leg_balance_seconds",
+    chairStandSeconds: "chair_stand_seconds", gaitSpeedMs: "gait_speed_ms",
   };
   const LAB_SECTION: Record<string, string> = { metabolic: "metabolic", heart: "heart", sarcopenia: "muscle" };
   const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
@@ -1288,64 +1299,209 @@ import SiteHeader from "../components/SiteHeader.astro";
     renderActivity();
     renderAppImports();
   }
-  /** The app's markers this person has on Labs, whatever brought them: the choices for the overlay. */
-  function markersOnFile(): { key: string; label: string; rows: any[] }[] {
-    const by = new Map<string, any[]>();
-    for (const r of allLabs) { const k = appKeyFor(String(r.analyte)); if (k && LABELS[k]) (by.get(k) ?? by.set(k, []).get(k)!).push(r); }
-    return [...by].map(([key, rows]) => ({ key, label: LABELS[key].label, rows: rows.sort((a, b) => String(a.measured_on).localeCompare(String(b.measured_on))) }));
+
+  // ── the 21 markers, in the three sections the landing page counts ──────
+  // A chart key is a lab_readings column, except "bp", which pairs sbp and
+  // dbp, and "sppb_score", which the app computes and no table stores. A
+  // marker with no reading anywhere shows as a dashed chip, never hidden:
+  // the page says 21 markers, and 21 it is.
+  type ChartMarker = { key: string; label: string; section: "metabolic" | "heart" | "muscle"; pair?: [string, string]; lines?: [number, number] };
+  const CHART_MARKERS: ChartMarker[] = [
+    { key: "glucose_mgdl", label: "Fasting glucose", section: "metabolic" },
+    { key: "hba1c_pct", label: "HbA1c", section: "metabolic" },
+    { key: "bp", label: "Blood pressure", section: "metabolic", pair: ["sbp", "dbp"], lines: [120, 80] },
+    { key: "triglycerides_mgdl", label: "Triglycerides", section: "metabolic" },
+    { key: "hdl_mgdl", label: "HDL", section: "metabolic" },
+    { key: "waist_cm", label: "Waist", section: "metabolic" },
+    { key: "post_meal_glucose_mgdl", label: "Post-meal glucose", section: "metabolic" },
+    { key: "fasting_insulin_uiuml", label: "Fasting insulin", section: "metabolic" },
+    { key: "apo_b_mgdl", label: "ApoB", section: "heart" },
+    { key: "ldl_mgdl", label: "LDL", section: "heart" },
+    { key: "lpa_value", label: "Lp(a)", section: "heart" },
+    { key: "hs_crp_mgl", label: "hs-CRP", section: "heart" },
+    { key: "body_fat_pct", label: "Body fat", section: "muscle" },
+    { key: "skel_musc_pct", label: "Muscle mass", section: "muscle" },
+    { key: "alm_kg", label: "Lean mass, arms and legs", section: "muscle" },
+    { key: "ffm_kg", label: "Whole-body lean mass", section: "muscle" },
+    { key: "handgrip_kg", label: "Grip strength", section: "muscle" },
+    { key: "single_leg_balance_seconds", label: "Single-leg balance", section: "muscle" },
+    { key: "chair_stand_seconds", label: "Chair stand", section: "muscle" },
+    { key: "sppb_score", label: "SPPB", section: "muscle" },
+    { key: "gait_speed_ms", label: "Walk speed", section: "muscle" },
+  ];
+  const CHART_SECTIONS: Array<["metabolic" | "heart" | "muscle", string]> = [["metabolic", "METABOLIC"], ["heart", "HEART"], ["muscle", "MUSCLE"]];
+  /** The chart's key for an analyte name: the app's column, or SPPB. */
+  const chartKeyFor = (analyte: string) => appKeyFor(analyte) ?? (squash(canonName(analyte)) === "sppb" || squash(canonName(analyte)) === "sppbscore" ? "sppb_score" : null);
+
+  type Pt = { d: string; v: number; lo: number | null; hi: number | null; unit: string | null };
+  /**
+   * Every reading of every marker this person has, by chart key, from the
+   * three places one can come from: the values read from reports and
+   * imports (web_labs), the app's own rows (lab_readings), and waist days
+   * (web_body). The same value on the same day is one reading.
+   */
+  function markerPoints(): Map<string, Pt[]> {
+    const by = new Map<string, Pt[]>();
+    const seen = new Set<string>();
+    const add = (key: string, pt: Pt) => {
+      const id = `${key}|${pt.d}|${pt.v}`;
+      if (seen.has(id)) return;
+      seen.add(id);
+      (by.get(key) ?? by.set(key, []).get(key)!).push(pt);
+    };
+    for (const r of allLabs) {
+      const k = chartKeyFor(String(r.analyte));
+      if (!k || !Number.isFinite(Number(r.value))) continue;
+      add(k, { d: String(r.measured_on).slice(0, 10), v: Number(r.value), lo: Number.isFinite(Number(r.ref_low)) && r.ref_low != null ? Number(r.ref_low) : null, hi: Number.isFinite(Number(r.ref_high)) && r.ref_high != null ? Number(r.ref_high) : null, unit: r.unit ?? null });
+    }
+    for (const r of allApp) {
+      const d = localDay(r.measured_at);
+      for (const m of CHART_MARKERS) {
+        const cols = m.pair ?? [m.key];
+        for (const col of cols) {
+          const v = Number(r[col]);
+          if (r[col] == null || !Number.isFinite(v)) continue;
+          add(col, { d, v, lo: null, hi: null, unit: col === "lpa_value" ? (r.lpa_unit ?? null) : (LABELS[col]?.unit || null) });
+        }
+      }
+    }
+    for (const b of allBody) if (b.waist_cm != null && Number.isFinite(Number(b.waist_cm)))
+      add("waist_cm", { d: String(b.measured_on).slice(0, 10), v: Number(b.waist_cm), lo: null, hi: null, unit: "cm" });
+    for (const pts of by.values()) pts.sort((a, b) => a.d.localeCompare(b.d));
+    return by;
   }
+  const hasPoints = (m: ChartMarker, by: Map<string, Pt[]>) => m.pair ? m.pair.some((k) => by.has(k)) : by.has(m.key);
+
   function renderActivity() {
     const weeks = allWeeks.slice(-52);
     show("activitywrap", weeks.length > 0);
     if (!weeks.length) return;
-    const markers = markersOnFile();
-    if (!markers.some((m) => m.key === pickedMarker)) pickedMarker = markers.find((m) => m.key === "apo_b_mgdl")?.key ?? markers[0]?.key ?? "";
-    $("markerpick").innerHTML = markers.map((m) => `<button type="button" data-marker="${m.key}" class="min-h-8 rounded-full border px-3 py-1 text-[12px] font-semibold transition-colors ${
-      m.key === pickedMarker ? "border-accent/70 bg-accent/15 text-text-primary" : "border-white/12 text-text-secondary hover:text-text-primary"}">${esc(m.label)}</button>`).join("");
+    const by = markerPoints();
+    const onFile = CHART_MARKERS.filter((m) => hasPoints(m, by));
+    if (!onFile.some((m) => m.key === pickedMarker)) pickedMarker = onFile.find((m) => m.key === "apo_b_mgdl")?.key ?? onFile[0]?.key ?? "";
+    $("markercount").textContent = `${CHART_MARKERS.length} markers · ${onFile.length} on file · dashed ones have no reading yet`;
+
+    // the chips: three rows, one per section, every marker present
+    $("markerpick").innerHTML = CHART_SECTIONS.map(([sec, name]) => `
+      <div class="flex items-center gap-2.5">
+        <div class="w-[84px] shrink-0 font-mono text-[10px] font-semibold tracking-[0.12em] text-text-tertiary">${name}</div>
+        <div class="flex flex-wrap gap-2">${CHART_MARKERS.filter((m) => m.section === sec).map((m) => {
+          const on = m.key === pickedMarker, has = hasPoints(m, by);
+          return has
+            ? `<button type="button" data-marker="${m.key}" aria-pressed="${on}" class="min-h-[34px] rounded-full border px-3 py-1 text-[13px] font-semibold transition-colors ${on ? "border-accent/70 bg-accent/15 text-text-primary" : "border-white/14 text-text-secondary hover:text-text-primary"}">${esc(m.label)}</button>`
+            : `<button type="button" aria-disabled="true" title="No reading on file yet" class="min-h-[34px] cursor-default rounded-full border border-dashed border-white/14 px-3 py-1 text-[13px] font-semibold text-text-muted">${esc(m.label)}</button>`;
+        }).join("")}</div>
+      </div>`).join("");
     $("markerpick").querySelectorAll("[data-marker]").forEach((b) =>
       b.addEventListener("click", () => { pickedMarker = (b as HTMLElement).dataset.marker!; renderActivity(); }));
-    const m = markers.find((x) => x.key === pickedMarker) ?? null;
-    $("activitysub").textContent = m ? `Weekly MET-hours from the app, with ${m.label} on the days it was measured.` : "Weekly MET-hours from the app.";
+    const m = CHART_MARKERS.find((x) => x.key === pickedMarker) ?? null;
+    const inProse = (label: string) => /^[A-Z][a-z]{3,}(?=[\s-]|$)/.test(label) ? label.charAt(0).toLowerCase() + label.slice(1) : label;
+    $("activitysub").textContent = m ? `Weekly MET-hours from the app, with ${inProse(m.label)} on the days it was measured.` : "Weekly MET-hours from the app.";
 
-    const W = 1000, H = 300, L = 44, R = 16, T = 30, B = 44;
-    const x0 = L, x1 = W - R, plotW = x1 - x0, plotH = H - T - B;
+    // ── geometry: the marker's lane above, a hairline, the bars below ─────
+    const W = 1150, x0 = 60, x1 = 1130, plotW = x1 - x0;
+    const LT = 18, LB = 128, SEP = 142, BT = 160, BB = 320, MONTH_Y = 342;
     const at = (iso: string) => new Date(String(iso).slice(0, 10) + "T00:00:00").getTime();
     const WEEK = 7 * 86400000;
     const first = at(weeks[0].week_start), last = at(weeks[weeks.length - 1].week_start) + WEEK;
     const span = Math.max(last - first, WEEK);
     const xAt = (iso: string) => x0 + ((at(iso) - first) / span) * plotW;
-    const barW = Math.max(3, plotW / Math.max(1, span / WEEK) - 2);
+    const barW = Math.max(3, plotW / Math.max(1, span / WEEK) - 3.6);
     const maxMet = Math.max(1, ...weeks.map((w) => Number(w.met_hours)));
-    const yMet = (v: number) => T + plotH - (v / maxMet) * plotH;
+    const yMet = (v: number) => BB - (v / maxMet) * (BB - BT);
+    const MONO = `font-family="JetBrains Mono, ui-monospace, monospace"`;
     let svg = "";
+
+    // the lane
+    if (m) {
+      const series: Array<{ col: string; pts: Pt[] }> = (m.pair ?? [m.key]).map((col) => ({ col, pts: (by.get(col) ?? []).filter((p) => at(p.d) >= first - 2 * WEEK && at(p.d) <= last + 2 * WEEK) }));
+      const all = series.flatMap((s) => s.pts);
+      const unit = all.map((p) => p.unit).filter(Boolean).pop() ?? LABELS[m.key]?.unit ?? "";
+      // the range: the marker page's line for blood pressure; else the lab's printed range on the latest reading that has one
+      const ranged = m.lines ? null : [...all].reverse().find((p) => p.lo != null || p.hi != null) ?? null;
+      const lo = ranged?.lo ?? null, hi = ranged?.hi ?? null;
+      const vals = [...all.map((p) => p.v), ...(m.lines ?? []), ...(lo != null ? [lo] : []), ...(hi != null ? [hi] : [])];
+      let vmin = Math.min(...vals), vmax = Math.max(...vals);
+      const pad = (vmax - vmin) || Math.max(1, Math.abs(vmax) * 0.2);
+      vmin -= pad * 0.35; vmax += pad * 0.35;
+      const yL = (v: number) => LB - ((v - vmin) / (vmax - vmin)) * (LB - LT);
+      const laneTitle = m.lines
+        ? `${m.label.toUpperCase()} · ${esc(unit)} · ${m.lines[0]}/${m.lines[1]} DASHED, THE LINE THE MARKER PAGE CITES`
+        : `${m.label.toUpperCase()}${unit ? ` · ${esc(unit)}` : ""}${ranged ? ` · THE LAB'S RANGE${lo != null && hi != null ? `, ${lo} TO ${hi},` : hi != null ? `, BELOW ${hi},` : `, ABOVE ${lo},`} SHADED` : ""}`;
+      svg += `<text x="${x0}" y="14" fill="#94a3b8" font-size="10" letter-spacing="1.2" ${MONO}>${laneTitle}</text>`;
+      if (m.lines) {
+        for (const v of m.lines) svg += `<line x1="${x0}" y1="${yL(v).toFixed(1)}" x2="${x1}" y2="${yL(v).toFixed(1)}" stroke="#a5b4fc" stroke-opacity="0.45" stroke-dasharray="4 4"/><text x="${x0 - 10}" y="${(yL(v) + 4).toFixed(1)}" text-anchor="end" fill="#94a3b8" font-size="10" ${MONO}>${v}</text>`;
+      } else if (ranged) {
+        const top = hi != null ? yL(hi) : LT, bottom = lo != null ? yL(lo) : LB;
+        svg += `<rect x="${x0}" y="${top.toFixed(1)}" width="${plotW}" height="${Math.max(0, bottom - top).toFixed(1)}" fill="#34d399" fill-opacity="0.07"/>`;
+        for (const v of [lo, hi]) if (v != null) svg += `<line x1="${x0}" y1="${yL(v).toFixed(1)}" x2="${x1}" y2="${yL(v).toFixed(1)}" stroke="#34d399" stroke-opacity="0.45" stroke-dasharray="4 4"/><text x="${x0 - 10}" y="${(yL(v) + 4).toFixed(1)}" text-anchor="end" fill="#94a3b8" font-size="10" ${MONO}>${v}</text>`;
+      }
+      // the readings; a label within 28 px of the previous one steps below its point
+      if (m.pair) {
+        const [top, bot] = series;
+        const byDay = new Map<string, { s?: Pt; d?: Pt }>();
+        for (const p of top.pts) (byDay.get(p.d) ?? byDay.set(p.d, {}).get(p.d)!).s = p;
+        for (const p of bot.pts) (byDay.get(p.d) ?? byDay.set(p.d, {}).get(p.d)!).d = p;
+        const days = [...byDay.keys()].sort();
+        const line = (pick: (r: { s?: Pt; d?: Pt }) => Pt | undefined, op: number) => {
+          const pts = days.map((d) => [d, pick(byDay.get(d)!)] as const).filter(([, p]) => p).map(([d, p]) => `${Math.min(x1, Math.max(x0, xAt(d))).toFixed(1)},${yL(p!.v).toFixed(1)}`);
+          return pts.length > 1 ? `<polyline points="${pts.join(" ")}" fill="none" stroke="#a5b4fc" stroke-opacity="${op}" stroke-width="1.5" stroke-dasharray="4 4"/>` : "";
+        };
+        svg += line((r) => r.s, 1) + line((r) => r.d, 0.6);
+        // a reading's pair of labels sits outside its bar, else beside it; a third close reading keeps only its tooltip
+        const taken = { out: -999, side: -999 };
+        for (const d of days) {
+          const r = byDay.get(d)!, x = Math.min(x1, Math.max(x0, xAt(d)));
+          const slot = x - taken.out >= 28 ? "out" : x - taken.side >= 34 ? "side" : "";
+          if (slot) taken[slot] = x;
+          const ys = r.s ? yL(r.s.v) : null, yd = r.d ? yL(r.d.v) : null;
+          if (ys != null && yd != null) svg += `<rect x="${(x - 2).toFixed(1)}" y="${ys.toFixed(1)}" width="4" height="${Math.max(0, yd - ys).toFixed(1)}" rx="2" fill="#818cf8"/>`;
+          const title = `${esc(fmtDay(d))}: ${r.s?.v ?? "?"}/${r.d?.v ?? "?"} ${esc(unit)}`;
+          for (const [p, y, above] of [[r.s, ys, true], [r.d, yd, false]] as Array<[Pt | undefined, number | null, boolean]>) {
+            if (!p || y == null) continue;
+            svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="#818cf8" stroke="#0D0D1C" stroke-width="2"><title>${title}</title></circle>`;
+            if (slot === "out") svg += `<text x="${x.toFixed(1)}" y="${(above ? y - 9 : y + 15).toFixed(1)}" text-anchor="middle" fill="#c7d2fe" font-size="12" font-weight="700">${p.v}</text>`;
+            else if (slot === "side") svg += `<text x="${(x + 9).toFixed(1)}" y="${(y + 4).toFixed(1)}" fill="#c7d2fe" font-size="12" font-weight="700">${p.v}</text>`;
+          }
+        }
+        if (!days.length) svg += `<text x="${x1}" y="${LT + 6}" text-anchor="end" fill="#64748b" font-size="11">no ${esc(m.label.toLowerCase())} in these weeks</text>`;
+      } else {
+        const pts = series[0].pts.map((p) => ({ ...p, x: Math.min(x1, Math.max(x0, xAt(p.d))), y: yL(p.v) }));
+        if (pts.length > 1) svg += `<polyline points="${pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ")}" fill="none" stroke="#a5b4fc" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+        // a label takes the first free slot: above, then below, then beside; a fourth close reading keeps only its tooltip
+        const taken = { above: -999, below: -999, side: -999 };
+        for (const p of pts) {
+          const slot = p.x - taken.above >= 28 ? "above" : p.x - taken.below >= 28 ? "below" : p.x - taken.side >= 34 ? "side" : "";
+          if (slot) taken[slot] = p.x;
+          svg += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5" fill="#818cf8" stroke="#0D0D1C" stroke-width="2"><title>${esc(fmtDay(p.d))}: ${esc(m.label)} ${p.v}${unit ? ` ${esc(unit)}` : ""}</title></circle>`;
+          if (slot === "above") svg += `<text x="${p.x.toFixed(1)}" y="${(p.y - 9).toFixed(1)}" text-anchor="middle" fill="#c7d2fe" font-size="12" font-weight="700">${p.v}</text>`;
+          else if (slot === "below") svg += `<text x="${p.x.toFixed(1)}" y="${(p.y + 17).toFixed(1)}" text-anchor="middle" fill="#c7d2fe" font-size="12" font-weight="700">${p.v}</text>`;
+          else if (slot === "side") svg += `<text x="${(p.x + 9).toFixed(1)}" y="${(p.y + 4).toFixed(1)}" fill="#c7d2fe" font-size="12" font-weight="700">${p.v}</text>`;
+        }
+        if (!pts.length) svg += `<text x="${x1}" y="${LT + 6}" text-anchor="end" fill="#64748b" font-size="11">no ${esc(m.label.toLowerCase())} in these weeks</text>`;
+      }
+    }
+
+    // the hairline, then the bars
+    svg += `<line x1="${x0}" y1="${SEP}" x2="${x1}" y2="${SEP}" stroke="rgba(255,255,255,0.10)"/>`;
     for (const f of [0, 0.5, 1]) {
-      const y = T + plotH - f * plotH;
-      svg += `<line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}" stroke="rgba(255,255,255,${f === 0 ? 0.14 : 0.06})"/><text x="${x0 - 8}" y="${y + 4}" text-anchor="end" fill="#94a3b8" font-size="11" font-family="JetBrains Mono, ui-monospace, monospace">${Math.round(maxMet * f)}</text>`;
+      const y = BB - f * (BB - BT);
+      svg += `<line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}" stroke="rgba(255,255,255,${f === 0 ? 0.14 : 0.06})"/><text x="${x0 - 10}" y="${y + 4}" text-anchor="end" fill="#94a3b8" font-size="11" ${MONO}>${Math.round(maxMet * f)}</text>`;
     }
     for (const w of weeks) {
       const x = xAt(w.week_start), y = yMet(Number(w.met_hours));
-      svg += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${(T + plotH - y).toFixed(1)}" rx="2" fill="#f97316" fill-opacity="0.85"><title>Week of ${esc(fmtDay(String(w.week_start).slice(0, 10)))}: ${Number(w.met_hours).toFixed(1)} MET-hours, ${w.workouts} workout${Number(w.workouts) === 1 ? "" : "s"}</title></rect>`;
+      svg += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${(BB - y).toFixed(1)}" rx="2" fill="#f97316" fill-opacity="0.85"><title>Week of ${esc(fmtDay(String(w.week_start).slice(0, 10)))}: ${Number(w.met_hours).toFixed(1)} MET-hours, ${w.workouts} workout${Number(w.workouts) === 1 ? "" : "s"}</title></rect>`;
     }
     let lastMonth = "";
     for (const w of weeks) {
       const mo = String(w.week_start).slice(0, 7);
       if (mo === lastMonth) continue;
       lastMonth = mo;
-      svg += `<text x="${xAt(w.week_start).toFixed(1)}" y="${H - B + 18}" fill="#94a3b8" font-size="11" font-family="JetBrains Mono, ui-monospace, monospace">${new Date(at(w.week_start)).toLocaleDateString(undefined, { month: "short" }).toUpperCase()}</text>`;
+      svg += `<text x="${xAt(w.week_start).toFixed(1)}" y="${MONTH_Y}" fill="#94a3b8" font-size="11" ${MONO}>${new Date(at(w.week_start)).toLocaleDateString(undefined, { month: "short" }).toUpperCase()}</text>`;
     }
-    if (m) {
-      const pts = m.rows.filter((r) => at(r.measured_on) >= first - 2 * WEEK && at(r.measured_on) <= last + 2 * WEEK);
-      const vals = pts.map((r) => Number(r.value));
-      const lo = Math.min(...vals), hi = Math.max(...vals), pad = (hi - lo) || Math.max(1, Math.abs(hi) * 0.2);
-      const yM = (v: number) => T + 14 + (1 - (v - (lo - pad * 0.5)) / ((hi + pad * 0.5) - (lo - pad * 0.5))) * (plotH * 0.6);
-      const coords = pts.map((r) => ({ x: Math.min(x1, Math.max(x0, xAt(r.measured_on))), y: yM(Number(r.value)), v: Number(r.value), d: r.measured_on }));
-      if (coords.length > 1) svg += `<polyline points="${coords.map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(" ")}" fill="none" stroke="#a5b4fc" stroke-width="2" stroke-dasharray="4 4"/>`;
-      for (const c of coords) svg += `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="6" fill="#818cf8" stroke="#0D0D1C" stroke-width="2"><title>${esc(fmtDay(c.d))}: ${esc(m.label)} ${c.v}</title></circle><text x="${c.x.toFixed(1)}" y="${(c.y - 12).toFixed(1)}" text-anchor="middle" fill="#c7d2fe" font-size="12" font-weight="700">${c.v}</text>`;
-      if (!coords.length) svg += `<text x="${x1}" y="${T + 6}" text-anchor="end" fill="#64748b" font-size="11">no ${esc(m.label)} in these weeks</text>`;
-    }
-    svg += `<rect x="${x0}" y="${H - 14}" width="12" height="8" fill="#f97316"/><text x="${x0 + 18}" y="${H - 6}" fill="#94a3b8" font-size="11">MET-hours per week, from the app</text>`;
-    if (m) svg += `<circle cx="${x0 + 270}" cy="${H - 10}" r="5" fill="#818cf8"/><text x="${x0 + 282}" y="${H - 6}" fill="#94a3b8" font-size="11">${esc(m.label)}, from reports and the app</text>`;
     $("activitychart").innerHTML = svg;
+    $("activitylegend").innerHTML = `<span class="inline-flex items-center gap-2"><span class="inline-block h-2 w-3 rounded-[2px] bg-met-hero"></span>MET-hours per week, from the app</span>`
+      + (m ? `<span class="inline-flex items-center gap-2"><span class="inline-block h-3.5 w-1 rounded-[2px] bg-accent"></span>${esc(m.label)}, from reports and the app, on the days it was measured</span>` : "");
 
     const avg = weeks.reduce((sum, w) => sum + Number(w.met_hours), 0) / weeks.length;
     const crf = allCrf.filter((c) => c.vo2max != null).slice(-1)[0];
@@ -1696,6 +1852,13 @@ import SiteHeader from "../components/SiteHeader.astro";
     lpa: "lpa_value", lipoproteina: "lpa_value",
     hscrp: "hs_crp_mgl", highsensitivitycrp: "hs_crp_mgl", crphs: "hs_crp_mgl", hscreactiveprotein: "hs_crp_mgl",
     bodyfat: "body_fat_pct", bodyfatpercentage: "body_fat_pct", skeletalmuscle: "skel_musc_pct", skeletalmusclepercentage: "skel_musc_pct",
+    musclemass: "skel_musc_pct", musclemasspercentage: "skel_musc_pct",
+    leanmassarmsandlegs: "alm_kg", appendicularleanmass: "alm_kg", alm: "alm_kg",
+    wholebodyleanmass: "ffm_kg", fatfreemass: "ffm_kg", leanmass: "ffm_kg", leanbodymass: "ffm_kg",
+    gripstrength: "handgrip_kg", handgrip: "handgrip_kg", handgripstrength: "handgrip_kg",
+    singlelegbalance: "single_leg_balance_seconds", singlelegstand: "single_leg_balance_seconds", onelegstand: "single_leg_balance_seconds",
+    chairstand: "chair_stand_seconds", chairstand5: "chair_stand_seconds", sittostand: "chair_stand_seconds", fivetimessittostand: "chair_stand_seconds",
+    walkspeed: "gait_speed_ms", gaitspeed: "gait_speed_ms", usualgaitspeed: "gait_speed_ms",
   };
   const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "");
   function appKeyFor(analyte: string): string | null {
