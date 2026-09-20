@@ -472,6 +472,8 @@ import SiteHeader from "../components/SiteHeader.astro";
       <div id="tab-depth" class="mt-6 hidden">
         <!-- the plan gate: in depth is on Pro for yourself, on Max for everyone you see -->
         <div id="dp-locked" class="hidden max-w-2xl flex-col gap-3 rounded-2xl border border-dashed border-accent/50 bg-accent/[0.05] p-5"></div>
+        <!-- "In Verve's words": a short reading of this page, written by Claude from the page's own working -->
+        <section id="dp-ai" class="mb-5 hidden flex-col gap-3 rounded-2xl border border-accent/50 bg-accent/[0.07] p-5"></section>
         <p id="dp-empty" class="hidden max-w-3xl text-[13.5px] leading-relaxed text-text-tertiary"></p>
         <div id="dp-cards" class="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4"></div>
         <div id="dp-panels" class="mt-5 grid gap-4 lg:grid-cols-2">
@@ -658,7 +660,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   import { canonName, unitKey } from "../lib/canon.js";
   import { AUTO_SEND_TO_APP } from "../data/site";
-  import { PLANS_ENFORCED, PLANS_OPEN, entitlements, planOf, type PlanKey } from "../data/plans";
+  import { PLANS_ENFORCED, PLANS_OPEN, AI_SUMMARY_OPEN, entitlements, planOf, type PlanKey } from "../data/plans";
 
   // ── tiny DOM helpers ───────────────────────────────────────────────────
   const $ = (id: string) => document.getElementById(id)!;
@@ -863,7 +865,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     $("upqueue").innerHTML = ""; show("upqueue", false);
     applyPersonMode();
     if (!p.mine && p.id) supabase.rpc("note_grant_view", { person: p.id }).then(() => {}, () => {});   // they can see when you last looked
-    await Promise.all([refresh(), loadPersonNote(), loadSharing(), loadGlance()]);
+    await Promise.all([refresh(), loadPersonNote(), loadSharing(), loadGlance(), loadAiSummary()]);
   }
 
   // ── add, edit, remove someone you look after ──────────────────────────
@@ -1968,11 +1970,104 @@ import SiteHeader from "../components/SiteHeader.astro";
       card("RETEST DUE", nextDue ? esc(nextDue.what) : "Nothing due", nextDue ? `${esc(nextDue.why)} · ${dueWord(nextDue)}` : "in the cited cadences", nextDue && nextDue.days < 0 ? "danger" : nextDue && nextDue.days <= 30 ? "warning" : ""),
     ].join("");
 
+    // ── the working, for "In Verve's words" ─────────────────────────────
+    depthWorking = {
+      person: { self: p.self, ageBand: syncProfile?.age ? `${Math.floor(Number(syncProfile.age) / 10) * 10}s` : null, sex: syncProfile?.sex ?? null, weeklyGoalMetHours: goal, scopes: p.self || p.mine ? "all" : p.scopes },
+      activity: { weeksOnFile: act.weeks.length, recentWeeks: recent.length, recentAvgMetHours: fmt1(recentAvg), changeVsPrior: change == null ? null : `${Math.round(change * 100)}%`, weeksAtGoalInARow: streak, atGoalOfLast12: `${act.atGoal} of ${act.of}`, daysSinceLastWorkout: quietDays, workoutsAWeek: Math.round(perWeek), kinds: [...kinds].map(([k, n]) => `${k} ${n}`), vigorousShare: minutes ? `${Math.round((vig / minutes) * 100)}%` : null, zone2MinutesAWeek: zone2 != null ? Math.round(zone2) : null, zone2WeeklyDose: 150 },
+      fitness: latest ? { latestVo2max: fmt1(latest.v), method: methodLabel(latest.method), maximal: latest.max, changeWithinMethod: within == null ? null : fmt1(within), trend: trendWord || null, category: latest.category ?? null, testedOn: latest.measured_on, retest: crfDue ? `${dueWord(crfDue)} (${crfDue.why})` : null } : null,
+      labs: labRows.map((r) => ({ marker: r.label, latest: r.latest, labsRange: r.range, sinceLast: r.since, outsideRange: r.out, measuredOn: r.d, retest: r.retest })),
+      body: { waist: wl ? { cm: wl.v, on: wl.d, waistToHeight: height ? (wl.v / height).toFixed(2) : null } : null, bodyFatPct: fat?.v ?? null, muscleMassPct: musc?.v ?? null, function: fnRows.map((f) => { const [word, ok] = f.judge(f.pt!.v); return { test: f.label, value: `${f.pt!.v} ${f.unit}`, verdict: word, withinCutoff: ok }; }), nextAssessment: bodyDue ? dueWord(bodyDue) : null },
+      thisWeek: eventsFrom(allLabs, labRows, fit, act, today).map((e) => `${e.d}: ${e.text.replace(/<[^>]+>/g, "")}`),
+    };
+    renderAiCard();
+
     // ── what changed this week ─────────────────────────────────────────────
     const events = eventsFrom(allLabs, labRows, fit, act, today);
     $("dp-changed").innerHTML = kicker("WHAT CHANGED THIS WEEK") + (events.length
       ? events.slice(0, 4).map((e) => `<span><span class="text-text-muted">${esc(dayWord(e.d))}</span> ${e.text}</span>`).join("")
       : `<span class="text-text-tertiary">Nothing new this week.</span>`);
+  }
+
+  // ── "In Verve's words": the card, the consent, the call ─────────────────
+  // Off until AI_SUMMARY_OPEN is on and the depth-summary function is
+  // switched on; the owner can preview the card with sessionStorage
+  // mh-ai-open=1, which only shows a card whose function answers "not open".
+  let depthWorking: Record<string, unknown> | null = null;
+  let aiSummary: { summary: any; created_at: string; model: string; cached?: boolean } | null = null;
+  let aiState: "idle" | "writing" | "error" = "idle";
+  let aiError = "";
+  let aiConsented = false;
+  const aiOpen = (() => { try { return AI_SUMMARY_OPEN || sessionStorage.getItem("mh-ai-open") === "1"; } catch { return AI_SUMMARY_OPEN; } })();
+  const aiPersonId = () => person?.id ?? "";
+  async function loadAiSummary() {
+    aiSummary = null; aiState = "idle"; aiError = "";
+    if (!aiOpen || !aiPersonId()) return;
+    const [{ data: kept }, { data: consent }] = await Promise.all([
+      supabase.from("depth_summaries").select("summary, created_at, model").eq("person_id", aiPersonId()).eq("viewer_id", userId).maybeSingle(),
+      supabase.from("ai_consent").select("summary_at").eq("user_id", userId).maybeSingle(),
+    ]);
+    aiConsented = !!consent?.summary_at;
+    if (kept?.summary) aiSummary = { summary: kept.summary, created_at: kept.created_at, model: kept.model };
+    renderAiCard();
+  }
+  const modelName = (m: string) => m.includes("fable") ? "Claude Fable 5.1" : m.includes("opus") ? "Claude Opus 5" : m.includes("sonnet") ? "Claude Sonnet 5" : m;
+  function renderAiCard() {
+    const on = aiOpen && !!aiPersonId() && !$("dp-locked").classList.contains("flex");
+    show("dp-ai", on); $("dp-ai").classList.toggle("flex", on);
+    if (!on) return;
+    const who = person!.self ? "you" : (person!.name || "this person");
+    const head = (sub: string) => `
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <span class="flex h-8 w-8 items-center justify-center rounded-[9px] bg-accent/20"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg></span>
+          <div><div class="text-[15px] font-extrabold text-text-primary">In Verve's words${person!.self ? "" : `, for ${esc(person!.name || "this person")}`}</div><div class="text-[12px] text-text-tertiary">${sub}</div></div>
+        </div>
+        <button type="button" id="dp-ai-go" class="min-h-9 rounded-xl ${aiSummary ? "border border-white/14 text-text-secondary hover:text-text-primary" : "bg-accent text-canvas"} px-3.5 text-[13px] font-bold" ${aiState === "writing" ? "disabled" : ""}>${aiState === "writing" ? "Writing…" : aiSummary ? "Write it again" : "Sum it up"}</button>
+      </div>`;
+    if (!aiSummary) {
+      $("dp-ai").innerHTML = head("A short reading of this page, from its numbers and nothing else") + `
+        <p class="text-[13.5px] leading-relaxed text-text-secondary">How ${who === "you" ? "you are" : `${who} is`} doing in two or three sentences, at most three things worth a conversation with a doctor or a coach, and what is due. It can only say what this page already shows: a number that is not on the page cannot appear.</p>
+        ${aiConsented ? "" : `<label class="flex items-start gap-2.5 text-[13px] leading-relaxed text-text-secondary"><input type="checkbox" id="dp-ai-consent" class="mt-0.5 h-4 w-4 shrink-0 accent-[#818cf8]" /><span>Send the numbers on this page to Anthropic's Claude to write it. Not ${person!.self ? "your" : "the"} name, not the reports, not the email. Deleted from their systems within 30 days; never used to train.</span></label>`}
+        ${aiState === "error" ? `<p class="text-[13px] text-danger">${esc(aiError)}</p>` : ""}`;
+    } else {
+      const sm = aiSummary.summary;
+      const tone = (w: string) => w === "doctor" ? "text-warning" : "text-accent-light";
+      $("dp-ai").innerHTML = head(`From the working on this page · ${esc(fmtDay(String(aiSummary.created_at).slice(0, 10)))} · ${esc(modelName(aiSummary.model))}`) + `
+        <p class="text-[15px] leading-relaxed text-text-primary">${esc(String(sm.lead ?? ""))}</p>
+        ${Array.isArray(sm.conversations) && sm.conversations.length ? `<div class="grid gap-3 sm:grid-cols-${Math.min(3, sm.conversations.length)}">${sm.conversations.map((c: any) => `<div class="rounded-xl border border-white/10 bg-white/[0.03] p-3.5"><div class="font-mono text-[10px] font-semibold tracking-[0.12em] ${tone(c.who)}">WORTH A CONVERSATION · ${String(c.who ?? "").toUpperCase()}</div><p class="mt-1 text-[13px] leading-relaxed text-text-secondary">${esc(String(c.text ?? ""))}</p></div>`).join("")}</div>` : ""}
+        ${sm.due ? `<div class="rounded-xl border border-white/10 bg-white/[0.03] p-3.5"><div class="font-mono text-[10px] font-semibold tracking-[0.12em] text-text-tertiary">DUE</div><p class="mt-1 text-[13px] leading-relaxed text-text-secondary">${esc(String(sm.due))}</p></div>` : ""}
+        ${sm.notShared ? `<p class="text-[12.5px] text-text-tertiary">${esc(String(sm.notShared))}</p>` : ""}
+        <p class="text-[12px] leading-relaxed text-text-muted">Not a diagnosis. Every number above is on this page; ranges are the lab's own and cadences the cited ones. Nothing was sent but the numbers${sm.dropped ? `; ${sm.dropped} sentence${sm.dropped === 1 ? "" : "s"} the model wrote with a number not on this page ${sm.dropped === 1 ? "was" : "were"} dropped` : ""}.</p>
+        ${aiState === "error" ? `<p class="text-[13px] text-danger">${esc(aiError)}</p>` : ""}`;
+    }
+    $("dp-ai-go")?.addEventListener("click", writeSummary);
+  }
+  async function writeSummary() {
+    if (!depthWorking || !aiPersonId()) return;
+    if (!aiConsented) {
+      const box = $("dp-ai").querySelector("#dp-ai-consent") as HTMLInputElement | null;
+      if (!box?.checked) { aiState = "error"; aiError = "Tick the box first: it says what is sent, and what is not."; renderAiCard(); return; }
+      const { error } = await supabase.from("ai_consent").upsert({ user_id: userId, summary_at: new Date().toISOString() }, { onConflict: "user_id" });
+      if (error) { aiState = "error"; aiError = `Could not record your consent: ${error.message}`; renderAiCard(); return; }
+      aiConsented = true;
+    }
+    aiState = "writing"; aiError = ""; renderAiCard();
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/depth-summary`, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${session?.access_token}`, apikey: SUPABASE_ANON_KEY },
+        body: JSON.stringify({ person_id: aiPersonId(), working: depthWorking, force: !!aiSummary }),
+      });
+      const out = await resp.json().catch(() => ({}));
+      if (!resp.ok || !out.summary) {
+        aiState = "error";
+        aiError = out.error === "summary_not_open" ? "In Verve's words is not switched on yet." : out.error === "consent_required" ? "Consent was not recorded; tick the box and try again." : resp.status === 429 ? "Today's allowance is used up; try tomorrow." : `Could not write it${out.detail ? `: ${out.detail}` : out.error ? `: ${out.error}` : ""}.`;
+        renderAiCard(); return;
+      }
+      aiSummary = { summary: out.summary, created_at: out.created_at, model: out.model, cached: out.cached };
+      aiState = "idle"; renderAiCard();
+    } catch { aiState = "error"; aiError = "Could not reach the writer. Try again in a moment."; renderAiCard(); }
   }
 
   // ── people at a glance: every person you can see, one line each ────────
@@ -2183,7 +2278,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       setTab(["overview", "labs", "reports", "depth"].includes(wanted) ? wanted : "overview");
       await Promise.all([loadPeople(), loadPlan()]);
       applyPersonMode();
-      await Promise.all([refresh(), loadPersonNote(), loadSharing(), loadInvites(), loadAsked(), loadRequests(), loadGlance()]);
+      await Promise.all([refresh(), loadPersonNote(), loadSharing(), loadInvites(), loadAsked(), loadRequests(), loadGlance(), loadAiSummary()]);
     } else {
       firstName = "";
       people = []; person = null;
