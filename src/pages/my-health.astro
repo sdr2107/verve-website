@@ -1407,7 +1407,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   // not have: weeks from before sync was on, or a person with no account.
   async function loadSynced(accountId: string) {
     const [a, c, w, pr] = await Promise.all([
-      supabase.from("activities").select("timestamp, duration_minutes, met_hours, intensity_category, activity_name, zone2_minutes")
+      supabase.from("activities").select("timestamp, duration_minutes, met_hours, intensity_category, activity_name, activity_type, source, zone2_minutes")
         .eq("user_id", accountId).is("deleted_at", null).order("timestamp", { ascending: true }).limit(6000),
       supabase.from("crf_entries").select("timestamp, met_capacity, performance_category, estimation_method, vo2_max_estimate")
         .eq("user_id", accountId).is("deleted_at", null).order("timestamp", { ascending: true }).limit(300),
@@ -1415,8 +1415,14 @@ import SiteHeader from "../components/SiteHeader.astro";
         .eq("user_id", accountId).is("deleted_at", null).order("measured_at", { ascending: true }).limit(600),
       supabase.from("profiles").select("weekly_met_hours_goal, height_cm, sex, age").eq("user_id", accountId).maybeSingle(),
     ]);
-    return { activities: a.data ?? [], crf: c.data ?? [], waist: w.data ?? [], profile: pr.data ?? null };
+    // Workouts only. The app also syncs its background-movement rows
+    // (source "passive-nakanishi", one per day), which are not sessions:
+    // counted here they inflated every week's MET-hours and workout count
+    // against the app's own Trends, which keeps background out of training.
+    return { activities: (a.data ?? []).filter(isWorkout), crf: c.data ?? [], waist: w.data ?? [], profile: pr.data ?? null };
   }
+  /** A synced activity row that is a session someone did, not the day's background movement. */
+  const isWorkout = (a: any) => a && a.source !== "passive-nakanishi";
   /** The app's weeks from its workouts, bucketed the way the app does: by the Monday, in local time. */
   function weeksFrom(activities: any[]): any[] {
     const by = new Map<string, any>();
@@ -1860,6 +1866,9 @@ import SiteHeader from "../components/SiteHeader.astro";
     const act = activitySummary(allWeeks, syncActs, goal, today, thisMonday);
     const { weeks, recent, prior, recentAvg, change, streak, quietDays, kinds, perWeek, minutes, vig, zone2 } = act;
     const twelve = weeks.slice(-12);
+    // The newest sessions the app synced, newest first: the rows the coach's
+    // working carries too, so a summary can name a workout the page shows.
+    const lastWorkouts = [...syncActs].filter((w) => w?.timestamp).sort(byDate("timestamp")).slice(-10).reverse();
     const maxW = Math.max(goal, ...twelve.map((w) => Number(w.met_hours)));
     const bw = 30, gap = 12, left = 24;
     const ySv = (v: number) => 120 - (v / maxW) * 100;
@@ -1880,7 +1889,8 @@ import SiteHeader from "../components/SiteHeader.astro";
         <div><strong class="text-text-primary">${fmt1(recentAvg)} MET-hours</strong> a week over the last ${recent.length === 1 ? "week" : `${recent.length} weeks`}${change != null ? `, ${change >= 0 ? "up" : "down"} ${Math.round(Math.abs(change) * 100)}% on the ${prior.length} before` : ""}${streak ? ` · ${streak} week${streak === 1 ? "" : "s"} at goal in a row` : " · not at goal last week"}</div>
         <div>Last workout <strong class="text-text-primary">${quietDays == null ? "none on file" : quietDays === 0 ? "today" : quietDays === 1 ? "yesterday" : `${quietDays} days ago`}</strong>${perWeek ? ` · ${Math.round(perWeek)} a week${kindText ? `: ${esc(kindText)}` : ""}` : ""}</div>
         <div>${minutes ? `Vigorous share <strong class="text-text-primary">${Math.round((vig / minutes) * 100)}%</strong>` : "No minutes on file"}${zone2 != null ? ` · Zone 2 <strong class="text-text-primary">${Math.round(zone2)} min</strong> a week, scored against each day's own band` : ""}</div>
-      </div>`;
+      </div>
+      ${lastWorkouts.length ? `<div class="mt-4">${kicker("LAST WORKOUTS")}<div class="mt-2 flex flex-col divide-y divide-white/8">${lastWorkouts.map((w) => `<div class="flex items-baseline gap-3 py-1.5 text-[12.5px]"><span class="w-[76px] shrink-0 font-mono text-[11px] text-text-tertiary">${esc(dayWord(localDay(w.timestamp)))}</span><span class="min-w-0 flex-1 truncate text-text-secondary">${esc(String(w.activity_name ?? "Workout"))}</span><span class="shrink-0 font-mono text-[11px] text-text-tertiary">${Math.round(Number(w.duration_minutes) || 0)} min</span><span class="w-[64px] shrink-0 text-right font-mono text-[11px] font-semibold text-text-primary">${fmt1(Number(w.met_hours) || 0)} MET-h</span><span class="w-[52px] shrink-0 text-right font-mono text-[11px] ${Number(w.zone2_minutes) > 0 ? "text-success-light" : "text-text-muted"}">${Number(w.zone2_minutes) > 0 ? `${Math.round(Number(w.zone2_minutes))} z2` : "—"}</span></div>`).join("")}</div></div>` : ""}`;
 
     // ── fitness ────────────────────────────────────────────────────────────
     const fit = fitnessSummary(allCrf, today);
@@ -1973,7 +1983,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     // ── the working, for "In Verve's words" ─────────────────────────────
     depthWorking = {
       person: { self: p.self, ageBand: syncProfile?.age ? `${Math.floor(Number(syncProfile.age) / 10) * 10}s` : null, sex: syncProfile?.sex ?? null, weeklyGoalMetHours: goal, scopes: p.self || p.mine ? "all" : p.scopes },
-      activity: { weeksOnFile: act.weeks.length, recentWeeks: recent.length, recentAvgMetHours: fmt1(recentAvg), changeVsPrior: change == null ? null : `${Math.round(change * 100)}%`, weeksAtGoalInARow: streak, atGoalOfLast12: `${act.atGoal} of ${act.of}`, daysSinceLastWorkout: quietDays, workoutsAWeek: Math.round(perWeek), kinds: [...kinds].map(([k, n]) => `${k} ${n}`), vigorousShare: minutes ? `${Math.round((vig / minutes) * 100)}%` : null, zone2MinutesAWeek: zone2 != null ? Math.round(zone2) : null, zone2WeeklyDose: 150 },
+      activity: { weeksOnFile: act.weeks.length, recentWeeks: recent.length, recentAvgMetHours: fmt1(recentAvg), changeVsPrior: change == null ? null : `${Math.round(change * 100)}%`, weeksAtGoalInARow: streak, atGoalOfLast12: `${act.atGoal} of ${act.of}`, daysSinceLastWorkout: quietDays, workoutsAWeek: Math.round(perWeek), kinds: [...kinds].map(([k, n]) => `${k} ${n}`), vigorousShare: minutes ? `${Math.round((vig / minutes) * 100)}%` : null, zone2MinutesAWeek: zone2 != null ? Math.round(zone2) : null, zone2WeeklyDose: 150, lastWorkouts: lastWorkouts.map((w) => ({ on: localDay(w.timestamp), name: String(w.activity_name ?? "workout"), minutes: Math.round(Number(w.duration_minutes) || 0), metHours: fmt1(Number(w.met_hours) || 0), intensity: w.intensity_category ?? null, zone2Minutes: w.zone2_minutes != null ? Math.round(Number(w.zone2_minutes)) : null })) },
       fitness: latest ? { latestVo2max: fmt1(latest.v), method: methodLabel(latest.method), maximal: latest.max, changeWithinMethod: within == null ? null : fmt1(within), trend: trendWord || null, category: latest.category ?? null, testedOn: latest.measured_on, retest: crfDue ? `${dueWord(crfDue)} (${crfDue.why})` : null } : null,
       labs: labRows.map((r) => ({ marker: r.label, latest: r.latest, labsRange: r.range, sinceLast: r.since, outsideRange: r.out, measuredOn: r.d, retest: r.retest })),
       body: { waist: wl ? { cm: wl.v, on: wl.d, waistToHeight: height ? (wl.v / height).toFixed(2) : null } : null, bodyFatPct: fat?.v ?? null, muscleMassPct: musc?.v ?? null, function: fnRows.map((f) => { const [word, ok] = f.judge(f.pt!.v); return { test: f.label, value: `${f.pt!.v} ${f.unit}`, verdict: word, withinCutoff: ok }; }), nextAssessment: bodyDue ? dueWord(bodyDue) : null },
@@ -2110,7 +2120,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       supabase.from("web_crf").select("person_id, measured_on, vo2max, method").in("person_id", ids).order("measured_on", { ascending: true }).limit(ids.length * 10 + 1),
       supabase.from("web_body").select("person_id, measured_on, waist_cm").in("person_id", ids).order("measured_on", { ascending: true }).limit(ids.length * 60 + 1),
       // the app's own rows, for everyone with an account: twelve weeks of workouts, every fitness test, the goal
-      accounts.length ? supabase.from("activities").select("user_id, timestamp, duration_minutes, met_hours, intensity_category, activity_name, zone2_minutes").in("user_id", accounts).is("deleted_at", null).gte("timestamp", since).order("timestamp", { ascending: true }).limit(accounts.length * 400 + 1) : none,
+      accounts.length ? supabase.from("activities").select("user_id, timestamp, duration_minutes, met_hours, intensity_category, activity_name, source, zone2_minutes").in("user_id", accounts).is("deleted_at", null).neq("source", "passive-nakanishi").gte("timestamp", since).order("timestamp", { ascending: true }).limit(accounts.length * 400 + 1) : none,
       accounts.length ? supabase.from("crf_entries").select("user_id, timestamp, met_capacity, performance_category, estimation_method, vo2_max_estimate").in("user_id", accounts).is("deleted_at", null).order("timestamp", { ascending: true }).limit(accounts.length * 40 + 1) : none,
       accounts.length ? supabase.from("profiles").select("user_id, weekly_met_hours_goal").in("user_id", accounts) : none,
       supabase.from("share_requests").select("target_email, created_at").eq("requester_id", userId).eq("status", "requested").order("created_at", { ascending: true }),

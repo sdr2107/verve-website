@@ -1,0 +1,111 @@
+---
+/**
+ * What the page keeps, what it only reads, and why one session shows one MET
+ * figure. Rendered by /science/movement/a-workout; see scienceTopics.ts.
+ *
+ * The app's workout page is figures only — a number, its unit, one mono line
+ * of numbers — and every sentence it used to carry lives here instead. The
+ * app links to /science#a-workout from the foot of that page.
+ */
+import { topicHref } from "../../data/scienceTopics";
+const mets = topicHref("mets-vs-met-h");
+const zone2 = topicHref("zone-2");
+const volume = topicHref("weekly-volume");
+const hrr = topicHref("heart-rate-recovery");
+---
+
+<div class="mt-[18px] rounded-2xl border border-white/8 bg-white/4 p-5 sm:px-[22px]">
+  <p class="font-mono text-[9px] uppercase tracking-[0.1em] text-text-tertiary">
+    The page, card by card
+  </p>
+  <div class="mt-3 grid gap-2 sm:grid-cols-2">
+    {[
+      ["What Verve keeps", "MET-hours · minutes · MET · average bpm"],
+      ["Effort, in your bands", "light · moderate · vigorous minutes"],
+      ["Minute by minute", "the heart-rate trace, read live"],
+      ["Recovery · Zone 2", "the fall after the end · minutes in your band"],
+      ["This week", "measured moderate and vigorous minutes, against 150"],
+    ].map(([k, v]) => (
+      <div class="flex flex-col gap-0.5 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2.5">
+        <span class="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">{k}</span>
+        <span class="text-[12.5px] text-text-secondary">{v}</span>
+      </div>
+    ))}
+  </div>
+</div>
+
+<div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+  <p class="text-sm leading-relaxed text-text-secondary">
+    Apple and the watch makers show pace, splits and a map, and do it well.
+    Verve&rsquo;s workout page shows what only Verve can say about the same
+    forty minutes, and it says it in figures. What each figure is, where it
+    comes from and what it is not, is here.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">What Verve keeps.</strong>
+    MET-hours are the session&rsquo;s MET value times its hours: 30 minutes at
+    4.4 MET is 2.2 MET-h. The same quantity in minutes is 132 MET-minutes.
+    The page prints one of them, never both, because two spellings of one
+    number read as two numbers that disagree. The average heart rate is
+    Apple Health&rsquo;s over the session. Calories are not shown: what Verve
+    could print is an estimate from the MET value and your weight, not a
+    measurement, and an estimate on a page of measurements is the one figure
+    a reader cannot tell apart. <a href={mets}>METs vs MET-hours</a> has the
+    difference between how hard and how much.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">Effort, in your bands.</strong>
+    Your moderate band runs from your resting heart rate and your age
+    (Karvonen), so it is yours, and it moves as they do. A session is scored
+    against the band that applied on the day and is never re-scored when the
+    band later moves: a finished day is finished. The two dashed lines on the
+    minute chart are that band&rsquo;s edges, which is why the three figures
+    under the bar do not repeat them. Strength, flexibility and balance always
+    read as light here. Heart rate is not a measure of their effort, and
+    pretending otherwise would credit a hard set as a slow walk.
+    <a href={zone2}>Zone 2</a> has where the band comes from.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">Minute by minute.</strong>
+    Each bar is a minute&rsquo;s average heart rate, coloured by the band it
+    fell in. The trace is read from Apple Health on your phone when the page
+    opens, and is not stored by Verve or sent anywhere. A minute without a
+    reading is a gap in the chart, not a zero. A workout logged by hand, or
+    recorded without a watch, has no trace and the card says so in four words.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">Recovery.</strong>
+    The fall in heart rate in the first minute after the workout truly ended,
+    read from Apple Health&rsquo;s end time rather than the start plus the
+    duration. The small line under it is the two readings: the rate at the end
+    and the rate a minute later. A walk that ended below your moderate band is
+    not read, because there was nothing to recover from, and the card shows a
+    dash. The one cited line, and why there is no second one, is on
+    <a href={hrr}>heart rate recovery</a>.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">Zone 2.</strong>
+    The minutes this session spent inside your moderate band, and under it the
+    week&rsquo;s running total against the 150 the app asks for. Why 150, and
+    why it is a dose rather than a goal, is on <a href={zone2}>Zone 2</a>.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">This week.</strong>
+    Moderate and vigorous minutes across the week&rsquo;s aerobic sessions, as
+    measured, against the first flag on the Weekly Ascent. This is the same
+    figure the Activity tab draws, from the same function, so the two cannot
+    disagree. It is not MET-hours: an earlier version of the page summed
+    MET-hours over every row in the week, background movement included, and
+    read &ldquo;25 of 10&rdquo; under a workout worth 2.2. Verve does not count
+    a vigorous minute twice the way the published 150 does, which is why the
+    flags on the Ascent carry no organisation&rsquo;s name;
+    <a href={volume}>weekly volume</a> has the arithmetic.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">What travels, and what does not.</strong>
+    The MET-hours, the band split and the zone 2 minutes are stored on the
+    activity row, go into your export, and with sync on reach My health on this
+    site, where In depth and the coach&rsquo;s summary read them. The trace and
+    the recovery are read live from the phone each time and never leave it.
+  </p>
+</div>
