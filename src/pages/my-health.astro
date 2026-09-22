@@ -307,9 +307,10 @@ import SiteHeader from "../components/SiteHeader.astro";
                 <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-scope="imaging" class="h-4 w-4 accent-[#818cf8]" />Imaging</label>
                 <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-scope="activity" class="h-4 w-4 accent-[#818cf8]" />Activity and fitness</label>
                 <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-scope="body" class="h-4 w-4 accent-[#818cf8]" />Body measurements</label>
+                <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-scope="heart" class="h-4 w-4 accent-[#818cf8]" />Sleep and heart</label>
               </fieldset>
               <button type="submit" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Invite</button>
-              <p class="basis-full text-[12px] leading-relaxed text-text-tertiary">They can look, not change. You can stop, or change what they see, at any time. Activity and body measurements come from the app, so they are offered only for a person with an account.</p>
+              <p class="basis-full text-[12px] leading-relaxed text-text-tertiary">They can look, not change. You can stop, or change what they see, at any time. Activity, body measurements, and sleep and heart come from the app, so they are offered only for a person with an account.</p>
             </form>
             <p id="sharemsg" class="mt-2 hidden text-[13px]"></p>
           </div>
@@ -481,6 +482,7 @@ import SiteHeader from "../components/SiteHeader.astro";
           <section id="dp-fitness" class="rounded-2xl border border-white/10 bg-white/[0.03] p-5"></section>
           <section id="dp-labs" class="rounded-2xl border border-white/10 bg-white/[0.03] p-5"></section>
           <section id="dp-body" class="rounded-2xl border border-white/10 bg-white/[0.03] p-5"></section>
+          <section id="dp-heart" class="rounded-2xl border border-white/10 bg-white/[0.03] p-5 lg:col-span-2"></section>
         </div>
         <div id="dp-changed" class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-2xl border border-white/10 px-5 py-3.5 text-[13px] text-text-secondary"></div>
         <p class="mt-2 text-[12px] text-text-muted">Ranges are each lab's own. Cadences are the cited ones on the marker pages in the science section; the fitness-test and body-assessment cadences are the app's. None of it is a diagnosis.</p>
@@ -1038,7 +1040,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   }
 
   // ── sharing: who can see this person, and invitations waiting for you ──
-  const SCOPE_LABEL: Record<string, string> = { labs: "Labs", imaging: "Imaging", activity: "Activity and fitness", body: "Body measurements", notes: "Notes" };
+  const SCOPE_LABEL: Record<string, string> = { labs: "Labs", imaging: "Imaging", activity: "Activity and fitness", body: "Body measurements", heart: "Sleep and heart", notes: "Notes" };
   const scopeList = (xs: string[]) => xs.map((x) => SCOPE_LABEL[x] ?? x).join(" · ");
   const dayOf = (iso: string) => fmtDay(String(iso).slice(0, 10));
 
@@ -1405,8 +1407,11 @@ import SiteHeader from "../components/SiteHeader.astro";
   // through your own policies and a client's through the activity and
   // body scopes they ticked. An export is then only for what sync does
   // not have: weeks from before sync was on, or a person with no account.
+  /** The app's daily read: resting heart rate, steps, the night, the day's recovery. One row a day, pushed on every sync. */
+  let syncSignals: any[] = [];
   async function loadSynced(accountId: string) {
-    const [a, c, w, pr] = await Promise.all([
+    const since = new Date(); since.setDate(since.getDate() - 400);
+    const [a, c, w, pr, sg] = await Promise.all([
       supabase.from("activities").select("timestamp, duration_minutes, met_hours, intensity_category, activity_name, activity_type, source, zone2_minutes")
         .eq("user_id", accountId).is("deleted_at", null).order("timestamp", { ascending: true }).limit(6000),
       supabase.from("crf_entries").select("timestamp, met_capacity, performance_category, estimation_method, vo2_max_estimate")
@@ -1414,12 +1419,14 @@ import SiteHeader from "../components/SiteHeader.astro";
       supabase.from("waist_readings").select("measured_at, waist_cm")
         .eq("user_id", accountId).is("deleted_at", null).order("measured_at", { ascending: true }).limit(600),
       supabase.from("profiles").select("weekly_met_hours_goal, height_cm, sex, age").eq("user_id", accountId).maybeSingle(),
+      supabase.from("daily_signals").select("day, resting_hr, steps, sleep_minutes, sleep_start, sleep_end, sleep_staged, hrr_bpm, hrr_n, hrr_source")
+        .eq("user_id", accountId).gte("day", since.toLocaleDateString("en-CA")).order("day", { ascending: true }).limit(420),
     ]);
     // Workouts only. The app also syncs its background-movement rows
     // (source "passive-nakanishi", one per day), which are not sessions:
     // counted here they inflated every week's MET-hours and workout count
     // against the app's own Trends, which keeps background out of training.
-    return { activities: (a.data ?? []).filter(isWorkout), crf: c.data ?? [], waist: w.data ?? [], profile: pr.data ?? null };
+    return { activities: (a.data ?? []).filter(isWorkout), crf: c.data ?? [], waist: w.data ?? [], profile: pr.data ?? null, signals: sg.data ?? [] };
   }
   /** A synced activity row that is a session someone did, not the day's background movement. */
   const isWorkout = (a: any) => a && a.source !== "passive-nakanishi";
@@ -1468,6 +1475,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     allBody = mergeBy("measured_on", synced ? bodyFromSync(synced.waist) : [], b.data ?? []);
     syncActs = synced?.activities ?? [];
     syncProfile = synced?.profile ?? null;
+    syncSignals = synced?.signals ?? [];
     renderActivity();
     renderAppImports();
     renderDepth();
@@ -1835,6 +1843,74 @@ import SiteHeader from "../components/SiteHeader.astro";
   }
   const dayWord = (d: string) => new Date(d + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", day: "numeric" });
 
+  const fmtSleepMin = (m: number) => `${Math.floor(m / 60)} h ${String(Math.round(m % 60)).padStart(2, "0")} m`;
+  const medianOf = (xs: number[]) => { if (!xs.length) return null; const s = [...xs].sort((a, b) => a - b); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+  const daysBack = (day: string, n: number) => { const d = new Date(day + "T00:00:00"); d.setDate(d.getDate() - n); return d.toLocaleDateString("en-CA"); };
+  /**
+   * The app's daily rows, read the way its Today tile reads them. Null when
+   * there are no rows at all; every part inside can be empty on its own.
+   */
+  function sleepHeartSummary(rows: any[], today: string) {
+    if (!rows.length) return null;
+    const byDay = new Map<string, any>(rows.map((r) => [String(r.day), r]));
+
+    // resting heart rate: the latest morning against the median of the 30 before it, latest excluded
+    const rhrRows = rows.filter((r) => r.resting_hr != null).map((r) => ({ day: String(r.day), bpm: Number(r.resting_hr) }));
+    const latestR = rhrRows[rhrRows.length - 1] ?? null;
+    let baseline: number | null = null, priors = 0, delta: number | null = null, status = "", level = "", run = 0, inBand = 0, read = 0, svg = "";
+    if (latestR) {
+      const from = daysBack(latestR.day, 30);
+      const pri = rhrRows.filter((r) => r.day >= from && r.day < latestR.day).map((r) => r.bpm);
+      priors = pri.length;
+      if (pri.length >= 14) {
+        baseline = Math.round(medianOf(pri)!);
+        delta = Math.round(latestR.bpm - baseline);
+        status = delta >= 10 ? "stronglyElevated" : delta >= 5 ? "elevated" : delta <= -5 ? "below" : "typical";
+      }
+      level = latestR.bpm < 50 ? "low" : latestR.bpm <= 60 ? "optimal" : latestR.bpm <= 75 ? "typical" : latestR.bpm <= 80 ? "elevated" : "high";
+      // the last 28 mornings, drawn; each judged against the median of its own prior 30
+      const win = rhrRows.filter((r) => r.day > daysBack(today, 28));
+      const judged = win.map((r) => { const f = daysBack(r.day, 30); const pr = rhrRows.filter((x) => x.day >= f && x.day < r.day).map((x) => x.bpm); const b = pr.length >= 14 ? medianOf(pr)! : null; return { ...r, b, above: b != null && r.bpm - b >= 5 }; });
+      read = judged.length; inBand = judged.filter((j) => j.b != null && !j.above && j.bpm - j.b! > -5).length;
+      for (let i = judged.length - 1; i >= 0 && judged[i].above; i--) run++;
+      if (judged.length) {
+        const vs = judged.map((j) => j.bpm); const lo = Math.min(...vs, baseline != null ? baseline - 5 : Infinity) - 2, hi = Math.max(...vs, baseline != null ? baseline + 5 : -Infinity) + 2;
+        const t0 = new Date(daysBack(today, 27) + "T00:00:00").getTime(), t1 = new Date(today + "T00:00:00").getTime();
+        const xf = (d: string) => 30 + ((new Date(d + "T00:00:00").getTime() - t0) / Math.max(1, t1 - t0)) * 490;
+        const yf = (v: number) => 122 - ((v - lo) / Math.max(1, hi - lo)) * 100;
+        if (baseline != null) svg += `<rect x="30" y="${yf(baseline + 5).toFixed(1)}" width="490" height="${(yf(baseline - 5) - yf(baseline + 5)).toFixed(1)}" fill="rgba(52,211,153,0.12)"/><text x="524" y="${(yf(baseline + 5) + 4).toFixed(1)}" fill="#64748b" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${baseline + 5}</text><text x="524" y="${(yf(baseline - 5) + 4).toFixed(1)}" fill="#64748b" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${baseline - 5}</text>`;
+        svg += `<line x1="30" y1="122" x2="520" y2="122" stroke="rgba(255,255,255,0.14)"/>`;
+        if (judged.length > 1) svg += `<polyline points="${judged.map((j) => `${xf(j.day).toFixed(1)},${yf(j.bpm).toFixed(1)}`).join(" ")}" fill="none" stroke="#a5b4fc" stroke-width="1.8"/>`;
+        for (const j of judged) svg += `<circle cx="${xf(j.day).toFixed(1)}" cy="${yf(j.bpm).toFixed(1)}" r="4" fill="${j.above ? "#FBBF24" : "#818cf8"}" stroke="#0D0D1C" stroke-width="1.5"><title>${esc(fmtDay(j.day))}: ${j.bpm} bpm${j.b != null ? ` · median before ${Math.round(j.b)}` : ""}</title></circle>`;
+        svg += `<text x="${xf(judged[0].day).toFixed(1)}" y="140" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${esc(fmtDay(judged[0].day)).toUpperCase()}</text><text x="520" y="140" text-anchor="end" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${esc(fmtDay(judged[judged.length - 1].day)).toUpperCase()}</text>`;
+      }
+    }
+
+    // the night that ended this morning, against the median of 30 nights
+    const nightRows = rows.filter((r) => r.sleep_minutes != null && r.day > daysBack(today, 30));
+    const lastN = nightRows[nightRows.length - 1] ?? null;
+    const usual = nightRows.length >= 7 ? Math.round(medianOf(nightRows.map((r) => Number(r.sleep_minutes)))!) : null;
+    const bedOf = (iso: string | null) => iso ? new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) : "";
+    const sleep = { nights: nightRows.length, shortNights: nightRows.filter((r) => Number(r.sleep_minutes) < 420).length, usual,
+      last: lastN ? { day: String(lastN.day), min: Number(lastN.sleep_minutes), band: Number(lastN.sleep_minutes) < 420 ? "short" : Number(lastN.sleep_minutes) > 540 ? "long" : "inRange", bed: bedOf(lastN.sleep_start) } : null };
+
+    // recovery: the latest day's median, against the median of the 30 days before
+    const hrrRows = rows.filter((r) => r.hrr_bpm != null);
+    const lastH = hrrRows[hrrRows.length - 1] ?? null;
+    const hrrPri = lastH ? hrrRows.filter((r) => r.day >= daysBack(String(lastH.day), 30) && r.day < String(lastH.day)).map((r) => Number(r.hrr_bpm)) : [];
+    const hrr = { latest: lastH ? Number(lastH.hrr_bpm) : null, latestDay: lastH ? String(lastH.day) : null, median: hrrPri.length >= 5 ? Math.round(medianOf(hrrPri)!) : null, source: lastH?.hrr_source ?? null };
+
+    // steps: the last seven days, and the seven before
+    const stepAvg = (from: string, to: string) => { const xs = rows.filter((r) => r.steps != null && r.day > from && r.day <= to).map((r) => Number(r.steps)); return xs.length ? { avg: Math.round(xs.reduce((a, b) => a + b, 0) / xs.length), n: xs.length } : null; };
+    const s7 = stepAvg(daysBack(today, 7), today), s14 = stepAvg(daysBack(today, 14), daysBack(today, 7));
+    const steps = { avg: s7?.avg ?? null, days: s7?.n ?? 0, prior: s14?.avg ?? null };
+
+    const first = rows[0]?.day ? String(rows[0].day) : today;
+    const days = Math.round((new Date(today + "T00:00:00").getTime() - new Date(first + "T00:00:00").getTime()) / 86400000) + 1;
+    void byDay;
+    return { days, rhr: { latest: latestR?.bpm ?? null, latestDay: latestR?.day ?? null, baseline, priors, delta, status, level, run, inBand, read, svg }, sleep, hrr, steps };
+  }
+
   function renderDepth() {
     const p = person;
     if (!p) return;
@@ -1850,7 +1926,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     }
     const today = new Date().toLocaleDateString("en-CA"), thisMonday = mondayOf(new Date());
     const by = markerPoints();
-    const nothing = !allWeeks.length && !allCrf.length && !by.size;
+    const nothing = !allWeeks.length && !allCrf.length && !by.size && !syncSignals.length;
     show("dp-empty", nothing); show("dp-cards", !nothing); show("dp-panels", !nothing); show("dp-changed", !nothing);
     $("dp-panels").classList.toggle("grid", !nothing); $("dp-cards").classList.toggle("grid", !nothing); $("dp-changed").classList.toggle("flex", !nothing);
     if (nothing) {
@@ -1963,6 +2039,44 @@ import SiteHeader from "../components/SiteHeader.astro";
         </div>
       </div>`;
 
+    // ── sleep and heart: the app's daily read, against the person's own normal ─
+    // The same rules the app's Today tile uses, so the two never disagree:
+    // resting heart rate against the MEDIAN of the prior 30 mornings, up from
+    // 5 bpm, strongly from 10 (Radin 2020; Smarr 2020); a night against the
+    // 7-to-9-hour band (Hirshkowitz 2015); recovery against the one cited
+    // line, 12 bpm (Cole 1999), and against the person's own 30-day median.
+    const heart = sleepHeartSummary(syncSignals, today);
+    const canSeeHeart = p.self || p.mine || p.scopes.includes("heart");
+    $("dp-heart").innerHTML = `
+      <div class="flex flex-wrap items-baseline justify-between gap-2"><h2 class="text-[17px] font-extrabold text-text-primary">Sleep and heart</h2><span class="text-[12.5px] text-text-tertiary">${heart ? `${heart.days} days from the app · read against ${p.self ? "your" : "their"} own normal` : "What the watch reads every morning"}</span></div>
+      ${!heart ? `<p class="mt-3 text-[13px] text-text-tertiary">${!p.account_id ? "Only for a person with a Verve account: the app sends these on every sync." : !canSeeHeart ? `${esc(p.name)} has not shared sleep and heart.` : "Nothing read yet. Open the app once with Apple Health on and Cloud Sync on; a year of mornings arrives with the first sync."}</p>` : `
+      <div class="mt-3 grid gap-5 lg:grid-cols-[3fr_2fr]">
+        <div>
+          ${kicker(`RESTING HEART RATE · LAST 28 MORNINGS · ${heart.rhr.baseline != null ? `NORMAL ${heart.rhr.baseline - 5}–${heart.rhr.baseline + 5}` : "NO BASELINE YET"}`)}
+          ${heart.rhr.svg ? `<svg viewBox="0 0 540 150" class="mt-2 block h-auto w-full" role="img" aria-label="Twenty-eight mornings of resting heart rate, the person's own band shaded, mornings above it marked">${heart.rhr.svg}</svg>` : `<p class="mt-2 text-[13px] text-text-tertiary">No resting heart rate on file.</p>`}
+          <div class="mt-2 flex flex-col gap-1.5 text-[13px] leading-relaxed text-text-secondary">
+            ${heart.rhr.latest != null ? `<div><strong class="text-text-primary">${heart.rhr.latest} bpm</strong> ${esc(dayWord(heart.rhr.latestDay!))}${heart.rhr.baseline != null ? ` · ${heart.rhr.delta === 0 ? "at" : `${Math.abs(heart.rhr.delta!)} ${heart.rhr.delta! > 0 ? "above" : "below"}`} the median of the ${heart.rhr.priors} mornings before${heart.rhr.status === "elevated" ? `, <span class="text-warning">elevated</span>` : heart.rhr.status === "stronglyElevated" ? `, <span class="text-danger">strongly elevated</span>` : heart.rhr.status === "below" ? ", below" : ""}` : ` · a baseline needs 14 mornings; ${heart.rhr.priors} so far`}</div>` : ""}
+            ${heart.rhr.run > 1 ? `<div><strong class="text-text-primary">${heart.rhr.run} mornings running</strong> above the band. One is noise; three is a pattern. It says nothing about why: a late meal, heat, hard training and a cold all do this.</div>` : heart.rhr.latest != null ? `<div>Inside the band ${heart.rhr.inBand} of the last ${heart.rhr.read} mornings read.</div>` : ""}
+            ${heart.rhr.level ? `<div>Absolute level <strong class="text-text-primary">${heart.rhr.level}</strong>: the ARIC bands, a reading aid for a graded association, not a diagnosis.</div>` : ""}
+          </div>
+        </div>
+        <div class="flex flex-col gap-3.5">
+          <div>
+            ${kicker("SLEEP · THE NIGHT THAT ENDED THIS MORNING")}
+            ${heart.sleep.last ? `<div class="mt-1.5 text-[13px] leading-relaxed text-text-secondary"><strong class="text-text-primary">${fmtSleepMin(heart.sleep.last.min)}</strong> ${esc(dayWord(heart.sleep.last.day))}${heart.sleep.usual != null ? ` · ${Math.abs(heart.sleep.last.min - heart.sleep.usual) < 20 ? "about the usual" : `${fmtSleepMin(Math.abs(heart.sleep.last.min - heart.sleep.usual))} ${heart.sleep.last.min < heart.sleep.usual ? "under" : "over"} the usual ${fmtSleepMin(heart.sleep.usual)}`}` : ""} · <span class="${heart.sleep.last.band === "inRange" ? "text-success-light" : "text-warning"}">${heart.sleep.last.band === "short" ? "under 7 h" : heart.sleep.last.band === "long" ? "over 9 h" : "in the 7 to 9 h band"}</span>${heart.sleep.last.bed ? ` · in bed ${esc(heart.sleep.last.bed)}` : ""}</div>
+            <div class="mt-1 text-[12.5px] text-text-tertiary">${heart.sleep.nights} nights in 30 · ${heart.sleep.shortNights} under 7 h · a move toward the band is the improvement, not more sleep without limit</div>` : `<p class="mt-1.5 text-[13px] text-text-tertiary">No night on file.</p>`}
+          </div>
+          <div>
+            ${kicker("HEART RATE RECOVERY · ONE MINUTE AFTER STOPPING")}
+            ${heart.hrr.latest != null ? `<div class="mt-1.5 text-[13px] leading-relaxed text-text-secondary"><strong class="${heart.hrr.latest <= 12 ? "text-danger" : "text-text-primary"}">${heart.hrr.latest} bpm</strong> ${esc(dayWord(heart.hrr.latestDay!))}${heart.hrr.median != null ? ` · own 30-day median ${heart.hrr.median}` : ""}${heart.hrr.latest <= 12 ? ` · <span class="text-danger">at or under the cited 12</span>` : " · above the one cited line; no verdict word above it"}${heart.hrr.source === "derived" ? " · read off the post-workout rate" : ""}</div>` : `<p class="mt-1.5 text-[13px] text-text-tertiary">No recovery on file: Apple Watch records one after a workout that ends above the person's Zone 2 floor.</p>`}
+          </div>
+          <div>
+            ${kicker("STEPS · LAST 7 DAYS")}
+            ${heart.steps.avg != null ? `<div class="mt-1.5 text-[13px] leading-relaxed text-text-secondary"><strong class="text-text-primary">${heart.steps.avg.toLocaleString()}</strong> a day${heart.steps.prior != null ? ` · ${heart.steps.prior.toLocaleString()} the week before` : ""} · ${heart.steps.days} days counted</div>` : `<p class="mt-1.5 text-[13px] text-text-tertiary">No steps on file.</p>`}
+          </div>
+        </div>
+      </div>`}`;
+
     // ── the four cards ─────────────────────────────────────────────────────
     const moving = change == null ? { k: "ACTIVITY", v: recent.length ? `${fmt1(recentAvg)} MET-h` : "—", tone: "", sub: recent.length ? `a week over the last ${recent.length === 1 ? "week" : `${recent.length} weeks`}; not enough weeks before to compare` : "no weeks on file" }
       : change >= 0.05 ? { k: "MOVING", v: `${signed(change * 100, 0)}%`, tone: "success", sub: `${recent.length}-week MET-hours against the ${prior.length} before` }
@@ -1987,6 +2101,12 @@ import SiteHeader from "../components/SiteHeader.astro";
       fitness: latest ? { latestVo2max: fmt1(latest.v), method: methodLabel(latest.method), maximal: latest.max, changeWithinMethod: within == null ? null : fmt1(within), trend: trendWord || null, category: latest.category ?? null, testedOn: latest.measured_on, retest: crfDue ? `${dueWord(crfDue)} (${crfDue.why})` : null } : null,
       labs: labRows.map((r) => ({ marker: r.label, latest: r.latest, labsRange: r.range, sinceLast: r.since, outsideRange: r.out, measuredOn: r.d, retest: r.retest })),
       body: { waist: wl ? { cm: wl.v, on: wl.d, waistToHeight: height ? (wl.v / height).toFixed(2) : null } : null, bodyFatPct: fat?.v ?? null, muscleMassPct: musc?.v ?? null, function: fnRows.map((f) => { const [word, ok] = f.judge(f.pt!.v); return { test: f.label, value: `${f.pt!.v} ${f.unit}`, verdict: word, withinCutoff: ok }; }), nextAssessment: bodyDue ? dueWord(bodyDue) : null },
+      sleepHeart: heart ? {
+        restingHeartRate: heart.rhr.latest != null ? { latest: heart.rhr.latest, on: heart.rhr.latestDay, ownMedian: heart.rhr.baseline, delta: heart.rhr.delta, status: heart.rhr.status, morningsAboveBandInARow: heart.rhr.run, absoluteLevel: heart.rhr.level } : null,
+        sleep: heart.sleep.last ? { lastNightMinutes: heart.sleep.last.min, usualMinutes: heart.sleep.usual, band: heart.sleep.last.band, nightsIn30: heart.sleep.nights, shortNightsIn30: heart.sleep.shortNights } : null,
+        heartRateRecovery: heart.hrr.latest != null ? { latestBpm: heart.hrr.latest, on: heart.hrr.latestDay, ownMedian: heart.hrr.median, citedLine: 12 } : null,
+        steps: heart.steps.avg != null ? { dailyAverageLast7: heart.steps.avg, weekBefore: heart.steps.prior } : null,
+      } : null,
       thisWeek: eventsFrom(allLabs, labRows, fit, act, today).map((e) => `${e.d}: ${e.text.replace(/<[^>]+>/g, "")}`),
     };
     renderAiCard();
