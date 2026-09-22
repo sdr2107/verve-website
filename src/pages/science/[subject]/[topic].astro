@@ -2,18 +2,20 @@
 /**
  * /science/<subject>/<topic> — one topic, and only this topic.
  *
- * The chrome is read from scienceTopics.ts: the rail lists the subject's
- * topics with this one lit, the eyebrow says "topic 2 of 5", and the foot
- * of the page carries the way back and the way on. The content is the
+ * The chrome is read from scienceTopics.ts: the sidebar lists every
+ * subject with this one unfolded and this topic lit, the eyebrow says
+ * "topic 2 of 5", and the foot of the page carries the way back and the
+ * way on. The content is the
  * matching file under src/topics/, found by its path; a topic with no file
  * fails the build here rather than shipping an empty page.
  *
- * On a phone the rail is gone and the header is a back link, so the way on
+ * On a phone the sidebar is gone and the header is a back link, so the way on
  * rides at the bottom of the screen: the progress dots, then prev and next.
  */
 import Layout from "../../../layouts/Layout.astro";
 import SiteHeader from "../../../components/SiteHeader.astro";
 import Footer from "../../../components/Footer.astro";
+import ScienceSidebar from "../../../components/science/ScienceSidebar.astro";
 import {
   TOPICS,
   topicsFor,
@@ -43,11 +45,6 @@ const mod = modules[`../../../topics/${subject}/${slug}.astro`];
 if (!mod) throw new Error(`No content for "${slug}": expected src/topics/${subject}/${slug}.astro`);
 const Content = mod.default;
 
-const RAIL =
-  "block rounded-lg border-l-2 px-3 py-[7px] text-[13px] leading-snug transition-colors hover:text-text-primary";
-const LIT = "border-accent bg-white/6 text-text-primary";
-const DIM = "border-transparent text-text-tertiary";
-
 const onward = next
   ? { href: topicHref(next.slug), kicker: "Next", label: next.label }
   : nextSubject
@@ -70,44 +67,8 @@ const onward = next
     position={`${n} of ${of}`}
   />
 
-  <div class="mx-auto flex max-w-6xl gap-11 px-6 sm:px-10">
-    <!-- ── The rail: the subject's topics, the open one lit. ─────────────── -->
-    <aside class="hidden w-[210px] shrink-0 lg:block">
-      <div class="sticky top-8 pt-10">
-        <a
-          href={`/science/${subject}`}
-          class="block px-3 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-accent-light"
-        >
-          &larr; {meta.label}
-        </a>
-        <nav class="mt-2.5" aria-label={`Topics in ${meta.label}`}>
-          <ol class="space-y-0.5">
-            {siblings.map((t, i) => (
-              <li>
-                <a
-                  href={topicHref(t.slug)}
-                  aria-current={t.slug === slug ? "page" : undefined}
-                  class:list={[RAIL, t.slug === slug ? LIT : DIM]}
-                >
-                  <span class="mr-2 font-mono text-[11px]">{i + 1}</span>{t.label}
-                </a>
-              </li>
-            ))}
-          </ol>
-        </nav>
-        <div class="mx-3 my-[18px] h-px bg-white/[0.07]"></div>
-        <a href="/science" class:list={[RAIL, DIM]}>All subjects</a>
-        {nextSubject && (
-          <a href={`/science/${nextSubject.slug}`} class:list={[RAIL, DIM]}>{nextSubject.label} &rarr;</a>
-        )}
-        {meta.aside && (
-          <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-4">
-            <p class="text-xs leading-relaxed text-text-secondary">{meta.aside.text}</p>
-            <a href={meta.aside.href} class="mt-2 block text-xs font-medium text-accent-light">{meta.aside.label} &rarr;</a>
-          </div>
-        )}
-      </div>
-    </aside>
+  <div class="mx-auto flex max-w-7xl gap-12 px-6 sm:px-10">
+    <ScienceSidebar subject={subject} topic={slug} />
 
     <!-- ── One topic, and only this topic. ──────────────────────────────── -->
     <main class="min-w-0 flex-1 pt-7 lg:pt-10">

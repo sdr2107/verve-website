@@ -1,0 +1,118 @@
+---
+/**
+ * The science section's sidebar: every subject, the open one unfolded.
+ *
+ * The topic page used to carry a rail of its own subject's topics and a
+ * link back to the subject; the subject page had no rail at all; and the
+ * hub was the only place all four subjects met. So a reader inside a topic
+ * who wanted a different subject went up twice. Now one sidebar rides on
+ * the subject page and every topic page: a way back to the hub at the top,
+ * the four subjects in reading order, and the open subject's topics under
+ * its name with the open topic lit. Everything in it is read from
+ * scienceTopics.ts, so a topic added there appears here at once.
+ *
+ * On a phone the sidebar is gone; the header's back link and the bar at the
+ * foot of a topic carry the way on.
+ */
+import {
+  SUBJECTS,
+  topicsFor,
+  subjectCounts,
+  topicHref,
+  type SubjectSlug,
+} from "../../data/scienceTopics";
+
+interface Props {
+  /** The subject whose page this is: unfolded in the sidebar. */
+  subject: SubjectSlug;
+  /** The open topic, when a topic page; lit in the list. */
+  topic?: string;
+}
+
+const { subject, topic } = Astro.props;
+
+const ROW =
+  "flex min-h-10 items-center gap-2.5 rounded-[10px] px-3 py-2 text-[14px] font-semibold transition-colors";
+const TOPIC =
+  "flex min-h-9 items-center gap-2.5 rounded-lg border-l-2 py-[7px] pl-3 pr-2 text-[13px] leading-snug transition-colors hover:text-text-primary";
+const LIT = "border-accent bg-white/6 text-text-primary";
+const DIM = "border-transparent text-text-secondary";
+---
+
+<aside class="hidden w-[264px] shrink-0 lg:block" data-science-sidebar>
+  <div class="sticky top-6 pt-8">
+    <a
+      href="/science"
+      class="flex min-h-9 items-center gap-1.5 px-3 text-[13px] font-semibold text-accent-light transition-colors hover:text-text-primary"
+    >
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+      All of science
+    </a>
+    <div class="mx-3 my-3 h-px bg-white/[0.07]"></div>
+
+    <nav aria-label="Subjects and topics">
+      <ol class="space-y-0.5">
+        {SUBJECTS.map((s) => {
+          const open = s.slug === subject;
+          const counts = subjectCounts(s.slug);
+          const topics = topicsFor(s.slug);
+          const at = open && topic ? topics.findIndex((t) => t.slug === topic) + 1 : 0;
+          return (
+            <li>
+              <a
+                href={`/science/${s.slug}`}
+                aria-current={open && !topic ? "page" : undefined}
+                class:list={[ROW, open ? "text-text-primary" : "text-text-secondary hover:text-text-primary"]}
+              >
+                <span
+                  class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg"
+                  style={`background: ${s.accentTint}`}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={s.accent} stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    {s.slug === "body" && <circle cx="12" cy="5" r="2.5" />}
+                    <path d={s.icon} />
+                  </svg>
+                </span>
+                <span class="min-w-0 flex-1 truncate">{s.label}</span>
+                <span class="shrink-0 font-mono text-[10.5px] font-medium text-text-tertiary">
+                  {at ? `${at} of ${counts.topics}` : `${counts.topics} topics`}
+                </span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  {open ? <path d="M6 9l6 6 6-6" /> : <path d="M9 18l6-6-6-6" />}
+                </svg>
+              </a>
+              {open && (
+                <ol class="mb-2 mt-0.5 space-y-0.5 pl-3">
+                  {topics.map((t, i) => {
+                    const lit = t.slug === topic;
+                    return (
+                      <li>
+                        <a
+                          href={topicHref(t.slug)}
+                          aria-current={lit ? "page" : undefined}
+                          class:list={[TOPIC, lit ? LIT : DIM]}
+                        >
+                          <span class:list={["w-3 shrink-0 font-mono text-[10.5px]", lit ? "text-accent-light" : "text-text-tertiary"]}>{i + 1}</span>
+                          <span class="min-w-0">{t.label}</span>
+                        </a>
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+
+    {SUBJECTS.find((s) => s.slug === subject)?.aside && (
+      <div class="mx-1 mt-5 rounded-2xl border border-white/8 bg-white/4 p-4">
+        <p class="text-xs leading-relaxed text-text-secondary">{SUBJECTS.find((s) => s.slug === subject)!.aside!.text}</p>
+        <a href={SUBJECTS.find((s) => s.slug === subject)!.aside!.href} class="mt-2 block text-xs font-medium text-accent-light">
+          {SUBJECTS.find((s) => s.slug === subject)!.aside!.label} &rarr;
+        </a>
+      </div>
+    )}
+  </div>
+</aside>
