@@ -46,7 +46,7 @@ const link = (key: NavKey) =>
   key === current ? "text-text-primary" : "text-text-secondary";
 ---
 
-<header class="border-b border-white/[0.06]">
+<header class="border-b border-white/[0.06]" transition:name="site-header" transition:animate="none">
   <div class="mx-auto max-w-6xl px-6 sm:px-10">
     <div class="flex items-center justify-between gap-6 py-4 md:py-5">
       <div class:list={["min-w-0 items-center gap-2.5 text-sm", back ? "hidden md:flex" : "flex"]}>

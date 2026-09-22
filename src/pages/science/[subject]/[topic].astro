@@ -11,6 +11,11 @@
  *
  * On a phone the sidebar is gone and the header is a back link, so the way on
  * rides at the bottom of the screen: the progress dots, then prev and next.
+ *
+ * Moving between topics is a crossfade of the reading column: the header and
+ * the sidebar hold still, the lit item in the sidebar simply moves. The
+ * layout's router does this; nothing on these pages needs a script to run
+ * again on arrival.
  */
 import Layout from "../../../layouts/Layout.astro";
 import SiteHeader from "../../../components/SiteHeader.astro";
@@ -55,6 +60,7 @@ const onward = next
 <Layout
   title={`${topic.label} — ${meta.label} — The Science Behind Verve`}
   description={`${topic.sub}. ${meta.label}, topic ${n} of ${of}, in the science behind Verve.`}
+  router
 >
   <SiteHeader
     current="science"
@@ -71,7 +77,7 @@ const onward = next
     <ScienceSidebar subject={subject} topic={slug} />
 
     <!-- ── One topic, and only this topic. ──────────────────────────────── -->
-    <main class="min-w-0 flex-1 pt-7 lg:pt-10">
+    <main class="min-w-0 flex-1 pt-7 lg:pt-10" transition:name="science-page" transition:animate="fade">
       <p class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-accent-light">
         {meta.label} &middot; topic {n} of {of}
       </p>

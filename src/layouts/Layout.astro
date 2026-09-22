@@ -1,9 +1,17 @@
 ---
 import "../styles/global.css";
+import { ClientRouter } from "astro:transitions";
 
 interface Props {
   title: string;
   description: string;
+  /**
+   * Move between pages without a full load, so a part of the page that
+   * stays (a sidebar) stays and the rest crossfades. Only for pages with
+   * no inline script that must run again on arrival: a page's scripts do
+   * not re-run when it is reached this way.
+   */
+  router?: boolean;
   /** Card image for X / iMessage / Slack previews. Absolute path from site root. */
   image?: string;
   /** "summary_large_image" gives the full-bleed card; "summary" the small square. */
@@ -16,6 +24,7 @@ const {
   description,
   image = "/og-default.png",
   cardType = "summary_large_image",
+  router = false,
 } = Astro.props;
 
 // Absolute URLs — X and iMessage both refuse relative og:image paths.
@@ -51,6 +60,7 @@ const imageAbs  = new URL(image, SITE).href;
     <meta name="twitter:creator" content="@RoplekarSudeep" />
 
     <title>{title}</title>
+    {router && <ClientRouter />}
   </head>
   <body class="vrv-canvas min-h-screen antialiased">
     <slot />

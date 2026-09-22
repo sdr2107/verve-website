@@ -46,7 +46,7 @@ const forward = Object.fromEntries(
 );
 ---
 
-<Layout title={meta.metaTitle} description={meta.metaDescription}>
+<Layout title={meta.metaTitle} description={meta.metaDescription} router>
   <script is:inline define:vars={{ forward }}>
     (function () {
       var hash = window.location.hash.slice(1);
@@ -64,7 +64,7 @@ const forward = Object.fromEntries(
   <div class="mx-auto flex max-w-7xl gap-12 px-6 sm:px-10">
     <ScienceSidebar subject={subject} />
 
-    <main class="min-w-0 max-w-3xl flex-1 pt-7 pb-24 sm:pt-12">
+    <main class="min-w-0 max-w-3xl flex-1 pt-7 pb-24 sm:pt-12" transition:name="science-page" transition:animate="fade">
       <span
         class="flex h-[38px] w-[38px] items-center justify-center rounded-[11px]"
         style={`background: ${meta.accentTint}`}

@@ -13,6 +13,9 @@
  *
  * On a phone the sidebar is gone; the header's back link and the bar at the
  * foot of a topic carry the way on.
+ *
+ * Between pages the sidebar holds still while the reading column
+ * crossfades: it is named for the layout's router and told not to animate.
  */
 import {
   SUBJECTS,
@@ -39,7 +42,7 @@ const LIT = "border-accent bg-white/6 text-text-primary";
 const DIM = "border-transparent text-text-secondary";
 ---
 
-<aside class="hidden w-[264px] shrink-0 lg:block" data-science-sidebar>
+<aside class="hidden w-[264px] shrink-0 lg:block" data-science-sidebar transition:name="science-sidebar" transition:animate="none">
   <div class="sticky top-6 pt-8">
     <a
       href="/science"

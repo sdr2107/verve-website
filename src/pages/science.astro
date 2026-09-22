@@ -70,13 +70,13 @@ const figures = [
   <!-- ── The opening ─────────────────────────────────────────────────── -->
   <section class="relative px-6 pt-8 pb-16 sm:px-10">
     <div class="mx-auto max-w-3xl text-center">
-      <span class="font-mono text-xs font-semibold uppercase tracking-widest text-accent-light">
+      <span class="vrv-rise block font-mono text-xs font-semibold uppercase tracking-widest text-accent-light">
         The evidence base
       </span>
-      <h1 class="mt-4 text-4xl font-bold tracking-tight text-text-primary sm:text-5xl">
+      <h1 class="vrv-rise mt-4 text-4xl font-bold tracking-tight text-text-primary sm:text-5xl" style="--i: 1">
         Every threshold, traced to its source.
       </h1>
-      <p class="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-text-secondary">
+      <p class="vrv-rise mx-auto mt-5 max-w-2xl text-base leading-relaxed text-text-secondary" style="--i: 2">
         Verve is built so you come to know your own readings. Every number it
         shows you is one a clinician would use, and every threshold names the
         study it came from.
@@ -84,7 +84,7 @@ const figures = [
 
       <!-- Search everything the section says. The index is one file built
            from the same registry as the pages, fetched on first focus. -->
-      <div class="relative mx-auto mt-8 max-w-xl text-left">
+      <div class="vrv-rise relative mx-auto mt-8 max-w-xl text-left" style="--i: 3">
         <label for="q" class="sr-only">Search the science</label>
         <svg class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
         <input
@@ -97,7 +97,7 @@ const figures = [
         <div id="results" role="listbox" class="absolute left-0 right-0 top-full z-20 mt-2 hidden overflow-hidden rounded-2xl border border-white/10 bg-canvas-2/95 shadow-2xl shadow-black/40 backdrop-blur"></div>
       </div>
 
-      <dl class="mx-auto mt-8 flex items-center justify-center gap-6 sm:gap-10">
+      <dl class="vrv-rise mx-auto mt-8 flex items-center justify-center gap-6 sm:gap-10" style="--i: 4">
         {figures.map((f, i) => (
           <>
             {i > 0 && <div class="h-10 w-px shrink-0 bg-white/10" aria-hidden="true"></div>}
