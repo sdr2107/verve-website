@@ -102,3 +102,18 @@ mark {
 button:not(:disabled) {
   cursor: pointer;
 }
+
+/* A block that rises into place as the page paints: six pixels up, a third
+   of a second, each sibling a beat after the last by --i. The same easing
+   My health's cards use. Nothing moves for a reader who asked for less
+   motion: the block is simply there. */
+@keyframes vrv-rise { to { opacity: 1; transform: translateY(0); } }
+.vrv-rise {
+  opacity: 0;
+  transform: translateY(6px);
+  animation: vrv-rise 0.36s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+@media (prefers-reduced-motion: reduce) {
+  .vrv-rise { opacity: 1; transform: none; animation: none; }
+}
