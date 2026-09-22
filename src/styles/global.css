@@ -117,3 +117,19 @@ button:not(:disabled) {
 @media (prefers-reduced-motion: reduce) {
   .vrv-rise { opacity: 1; transform: none; animation: none; }
 }
+
+/* Where a search hit, or any link with a hash, lands: the heading is lit
+   for a moment so the eye finds it, then the light fades. The rule
+   applies only to headings that carry the class, so an id used for
+   anything else stays as it was. */
+@keyframes vrv-target {
+  0%   { background-color: rgba(129, 140, 248, 0.22); box-shadow: 0 0 0 8px rgba(129, 140, 248, 0.22); }
+  100% { background-color: transparent; box-shadow: 0 0 0 8px transparent; }
+}
+.vrv-anchor:target {
+  border-radius: 6px;
+  animation: vrv-target 1.8s ease-out 0.15s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .vrv-anchor:target { animation: none; background-color: rgba(129, 140, 248, 0.14); }
+}

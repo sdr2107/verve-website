@@ -22,7 +22,7 @@ interface Props {
 const { id, title, sub } = Astro.props;
 ---
 
-<section id={id} class="scroll-mt-8 border-t border-white/[0.07] pt-7">
+<section id={id} class="vrv-anchor scroll-mt-8 border-t border-white/[0.07] pt-7">
   <h2 class="text-[26px] font-bold tracking-tight text-text-primary">{title}</h2>
   {sub && <p class="mt-1.5 text-[13px] text-text-tertiary">{sub}</p>}
   <slot />

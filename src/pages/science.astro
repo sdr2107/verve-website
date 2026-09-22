@@ -124,7 +124,7 @@ const figures = [
       var box = document.getElementById("results");
       if (!q || !box) return;
       var index = null, loading = null;
-      var KIND = { topic: "Topic", subject: "Subject", marker: "Body marker", study: "Study" };
+      var KIND = { topic: "Topic", section: "Section", subject: "Subject", marker: "Body marker", study: "Study" };
 
       function load() {
         if (index || loading) return loading;
@@ -150,7 +150,7 @@ const figures = [
           total += n;
         }
         if (hit < terms.length) return 0;      // every word must land somewhere
-        return total + (e.k === "topic" ? 3 : e.k === "marker" ? 2 : 0);
+        return total + (e.k === "topic" ? 3 : e.k === "section" || e.k === "marker" ? 2 : 0);
       }
 
       function snippet(e, terms) {
