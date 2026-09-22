@@ -233,6 +233,14 @@ import SiteHeader from "../components/SiteHeader.astro";
           <button type="button" data-tab="reports"><svg class="hidden shrink-0 lg:block" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg><span>Reports</span><span data-count class="ml-auto hidden font-mono text-[10.5px] font-semibold text-text-tertiary lg:inline"></span></button>
           <button type="button" data-tab="depth"><svg class="hidden shrink-0 lg:block" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>In depth</span></button>
         </nav>
+        <!-- the four sections under Overview: chips under the pills on a phone, nested rows from lg -->
+        <div id="ovsections" class="mt-3 hidden flex-wrap gap-1.5 lg:-mt-4 lg:flex-col lg:gap-0.5 lg:pl-3">
+          <button type="button" data-section="all"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-text-secondary"></span>All</button>
+          <button type="button" data-section="fitness"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #f97316"></span>Fitness</button>
+          <button type="button" data-section="movement"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #34d399"></span>Movement</button>
+          <button type="button" data-section="heart"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #818cf8"></span>Sleep &amp; heart</button>
+          <button type="button" data-section="body"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #FBBF24"></span>Body</button>
+        </div>
         <!-- who can see this page: the entry here opens the panel on the page -->
         <div id="accesswrap" class="hidden">
           <button type="button" id="accessgophone" class="mt-3 flex min-h-9 items-center gap-1.5 text-[13px] font-semibold text-accent-light hover:text-text-primary lg:hidden">
@@ -411,6 +419,8 @@ import SiteHeader from "../components/SiteHeader.astro";
 
       <!-- ═══ OVERVIEW ═══════════════════════════════════════════════════ -->
       <div id="tab-overview" class="mt-6 hidden">
+       <!-- All: the person at a glance -->
+       <div id="ovall">
         <!-- values for the app that were read but never sent: one line, until it is done -->
         <div id="tosend" class="mb-5 hidden flex-wrap items-center gap-3 rounded-2xl border border-accent/30 bg-accent/[0.06] px-4 py-3.5">
           <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-accent/[0.16]">
@@ -492,6 +502,24 @@ import SiteHeader from "../components/SiteHeader.astro";
         </section>
 
         <p class="mt-7 font-mono text-[10.5px] text-text-muted lg:hidden">Drag a PDF anywhere on this page to add it.</p>
+       </div>
+
+       <!-- ═══ ONE SECTION: its markers as tiles, one of them open ═════════
+            Fitness, Movement, Sleep & heart or Body, picked in the sidebar.
+            Everything here is drawn by renderSection() from rows the page
+            already holds; nothing is fetched for it. -->
+       <div id="ovsection" class="hidden">
+         <div class="flex flex-wrap items-end justify-between gap-4">
+           <div class="min-w-0">
+             <div id="seckick" class="font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary"></div>
+             <h2 class="mt-1.5 flex items-center gap-2.5 text-[24px] font-extrabold tracking-[-0.02em] text-text-primary"><span id="secdot" class="h-2.5 w-2.5 shrink-0 rounded-full"></span><span id="secname"></span></h2>
+             <p id="secsub" class="mt-1.5 text-[13px] text-text-tertiary"></p>
+           </div>
+           <a id="seclink" href="/science" class="text-[13px] font-medium text-accent-light hover:text-text-primary">The science behind these &rarr;</a>
+         </div>
+         <div id="sectiles" class="mt-5 grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6"></div>
+         <div id="secopen" class="mt-4"></div>
+       </div>
       </div>
 
       <!-- ═══ LABS ═══════════════════════════════════════════════════════ -->
@@ -2516,6 +2544,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     ["group", "overview", "labs", "reports", "depth"].forEach((x) => show("tab-" + x, x === t));
     show("pagehead", !group); show("personwrap", !group && people.some((x) => !!x.id));
     show("mhsearchwrap", t === "labs" || t === "reports");
+    show("ovsections", t === "overview"); $("ovsections").classList.toggle("flex", t === "overview");
     if (group !== wasGroup && people.some((x) => !!x.id)) renderPeople();
     if (switching) {
       const el = $("tab-" + t);
@@ -2528,7 +2557,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       b.className = `flex min-h-9 flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors sm:flex-none lg:min-h-10 lg:w-full lg:justify-start lg:gap-2.5 lg:rounded-[10px] lg:border-l-2 lg:px-3 lg:py-2 lg:text-[13.5px] ${
         on ? "bg-accent/20 text-text-primary lg:border-accent lg:bg-white/6" : "text-text-tertiary hover:text-text-primary lg:border-transparent lg:text-text-secondary lg:hover:bg-white/[0.04]"}`;
     });
-    history.replaceState(null, "", "#" + t);
+    history.replaceState(null, "", t === "overview" && ovSection !== "all" ? `#overview-${ovSection}` : "#" + t);
   }
   /** The small figure beside a tab in the sidebar: how many outside range, how many reports. */
   function setTabCount(t: string, text: string, tone = "text-text-tertiary") {
@@ -2569,7 +2598,8 @@ import SiteHeader from "../components/SiteHeader.astro";
       appLink?.classList.add("hidden");
       show("signout", true); show("home", true); show("auth", false);
       const wanted = window.location.hash.replace("#", "");
-      setTab(["overview", "labs", "reports", "depth"].includes(wanted) ? wanted : "overview");
+      if (wanted.startsWith("overview-") && SEC_ORDER.includes(wanted.slice(9) as SecKey)) ovSection = wanted.slice(9) as SecKey;
+      setTab(["overview", "labs", "reports", "depth"].includes(wanted) || wanted.startsWith("overview-") ? wanted.split("-")[0] : "overview");
       await Promise.all([loadPeople(), loadPlan()]);
       applyPersonMode();
       if (wanted === "group") setTab("group");   // only once the people are known
@@ -3230,7 +3260,338 @@ import SiteHeader from "../components/SiteHeader.astro";
       else setTab(go);
     }));
     wireGoto();
+    renderSection();
   }
+
+  // ═══ THE FOUR SECTIONS UNDER OVERVIEW ═══════════════════════════════════
+  // Fitness, Movement, Sleep & heart, Body: the same four subjects the
+  // science section is written in. Each shows the markers the app captures
+  // for it as tiles, and one marker opened: a day, a week, a month or a year
+  // of it, drawn against the person's own normal or the goal, then what
+  // Verve reads from it and what else moved on the same days. Every rule
+  // here is the app's own, so the two never disagree; the science link on
+  // each section is the page the rule is cited on.
+  //
+  // Two kinds of marker. A DAILY one has a value most days (resting heart
+  // rate, sleep, steps, the day's MET-hours) and gets day, week, month and
+  // year. A SPARSE one has a reading now and then (a fitness test, a
+  // waist, a grip) and gets six months, a year, or everything: a "day" of
+  // a waist is nothing to look at.
+  type SecKey = "fitness" | "movement" | "heart" | "body";
+  type Rng = "day" | "week" | "month" | "year" | "6m" | "1y" | "all";
+  type Pt2 = { d: string; v: number; note?: string };
+  type Marker = {
+    key: string; section: SecKey; label: string; unit: string; sub: string;
+    daily: boolean; sum?: boolean;              // a daily marker that adds up (steps, MET-hours) rather than averages
+    avgDay?: boolean;                           // adds up within a day, but a year of it reads as a daily average (steps)
+    color: string; science: string; source: string;
+    fmt: (v: number) => string;
+    series: () => Pt2[];                        // every point, oldest first
+    goal?: () => number | null;                 // a weekly goal, drawn as a line on the week
+    band?: () => { lo: number; hi: number; why: string } | null;   // the person's own normal, shaded
+    reads: (pts: Pt2[]) => string[];            // what Verve reads, in sentences
+  };
+  const SEC_META: Record<SecKey, { label: string; dot: string; blurb: string; science: string }> = {
+    fitness:  { label: "Fitness",       dot: "#f97316", blurb: "What a MET is, how yours is measured, and how much to trust the answer.", science: "/science/fitness" },
+    movement: { label: "Movement",      dot: "#34d399", blurb: "How much, how hard, how often, and how much of the rest of the day is sitting.", science: "/science/movement" },
+    heart:    { label: "Sleep & heart", dot: "#818cf8", blurb: "What the watch reads while you are asleep and in the minute after you stop.", science: "/science/sleep-heart" },
+    body:     { label: "Body",          dot: "#FBBF24", blurb: "Waist, composition, and the function tests that say how the body works.", science: "/science/body" },
+  };
+  const SEC_ORDER: SecKey[] = ["fitness", "movement", "heart", "body"];
+  let ovSection: "all" | SecKey = "all";
+  let openMarkerKey = "";
+  let openRange: Rng | "" = "";
+
+  const todayStr = () => new Date().toLocaleDateString("en-CA");
+  const round0 = (v: number) => String(Math.round(v));
+  const fmtHM = (m: number) => `${Math.floor(m / 60)}h ${String(Math.round(m % 60)).padStart(2, "0")}m`;
+  /** The app's rows by day: MET-hours, minutes by effort, Zone 2, the count. Only when the sessions themselves are here. */
+  function actsByDay(): Map<string, { met: number; z2: number; n: number; vig: number; mod: number; min: number }> {
+    const by = new Map<string, { met: number; z2: number; n: number; vig: number; mod: number; min: number }>();
+    for (const a of syncActs) {
+      if (!a?.timestamp) continue;
+      const d = localDay(a.timestamp);
+      const r = by.get(d) ?? { met: 0, z2: 0, n: 0, vig: 0, mod: 0, min: 0 };
+      const mins = Number(a.duration_minutes) || 0;
+      r.met += Number(a.met_hours) || 0; r.z2 += Number(a.zone2_minutes) || 0; r.n += 1; r.min += mins;
+      if (a.intensity_category === "vigorous") r.vig += mins; else if (a.intensity_category === "moderate") r.mod += mins;
+      by.set(d, r);
+    }
+    return by;
+  }
+  const signalSeries = (col: string): Pt2[] => syncSignals.filter((r) => r[col] != null).map((r) => ({ d: String(r.day), v: Number(r[col]) }));
+  const sparseFrom = (key: string): Pt2[] => (markerPoints().get(key) ?? []).map((p) => ({ d: p.d, v: p.v }));
+  const weeklyGoal = () => Number(syncProfile?.weekly_met_hours_goal) || 7.5;
+  /** The person's own normal for a daily marker: the median of the prior 30 days, five either side. */
+  function ownBand(pts: Pt2[], spread: number, why: string) {
+    const last = pts[pts.length - 1]; if (!last) return null;
+    const from = addDays(last.d, -30);
+    const pri = pts.filter((p) => p.d >= from && p.d < last.d).map((p) => p.v);
+    if (pri.length < 14) return null;
+    const m = medianOf(pri)!;
+    return { lo: Math.round(m) - spread, hi: Math.round(m) + spread, why };
+  }
+
+  const MARKERS: Marker[] = [
+    // ── fitness ──
+    { key: "mets", section: "fitness", label: "Fitness", unit: "METs", sub: "The number Verve leads with, from each test", daily: false, color: "#f97316",
+      science: "/science/fitness/crf", source: "Every fitness test the app holds, compared only within its method.", fmt: (v) => fmt1(v),
+      series: () => allCrf.filter((c) => c.met_capacity != null || c.vo2max != null).map((c) => ({ d: String(c.measured_on), v: c.met_capacity != null ? Number(c.met_capacity) : Number(c.vo2max) / 3.5, note: methodLabel(c.method) })),
+      reads: () => { const f = fitnessSummary(allCrf, todayStr()); if (!f.latest) return ["No fitness test on file. The app offers one in six to twelve minutes."]; const out = [`<strong class="text-text-primary">${fmt1(f.latest.v / 3.5)} METs</strong> by ${esc(methodLabel(f.latest.method))} on ${esc(fmtDay(f.latest.measured_on))}${f.within != null ? `, ${f.within >= 0 ? "up" : "down"} ${fmt1(Math.abs(f.within) / 3.5)} on the same method before` : ", the first of its method"}.`]; if (f.latest.category) out.push(`Tier <strong class="text-text-primary">${esc(String(f.latest.category).replace(/-/g, " "))}</strong> for this age and sex. Each MET more is worth about 13% lower all-cause mortality in Kodama's pooled 33 studies.`); if (f.due) out.push(`Retest <strong class="${dueTone(f.due)}">${dueWord(f.due)}</strong>: the app's own reminder, eight weeks from the last.`); return out; } },
+    { key: "vo2", section: "fitness", label: "VO₂max", unit: "mL/kg/min", sub: "The same tests, in the unit the studies use", daily: false, color: "#f97316",
+      science: "/science/fitness/mets-vs-met-h", source: "Estimated from each test; a wearable's own figure is shown in grey in the app and never graded.", fmt: (v) => fmt1(v),
+      series: () => allCrf.filter((c) => c.vo2max != null).map((c) => ({ d: String(c.measured_on), v: Number(c.vo2max), note: methodLabel(c.method) })),
+      reads: (pts) => pts.length ? [`<strong class="text-text-primary">${fmt1(pts[pts.length - 1].v)} mL/kg/min</strong> on ${esc(fmtDay(pts[pts.length - 1].d))}. One MET is 3.5 of these; the tiers are drawn in METs.`] : ["No test on file."] },
+    // ── movement ──
+    { key: "met", section: "movement", label: "MET-hours", unit: "MET-h", sub: "The week's dose of movement", daily: true, sum: true, color: "#f97316",
+      science: "/science/movement/weekly-volume", source: "Workouts the app synced, each as Verve read it; background movement is not counted here.", fmt: (v) => fmt1(v),
+      series: () => [...actsByDay()].map(([d, r]) => ({ d, v: r.met })).sort((a, b) => a.d.localeCompare(b.d)), goal: weeklyGoal,
+      reads: () => { const t = todayStr(), m = mondayOf(new Date()); const a = activitySummary(allWeeks, syncActs, weeklyGoal(), t, m); const tw = a.thisWeek ? Number(a.thisWeek.met_hours) : 0; const out = [`<strong class="text-text-primary">${fmt1(tw)} of ${weeklyGoal()}</strong> this week${tw >= weeklyGoal() ? ", at goal" : `, ${fmt1(weeklyGoal() - tw)} to go`}${a.streak ? ` · ${a.streak} week${a.streak === 1 ? "" : "s"} at goal in a row` : ""}.`]; if (a.change != null) out.push(`The last four weeks averaged <strong class="text-text-primary">${fmt1(a.recentAvg)}</strong> a week, ${a.change >= 0 ? "up" : "down"} ${Math.round(Math.abs(a.change) * 100)}% on the four before.`); out.push("One MET-hour is an hour at rest; a run earns more than a walk of the same length. The summit sits well above 150 minutes."); return out; } },
+    { key: "z2", section: "movement", label: "Zone 2", unit: "min", sub: "Minutes in the personal heart-rate band", daily: true, sum: true, color: "#34d399",
+      science: "/science/movement/zone-2", source: "Scored against each day's own band, set from the resting rate and the highest rate the app has seen.", fmt: (v) => round0(v),
+      series: () => [...actsByDay()].map(([d, r]) => ({ d, v: r.z2 })).sort((a, b) => a.d.localeCompare(b.d)), goal: () => 150,
+      reads: (pts) => { const m = mondayOf(new Date()); const wk = pts.filter((p) => p.d >= m).reduce((t, p) => t + p.v, 0); return [`<strong class="text-text-primary">${round0(wk)} of 150 minutes</strong> this week in the band. The target is a weekly dose, not a daily one.`, "The band moves as you do: a morning above your normal resting rate narrows it."]; } },
+    { key: "sessions", section: "movement", label: "Workouts", unit: "", sub: "Sessions the app read, by day", daily: true, sum: true, color: "#a5b4fc",
+      science: "/science/movement/a-workout", source: "One session is one row; the app keeps what the watch recorded and only reads the rest.", fmt: (v) => round0(v),
+      series: () => [...actsByDay()].map(([d, r]) => ({ d, v: r.n })).sort((a, b) => a.d.localeCompare(b.d)),
+      reads: () => { const a = activitySummary(allWeeks, syncActs, weeklyGoal(), todayStr(), mondayOf(new Date())); const kinds = [...a.kinds].sort((x, y) => y[1] - x[1]).slice(0, 3).map(([k, n]) => `${k} ${Math.round(n / Math.max(1, a.recent.length))}`).join(", "); return [`<strong class="text-text-primary">${Math.round(a.perWeek)} a week</strong> over the last ${a.recent.length} weeks${kinds ? `: ${esc(kinds)}` : ""}.`, `Last workout <strong class="text-text-primary">${a.quietDays == null ? "none on file" : a.quietDays === 0 ? "today" : a.quietDays === 1 ? "yesterday" : `${a.quietDays} days ago`}</strong>.`]; } },
+    { key: "vig", section: "movement", label: "Vigorous", unit: "min", sub: "Minutes graded vigorous, by day", daily: true, sum: true, color: "#f87171",
+      science: "/science/movement/weekly-volume", source: "Each session graded against the person's own heart-rate reserve, not a population band.", fmt: (v) => round0(v),
+      series: () => [...actsByDay()].map(([d, r]) => ({ d, v: r.vig })).sort((a, b) => a.d.localeCompare(b.d)),
+      reads: () => { const a = activitySummary(allWeeks, syncActs, weeklyGoal(), todayStr(), mondayOf(new Date())); return a.minutes ? [`Vigorous share <strong class="text-text-primary">${Math.round((a.vig / a.minutes) * 100)}%</strong> of the last four weeks' minutes.`, "Most of a week easy, one hard day: the shape the endurance literature keeps finding."] : ["No minutes on file yet."]; } },
+    { key: "steps", section: "movement", label: "Steps", unit: "", sub: "Every source, one total a day", daily: true, sum: true, avgDay: true, color: "#34d399",
+      science: "/science/movement/steps", source: "Apple Health's daily total, watch and phone together, pushed by the app on every sync.", fmt: (v) => Math.round(v).toLocaleString(),
+      series: () => signalSeries("steps"),
+      reads: (pts) => { const h = sleepHeartSummary(syncSignals, todayStr()); if (!h?.steps.avg) return ["No steps on file yet."]; return [`<strong class="text-text-primary">${h.steps.avg.toLocaleString()} a day</strong> over the last seven${h.steps.prior != null ? `, ${h.steps.avg >= h.steps.prior ? "up" : "down"} from ${h.steps.prior.toLocaleString()} the week before` : ""}.`, "Paluch's 2023 pooled cohorts found the mortality curve flattening around 7,000 to 8,000 a day for adults over 60, higher for younger adults, with the fall steepest from the lowest counts."]; } },
+    // ── sleep & heart ──
+    { key: "rhr", section: "heart", label: "Resting heart rate", unit: "bpm", sub: "Every morning, against your own normal", daily: true, color: "#818cf8",
+      science: "/science/sleep-heart/resting-heart-rate", source: "Apple's one figure per day, from heart rate during stillness, weighted to sleep and the early morning.", fmt: (v) => round0(v),
+      series: () => signalSeries("resting_hr"), band: () => ownBand(signalSeries("resting_hr"), 5, "the median of the prior 30 mornings, five either side"),
+      reads: () => { const h = sleepHeartSummary(syncSignals, todayStr()); if (!h?.rhr.latest) return ["No resting heart rate on file yet."]; const r = h.rhr; const out = [`<strong class="text-text-primary">${r.latest} bpm</strong> ${esc(dayWord(r.latestDay!))}${r.baseline != null ? `, ${r.delta === 0 ? "at" : `${Math.abs(r.delta!)} ${r.delta! > 0 ? "above" : "below"}`} the median of the ${r.priors} mornings before${r.status === "elevated" ? `: <span class="text-warning">elevated</span>` : r.status === "stronglyElevated" ? `: <span class="text-danger">strongly elevated</span>` : ""}` : `; a normal needs 14 mornings, ${r.priors} so far`}.`]; out.push(r.run > 1 ? `<strong class="text-text-primary">${r.run} mornings running</strong> above the band. One is noise; three is a pattern. It says nothing about why: a late meal, heat, hard training and a cold all do this.` : `Inside the band ${r.inBand} of the last ${r.read} mornings read.`); if (r.level) out.push(`Absolute level <strong class="text-text-primary">${r.level}</strong> on the ARIC bands: a reading aid for a graded association, not a diagnosis.`); return out; } },
+    { key: "sleep", section: "heart", label: "Sleep", unit: "", sub: "Time asleep, the night that ended each morning", daily: true, color: "#a5b4fc",
+      science: "/science/sleep-heart/sleep-rhythm", source: "Every writer's asleep intervals; the stages from one elected writer per night.", fmt: (v) => fmtHM(v),
+      series: () => signalSeries("sleep_minutes"), band: () => ({ lo: 420, hi: 540, why: "7 to 9 hours, the adult band" }),
+      reads: () => { const h = sleepHeartSummary(syncSignals, todayStr()); if (!h?.sleep.last) return ["No night on file yet."]; const s = h.sleep; return [`<strong class="text-text-primary">${fmtSleepMin(s.last.min)}</strong> ${esc(dayWord(s.last.day))}${s.usual != null ? `, ${Math.abs(s.last.min - s.usual) < 20 ? "about the usual" : `${fmtSleepMin(Math.abs(s.last.min - s.usual))} ${s.last.min < s.usual ? "under" : "over"} the usual ${fmtSleepMin(s.usual)}`}` : ""}${s.last.bed ? ` · in bed ${esc(s.last.bed)}` : ""}.`, `${s.shortNights} of the last ${s.nights} nights under 7 h. A move toward the band is the improvement, not more sleep without limit.`]; } },
+    { key: "hrr", section: "heart", label: "Heart rate recovery", unit: "bpm", sub: "The drop in the minute after a workout", daily: true, color: "#818cf8",
+      science: "/science/sleep-heart/heart-rate-recovery", source: "Apple's stored one-minute recovery after each workout; for a workout without one, the rate at the end minus the rate a minute later, marked derived.", fmt: (v) => round0(v),
+      series: () => signalSeries("hrr_bpm"),
+      reads: () => { const h = sleepHeartSummary(syncSignals, todayStr()); if (!h || h.hrr.latest == null) return ["No recovery on file: the watch records one after a workout that ends above the Zone 2 floor."]; return [`<strong class="${h.hrr.latest <= 12 ? "text-danger" : "text-text-primary"}">${h.hrr.latest} bpm</strong> ${esc(dayWord(h.hrr.latestDay!))}${h.hrr.median != null ? `, own 30-day median ${h.hrr.median}` : ""}.`, h.hrr.latest <= 12 ? `<span class="text-danger">At or under the one cited line, 12 bpm</span> (Cole 1999). Worth a conversation if it stays there; one reading is not.` : "Above the one cited line, 12 bpm. There is no validated \"good\" threshold, so no verdict word above it."]; } },
+    // ── body ──
+    { key: "waist_cm", section: "body", label: "Waist", unit: "cm", sub: "The measure that stands in for the fat that matters", daily: false, color: "#FBBF24",
+      science: "/science/body/body-phenotyping", source: "Measured in the app or read from a report; the app's row wins on the same day.", fmt: (v) => fmt1(v),
+      series: () => sparseFrom("waist_cm"),
+      reads: (pts) => { if (!pts.length) return ["No waist on file."]; const l = pts[pts.length - 1], h = Number(syncProfile?.height_cm) || null; const out = [`<strong class="text-text-primary">${fmt1(l.v)} cm</strong> on ${esc(fmtDay(l.d))}${pts.length > 1 ? `, ${l.v === pts[0].v ? "the same as" : `${fmt1(Math.abs(l.v - pts[0].v))} cm ${l.v < pts[0].v ? "less than" : "more than"}`} the first on ${esc(fmtDay(pts[0].d))}` : ""}.`]; if (h) out.push(`Waist-to-height <strong class="text-text-primary">${(l.v / h).toFixed(2)}</strong> at ${h} cm; the screening line is 0.5.`); return out; } },
+    { key: "body_fat_pct", section: "body", label: "Body fat", unit: "%", sub: "Composition, by whichever method the report used", daily: false, color: "#FBBF24", science: "/science/body/body-phenotyping", source: "From a body-composition report or the app.", fmt: (v) => fmt1(v), series: () => sparseFrom("body_fat_pct"), reads: (pts) => pts.length ? [`<strong class="text-text-primary">${fmt1(pts[pts.length - 1].v)}%</strong> on ${esc(fmtDay(pts[pts.length - 1].d))}. Methods differ; compare only within one.`] : ["No body fat on file."] },
+    { key: "skel_musc_pct", section: "body", label: "Skeletal muscle", unit: "%", sub: "Muscle as a share of weight", daily: false, color: "#FBBF24", science: "/science/body/muscle-health", source: "From a body-composition report or the app.", fmt: (v) => fmt1(v), series: () => sparseFrom("skel_musc_pct"), reads: (pts) => pts.length ? [`<strong class="text-text-primary">${fmt1(pts[pts.length - 1].v)}%</strong> on ${esc(fmtDay(pts[pts.length - 1].d))}.`] : ["No muscle mass on file."] },
+    { key: "handgrip_kg", section: "body", label: "Grip strength", unit: "kg", sub: "Why grip is in a fitness app at all", daily: false, color: "#FBBF24", science: "/science/body/muscle-health", source: "The app's grip test, or a report.", fmt: (v) => fmt1(v), series: () => sparseFrom("handgrip_kg"), reads: (pts) => { if (!pts.length) return ["No grip test on file."]; const cut = String(syncProfile?.sex ?? "") === "female" ? 16 : 27; const l = pts[pts.length - 1]; return [`<strong class="text-text-primary">${fmt1(l.v)} kg</strong> on ${esc(fmtDay(l.d))}, <span class="${l.v >= cut ? "text-success-light" : "text-warning"}">${l.v >= cut ? "above" : "below"} the EWGSOP2 cut-off of ${cut}</span>.`]; } },
+    { key: "chair_stand_seconds", section: "body", label: "Chair stand", unit: "s", sub: "Five rises, timed", daily: false, color: "#FBBF24", science: "/science/body/intrinsic-capacity", source: "The app's chair-stand test.", fmt: (v) => fmt1(v), series: () => sparseFrom("chair_stand_seconds"), reads: (pts) => pts.length ? [`<strong class="text-text-primary">${fmt1(pts[pts.length - 1].v)} s</strong>, <span class="${pts[pts.length - 1].v <= 15 ? "text-success-light" : "text-warning"}">${pts[pts.length - 1].v <= 15 ? "under" : "over"} the 15-second line</span>.`] : ["No chair stand on file."] },
+    { key: "gait_speed_ms", section: "body", label: "Walk speed", unit: "m/s", sub: "Usual pace over a short course", daily: false, color: "#FBBF24", science: "/science/body/intrinsic-capacity", source: "The app's walk test.", fmt: (v) => v.toFixed(2), series: () => sparseFrom("gait_speed_ms"), reads: (pts) => pts.length ? [`<strong class="text-text-primary">${pts[pts.length - 1].v.toFixed(2)} m/s</strong>, <span class="${pts[pts.length - 1].v >= 0.8 ? "text-success-light" : "text-warning"}">${pts[pts.length - 1].v >= 0.8 ? "above" : "below"} 0.8</span>.`] : ["No walk speed on file."] },
+    { key: "single_leg_balance_seconds", section: "body", label: "Single-leg balance", unit: "s", sub: "How long one leg holds", daily: false, color: "#FBBF24", science: "/science/body/intrinsic-capacity", source: "The app's balance test.", fmt: (v) => round0(v), series: () => sparseFrom("single_leg_balance_seconds"), reads: (pts) => pts.length ? [`<strong class="text-text-primary">${round0(pts[pts.length - 1].v)} s</strong>, <span class="${pts[pts.length - 1].v >= 10 ? "text-success-light" : "text-warning"}">${pts[pts.length - 1].v >= 10 ? "held past" : "under"} 10 seconds</span>.`] : ["No balance test on file."] },
+  ];
+  const markerByKey = (k: string) => MARKERS.find((m) => m.key === k)!;
+
+  // ── one range of one marker: the points to draw, the headline, the caption ──
+  type Drawn = { pts: { x: string; v: number | null; tone?: string; note?: string }[]; headline: string; caption: string; labelEvery: number; goalLine?: number | null };
+  function drawnFor(m: Marker, range: Rng): Drawn | null {
+    const all = m.series();
+    if (!all.length) return null;
+    const t = todayStr();
+    const by = new Map(all.map((p) => [p.d, p.v]));
+    const summing = !!m.sum && !(range === "year" && m.avgDay);
+    const agg = (from: string, to: string) => { const xs = all.filter((p) => p.d >= from && p.d <= to).map((p) => p.v); return xs.length ? (summing ? xs.reduce((a, b) => a + b, 0) : xs.reduce((a, b) => a + b, 0) / xs.length) : null; };
+    const band = m.band?.() ?? null;
+    const toneOf = (v: number | null) => v == null ? "" : band ? (v > band.hi ? "warn" : v < band.lo ? "low" : "") : "";
+    if (range === "day" || range === "week" || range === "month") {
+      const n = range === "day" ? 14 : range === "week" ? 7 : 30;
+      const start = range === "week" ? mondayOf(new Date()) : addDays(t, -(n - 1));
+      const pts = []; for (let d = start, i = 0; i < n; d = addDays(d, 1), i++) { const v = by.has(d) ? by.get(d)! : null; pts.push({ x: d, v, tone: d === t ? "today" : toneOf(v) }); }
+      const latest = [...all].reverse().find((p) => p.d <= t) ?? null;
+      const inRangePts = pts.filter((p) => p.v != null).map((p) => p.v!);
+      const total = inRangePts.reduce((a, b) => a + b, 0);
+      const goal = m.goal?.() ?? null;
+      if (range === "week") {
+        const headline = m.sum ? m.fmt(total) : latest ? m.fmt(latest.v) : "—";
+        const caption = m.sum ? (goal != null ? `of ${m.fmt(goal)}${m.unit ? ` ${m.unit}` : ""} this week, Monday to today` : `${m.unit ? `${m.unit} ` : ""}this week so far`) : `${inRangePts.length ? `${m.fmt(inRangePts.reduce((a, b) => a + b, 0) / inRangePts.length)} ${m.unit} average this week, ` : ""}${latest ? `latest ${esc(dayWord(latest.d))}` : ""}`;
+        return { pts, headline, caption, labelEvery: 1, goalLine: null };
+      }
+      const avg = inRangePts.length ? inRangePts.reduce((a, b) => a + b, 0) / inRangePts.length : null;
+      const headline = range === "day" ? (latest ? m.fmt(latest.v) : "—") : (m.sum ? m.fmt(total) : avg != null ? m.fmt(avg) : "—");
+      const caption = range === "day"
+        ? `${m.unit ? `${m.unit}, ` : ""}${latest?.d === t ? "today" : latest ? esc(dayWord(latest.d)) : ""}${avg != null && inRangePts.length > 1 ? ` · ${m.fmt(avg)} a day over the last ${inRangePts.length}` : ""}`
+        : `${m.unit ? `${m.unit} ` : ""}${m.sum ? "over" : "a day, averaged over"} the last 30 days · ${inRangePts.length} days read`;
+      return { pts, headline, caption, labelEvery: range === "day" ? 2 : 5, goalLine: null };
+    }
+    if (range === "year") {
+      const pts = []; const now = new Date();
+      for (let i = 11; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); const from = d.toLocaleDateString("en-CA"), to = new Date(d.getFullYear(), d.getMonth() + 1, 0).toLocaleDateString("en-CA"); const v = agg(from, to); pts.push({ x: from, v, tone: toneOf(v) }); }
+      const have = pts.filter((p) => p.v != null).map((p) => p.v!);
+      const yearVal = summing ? have.reduce((a, b) => a + b, 0) : have.length ? have.reduce((a, b) => a + b, 0) / have.length : null;
+      return { pts, headline: yearVal != null ? m.fmt(yearVal) : "—", caption: `${m.unit ? `${m.unit} ` : ""}${summing ? "over the last twelve months, month by month" : "a day, averaged over the last twelve months"}`, labelEvery: 1, goalLine: null };
+    }
+    // sparse: six months, a year, everything
+    const from = range === "6m" ? addDays(t, -182) : range === "1y" ? addDays(t, -365) : "0000";
+    const sel = all.filter((p) => p.d >= from);
+    const pts = sel.map((p) => ({ x: p.d, v: p.v, note: p.note, tone: toneOf(p.v) }));
+    const l = sel[sel.length - 1] ?? null;
+    return { pts, headline: l ? m.fmt(l.v) : "—", caption: l ? `${m.unit ? `${m.unit}, ` : ""}latest ${esc(fmtDay(l.d))}${sel.length > 1 ? ` · ${sel.length} readings${sel[0].v !== l.v ? `, ${l.v > sel[0].v ? "up" : "down"} ${m.fmt(Math.abs(l.v - sel[0].v))} since ${esc(fmtDay(sel[0].d))}` : ""}` : ""}` : "nothing in this range", labelEvery: Math.max(1, Math.ceil(sel.length / 8)), goalLine: null };
+  }
+
+  /** The chart: bars for a marker that adds up, a line for one that is read; the band or the goal behind it. */
+  function chartSvg(m: Marker, range: Rng, dr: Drawn): string {
+    const W = 820, H = 200, L = 34, R = 20, T = 18, B = 34;
+    const band = m.daily && (range !== "year") ? (m.band?.() ?? null) : null;
+    const weekGoal = range === "week" && m.goal?.() ? m.goal()! : null;
+    const vals = dr.pts.map((p) => p.v).filter((v): v is number => v != null);
+    if (!vals.length) return `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" fill="#64748b" font-size="13">Nothing read in this range.</text>`;
+    let lo = Math.min(...vals), hi = Math.max(...vals);
+    if (band) { lo = Math.min(lo, band.lo); hi = Math.max(hi, band.hi); }
+    const bars = !!m.sum;
+    if (bars) lo = 0; else { const pad = Math.max((hi - lo) * 0.15, 1); lo -= pad; hi += pad; }
+    if (hi === lo) hi = lo + 1;
+    const n = dr.pts.length, slot = (W - L - R) / Math.max(1, n);
+    const xf = (i: number) => L + slot * (i + 0.5);
+    const yf = (v: number) => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
+    let s = "";
+    if (band) s += `<rect x="${L}" y="${yf(band.hi).toFixed(1)}" width="${W - L - R}" height="${(yf(band.lo) - yf(band.hi)).toFixed(1)}" fill="rgba(52,211,153,0.12)"/><text x="${W - R + 3}" y="${(yf(band.hi) + 4).toFixed(1)}" fill="#64748b" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${m.fmt(band.hi)}</text><text x="${W - R + 3}" y="${(yf(band.lo) + 4).toFixed(1)}" fill="#64748b" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${m.fmt(band.lo)}</text>`;
+    s += `<line x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}" stroke="rgba(255,255,255,0.12)"/>`;
+    if (!bars) s += `<text x="4" y="${(yf(hi) + 4).toFixed(1)}" fill="#64748b" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${m.fmt(hi)}</text><text x="4" y="${(yf(lo) + 4).toFixed(1)}" fill="#64748b" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${m.fmt(lo)}</text>`;
+    if (weekGoal != null && m.sum) {
+      // the week's running total against the goal, dashed; the goal line above
+      const gy = yf(Math.min(weekGoal, hi)); if (weekGoal <= hi) s += `<line x1="${L}" y1="${gy.toFixed(1)}" x2="${W - R}" y2="${gy.toFixed(1)}" stroke="#a5b4fc" stroke-opacity="0.6" stroke-dasharray="4 4"/><text x="${W - R}" y="${(gy - 5).toFixed(1)}" text-anchor="end" fill="#a5b4fc" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">GOAL ${m.fmt(weekGoal)}</text>`;
+      let run = 0; const rp: string[] = [];
+      dr.pts.forEach((p, i) => { if (p.v == null && p.x > todayStr()) return; run += p.v ?? 0; rp.push(`${xf(i).toFixed(1)},${yf(Math.min(run, hi)).toFixed(1)}`); });
+      if (rp.length > 1) s += `<polyline points="${rp.join(" ")}" fill="none" stroke="#a5b4fc" stroke-width="1.5" stroke-dasharray="3 4" stroke-opacity="0.8"/>`;
+    }
+    const color = m.color;
+    if (bars) {
+      const bw = Math.min(46, slot * 0.62);
+      dr.pts.forEach((p, i) => {
+        if (p.v == null) { if (p.x <= todayStr()) s += `<rect x="${(xf(i) - bw / 2).toFixed(1)}" y="${H - B - 3}" width="${bw.toFixed(1)}" height="3" rx="1.5" fill="rgba(255,255,255,0.08)"/>`; return; }
+        const y = yf(p.v), hgt = Math.max(2, H - B - y);
+        s += `<rect x="${(xf(i) - bw / 2).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${hgt.toFixed(1)}" rx="3" fill="${color}" fill-opacity="${p.tone === "today" ? 1 : 0.6}"><title>${esc(fmtDay(p.x))}: ${m.fmt(p.v)} ${m.unit}</title></rect>`;
+        if (n <= 14 && p.v > 0) s += `<text x="${xf(i).toFixed(1)}" y="${(y - 6).toFixed(1)}" text-anchor="middle" fill="#f1f5f9" font-size="11" font-weight="700">${m.fmt(p.v)}</text>`;
+      });
+    } else {
+      const have = dr.pts.map((p, i) => ({ p, i })).filter(({ p }) => p.v != null);
+      if (have.length > 1) s += `<polyline points="${have.map(({ p, i }) => `${xf(i).toFixed(1)},${yf(p.v!).toFixed(1)}`).join(" ")}" fill="none" stroke="${color}" stroke-opacity="0.8" stroke-width="1.8"/>`;
+      for (const { p, i } of have) {
+        const fill = p.tone === "warn" ? "#FBBF24" : p.tone === "low" ? "#94a3b8" : color;
+        s += `<circle cx="${xf(i).toFixed(1)}" cy="${yf(p.v!).toFixed(1)}" r="${n <= 14 ? 5.5 : 3.5}" fill="${fill}" stroke="#0D0D1C" stroke-width="1.5"><title>${esc(fmtDay(p.x))}: ${m.fmt(p.v!)} ${m.unit}${p.note ? ` · ${esc(p.note)}` : ""}</title></circle>`;
+        if (n <= 14) s += `<text x="${xf(i).toFixed(1)}" y="${(yf(p.v!) - 11).toFixed(1)}" text-anchor="middle" fill="${p.tone === "warn" ? "#FBBF24" : "#c7d2fe"}" font-size="11" font-weight="700">${m.fmt(p.v!)}</text>`;
+      }
+    }
+    const label = (x: string) => range === "year" ? new Date(x + "T00:00:00").toLocaleDateString(undefined, { month: "short" }).toUpperCase() : range === "week" || range === "day" ? new Date(x + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" }).toUpperCase() : range === "month" ? new Date(x + "T00:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short" }).toUpperCase() : new Date(x + "T00:00:00").toLocaleDateString(undefined, { month: "short", year: "2-digit" }).toUpperCase();
+    dr.pts.forEach((p, i) => { if (i % dr.labelEvery === 0 || i === n - 1) s += `<text x="${xf(i).toFixed(1)}" y="${H - B + 16}" text-anchor="middle" fill="${p.tone === "today" ? "#f1f5f9" : "#94a3b8"}" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${label(p.x)}</text>`; });
+    return s;
+  }
+
+  /** Alongside: two or three other daily markers on the same days, as small strips. */
+  function alongsideHtml(m: Marker, range: Rng, dr: Drawn): string {
+    if (!m.daily || range === "year") return "";
+    const others = MARKERS.filter((o) => o.daily && o.key !== m.key && o.series().length).slice(0, 3);
+    if (!others.length) return "";
+    const days = dr.pts.map((p) => p.x);
+    const rows = others.map((o) => {
+      const by = new Map(o.series().map((p) => [p.d, p.v]));
+      const vs = days.map((d) => by.has(d) ? by.get(d)! : null);
+      const have = vs.filter((v): v is number => v != null);
+      if (!have.length) return "";
+      const lo = Math.min(...have), hi = Math.max(...have) || 1;
+      const W = 300, Hh = 26, slot = W / days.length;
+      const svg = o.sum
+        ? vs.map((v, i) => v == null ? "" : `<rect x="${(i * slot + slot * 0.2).toFixed(1)}" y="${(Hh - (v / hi) * (Hh - 2)).toFixed(1)}" width="${(slot * 0.6).toFixed(1)}" height="${((v / hi) * (Hh - 2)).toFixed(1)}" fill="${o.color}" opacity="0.6"/>`).join("")
+        : `<polyline points="${vs.map((v, i) => v == null ? null : `${(i * slot + slot / 2).toFixed(1)},${(Hh - 3 - ((v - lo) / (hi - lo || 1)) * (Hh - 6)).toFixed(1)}`).filter(Boolean).join(" ")}" fill="none" stroke="${o.color}" stroke-width="1.6" stroke-opacity="0.9"/>`;
+      return `<div class="flex items-center gap-3"><span class="w-24 shrink-0 text-[12.5px] text-text-secondary">${esc(o.label)}</span><svg viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none" class="h-[26px] w-full" aria-hidden="true">${svg}</svg></div>`;
+    }).filter(Boolean).join("");
+    return rows ? `<div class="flex flex-col gap-2">${rows}</div><p class="mt-2 text-[12px] leading-relaxed text-text-muted">The same days. Two things on one timeline, with no claim about which moved the other.</p>` : "";
+  }
+
+  function renderSection() {
+    const sec = ovSection;
+    show("ovall", sec === "all"); show("ovsection", sec !== "all");
+    $("ovsections").querySelectorAll<HTMLElement>("[data-section]").forEach((b) => {
+      const on = b.dataset.section === sec;
+      b.setAttribute("aria-current", on ? "page" : "false");
+      b.className = `flex min-h-8 items-center gap-2 rounded-full border px-3 py-1 text-[12.5px] font-semibold transition-colors lg:min-h-8 lg:w-full lg:rounded-lg lg:border-0 lg:border-l-2 lg:px-3 lg:py-1 lg:text-left lg:text-[13px] ${on
+        ? "border-accent/70 bg-accent/15 text-text-primary lg:border-accent lg:bg-white/6"
+        : "border-white/14 text-text-secondary hover:border-white/30 hover:text-text-primary lg:border-transparent lg:hover:bg-white/[0.04]"}`;
+    });
+    if (sec === "all") return;
+    const meta = SEC_META[sec];
+    const ms = MARKERS.filter((m) => m.section === sec);
+    const have = ms.filter((m) => m.series().length);
+    $("seckick").textContent = `OVERVIEW · ${meta.label.toUpperCase()} · ${sec === "body" ? "FROM THE APP AND THE REPORTS" : "FROM THE APP"}`;
+    $("secname").textContent = meta.label; ($("secdot") as HTMLElement).style.background = meta.dot;
+    $("secsub").textContent = meta.blurb; ($("seclink") as HTMLAnchorElement).href = meta.science;
+    if (!openMarkerKey || markerByKey(openMarkerKey).section !== sec) { openMarkerKey = (have[0] ?? ms[0]).key; openRange = ""; }
+    const open = markerByKey(openMarkerKey);
+    // the tiles: a marker with nothing yet is a dashed tile, never hidden
+    $("sectiles").innerHTML = ms.map((m, i) => {
+      const pts = m.series(); const l = pts[pts.length - 1] ?? null; const on = m.key === openMarkerKey;
+      return `<button type="button" data-marker="${m.key}" style="--i: ${i}" aria-current="${on ? "true" : "false"}" class="mh-rise flex flex-col gap-1 rounded-2xl border p-3.5 text-left transition-colors ${on ? "border-accent/60 bg-accent/[0.08]" : l ? "border-white/8 bg-white/4 hover:border-white/16" : "border-dashed border-white/10 hover:border-white/20"}">
+        <span class="text-[12px] text-text-secondary">${esc(m.label)}</span>
+        <span class="font-mono text-[20px] font-bold leading-none ${l ? "" : "text-text-muted"}" style="${l ? `color: ${m.color}` : ""}">${l ? m.fmt(l.v) : "—"}${l && m.unit ? ` <span class="text-[10px] text-text-tertiary">${esc(m.unit)}</span>` : ""}</span>
+        <span class="text-[11.5px] leading-snug text-text-tertiary">${l ? (l.d === todayStr() ? "today" : esc(dayWord(l.d))) : "not read yet"}</span>
+      </button>`;
+    }).join("");
+    $("sectiles").querySelectorAll<HTMLElement>("[data-marker]").forEach((b) => b.addEventListener("click", () => { openMarkerKey = b.dataset.marker!; openRange = ""; renderSection(); }));
+
+    // the open marker
+    const ranges: Rng[] = open.daily ? ["day", "week", "month", "year"] : ["6m", "1y", "all"];
+    const RANGE_LABEL: Record<Rng, string> = { day: "Day", week: "Week", month: "Month", year: "Year", "6m": "6 months", "1y": "Year", all: "All" };
+    if (!openRange || !ranges.includes(openRange as Rng)) openRange = open.daily ? "week" : "1y";
+    const dr = drawnFor(open, openRange as Rng);
+    const band = open.daily && openRange !== "year" ? (open.band?.() ?? null) : null;
+    const pts = open.series();
+    const reads = open.reads(pts);
+    const t = todayStr();
+    const monthAgg = (from: string, to: string) => { const xs = pts.filter((p) => p.d >= from && p.d <= to).map((p) => p.v); return xs.length ? { v: open.sum ? xs.reduce((a, b) => a + b, 0) : xs.reduce((a, b) => a + b, 0) / xs.length, n: xs.length } : null; };
+    const m30 = monthAgg(addDays(t, -29), t), y1 = monthAgg(addDays(t, -364), t), y2 = monthAgg(addDays(t, -729), addDays(t, -365));
+    $("secopen").innerHTML = `
+      <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div class="min-w-0">
+            <h3 class="text-[20px] font-extrabold tracking-[-0.02em] text-text-primary">${esc(open.label)}</h3>
+            <p class="mt-0.5 text-[12.5px] text-text-tertiary">${esc(open.sub)}</p>
+          </div>
+          <div class="flex gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1" role="group" aria-label="Range">
+            ${ranges.map((r) => `<button type="button" data-range="${r}" class="min-h-8 rounded-lg px-3.5 text-[13px] font-semibold transition-colors ${r === openRange ? "bg-accent/20 text-text-primary" : "text-text-tertiary hover:text-text-primary"}">${RANGE_LABEL[r]}</button>`).join("")}
+          </div>
+        </div>
+        ${dr ? `
+        <div class="mt-4 flex flex-wrap items-end justify-between gap-3">
+          <div class="flex items-baseline gap-2.5"><span class="font-mono text-[38px] font-bold leading-none" style="color: ${open.color}">${dr.headline}</span><span class="text-[13.5px] text-text-secondary">${dr.caption}</span></div>
+          <div class="flex flex-wrap gap-4 text-[12px] text-text-secondary">
+            ${band ? `<span><span class="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm border border-success/50 bg-success/20 align-[-1px]"></span>${esc(band.why)}</span>` : ""}
+            ${openRange === "week" && open.goal?.() ? `<span><span class="mr-1.5 inline-block h-0.5 w-3 bg-accent-light align-[3px]"></span>the week's running total, against the goal</span>` : ""}
+          </div>
+        </div>
+        <div class="mt-2 overflow-x-auto"><svg viewBox="0 0 820 200" class="block h-auto w-full min-w-[560px]" role="img" aria-label="${esc(open.label)}, ${RANGE_LABEL[openRange as Rng].toLowerCase()} view">${chartSvg(open, openRange as Rng, dr)}</svg></div>` : `<p class="mt-4 text-[13px] text-text-tertiary">Nothing read yet for ${esc(open.label.toLowerCase())}.${open.section === "heart" || open.key === "steps" ? " The app sends it on every sync once Apple Health is on." : ""}</p>`}
+        <div class="mt-4 grid gap-4 border-t border-white/[0.07] pt-4 lg:grid-cols-2">
+          <div>
+            ${kicker("WHAT VERVE READS")}
+            <div class="mt-2 flex flex-col gap-2 text-[13.5px] leading-relaxed text-text-secondary">${reads.map((r) => `<p>${r}</p>`).join("")}</div>
+            <a href="${open.science}" class="mt-2.5 inline-block text-[12.5px] font-semibold text-accent-light hover:text-text-primary">The science behind this &rarr;</a>
+          </div>
+          <div>
+            ${dr && open.daily && openRange !== "year" ? kicker("ALONGSIDE · THE SAME DAYS") + `<div class="mt-2">${alongsideHtml(open, openRange as Rng, dr) || `<p class="text-[12.5px] text-text-tertiary">Nothing else read on these days yet.</p>`}</div>` : kicker("SOURCE") + `<p class="mt-2 text-[13px] leading-relaxed text-text-secondary">${esc(open.source)}</p>`}
+          </div>
+        </div>
+      </div>
+      <div class="mt-3 grid gap-3 sm:grid-cols-3">
+        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4">${kicker(open.daily ? "LAST 30 DAYS" : "LAST YEAR")}<div class="mt-1.5 font-mono text-[20px] font-bold text-text-primary">${open.daily ? (m30 ? open.fmt(m30.v) : "—") : (y1 ? open.fmt(y1.v) : "—")} <span class="text-[11px] font-semibold text-text-tertiary">${open.daily ? (m30 ? `${open.unit}${open.sum ? "" : " a day"}` : "") : (y1 ? `${open.unit} average` : "")}</span></div><div class="mt-0.5 text-[12px] text-text-tertiary">${open.daily ? (m30 ? `${m30.n} days read` : "nothing read") : (y1 ? `${y1.n} reading${y1.n === 1 ? "" : "s"}` : "no reading")}</div></div>
+        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4">${kicker(open.daily ? "LAST 12 MONTHS" : "THE YEAR BEFORE")}<div class="mt-1.5 font-mono text-[20px] font-bold text-text-primary">${open.daily ? (y1 ? open.fmt(y1.v) : "—") : (y2 ? open.fmt(y2.v) : "—")} <span class="text-[11px] font-semibold text-text-tertiary">${open.daily ? (y1 ? `${open.unit}${open.sum ? " in all" : " a day"}` : "") : (y2 ? `${open.unit} average` : "")}</span></div><div class="mt-0.5 text-[12px] text-text-tertiary">${open.daily ? (y1 && y2 ? `the year before: ${open.fmt(y2.v)}` : y1 ? `${y1.n} days read` : "nothing read") : (y2 ? `${y2.n} reading${y2.n === 1 ? "" : "s"}` : "no reading")}</div></div>
+        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4">${kicker("SOURCE")}<div class="mt-1.5 text-[13px] leading-relaxed text-text-secondary">${esc(open.source)}</div></div>
+      </div>`;
+    $("secopen").querySelectorAll<HTMLElement>("[data-range]").forEach((b) => b.addEventListener("click", () => { openRange = b.dataset.range as Rng; renderSection(); }));
+  }
+  function setSection(k: "all" | SecKey) {
+    ovSection = k;
+    if (activeTab !== "overview") setTab("overview");
+    renderSection();
+    history.replaceState(null, "", k === "all" ? "#overview" : `#overview-${k}`);
+  }
+  $("ovsections").querySelectorAll<HTMLElement>("[data-section]").forEach((b) => b.addEventListener("click", () => setSection(b.dataset.section as "all" | SecKey)));
 
   function renderOverview() {
     $("greet").textContent = greeting();
