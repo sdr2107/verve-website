@@ -524,8 +524,9 @@ import SiteHeader from "../components/SiteHeader.astro";
 
       <!-- ═══ LABS ═══════════════════════════════════════════════════════ -->
       <!-- ═══ IN DEPTH: one person, at the depth a coach wants ═══════════════
-           Four cards that answer "how is this person doing", then the four
-           panels behind them: activity, fitness, labs, body. Every number
+           Four answers to "how is this person doing" as one strip, then five
+           chapters with the working: rhythm, load, sessions, fitness and
+           recovery, labs and body and what is due. Every number
            here is computed from rows the page already reads, so a person
            you look after gets the same page from their exports, and a
            client's page shows only what their scopes let you read. -->
@@ -535,15 +536,11 @@ import SiteHeader from "../components/SiteHeader.astro";
         <!-- "In Verve's words": a short reading of this page, written by Claude from the page's own working -->
         <section id="dp-ai" class="mb-5 hidden flex-col gap-3 rounded-2xl border border-accent/50 bg-accent/[0.07] p-5"></section>
         <p id="dp-empty" class="hidden max-w-3xl text-[13.5px] leading-relaxed text-text-tertiary"></p>
-        <div id="dp-cards" class="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4"></div>
-        <div id="dp-panels" class="mt-5 grid gap-4 lg:grid-cols-2">
-          <section id="dp-activity" class="rounded-2xl border border-white/10 bg-white/[0.03] p-5"></section>
-          <section id="dp-fitness" class="rounded-2xl border border-white/10 bg-white/[0.03] p-5"></section>
-          <section id="dp-labs" class="rounded-2xl border border-white/10 bg-white/[0.03] p-5"></section>
-          <section id="dp-body" class="rounded-2xl border border-white/10 bg-white/[0.03] p-5"></section>
-          <section id="dp-heart" class="rounded-2xl border border-white/10 bg-white/[0.03] p-5 lg:col-span-2"></section>
-        </div>
-        <div id="dp-changed" class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-2xl border border-white/10 px-5 py-3.5 text-[13px] text-text-secondary"></div>
+        <!-- whose page, in one line; the four answers as one strip; then five chapters, each a sentence, the working beside it -->
+        <div id="dp-head" class="hidden"></div>
+        <div id="dp-cards" class="mt-5 hidden border-y border-white/[0.08] sm:grid-cols-2 lg:grid-cols-4"></div>
+        <div id="dp-chapters" class="mt-8 hidden flex-col gap-10"></div>
+        <div id="dp-changed" class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-2xl border border-white/10 px-5 py-3.5 text-[13px] text-text-secondary"></div>
         <p class="mt-2 text-[12px] text-text-muted">Ranges are each lab's own. Cadences are the cited ones on the marker pages in the science section; the fitness-test and body-assessment cadences are the app's. None of it is a diagnosis.</p>
       </div>
 
@@ -2099,14 +2096,14 @@ import SiteHeader from "../components/SiteHeader.astro";
         ? lockCard("In depth is on Pro.", "Four cards that say how you are doing, then activity, fitness, labs and body with the working shown. Your Overview, Labs and Reports stay as they are.")
         : lockCard("In depth on other people is on Max.", `${esc(p.name || "This person")}'s Overview, Labs and Reports are here as before. In depth on everyone you see, and the group ranked by movement, come with Max; Enterprise adds clients without a family limit.`);
       $("dp-locked").querySelector("[data-goto]")?.addEventListener("click", () => setTab("overview"));
-      ["dp-empty", "dp-cards", "dp-panels", "dp-changed"].forEach((id) => show(id, false));
+      ["dp-empty", "dp-head", "dp-cards", "dp-chapters", "dp-changed"].forEach((id) => show(id, false));
       return;
     }
     const today = new Date().toLocaleDateString("en-CA"), thisMonday = mondayOf(new Date());
     const by = markerPoints();
     const nothing = !allWeeks.length && !allCrf.length && !by.size && !syncSignals.length;
-    show("dp-empty", nothing); show("dp-cards", !nothing); show("dp-panels", !nothing); show("dp-changed", !nothing);
-    $("dp-panels").classList.toggle("grid", !nothing); $("dp-cards").classList.toggle("grid", !nothing); $("dp-changed").classList.toggle("flex", !nothing);
+    show("dp-empty", nothing); show("dp-head", !nothing); show("dp-cards", !nothing); show("dp-chapters", !nothing); show("dp-changed", !nothing);
+    $("dp-chapters").classList.toggle("flex", !nothing); $("dp-cards").classList.toggle("grid", !nothing); $("dp-changed").classList.toggle("flex", !nothing);
     if (nothing) {
       $("dp-empty").textContent = p.self
         ? "Nothing to go deep on yet. Turn on Cloud Sync in the app, or drop a report or the app's export on the Reports tab, and this page fills itself."
@@ -2115,72 +2112,17 @@ import SiteHeader from "../components/SiteHeader.astro";
       return;
     }
 
-    // ── activity ───────────────────────────────────────────────────────────
+    // ── the figures every chapter draws from ──────────────────────────────
     const goal = Number(syncProfile?.weekly_met_hours_goal) || 7.5;
     const act = activitySummary(allWeeks, syncActs, goal, today, thisMonday);
     const { weeks, recent, prior, recentAvg, change, streak, quietDays, kinds, perWeek, minutes, vig, zone2 } = act;
     const twelve = weeks.slice(-12);
     // The newest sessions the app synced, newest first: the rows the coach's
     // working carries too, so a summary can name a workout the page shows.
-    const lastWorkouts = [...syncActs].filter((w) => w?.timestamp).sort(byDate("timestamp")).slice(-10).reverse();
-    const maxW = Math.max(goal, ...twelve.map((w) => Number(w.met_hours)));
-    const bw = 30, gap = 12, left = 24;
-    const ySv = (v: number) => 120 - (v / maxW) * 100;
-    let asvg = `<line x1="${left}" y1="120" x2="528" y2="120" stroke="rgba(255,255,255,0.14)"/>`;
-    asvg += `<line x1="${left}" y1="${ySv(goal).toFixed(1)}" x2="528" y2="${ySv(goal).toFixed(1)}" stroke="#a5b4fc" stroke-opacity="0.7" stroke-dasharray="4 4"/><text x="528" y="${(ySv(goal) - 5).toFixed(1)}" text-anchor="end" fill="#a5b4fc" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">GOAL ${goal}</text>`;
-    twelve.forEach((w, i) => {
-      const x = left + 6 + i * (bw + gap), y = ySv(Number(w.met_hours));
-      const dim = i < twelve.length - Math.min(4, recent.length) || w.week_start >= thisMonday;
-      asvg += `<rect x="${x}" y="${y.toFixed(1)}" width="${bw}" height="${(120 - y).toFixed(1)}" rx="2" fill="#f97316" fill-opacity="${dim ? 0.5 : 1}"><title>Week of ${esc(fmtDay(w.week_start))}: ${fmt1(Number(w.met_hours))} MET-hours, ${w.workouts} workout${Number(w.workouts) === 1 ? "" : "s"}</title></rect>`;
-    });
-    let lastM = "";
-    twelve.forEach((w, i) => { const mo = w.week_start.slice(0, 7); if (mo === lastM) return; lastM = mo; asvg += `<text x="${left + 6 + i * (bw + gap)}" y="134" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${monthOf(w.week_start).toUpperCase()}</text>`; });
-    const kindText = [...kinds].sort((x, y) => y[1] - x[1]).slice(0, 3).map(([k, n]) => `${k} ${Math.round(n / Math.max(1, recent.length))}`).join(", ");
-    $("dp-activity").innerHTML = `
-      <div class="flex flex-wrap items-baseline justify-between gap-2"><h2 class="text-[17px] font-extrabold text-text-primary">Activity</h2><span class="text-[12.5px] text-text-tertiary">${twelve.length} week${twelve.length === 1 ? "" : "s"} from the app · goal ${goal} MET-hours</span></div>
-      <svg viewBox="0 0 540 140" class="mt-3 block h-auto w-full" role="img" aria-label="Twelve weeks of MET-hours as bars, the latest four brighter, with the goal line">${asvg}</svg>
-      <div class="mt-2 flex flex-col gap-1.5 text-[13px] leading-relaxed text-text-secondary">
-        <div><strong class="text-text-primary">${fmt1(recentAvg)} MET-hours</strong> a week over the last ${recent.length === 1 ? "week" : `${recent.length} weeks`}${change != null ? `, ${change >= 0 ? "up" : "down"} ${Math.round(Math.abs(change) * 100)}% on the ${prior.length} before` : ""}${streak ? ` · ${streak} week${streak === 1 ? "" : "s"} at goal in a row` : " · not at goal last week"}</div>
-        <div>Last workout <strong class="text-text-primary">${quietDays == null ? "none on file" : quietDays === 0 ? "today" : quietDays === 1 ? "yesterday" : `${quietDays} days ago`}</strong>${perWeek ? ` · ${Math.round(perWeek)} a week${kindText ? `: ${esc(kindText)}` : ""}` : ""}</div>
-        <div>${minutes ? `Vigorous share <strong class="text-text-primary">${Math.round((vig / minutes) * 100)}%</strong>` : "No minutes on file"}${zone2 != null ? ` · Zone 2 <strong class="text-text-primary">${Math.round(zone2)} min</strong> a week, scored against each day's own band` : ""}</div>
-      </div>
-      ${lastWorkouts.length ? `<div class="mt-4">${kicker("LAST WORKOUTS")}<div class="mt-2 flex flex-col divide-y divide-white/8">${lastWorkouts.map((w) => `<div class="flex items-baseline gap-3 py-1.5 text-[12.5px]"><span class="w-[76px] shrink-0 font-mono text-[11px] text-text-tertiary">${esc(dayWord(localDay(w.timestamp)))}</span><span class="min-w-0 flex-1 truncate text-text-secondary">${esc(String(w.activity_name ?? "Workout"))}</span><span class="shrink-0 font-mono text-[11px] text-text-tertiary">${Math.round(Number(w.duration_minutes) || 0)} min</span><span class="w-[64px] shrink-0 text-right font-mono text-[11px] font-semibold text-text-primary">${fmt1(Number(w.met_hours) || 0)} MET-h</span><span class="w-[52px] shrink-0 text-right font-mono text-[11px] ${Number(w.zone2_minutes) > 0 ? "text-success-light" : "text-text-muted"}">${Number(w.zone2_minutes) > 0 ? `${Math.round(Number(w.zone2_minutes))} z2` : "—"}</span></div>`).join("")}</div></div>` : ""}`;
-
-    // ── fitness ────────────────────────────────────────────────────────────
+    const lastWorkouts = [...syncActs].filter((w) => w?.timestamp).sort(byDate("timestamp")).slice(-8).reverse();
     const fit = fitnessSummary(allCrf, today);
     const { tests, latest, prevSame, within, trendWord } = fit; const crfDue = fit.due;
-    let fsvg = "";
-    if (tests.length) {
-      const vs = tests.map((t) => t.v); const lo = Math.min(...vs) - 2, hi = Math.max(...vs) + 2;
-      const t0 = new Date(tests[0].measured_on + "T00:00:00").getTime(), t1 = Math.max(new Date(tests[tests.length - 1].measured_on + "T00:00:00").getTime(), t0 + 86400000);
-      const xf = (d: string) => 40 + ((new Date(d + "T00:00:00").getTime() - t0) / (t1 - t0)) * 470;
-      const yf = (v: number) => 120 - ((v - lo) / (hi - lo)) * 100;
-      fsvg += `<line x1="24" y1="120" x2="528" y2="120" stroke="rgba(255,255,255,0.14)"/><text x="8" y="124" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${Math.round(lo)}</text><text x="8" y="24" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${Math.round(hi)}</text>`;
-      for (const grp of [false, true]) {
-        const g = tests.filter((t) => t.max === grp);
-        if (g.length > 1) fsvg += `<polyline points="${g.map((t) => `${xf(t.measured_on).toFixed(1)},${yf(t.v).toFixed(1)}`).join(" ")}" fill="none" stroke="${grp ? "#a5b4fc" : "#64748b"}" stroke-width="2"${grp ? "" : ' stroke-dasharray="3 4"'}/>`;
-      }
-      for (const t of tests) fsvg += `<circle cx="${xf(t.measured_on).toFixed(1)}" cy="${yf(t.v).toFixed(1)}" r="${t.max ? 6 : 5}" fill="${t.max ? "#818cf8" : "#64748b"}" stroke="#0D0D1C" stroke-width="2"><title>${esc(fmtDay(t.measured_on))}: ${fmt1(t.v)} by ${esc(methodLabel(t.method))}</title></circle><text x="${xf(t.measured_on).toFixed(1)}" y="${(yf(t.v) - 11).toFixed(1)}" text-anchor="middle" fill="${t.max ? "#c7d2fe" : "#94a3b8"}" font-size="12" font-weight="700">${fmt1(t.v)}</text><text x="${xf(t.measured_on).toFixed(1)}" y="134" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${monthOf(t.measured_on).toUpperCase()}</text>`;
-    }
-    $("dp-fitness").innerHTML = `
-      <div class="flex flex-wrap items-baseline justify-between gap-2"><h2 class="text-[17px] font-extrabold text-text-primary">Fitness</h2><span class="text-[12.5px] text-text-tertiary">Every test, compared only within its method</span></div>
-      ${tests.length ? `<svg viewBox="0 0 540 140" class="mt-3 block h-auto w-full" role="img" aria-label="Fitness tests over time, maximal tests in colour and submaximal in grey">${fsvg}</svg>` : `<p class="mt-3 text-[13px] text-text-tertiary">No fitness test on file.</p>`}
-      ${latest ? `<div class="mt-2 flex flex-col gap-1.5 text-[13px] leading-relaxed text-text-secondary">
-        <div><strong class="text-text-primary">${fmt1(latest.v)} mL/kg/min</strong> by ${esc(methodLabel(latest.method))} on ${esc(fmtDay(latest.measured_on))}${within != null ? ` · ${within >= 0 ? "up" : "down"} ${fmt1(Math.abs(within))} on the ${esc(methodLabel(latest.method))} of ${esc(monthYearOf(prevSame!.measured_on))}` : " · the first of its method"}</div>
-        <div>${tests.some((t) => !t.max) ? "Submaximal tests are shown in grey, never compared with a maximal one" : "All tests on file are maximal"}</div>
-        <div>${latest.category ? `Category <strong class="text-text-primary">${esc(String(latest.category).replace(/-/g, " "))}</strong> · ` : ""}retest <strong class="${crfDue ? dueTone(crfDue) : ""}">${crfDue ? dueWord(crfDue) : ""}</strong>, the app's own reminder</div>
-      </div>` : ""}`;
-
-    // ── labs ───────────────────────────────────────────────────────────────
     const labRows = labRowsFrom(by, today);
-    $("dp-labs").innerHTML = `
-      <div class="flex flex-wrap items-baseline justify-between gap-2"><h2 class="text-[17px] font-extrabold text-text-primary">Labs</h2><span class="text-[12.5px] text-text-tertiary">Against each lab's own printed range</span></div>
-      ${labRows.length ? `<div class="mt-3 overflow-x-auto"><table class="w-full min-w-[520px] border-collapse text-[12.5px]">
-        <thead><tr class="text-left font-mono text-[10px] tracking-[0.1em] text-text-tertiary"><th class="border-b border-white/10 pb-1.5 pr-2 font-semibold">MARKER</th><th class="border-b border-white/10 px-2 pb-1.5 font-semibold">LATEST</th><th class="border-b border-white/10 px-2 pb-1.5 font-semibold">LAB'S RANGE</th><th class="border-b border-white/10 px-2 pb-1.5 font-semibold">SINCE LAST</th><th class="border-b border-white/10 pb-1.5 pl-2 font-semibold">RETEST</th></tr></thead>
-        <tbody>${labRows.map((r) => `<tr><td class="py-1.5 pr-2 font-bold text-text-primary">${esc(r.label)}</td><td class="px-2 py-1.5 font-bold ${r.tone}">${esc(r.latest)}</td><td class="px-2 py-1.5 text-text-tertiary">${esc(r.range)}</td><td class="px-2 py-1.5 ${r.sinceTone}">${esc(r.since)}</td><td class="py-1.5 pl-2 ${r.retestTone}">${esc(r.retest)}</td></tr>`).join("")}</tbody></table></div>`
-        : `<p class="mt-3 text-[13px] text-text-tertiary">No lab values on file.</p>`}`;
-
-    // ── body ───────────────────────────────────────────────────────────────
     const waist = by.get("waist_cm") ?? [];
     const wl = waist[waist.length - 1] ?? null;
     const height = Number(syncProfile?.height_cm) || null;
@@ -2196,66 +2138,8 @@ import SiteHeader from "../components/SiteHeader.astro";
     const fnRows = fn.map((f) => ({ ...f, pt: (by.get(f.key) ?? []).slice(-1)[0] ?? null })).filter((f) => f.pt);
     const fnDay = fnRows.map((f) => f.pt!.d).sort().pop() ?? "";
     const bodyDue = bodyDueFrom(by, today);
-    let wsvg = "";
-    if (waist.length) {
-      const W3 = waist.slice(-6); const vs = W3.map((x) => x.v); const lo = Math.min(...vs) - 1, hi = Math.max(...vs) + 1;
-      const xw = (i: number) => 14 + (W3.length > 1 ? (i / (W3.length - 1)) * 222 : 111), yw = (v: number) => 62 - ((v - lo) / Math.max(1, hi - lo)) * 44;
-      if (W3.length > 1) wsvg += `<polyline points="${W3.map((x, i) => `${xw(i).toFixed(1)},${yw(x.v).toFixed(1)}`).join(" ")}" fill="none" stroke="#a5b4fc" stroke-width="2"/>`;
-      W3.forEach((x, i) => { wsvg += `<circle cx="${xw(i).toFixed(1)}" cy="${yw(x.v).toFixed(1)}" r="5" fill="#818cf8" stroke="#0D0D1C" stroke-width="2"><title>${esc(fmtDay(x.d))}: ${x.v} cm</title></circle><text x="${xw(i).toFixed(1)}" y="${(yw(x.v) - 10).toFixed(1)}" text-anchor="middle" fill="#c7d2fe" font-size="11" font-weight="700">${x.v}</text><text x="${xw(i).toFixed(1)}" y="78" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${monthOf(x.d).toUpperCase()}</text>`; });
-    }
-    $("dp-body").innerHTML = `
-      <div class="flex flex-wrap items-baseline justify-between gap-2"><h2 class="text-[17px] font-extrabold text-text-primary">Body</h2><span class="text-[12.5px] text-text-tertiary">Waist, composition, function</span></div>
-      <div class="mt-3 grid gap-4 sm:grid-cols-2">
-        <div class="flex flex-col gap-2">
-          ${waist.length ? `<svg viewBox="0 0 250 82" class="block h-auto w-full max-w-[250px]" role="img" aria-label="Waist over the last measurements">${wsvg}</svg>` : `<p class="text-[13px] text-text-tertiary">No waist on file.</p>`}
-          ${wl ? `<div class="text-[13px] leading-relaxed text-text-secondary">Waist <strong class="text-text-primary">${wl.v} cm</strong> on ${esc(fmtDay(wl.d))}${height ? ` · waist-to-height <strong class="text-text-primary">${(wl.v / height).toFixed(2)}</strong> at ${height} cm` : ""}</div>` : ""}
-          ${fat || musc ? `<div class="text-[13px] leading-relaxed text-text-secondary">${fat ? `Body fat <strong class="text-text-primary">${fat.v}%</strong>` : ""}${fat && musc ? " · " : ""}${musc ? `muscle mass <strong class="text-text-primary">${musc.v}%</strong>` : ""}${method ? ` · ${esc(String(method).toUpperCase())}` : ""}, ${esc(fmtDay((fat ?? musc)!.d))}</div>` : ""}
-        </div>
-        <div class="flex flex-col gap-1.5">
-          ${fnRows.length ? `${kicker(`FUNCTION · ${fnDay ? esc(fmtDay(fnDay)).toUpperCase() : ""} · AGAINST THE CUT-OFFS THE APP USES`)}${fnRows.map((f) => { const [word, ok] = f.judge(f.pt!.v); return `<div class="flex justify-between gap-3 text-[13px]"><span class="text-text-secondary">${esc(f.label)}</span><span><strong class="text-text-primary">${f.pt!.v} ${f.unit}</strong> <span class="${ok ? "text-success-light" : "text-warning"}">${esc(word)}</span></span></div>`; }).join("")}` : `<p class="text-[13px] text-text-tertiary">No function tests on file: grip, chair stand, walk speed, balance.</p>`}
-          ${bodyDue ? `<div class="mt-1 text-[12px] text-text-muted">Next body assessment <span class="${dueTone(bodyDue)}">${dueWord(bodyDue)}</span>: ${bodyDue.why}</div>` : ""}
-        </div>
-      </div>`;
-
-    // ── sleep and heart: the app's daily read, against the person's own normal ─
-    // The same rules the app's Today tile uses, so the two never disagree:
-    // resting heart rate against the MEDIAN of the prior 30 mornings, up from
-    // 5 bpm, strongly from 10 (Radin 2020; Smarr 2020); a night against the
-    // 7-to-9-hour band (Hirshkowitz 2015); recovery against the one cited
-    // line, 12 bpm (Cole 1999), and against the person's own 30-day median.
     const heart = sleepHeartSummary(syncSignals, today);
     const canSeeHeart = p.self || p.mine || p.scopes.includes("heart");
-    $("dp-heart").innerHTML = `
-      <div class="flex flex-wrap items-baseline justify-between gap-2"><h2 class="text-[17px] font-extrabold text-text-primary">Sleep and heart</h2><span class="text-[12.5px] text-text-tertiary">${heart ? `${heart.days} days from the app · read against ${p.self ? "your" : "their"} own normal` : "What the watch reads every morning"}</span></div>
-      ${!heart ? `<p class="mt-3 text-[13px] text-text-tertiary">${!p.account_id ? "Only for a person with a Verve account: the app sends these on every sync." : !canSeeHeart ? `${esc(p.name)} has not shared sleep and heart.` : "Nothing read yet. Open the app once with Apple Health on and Cloud Sync on; a year of mornings arrives with the first sync."}</p>` : `
-      <div class="mt-3 grid gap-5 lg:grid-cols-[3fr_2fr]">
-        <div>
-          ${kicker(`RESTING HEART RATE · LAST 28 MORNINGS · ${heart.rhr.baseline != null ? `NORMAL ${heart.rhr.baseline - 5}–${heart.rhr.baseline + 5}` : "NO BASELINE YET"}`)}
-          ${heart.rhr.svg ? `<svg viewBox="0 0 540 150" class="mt-2 block h-auto w-full" role="img" aria-label="Twenty-eight mornings of resting heart rate, the person's own band shaded, mornings above it marked">${heart.rhr.svg}</svg>` : `<p class="mt-2 text-[13px] text-text-tertiary">No resting heart rate on file.</p>`}
-          <div class="mt-2 flex flex-col gap-1.5 text-[13px] leading-relaxed text-text-secondary">
-            ${heart.rhr.latest != null ? `<div><strong class="text-text-primary">${heart.rhr.latest} bpm</strong> ${esc(dayWord(heart.rhr.latestDay!))}${heart.rhr.baseline != null ? ` · ${heart.rhr.delta === 0 ? "at" : `${Math.abs(heart.rhr.delta!)} ${heart.rhr.delta! > 0 ? "above" : "below"}`} the median of the ${heart.rhr.priors} mornings before${heart.rhr.status === "elevated" ? `, <span class="text-warning">elevated</span>` : heart.rhr.status === "stronglyElevated" ? `, <span class="text-danger">strongly elevated</span>` : heart.rhr.status === "below" ? ", below" : ""}` : ` · a baseline needs 14 mornings; ${heart.rhr.priors} so far`}</div>` : ""}
-            ${heart.rhr.run > 1 ? `<div><strong class="text-text-primary">${heart.rhr.run} mornings running</strong> above the band. One is noise; three is a pattern. It says nothing about why: a late meal, heat, hard training and a cold all do this.</div>` : heart.rhr.latest != null ? `<div>Inside the band ${heart.rhr.inBand} of the last ${heart.rhr.read} mornings read.</div>` : ""}
-            ${heart.rhr.level ? `<div>Absolute level <strong class="text-text-primary">${heart.rhr.level}</strong>: the ARIC bands, a reading aid for a graded association, not a diagnosis.</div>` : ""}
-          </div>
-        </div>
-        <div class="flex flex-col gap-3.5">
-          <div>
-            ${kicker("SLEEP · THE NIGHT THAT ENDED THIS MORNING")}
-            ${heart.sleep.last ? `<div class="mt-1.5 text-[13px] leading-relaxed text-text-secondary"><strong class="text-text-primary">${fmtSleepMin(heart.sleep.last.min)}</strong> ${esc(dayWord(heart.sleep.last.day))}${heart.sleep.usual != null ? ` · ${Math.abs(heart.sleep.last.min - heart.sleep.usual) < 20 ? "about the usual" : `${fmtSleepMin(Math.abs(heart.sleep.last.min - heart.sleep.usual))} ${heart.sleep.last.min < heart.sleep.usual ? "under" : "over"} the usual ${fmtSleepMin(heart.sleep.usual)}`}` : ""} · <span class="${heart.sleep.last.band === "inRange" ? "text-success-light" : "text-warning"}">${heart.sleep.last.band === "short" ? "under 7 h" : heart.sleep.last.band === "long" ? "over 9 h" : "in the 7 to 9 h band"}</span>${heart.sleep.last.bed ? ` · in bed ${esc(heart.sleep.last.bed)}` : ""}</div>
-            <div class="mt-1 text-[12.5px] text-text-tertiary">${heart.sleep.nights} nights in 30 · ${heart.sleep.shortNights} under 7 h · a move toward the band is the improvement, not more sleep without limit</div>` : `<p class="mt-1.5 text-[13px] text-text-tertiary">No night on file.</p>`}
-          </div>
-          <div>
-            ${kicker("HEART RATE RECOVERY · ONE MINUTE AFTER STOPPING")}
-            ${heart.hrr.latest != null ? `<div class="mt-1.5 text-[13px] leading-relaxed text-text-secondary"><strong class="${heart.hrr.latest <= 12 ? "text-danger" : "text-text-primary"}">${heart.hrr.latest} bpm</strong> ${esc(dayWord(heart.hrr.latestDay!))}${heart.hrr.median != null ? ` · own 30-day median ${heart.hrr.median}` : ""}${heart.hrr.latest <= 12 ? ` · <span class="text-danger">at or under the cited 12</span>` : " · above the one cited line; no verdict word above it"}${heart.hrr.source === "derived" ? " · read off the post-workout rate" : ""}</div>` : `<p class="mt-1.5 text-[13px] text-text-tertiary">No recovery on file: Apple Watch records one after a workout that ends above the person's Zone 2 floor.</p>`}
-          </div>
-          <div>
-            ${kicker("STEPS · LAST 7 DAYS")}
-            ${heart.steps.avg != null ? `<div class="mt-1.5 text-[13px] leading-relaxed text-text-secondary"><strong class="text-text-primary">${heart.steps.avg.toLocaleString()}</strong> a day${heart.steps.prior != null ? ` · ${heart.steps.prior.toLocaleString()} the week before` : ""} · ${heart.steps.days} days counted</div>` : `<p class="mt-1.5 text-[13px] text-text-tertiary">No steps on file.</p>`}
-          </div>
-        </div>
-      </div>`}`;
-
-    // ── the four cards ─────────────────────────────────────────────────────
     const moving = change == null ? { k: "ACTIVITY", v: recent.length ? `${fmt1(recentAvg)} MET-h` : "—", tone: "", sub: recent.length ? `a week over the last ${recent.length === 1 ? "week" : `${recent.length} weeks`}; not enough weeks before to compare` : "no weeks on file" }
       : change >= 0.05 ? { k: "MOVING", v: `${signed(change * 100, 0)}%`, tone: "success", sub: `${recent.length}-week MET-hours against the ${prior.length} before` }
       : change <= -0.05 ? { k: "DECLINING", v: `${signed(change * 100, 0)}%`, tone: "danger", sub: `${recent.length}-week MET-hours against the ${prior.length} before` }
@@ -2264,13 +2148,200 @@ import SiteHeader from "../components/SiteHeader.astro";
     const oldest = outRows.filter((r) => r.noFollow != null).sort((x, y) => y.noFollow! - x.noFollow!)[0];
     const dues: Due[] = [...labRows.map((r) => r.due).filter((d): d is Due => !!d), ...(crfDue ? [crfDue] : []), ...(bodyDue ? [bodyDue] : [])].sort((x, y) => x.days - y.days);
     const nextDue = dues[0] ?? null;
-    const card = (k: string, v: string, sub: string, tone = "") => `<div class="flex flex-col gap-1 rounded-2xl border p-4 ${tone === "success" ? "border-success/40 bg-success/[0.06]" : tone === "warning" ? "border-warning/45 bg-warning/[0.06]" : tone === "danger" ? "border-danger/40 bg-danger/[0.06]" : "border-white/10 bg-white/[0.03]"}">${kicker(k, tone === "success" ? "text-success-light" : tone === "warning" ? "text-warning" : tone === "danger" ? "text-danger" : "text-text-tertiary")}<div class="text-[22px] font-extrabold leading-tight text-text-primary">${v}</div><div class="text-[12.5px] leading-snug text-text-tertiary">${sub}</div></div>`;
+    const who = p.self ? "you" : (p.name || "they");
+    const their = p.self ? "your" : "their";
+    const MONO = "JetBrains Mono, ui-monospace, monospace";
+
+    // ── the head, and the four answers as one strip, not four boxes ───────
+    $("dp-head").innerHTML = `
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div class="min-w-0">
+          <div class="font-mono text-[10px] font-semibold tracking-[0.14em] text-accent-light">${p.self ? "YOU" : esc((p.name || "UNNAMED").toUpperCase())} · ${p.self ? "YOUR OWN PAGE" : p.mine ? "YOU LOOK AFTER" : `SHARES ${esc(scopeList(p.scopes).toUpperCase() || "NOTHING YET")}`} · READ ${esc(fmtDay(today).toUpperCase())}</div>
+          <h2 class="mt-2 text-[26px] font-extrabold leading-[1.05] tracking-[-0.03em] text-text-primary sm:text-[30px]">In depth</h2>
+          <p class="mt-2 text-[13px] leading-relaxed text-text-tertiary">The four questions a coach asks of one person, then the working behind each. Every number is from ${p.self ? "your own rows" : p.mine ? `what is on file for ${esc(p.name)}` : `what ${esc(p.name)} chose to share`}.</p>
+        </div>
+      </div>`;
+    const cell = (k: string, v: string, sub: string, tone = "", last = false) => `<div class="flex flex-col gap-1 py-4 ${last ? "" : "sm:border-r sm:border-white/[0.08] sm:pr-4"} ${k === "MOVING" || k === "ACTIVITY" || k === "STEADY" || k === "DECLINING" ? "" : "sm:pl-4"}">${kicker(k, tone === "success" ? "text-success-light" : tone === "warning" ? "text-warning" : tone === "danger" ? "text-danger" : "text-text-tertiary")}<div class="text-[24px] font-extrabold leading-tight tracking-[-0.02em] text-text-primary">${v}</div><div class="text-[12.5px] leading-snug text-text-tertiary">${sub}</div></div>`;
     $("dp-cards").innerHTML = [
-      card(moving.k, moving.v, moving.sub, moving.tone),
-      card("FITNESS", latest ? `${fmt1(latest.v)} <span class="text-[13px] font-semibold ${trendWord === "rising" ? "text-success-light" : trendWord === "falling" ? "text-danger" : "text-text-tertiary"}">${trendWord}</span>` : "—", latest ? `VO₂max by ${esc(methodLabel(latest.method))}${within != null ? `, ${within >= 0 ? "up" : "down"} ${fmt1(Math.abs(within))} within the method` : ", first of its method"}` : "no fitness test on file"),
-      card("LABS", labRows.length ? `${outRows.length} <span class="text-[13px] font-semibold ${outRows.length ? "text-warning" : "text-success-light"}">${outRows.length ? "outside range" : "all in range"}</span>` : "—", labRows.length ? (outRows.length ? `${esc(outRows.slice(0, 2).map((r) => r.label).join(" and "))}${outRows.length > 2 ? ` and ${outRows.length - 2} more` : ""}${oldest ? `, no follow-up in ${oldest.noFollow} months` : ""}` : `${labRows.length} marker${labRows.length === 1 ? "" : "s"} on file, latest ${esc(fmtDay(labRows[0].d))}`) : "no lab values on file", outRows.length ? "warning" : ""),
-      card("RETEST DUE", nextDue ? esc(nextDue.what) : "Nothing due", nextDue ? `${esc(nextDue.why)} · ${dueWord(nextDue)}` : "in the cited cadences", nextDue && nextDue.days < 0 ? "danger" : nextDue && nextDue.days <= 30 ? "warning" : ""),
+      cell(moving.k, moving.v, moving.sub, moving.tone),
+      cell("FITNESS", latest ? `${fmt1(latest.v)} <span class="text-[13px] font-semibold ${trendWord === "rising" ? "text-success-light" : trendWord === "falling" ? "text-danger" : "text-text-tertiary"}">${trendWord}</span>` : "—", latest ? `VO₂max by ${esc(methodLabel(latest.method))}${within != null ? `, ${within >= 0 ? "up" : "down"} ${fmt1(Math.abs(within))} within the method` : ", first of its method"}` : "no fitness test on file"),
+      cell("LABS", labRows.length ? `${outRows.length} <span class="text-[13px] font-semibold ${outRows.length ? "text-warning" : "text-success-light"}">${outRows.length ? "outside range" : "all in range"}</span>` : "—", labRows.length ? (outRows.length ? `${esc(outRows.slice(0, 2).map((r) => r.label).join(" and "))}${outRows.length > 2 ? ` and ${outRows.length - 2} more` : ""}${oldest ? `, no follow-up in ${oldest.noFollow} months` : ""}` : `${labRows.length} marker${labRows.length === 1 ? "" : "s"} on file, latest ${esc(fmtDay(labRows[0].d))}`) : "no lab values on file", outRows.length ? "warning" : ""),
+      cell("DUE", nextDue ? esc(nextDue.what) : "Nothing due", nextDue ? `${esc(nextDue.why)} · ${dueWord(nextDue)}` : "in the cited cadences", nextDue && nextDue.days < 0 ? "danger" : nextDue && nextDue.days <= 30 ? "warning" : "", true),
     ].join("");
+
+    // ── 1 · training rhythm: twelve weeks, one dot a day ─────────────────
+    // The hardest session of each day colours its dot; strength is a square,
+    // since it is graded by its own rule. Rest is the quiet grey. The shape
+    // is the point: a coach reads the gaps as readily as the sessions.
+    const isStrength = (a: any) => /strength|weight/i.test(String(a?.activity_name ?? "") + " " + String(a?.activity_type ?? ""));
+    const dayKind = new Map<string, { kind: string; strength: boolean }>();
+    for (const a of syncActs) {
+      if (!a?.timestamp) continue;
+      const d = localDay(a.timestamp), cur = dayKind.get(d) ?? { kind: "", strength: false };
+      const rank = (k: string) => k === "vigorous" ? 3 : k === "moderate" ? 2 : k ? 1 : 0;
+      const k = String(a.intensity_category ?? "light");
+      if (rank(k) > rank(cur.kind)) cur.kind = k;
+      if (isStrength(a)) cur.strength = true;
+      dayKind.set(d, cur);
+    }
+    const gridStart = addDays(thisMonday, -77);   // twelve weeks, this one last
+    let longestGap = 0, prevDay = "";
+    for (let d = gridStart; d <= today; d = addDays(d, 1)) {
+      if (dayKind.has(d)) { if (prevDay) longestGap = Math.max(longestGap, daysBetween(prevDay, d) - 1); prevDay = d; }
+    }
+    if (prevDay) longestGap = Math.max(longestGap, daysBetween(prevDay, today));
+    const sessionDays = [...dayKind.keys()].filter((d) => d >= gridStart).length;
+    const rhythmWords = !syncActs.length ? "The weeks, without their days"
+      : perWeek >= 4 && longestGap <= 2 ? `${Math.round(perWeek)} a week, never ${longestGap + 1} days off`
+      : perWeek >= 3 ? `${Math.round(perWeek)} a week, with a ${longestGap}-day gap`
+      : perWeek >= 1 ? `${Math.round(perWeek)} a week, and quiet stretches` : "Quiet, lately";
+    const dotColor: Record<string, string> = { vigorous: "#f87171", moderate: "#f97316", light: "#34d399" };
+    let rsvg = `<g fill="#94a3b8" font-size="10" font-family="${MONO}">${["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((w, r) => `<text x="0" y="${30 + r * 26}">${w}</text>`).join("")}</g>`;
+    let lastMonth = "";
+    for (let c = 0; c < 12; c++) {
+      const wk = addDays(gridStart, c * 7), cx = 70 + c * 60;
+      const mo = wk.slice(0, 7);
+      if (mo !== lastMonth) { lastMonth = mo; rsvg += `<text x="${cx}" y="10" text-anchor="middle" fill="#64748b" font-size="10" font-family="${MONO}">${monthOf(wk).toUpperCase()}</text>`; }
+      for (let r = 0; r < 7; r++) {
+        const d = addDays(wk, r), cy = 26 + r * 26;
+        if (d > today) continue;
+        const k = dayKind.get(d);
+        const title = `<title>${esc(fmtDay(d))}${k ? `: ${k.kind}${k.strength ? ", strength" : ""}` : ": rest"}</title>`;
+        if (!k) rsvg += `<circle cx="${cx}" cy="${cy}" r="6" fill="rgba(255,255,255,0.1)">${title}</circle>`;
+        else if (k.strength && !k.kind) rsvg += `<rect x="${cx - 6}" y="${cy - 6}" width="12" height="12" rx="2" fill="#818cf8">${title}</rect>`;
+        else { rsvg += `<circle cx="${cx}" cy="${cy}" r="6" fill="${dotColor[k.kind] ?? "#34d399"}">${title}</circle>`; if (k.strength) rsvg += `<rect x="${cx + 4}" y="${cy - 10}" width="7" height="7" rx="1.5" fill="#818cf8"/>`; }
+      }
+    }
+    const chapter = (n: number, title: string, heading: string, body: string, lines: string[], right: string) => `
+      <section class="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-7">
+        <div class="flex flex-col gap-2.5">
+          ${kicker(`${n} · ${title}`)}
+          <h3 class="text-[19px] font-extrabold leading-tight tracking-[-0.02em] text-text-primary">${heading}</h3>
+          <p class="text-[13.5px] leading-relaxed text-text-secondary">${body}</p>
+          ${lines.length ? `<div class="flex flex-col gap-1 text-[13px] text-text-secondary">${lines.map((l) => `<div>${l}</div>`).join("")}</div>` : ""}
+        </div>
+        <div class="min-w-0">${right}</div>
+      </section>`;
+    const panel = (inner: string) => `<div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">${inner}</div>`;
+    const legend = (items: Array<[string, string, boolean?]>) => `<div class="flex flex-wrap gap-x-3.5 gap-y-1 text-[11.5px] text-text-secondary">${items.map(([c, l, sq]) => `<span><span class="mr-1.5 inline-block h-[9px] w-[9px] ${sq ? "rounded-[2px]" : "rounded-full"} align-[-1px]" style="background: ${c}"></span>${l}</span>`).join("")}</div>`;
+    const ch1 = chapter(1, "TRAINING RHYTHM", esc(rhythmWords),
+      syncActs.length ? `Twelve weeks, every day a dot, coloured by the day's hardest session. The gaps are as telling as the sessions.` : `The app's sync carries each session; an export carries weeks. The day-by-day rhythm arrives with the sync.`,
+      [`<strong class="text-text-primary">${fmt1(recentAvg)} MET-hours</strong> a week, the last ${recent.length === 1 ? "week" : `${recent.length} weeks`}`,
+       syncActs.length ? `<strong class="text-text-primary">${Math.round(perWeek)} session${Math.round(perWeek) === 1 ? "" : "s"}</strong> a week${[...kinds].length ? ` · ${esc([...kinds].sort((x, y) => y[1] - x[1]).slice(0, 3).map(([k, n]) => `${k} ${Math.round(n / Math.max(1, recent.length))}`).join(", "))}` : ""}` : "",
+       syncActs.length ? `Longest gap <strong class="text-text-primary">${longestGap} day${longestGap === 1 ? "" : "s"}</strong> · ${sessionDays} of ${daysBetween(gridStart, today) + 1} days with a session` : ""].filter(Boolean),
+      syncActs.length ? panel(`<div class="flex flex-wrap items-center justify-between gap-2">${kicker("ONE DOT A DAY · THIS WEEK LAST")}${legend([["rgba(255,255,255,0.18)", "Rest"], ["#34d399", "Easy"], ["#f97316", "Moderate"], ["#f87171", "Vigorous"], ["#818cf8", "Strength", true]])}</div><div class="mt-3 overflow-x-auto"><svg viewBox="0 0 760 200" class="block h-auto w-full min-w-[560px]" role="img" aria-label="Twelve weeks as columns of seven dots, one a day, coloured by the day's hardest session">${rsvg}</svg></div>`)
+      : panel(`<p class="text-[13px] leading-relaxed text-text-tertiary">${weeks.length ? `${weeks.length} week${weeks.length === 1 ? "" : "s"} on file from an export. Turn on Cloud Sync in the app for the days themselves.` : "No weeks on file."}</p>`));
+
+    // ── 2 · load and intensity ───────────────────────────────────────────
+    const maxW = Math.max(goal, ...twelve.map((w) => Number(w.met_hours)));
+    const bw = 30, gap = 12, left = 24;
+    const ySv = (v: number) => 120 - (v / maxW) * 100;
+    let asvg = `<line x1="${left}" y1="120" x2="528" y2="120" stroke="rgba(255,255,255,0.14)"/>`;
+    asvg += `<line x1="${left}" y1="${ySv(goal).toFixed(1)}" x2="528" y2="${ySv(goal).toFixed(1)}" stroke="#a5b4fc" stroke-opacity="0.7" stroke-dasharray="4 4"/><text x="528" y="${(ySv(goal) - 5).toFixed(1)}" text-anchor="end" fill="#a5b4fc" font-size="10" font-family="${MONO}">GOAL ${goal}</text>`;
+    twelve.forEach((w, i) => {
+      const x = left + 6 + i * (bw + gap), y = ySv(Number(w.met_hours));
+      const dim = i < twelve.length - Math.min(4, recent.length) || w.week_start >= thisMonday;
+      asvg += `<rect x="${x}" y="${y.toFixed(1)}" width="${bw}" height="${(120 - y).toFixed(1)}" rx="2" fill="#f97316" fill-opacity="${dim ? 0.5 : 1}"><title>Week of ${esc(fmtDay(w.week_start))}: ${fmt1(Number(w.met_hours))} MET-hours, ${w.workouts} workout${Number(w.workouts) === 1 ? "" : "s"}</title></rect>`;
+    });
+    let lastM = "";
+    twelve.forEach((w, i) => { const mo = w.week_start.slice(0, 7); if (mo === lastM) return; lastM = mo; asvg += `<text x="${left + 6 + i * (bw + gap)}" y="134" fill="#94a3b8" font-size="10" font-family="${MONO}">${monthOf(w.week_start).toUpperCase()}</text>`; });
+    const sumK = (k: string) => recent.reduce((t, w) => t + (Number(w[k]) || 0), 0);
+    const easyMin = sumK("light_min"), modMin = sumK("moderate_min"), vigMin = sumK("vigorous_min"), allMin = easyMin + modMin + vigMin;
+    const pct = (v: number) => allMin ? Math.round((v / allMin) * 100) : 0;
+    const hm = (m: number) => `${Math.floor(m / 60)}h ${String(Math.round(m % 60)).padStart(2, "0")}m`;
+    const loadWords = change == null ? (recent.length ? "The first weeks on file" : "Nothing on file yet") : `${change >= 0.05 ? "Load rising" : change <= -0.05 ? "Load falling" : "Steady load"}, ${allMin ? (pct(vigMin) >= 35 ? "a lot of it hard" : pct(easyMin) >= 50 ? "most of it easy" : "evenly graded") : "ungraded"}`;
+    const ch2 = chapter(2, "LOAD AND INTENSITY", esc(loadWords),
+      `Weekly MET-hours against the goal, and how the minutes split by effort. Verve grades each session against ${their} own heart-rate reserve, not a population band.`,
+      [allMin ? `Vigorous share <strong class="text-text-primary">${pct(vigMin)}%</strong> of minutes` : "",
+       zone2 != null ? `Zone 2 <strong class="text-text-primary">${Math.round(zone2)} min</strong> a week, of the cited 150` : "",
+       act.of ? `At goal <strong class="text-text-primary">${act.atGoal} of ${act.of}</strong> weeks${streak ? ` · ${streak} in a row` : ""}` : ""].filter(Boolean),
+      twelve.length ? panel(`<div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_240px]">
+        <div>${kicker(`WEEKLY MET-HOURS · GOAL ${goal}`)}<svg viewBox="0 0 540 140" class="mt-2 block h-auto w-full" role="img" aria-label="Twelve weeks of MET-hours as bars, the latest four brighter, with the goal line">${asvg}</svg></div>
+        <div class="flex flex-col gap-2.5 lg:border-l lg:border-white/[0.07] lg:pl-5">${kicker(`MINUTES BY EFFORT · LAST ${recent.length} WEEK${recent.length === 1 ? "" : "S"}`)}
+          ${allMin ? `<div class="flex h-3.5 overflow-hidden rounded-full"><span style="width: ${pct(easyMin)}%; background: #34d399"></span><span style="width: ${pct(modMin)}%; background: #f97316"></span><span style="width: ${pct(vigMin)}%; background: #f87171"></span></div>
+          <div class="flex flex-col gap-1.5 text-[12.5px] text-text-secondary">
+            <div class="flex justify-between"><span><span class="mr-1.5 inline-block h-2 w-2 rounded-sm align-[-1px]" style="background: #34d399"></span>Easy</span><strong class="text-text-primary">${pct(easyMin)}% · ${hm(easyMin)}</strong></div>
+            <div class="flex justify-between"><span><span class="mr-1.5 inline-block h-2 w-2 rounded-sm align-[-1px]" style="background: #f97316"></span>Moderate</span><strong class="text-text-primary">${pct(modMin)}% · ${hm(modMin)}</strong></div>
+            <div class="flex justify-between"><span><span class="mr-1.5 inline-block h-2 w-2 rounded-sm align-[-1px]" style="background: #f87171"></span>Vigorous</span><strong class="text-text-primary">${pct(vigMin)}% · ${hm(vigMin)}</strong></div>
+          </div>
+          <p class="text-[12px] leading-relaxed text-text-muted">${pct(easyMin) >= 50 && pct(vigMin) >= 15 ? "Most of the week easy, with hard days: the shape the endurance literature keeps finding." : pct(vigMin) >= 40 ? "A large hard share. The literature keeps finding that most of a week is better spent easy." : "The split of the minutes, as the app graded each session."}</p>` : `<p class="text-[13px] text-text-tertiary">No minutes on file.</p>`}
+        </div></div>`)
+      : panel(`<p class="text-[13px] text-text-tertiary">No weeks on file.</p>`));
+
+    // ── 3 · sessions ─────────────────────────────────────────────────────
+    const monthAgo = addDays(today, -30);
+    const longest = syncActs.filter((a) => a?.timestamp && localDay(a.timestamp) >= monthAgo).reduce((m, a) => Math.max(m, Number(a.duration_minutes) || 0), 0);
+    const tone = (k: string) => k === "vigorous" ? "text-danger" : k === "moderate" ? "text-met-hero" : "text-success-light";
+    const ch3 = chapter(3, "SESSIONS", lastWorkouts.length ? `The last ${lastWorkouts.length}, as Verve read them` : "Sessions arrive with the sync",
+      `Each session as the app synced it: what it was, how long, the MET-hours it earned, the minutes in ${their} Zone 2 band that day, and the effort Verve graded it.`,
+      [`<a href="/science/movement/a-workout" class="font-semibold text-accent-light hover:text-text-primary">A workout, as Verve reads it &rarr;</a>`],
+      lastWorkouts.length ? `<div class="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03]"><table class="w-full min-w-[560px] text-[12.5px]">
+        <thead><tr class="text-left font-mono text-[10px] tracking-wider text-text-tertiary"><th class="px-3 py-2.5 font-semibold">WHEN</th><th class="px-3 py-2.5 font-semibold">SESSION</th><th class="px-3 py-2.5 text-right font-semibold">MIN</th><th class="px-3 py-2.5 text-right font-semibold">MET-H</th><th class="px-3 py-2.5 text-right font-semibold">ZONE 2</th><th class="px-3 py-2.5 font-semibold">EFFORT</th><th class="px-3 py-2.5 font-semibold">NOTE</th></tr></thead>
+        <tbody class="divide-y divide-white/[0.06]">${lastWorkouts.map((w) => { const mins = Math.round(Number(w.duration_minutes) || 0), z2 = Math.round(Number(w.zone2_minutes) || 0), k = String(w.intensity_category ?? "light"), st = isStrength(w); const d = localDay(w.timestamp); return `<tr>
+          <td class="px-3 py-2 font-mono text-[11px] text-text-tertiary">${d === today ? "Today" : d === addDays(today, -1) ? "Yesterday" : esc(dayWord(d))}</td>
+          <td class="px-3 py-2 font-semibold text-text-primary">${esc(String(w.activity_name ?? "Workout"))}</td>
+          <td class="px-3 py-2 text-right font-mono text-text-secondary">${mins}</td>
+          <td class="px-3 py-2 text-right font-mono font-semibold text-text-primary">${fmt1(Number(w.met_hours) || 0)}</td>
+          <td class="px-3 py-2 text-right font-mono ${z2 ? "text-success-light" : "text-text-muted"}">${z2 ? z2 : "—"}</td>
+          <td class="px-3 py-2"><span class="rounded-md bg-white/[0.06] px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider ${st ? "text-accent-light" : tone(k)}">${st ? "strength" : esc(k)}</span></td>
+          <td class="px-3 py-2 text-text-tertiary">${mins && mins === longest && !st ? "longest of the month" : st ? "counts toward the 60 min" : ""}</td></tr>`; }).join("")}</tbody></table></div>`
+      : panel(`<p class="text-[13px] leading-relaxed text-text-tertiary">${p.self ? "Turn on Cloud Sync in the app and each session appears here as it was read." : "An export carries weeks, not sessions; a person with an account sends them on every sync."}</p>`));
+
+    // ── 4 · fitness and recovery ─────────────────────────────────────────
+    let fsvg = "";
+    if (tests.length) {
+      const vs = tests.map((t) => t.v); const lo = Math.min(...vs) - 2, hi = Math.max(...vs) + 2;
+      const t0 = new Date(tests[0].measured_on + "T00:00:00").getTime(), t1 = Math.max(new Date(tests[tests.length - 1].measured_on + "T00:00:00").getTime(), t0 + 86400000);
+      const xf = (d: string) => 40 + ((new Date(d + "T00:00:00").getTime() - t0) / (t1 - t0)) * 470;
+      const yf = (v: number) => 120 - ((v - lo) / (hi - lo)) * 100;
+      fsvg += `<line x1="24" y1="120" x2="528" y2="120" stroke="rgba(255,255,255,0.14)"/><text x="8" y="124" fill="#94a3b8" font-size="10" font-family="${MONO}">${Math.round(lo)}</text><text x="8" y="24" fill="#94a3b8" font-size="10" font-family="${MONO}">${Math.round(hi)}</text>`;
+      for (const grp of [false, true]) {
+        const g = tests.filter((t) => t.max === grp);
+        if (g.length > 1) fsvg += `<polyline points="${g.map((t) => `${xf(t.measured_on).toFixed(1)},${yf(t.v).toFixed(1)}`).join(" ")}" fill="none" stroke="${grp ? "#a5b4fc" : "#64748b"}" stroke-width="2"${grp ? "" : ' stroke-dasharray="3 4"'}/>`;
+      }
+      for (const t of tests) fsvg += `<circle cx="${xf(t.measured_on).toFixed(1)}" cy="${yf(t.v).toFixed(1)}" r="${t.max ? 6 : 5}" fill="${t.max ? "#818cf8" : "#64748b"}" stroke="#0D0D1C" stroke-width="2"><title>${esc(fmtDay(t.measured_on))}: ${fmt1(t.v)} by ${esc(methodLabel(t.method))}</title></circle><text x="${xf(t.measured_on).toFixed(1)}" y="${(yf(t.v) - 11).toFixed(1)}" text-anchor="middle" fill="${t.max ? "#c7d2fe" : "#94a3b8"}" font-size="12" font-weight="700">${fmt1(t.v)}</text><text x="${xf(t.measured_on).toFixed(1)}" y="134" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="${MONO}">${monthOf(t.measured_on).toUpperCase()}</text>`;
+    }
+    const fitWords = !latest ? "No test yet" : trendWord === "rising" ? "Rising" : trendWord === "falling" ? "Slipping, within the method" : "Holding, not yet rising";
+    const rhrLine = heart?.rhr.latest != null ? (heart.rhr.read ? `Resting rate <strong class="text-text-primary">in band ${heart.rhr.inBand} of the last ${heart.rhr.read}</strong> mornings${heart.rhr.run > 1 ? `, <span class="text-warning">${heart.rhr.run} running above it</span>` : ""}` : "") : "";
+    const ch4 = chapter(4, "FITNESS AND RECOVERY", esc(fitWords),
+      `Every test compared only within its method. Resting heart rate is read against ${their} own 28-day band, so a rise here is a rise for ${who}, not for a population.`,
+      [latest ? `<strong class="text-text-primary">${fmt1(latest.v)} mL/kg/min</strong> by ${esc(methodLabel(latest.method))} on ${esc(fmtDay(latest.measured_on))}${within != null ? `, ${within >= 0 ? "up" : "down"} ${fmt1(Math.abs(within))} on the ${esc(methodLabel(latest.method))} of ${esc(monthYearOf(prevSame!.measured_on))}` : ", the first of its method"}` : "",
+       latest?.category ? `Category <strong class="text-text-primary">${esc(String(latest.category).replace(/-/g, " "))}</strong>` : "",
+       crfDue ? `Retest <strong class="${dueTone(crfDue)}">${dueWord(crfDue)}</strong>, the app's own reminder` : "",
+       rhrLine].filter(Boolean),
+      `<div class="grid gap-3.5 lg:grid-cols-2">
+        ${panel(`${kicker("FITNESS TESTS")}${tests.length ? `<svg viewBox="0 0 540 140" class="mt-2 block h-auto w-full" role="img" aria-label="Fitness tests over time, maximal tests in colour and submaximal in grey">${fsvg}</svg><p class="mt-1.5 text-[12px] leading-relaxed text-text-muted">${tests.some((t) => !t.max) ? "Submaximal tests in grey, never compared with a maximal one." : "All tests on file are maximal."}</p>` : `<p class="mt-2 text-[13px] text-text-tertiary">No fitness test on file.</p>`}`)}
+        ${panel(`${kicker(`RESTING HEART RATE · LAST 28 MORNINGS${heart?.rhr.baseline != null ? ` · NORMAL ${heart.rhr.baseline - 5}–${heart.rhr.baseline + 5}` : ""}`)}${heart?.rhr.svg ? `<svg viewBox="0 0 540 150" class="mt-2 block h-auto w-full" role="img" aria-label="Twenty-eight mornings of resting heart rate, the person's own band shaded, mornings above it marked">${heart.rhr.svg}</svg>` : `<p class="mt-2 text-[13px] text-text-tertiary">${!p.account_id ? "Only for a person with a Verve account: the app sends it on every sync." : !canSeeHeart ? `${esc(p.name)} has not shared sleep and heart.` : "Nothing read yet. Open the app once with Apple Health and Cloud Sync on."}</p>`}
+          ${heart ? `<div class="mt-2 flex flex-col gap-1 text-[12.5px] leading-relaxed text-text-secondary">
+            ${heart.sleep.last ? `<div>Sleep <strong class="text-text-primary">${fmtSleepMin(heart.sleep.last.min)}</strong> ${esc(dayWord(heart.sleep.last.day))}${heart.sleep.usual != null ? ` · usual ${fmtSleepMin(heart.sleep.usual)}` : ""} · <span class="${heart.sleep.last.band === "inRange" ? "text-success-light" : "text-warning"}">${heart.sleep.last.band === "short" ? "under 7 h" : heart.sleep.last.band === "long" ? "over 9 h" : "in the 7 to 9 h band"}</span></div>` : ""}
+            ${heart.hrr.latest != null ? `<div>Recovery <strong class="${heart.hrr.latest <= 12 ? "text-danger" : "text-text-primary"}">${heart.hrr.latest} bpm</strong> ${esc(dayWord(heart.hrr.latestDay!))}${heart.hrr.median != null ? ` · own median ${heart.hrr.median}` : ""}${heart.hrr.latest <= 12 ? " · at or under the cited 12" : ""}</div>` : ""}
+            ${heart.steps.avg != null ? `<div>Steps <strong class="text-text-primary">${heart.steps.avg.toLocaleString()}</strong> a day over the last 7${heart.steps.prior != null ? ` · ${heart.steps.prior.toLocaleString()} the week before` : ""}</div>` : ""}
+          </div>` : ""}`)}
+      </div>`);
+
+    // ── 5 · labs, body, and what is due ──────────────────────────────────
+    const labWords = !labRows.length ? "No lab values yet" : outRows.length === 0 ? "Everything in its range" : outRows.length === 1 ? "One number to chase" : `${outRows.length} numbers to chase`;
+    const ch5 = chapter(5, "LABS, BODY, AND WHAT IS DUE", esc(labWords),
+      `Only the markers outside their lab's range and the dates that are due. Everything else is on Labs, with its own chart.`,
+      [],
+      `<div class="grid gap-3.5 sm:grid-cols-3">
+        <div class="rounded-2xl border ${outRows.length ? "border-warning/40" : "border-white/10"} bg-white/[0.03] p-4">${kicker(outRows.length ? "OUTSIDE RANGE" : "LABS", outRows.length ? "text-warning" : "text-text-tertiary")}
+          ${outRows.length ? `<div class="mt-2 flex flex-col gap-2">${outRows.slice(0, 3).map((r) => `<div><div class="text-[14px] font-bold text-text-primary">${esc(r.label)} <span class="font-mono text-warning">${esc(r.latest)}</span></div><div class="text-[12px] text-text-tertiary">lab's range ${esc(r.range)} · ${esc(fmtDay(r.d))}${r.noFollow != null ? ` · no follow-up in ${r.noFollow} months` : ""}</div></div>`).join("")}${outRows.length > 3 ? `<button type="button" data-goto="labs" class="text-left text-[12px] font-semibold text-accent-light hover:text-text-primary">and ${outRows.length - 3} more, in Labs &rarr;</button>` : ""}</div>`
+          : `<div class="mt-2 text-[14px] font-bold text-text-primary">${labRows.length ? `${labRows.length} marker${labRows.length === 1 ? "" : "s"}, all in range` : "Nothing on file"}</div><div class="text-[12px] text-text-tertiary">${labRows.length ? `latest ${esc(fmtDay(labRows[0].d))}` : "drop a report on the Reports tab"}</div>`}
+        </div>
+        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4">${kicker("BODY")}
+          ${wl || fat || musc || fnRows.length ? `<div class="mt-2 flex flex-col gap-1.5 text-[12.5px] leading-relaxed text-text-secondary">
+            ${wl ? `<div class="text-[14px] font-bold text-text-primary">Waist <span class="font-mono">${wl.v} cm</span>${height ? ` · <span class="font-mono">${(wl.v / height).toFixed(2)}</span> to height` : ""}</div><div class="text-[12px] text-text-tertiary">${esc(fmtDay(wl.d))}${waist.length > 1 ? ` · ${wl.v === waist[0].v ? "the same as" : `${fmt1(Math.abs(wl.v - waist[0].v))} cm ${wl.v < waist[0].v ? "less than" : "more than"}`} the first` : ""}</div>` : ""}
+            ${fat || musc ? `<div>${fat ? `Body fat <strong class="text-text-primary">${fat.v}%</strong>` : ""}${fat && musc ? " · " : ""}${musc ? `muscle <strong class="text-text-primary">${musc.v}%</strong>` : ""}${method ? ` · ${esc(String(method).toUpperCase())}` : ""}</div>` : ""}
+            ${fnRows.length ? `<div>${fnRows.map((f) => { const [word, ok] = f.judge(f.pt!.v); return `${esc(f.label.replace(", 5 rises", ""))} <strong class="text-text-primary">${f.pt!.v} ${f.unit}</strong> <span class="${ok ? "text-success-light" : "text-warning"}">${esc(word)}</span>`; }).join(" · ")}${fnDay ? ` <span class="text-text-tertiary">· ${esc(fmtDay(fnDay))}</span>` : ""}</div>` : ""}
+          </div>` : `<div class="mt-2 text-[13px] text-text-tertiary">No waist, composition or function test on file.</div>`}
+        </div>
+        <div class="rounded-2xl border ${nextDue && nextDue.days < 0 ? "border-danger/40" : nextDue && nextDue.days <= 30 ? "border-warning/40" : "border-white/10"} bg-white/[0.03] p-4">${kicker("DUE", nextDue && nextDue.days < 0 ? "text-danger" : nextDue && nextDue.days <= 30 ? "text-warning" : "text-text-tertiary")}
+          ${dues.length ? `<div class="mt-2 flex flex-col gap-1.5 text-[13px]">${dues.slice(0, 4).map((d) => `<div><strong class="${dueTone(d)}">${esc(d.what)}</strong> <span class="text-text-secondary">${dueWord(d)}</span><div class="text-[11.5px] text-text-tertiary">${esc(d.why)}</div></div>`).join("")}</div>` : `<div class="mt-2 text-[13px] text-text-tertiary">Nothing due in the cited cadences.</div>`}
+        </div>
+      </div>`);
+    $("dp-chapters").innerHTML = ch1 + ch2 + ch3 + ch4 + ch5;
+    wireGoto();
 
     // ── the working, for "In Verve's words" ─────────────────────────────
     depthWorking = {
