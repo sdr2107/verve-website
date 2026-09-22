@@ -235,6 +235,9 @@ import SiteHeader from "../components/SiteHeader.astro";
         </nav>
         <!-- who can see this page: the entry here opens the panel on the page -->
         <div id="accesswrap" class="hidden">
+          <button type="button" id="accessgophone" class="mt-3 flex min-h-9 items-center gap-1.5 text-[13px] font-semibold text-accent-light hover:text-text-primary lg:hidden">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Give access
+          </button>
           <div class="hidden lg:block">
             <h3 class="mb-2 hidden px-3 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary lg:block">Access</h3>
             <button type="button" id="accessgo" class="flex w-full items-start gap-2.5 rounded-[10px] border-l-2 border-transparent px-3 py-2 text-left text-[13.5px] font-medium text-text-secondary transition-colors hover:bg-white/[0.04] hover:text-text-primary">
@@ -326,32 +329,6 @@ import SiteHeader from "../components/SiteHeader.astro";
         <!-- someone asks to see your page: nothing is shared until you say so -->
         <div id="requests" class="mt-3 hidden max-w-3xl flex-col gap-3"></div>
 
-        <!-- who can see this person: yours to change, closed until opened -->
-        <details id="sharewrap" class="mt-3 hidden max-w-3xl rounded-2xl border border-white/10 bg-white/[0.03]">
-          <summary class="cursor-pointer list-none px-4 py-3 text-[13px] font-semibold text-text-secondary hover:text-text-primary">
-            <span id="sharesummary">Give access</span>
-          </summary>
-          <div class="border-t border-white/[0.06] px-4 py-3">
-            <div id="sharelist" class="flex flex-col gap-2"></div>
-            <form id="shareform" class="mt-4 flex flex-wrap items-end gap-x-3 gap-y-2">
-              <label class="flex flex-col gap-1 text-[12px] text-text-secondary">Their email
-                <input id="shareemail" type="email" required autocomplete="off" placeholder="coach@example.com"
-                  class="w-60 max-w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
-              </label>
-              <fieldset class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-text-primary">
-                <legend class="mb-1 text-[12px] text-text-secondary">What they see</legend>
-                <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-scope="labs" class="h-4 w-4 accent-[#818cf8]" />Labs</label>
-                <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-scope="imaging" class="h-4 w-4 accent-[#818cf8]" />Imaging</label>
-                <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-scope="activity" class="h-4 w-4 accent-[#818cf8]" />Activity and fitness</label>
-                <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-scope="body" class="h-4 w-4 accent-[#818cf8]" />Body measurements</label>
-                <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-scope="heart" class="h-4 w-4 accent-[#818cf8]" />Sleep and heart</label>
-              </fieldset>
-              <button type="submit" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Invite</button>
-              <p class="basis-full text-[12px] leading-relaxed text-text-tertiary">They can look, not change. You can stop, or change what they see, at any time. Activity, body measurements, and sleep and heart come from the app, so they are offered only for a person with an account.</p>
-            </form>
-            <p id="sharemsg" class="mt-2 hidden text-[13px]"></p>
-          </div>
-        </details>
       </div>
 
       <!-- reading in progress: shown on every tab, since the read carries on
@@ -652,6 +629,54 @@ import SiteHeader from "../components/SiteHeader.astro";
     <p id="loading" class="mt-10 text-sm text-text-tertiary">Checking your session…</p>
   </main>
 
+  <!-- ═══ GIVE ACCESS ═══════════════════════════════════════════════════
+       Who can see the open person's page, and the way to let someone new.
+       A panel over the page, opened from the sidebar (or the small button
+       under the tabs on a phone), since it is about the account's trust
+       rather than about any one tab. Each grant can be changed here, not
+       only stopped: the ticks are re-saved on the same row. -->
+  <div id="sharewrap" class="fixed inset-0 z-40 hidden items-start justify-center overflow-y-auto bg-canvas-3/70 p-4 backdrop-blur-sm sm:p-8" role="dialog" aria-modal="true" aria-labelledby="sharetitle">
+    <div class="mh-open mt-4 w-full max-w-2xl rounded-[20px] border border-white/12 bg-[#15151f] p-5 shadow-2xl shadow-black/50 sm:mt-8 sm:p-7">
+      <div class="flex items-start justify-between gap-4">
+        <div class="min-w-0">
+          <span id="sharekick" class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-accent-light">Access · your page</span>
+          <h2 id="sharetitle" class="mt-2 text-[22px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-2xl">Give access to your page</h2>
+          <p class="mt-1.5 text-[13px] leading-relaxed text-text-secondary">They can look, not change. You choose what they see, and you can stop, or change it, at any time.</p>
+        </div>
+        <button type="button" id="shareclose" aria-label="Close" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/12 text-text-secondary transition-colors hover:border-white/25 hover:text-text-primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+
+      <div class="mt-5">
+        <div class="font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary">HAS ACCESS</div>
+        <div id="sharelist" class="mt-2 flex flex-col gap-2"></div>
+      </div>
+
+      <form id="shareform" class="mt-5 flex flex-col gap-3 border-t border-white/[0.07] pt-5">
+        <div class="font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary">GIVE ACCESS TO SOMEONE NEW</div>
+        <label class="flex flex-col gap-1 text-[12px] text-text-secondary">Their email
+          <input id="shareemail" type="email" required autocomplete="off" placeholder="coach@example.com"
+            class="w-80 max-w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
+        </label>
+        <fieldset class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13.5px] text-text-primary">
+          <legend class="mb-1 text-[12px] text-text-secondary">What they see</legend>
+          <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-scope="labs" class="h-4 w-4 accent-[#818cf8]" />Labs</label>
+          <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-scope="imaging" class="h-4 w-4 accent-[#818cf8]" />Imaging</label>
+          <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-scope="activity" class="h-4 w-4 accent-[#818cf8]" />Activity and fitness</label>
+          <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-scope="body" class="h-4 w-4 accent-[#818cf8]" />Body measurements</label>
+          <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-scope="heart" class="h-4 w-4 accent-[#818cf8]" />Sleep and heart</label>
+        </fieldset>
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <button type="submit" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Send the invitation</button>
+          <p class="text-[12px] leading-relaxed text-text-tertiary">They get an email with a link that signs them in. Nothing is shared until they open it.</p>
+        </div>
+        <p class="text-[12px] leading-relaxed text-text-tertiary">Activity, body measurements, and sleep and heart come from the app, so they are offered only for a person with an account.</p>
+      </form>
+      <p id="sharemsg" class="mt-3 hidden text-[13px]"></p>
+    </div>
+  </div>
+
   <!-- ── the veil: any page, the moment a file is dragged over it ──────── -->
   <div id="veil" class="pointer-events-none fixed inset-0 z-50 hidden items-center justify-center bg-canvas-3/75 p-6 backdrop-blur-sm">
     <div class="flex w-full max-w-[560px] flex-col items-center gap-3.5 rounded-3xl border-2 border-dashed border-accent/70 bg-canvas/85 px-8 py-11 text-center">
@@ -873,7 +898,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     const w = canWrite(), self = isSelf();
     show("addreport", w); show("drop", w); show("emptyadd", w);
     show("personnotewrap", w && !self && !!person?.id);
-    show("sharewrap", w && !!person?.id); show("accesswrap", w && !!person?.id);
+    show("accesswrap", w && !!person?.id); if (!(w && person?.id)) closeAccess();
     show("namechange", self && !!firstName);
     if (!self) hideNameForm();
     renderPeople();
@@ -930,7 +955,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   async function switchPerson(id: string) {
     const p = people.find((x) => x.id === id);
     if (!p) return;
-    if (p.id === person?.id) { if (activeTab === "group") setTab("overview"); closePersonForm(); ($("sharewrap") as HTMLDetailsElement).open = false; return; }
+    if (p.id === person?.id) { if (activeTab === "group") setTab("overview"); closePersonForm(); closeAccess(); return; }
     person = p;
     if (activeTab === "group") setTab("overview");
     syncSignals = []; syncActs = []; syncProfile = null; allWeeks = []; allCrf = []; allBody = [];   // the last person's, until loadActivity brings this one's
@@ -985,14 +1010,31 @@ import SiteHeader from "../components/SiteHeader.astro";
     $("personname").focus();
   }
   function closePersonForm() { show("personform", false); $("personform").classList.remove("flex"); editingPerson = null; }
-  // a click anywhere else closes the add-a-person form and the sharing card
+  // a click anywhere else closes the add-a-person form
   document.addEventListener("click", (e) => {
     const t = e.target as HTMLElement | null;
     if (!t) return;
     if (!$("personform").classList.contains("hidden") && !t.closest("#personform") && !t.closest("#personadd") && !t.closest("[data-pedit]")) closePersonForm();
-    const sw = $("sharewrap") as HTMLDetailsElement;
-    if (sw.open && !t.closest("#sharewrap")) sw.open = false;
   });
+  // ── the Give access panel: open from the sidebar, close by the button, the backdrop or Escape ──
+  function openAccess() {
+    const p = person;
+    if (!p?.id) return;
+    $("sharekick").textContent = p.self ? "Access · your page" : `Access · ${p.name || "their"}’s page`;
+    $("sharetitle").textContent = p.self ? "Give access to your page" : `Give access to ${p.name || "their"}’s page`;
+    msg("sharemsg", "");
+    show("sharewrap", true); $("sharewrap").classList.add("flex");
+    document.body.style.overflow = "hidden";
+    ($("shareemail") as HTMLInputElement).focus({ preventScroll: true });
+  }
+  function closeAccess() {
+    if ($("sharewrap").classList.contains("hidden")) return;
+    show("sharewrap", false); $("sharewrap").classList.remove("flex");
+    document.body.style.overflow = "";
+  }
+  $("shareclose").addEventListener("click", closeAccess);
+  $("sharewrap").addEventListener("click", (e) => { if (e.target === $("sharewrap")) closeAccess(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAccess(); });
   $("personcancel").addEventListener("click", closePersonForm);
   function showPlanPeople(why: string) {
     $("planpeople").innerHTML = lockCard("No room on this plan for one more.", why, plan === "max" ? "See Enterprise" : "See the plans");
@@ -1123,7 +1165,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     if (!p?.id || !p.mine) return;
     // activity and body come from the app, which only a person with an account has
     $("shareform").querySelectorAll<HTMLInputElement>("[data-scope]").forEach((c) => {
-      const appOnly = c.dataset.scope === "activity" || c.dataset.scope === "body";
+      const appOnly = c.dataset.scope === "activity" || c.dataset.scope === "body" || c.dataset.scope === "heart";
       c.closest("label")!.classList.toggle("hidden", appOnly && !p.account_id);
       if (appOnly && !p.account_id) c.checked = false;
     });
@@ -1132,17 +1174,30 @@ import SiteHeader from "../components/SiteHeader.astro";
       .eq("person_id", p.id).neq("status", "stopped").order("invited_at", { ascending: true });
     if (person?.id !== p.id) return;   // switched away meanwhile
     const rows = error ? [] : (data ?? []);
-    $("sharesummary").textContent = rows.length ? `Give access · ${rows.length} can see this page` : "Give access · only you, so far";
     $("accesssub").textContent = rows.length ? `${rows.length} ${rows.length === 1 ? "person" : "people"} can see this page` : "Only you, so far";
+    const APP_SCOPES = new Set(["activity", "body", "heart"]);
+    const offered = Object.keys(SCOPE_LABEL).filter((k) => k !== "notes" && (p.account_id || !APP_SCOPES.has(k)));
     $("sharelist").innerHTML = rows.length ? rows.map((g: any) => `
-      <div class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-white/[0.08] px-3 py-2 text-[13px]">
-        <span class="font-semibold text-text-primary">${esc(g.viewer_email)}</span>
-        <span class="rounded-md px-1.5 py-0.5 font-mono text-[9px] tracking-wider ${g.status === "active" ? "bg-success/15 text-success-light" : "bg-warning/15 text-warning"}">${g.status === "active" ? "SEES" : "WAITING"}</span>
-        <span class="text-text-tertiary">${esc(scopeList(g.scopes ?? []))}</span>
-        <span class="text-text-muted">${g.status === "active"
-          ? (g.last_viewed_at ? `last looked ${dayOf(g.last_viewed_at)}` : "has not looked yet")
-          : `invited ${dayOf(g.invited_at)}`}</span>
-        <button type="button" data-stop="${g.id}" class="ml-auto min-h-9 text-[12px] font-semibold text-text-tertiary hover:text-danger">${g.status === "active" ? "Stop" : "Cancel"}</button>
+      <div class="rounded-xl border border-white/[0.08] px-3.5 py-2.5 text-[13px]" data-grant="${g.id}">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/20 text-[11px] font-bold text-accent-light">${esc(String(g.viewer_email).charAt(0).toUpperCase())}</span>
+          <span class="min-w-0 flex-1">
+            <span class="flex flex-wrap items-center gap-2"><span class="truncate font-semibold text-text-primary">${esc(g.viewer_email)}</span>
+              <span class="rounded-md px-1.5 py-0.5 font-mono text-[9px] tracking-wider ${g.status === "active" ? "bg-success/15 text-success-light" : "bg-warning/15 text-warning"}">${g.status === "active" ? "SEES" : "WAITING"}</span></span>
+            <span class="block text-[12px] text-text-tertiary"><span data-scopes>${esc(scopeList(g.scopes ?? []) || "nothing yet")}</span> · ${g.status === "active"
+              ? `since ${dayOf(g.accepted_at ?? g.invited_at)}${g.last_viewed_at ? `, last looked ${dayOf(g.last_viewed_at)}` : ", has not looked yet"}`
+              : `invited ${dayOf(g.invited_at)}`}</span>
+          </span>
+          <button type="button" data-change="${g.id}" class="min-h-9 rounded-lg border border-white/12 px-3 text-[12px] font-semibold text-text-secondary transition-colors hover:border-white/25 hover:text-text-primary">Change</button>
+          <button type="button" data-stop="${g.id}" class="min-h-9 rounded-lg border border-danger/35 px-3 text-[12px] font-semibold text-danger/90 transition-colors hover:border-danger/60 hover:text-danger">${g.status === "active" ? "Stop" : "Cancel"}</button>
+        </div>
+        <form data-edit="${g.id}" class="mt-3 hidden flex-wrap items-center gap-x-4 gap-y-1 border-t border-white/[0.06] pt-3 text-[13px] text-text-primary">
+          ${offered.map((k) => `<label class="flex min-h-9 items-center gap-2"><input type="checkbox" value="${k}" ${(g.scopes ?? []).includes(k) ? "checked" : ""} class="h-4 w-4 accent-[#818cf8]" />${esc(SCOPE_LABEL[k])}</label>`).join("")}
+          <span class="ml-auto flex items-center gap-3">
+            <button type="button" data-editcancel class="text-[12px] font-medium text-text-tertiary hover:text-text-primary">Cancel</button>
+            <button type="submit" class="min-h-9 rounded-lg bg-accent px-3.5 text-[12.5px] font-bold text-canvas transition-opacity hover:opacity-90">Save</button>
+          </span>
+        </form>
       </div>`).join("")
       : `<p class="text-[13px] text-text-tertiary">Nobody else. Invite a doctor or a coach below: they see what you tick, and nothing else.</p>`;
     $("sharelist").querySelectorAll("[data-stop]").forEach((b) => b.addEventListener("click", async () => {
@@ -1150,6 +1205,25 @@ import SiteHeader from "../components/SiteHeader.astro";
         .update({ status: "stopped", stopped_at: new Date().toISOString() }).eq("id", (b as HTMLElement).dataset.stop);
       if (e) msg("sharemsg", `Could not stop: ${e.message}`, true);
       else { msg("sharemsg", ""); await loadSharing(); }
+    }));
+    // Change: the ticks open under the row; Save writes them to the same grant
+    $("sharelist").querySelectorAll("[data-change]").forEach((b) => b.addEventListener("click", () => {
+      const f = $("sharelist").querySelector<HTMLFormElement>(`[data-edit="${(b as HTMLElement).dataset.change}"]`)!;
+      const open = f.classList.contains("hidden");
+      $("sharelist").querySelectorAll("[data-edit]").forEach((x) => { x.classList.add("hidden"); x.classList.remove("flex"); });
+      if (open) { f.classList.remove("hidden"); f.classList.add("flex"); }
+    }));
+    $("sharelist").querySelectorAll("[data-editcancel]").forEach((b) => b.addEventListener("click", () => {
+      const f = b.closest("form")!; f.classList.add("hidden"); f.classList.remove("flex");
+    }));
+    $("sharelist").querySelectorAll<HTMLFormElement>("[data-edit]").forEach((f) => f.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const scopes = [...f.querySelectorAll<HTMLInputElement>("input[type=checkbox]")].filter((c) => c.checked).map((c) => c.value);
+      if (!scopes.length) { msg("sharemsg", "Tick at least one thing for them to see, or stop their access instead.", true); return; }
+      const { error: e2 } = await supabase.from("grants").update({ scopes }).eq("id", f.dataset.edit);
+      if (e2) { msg("sharemsg", `Could not change: ${e2.message}`, true); return; }
+      msg("sharemsg", "Changed. They see the new set from their next look.");
+      await loadSharing();
     }));
   }
 
@@ -2463,11 +2537,8 @@ import SiteHeader from "../components/SiteHeader.astro";
     el.textContent = text;
     el.className = `ml-auto hidden font-mono text-[10.5px] font-semibold lg:inline ${tone}`;
   }
-  $("accessgo").addEventListener("click", () => {
-    const d = $("sharewrap") as HTMLDetailsElement;
-    d.open = true;
-    d.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
+  $("accessgo").addEventListener("click", openAccess);
+  $("accessgophone").addEventListener("click", openAccess);
   $("tabbar").querySelectorAll("[data-tab]").forEach((b) =>
     b.addEventListener("click", () => setTab((b as HTMLElement).dataset.tab!)));
 
