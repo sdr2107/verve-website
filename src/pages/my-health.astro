@@ -247,7 +247,7 @@ import SiteHeader from "../components/SiteHeader.astro";
           <h3 id="tabhead" class="mb-2 hidden px-3 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary lg:block">Your page</h3>
           <button type="button" data-tab="overview"><svg class="hidden shrink-0 lg:block" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg><span>Overview</span></button>
           <!-- the four sections, nested under Overview in the column; the phone's copy is under the pills -->
-          <div data-ovsections class="mb-1 hidden flex-col gap-0.5 pl-3 lg:flex">
+          <div data-ovsections class="mb-1 hidden flex-col gap-0.5 pl-3 lg:flex" style="display: none">
             <button type="button" data-section="all"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-text-secondary"></span>All</button>
             <button type="button" data-section="fitness"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #f97316"></span>Fitness</button>
             <button type="button" data-section="movement"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #34d399"></span>Movement</button>
@@ -259,7 +259,7 @@ import SiteHeader from "../components/SiteHeader.astro";
           <button type="button" data-tab="depth"><svg class="hidden shrink-0 lg:block" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>In depth</span></button>
         </nav>
         <!-- the four sections under Overview: chips under the pills on a phone -->
-        <div data-ovsections class="mt-3 hidden flex-wrap gap-1.5 lg:hidden">
+        <div data-ovsections class="mt-3 flex flex-wrap gap-1.5 lg:hidden" style="display: none">
           <button type="button" data-section="all"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-text-secondary"></span>All</button>
             <button type="button" data-section="fitness"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #f97316"></span>Fitness</button>
             <button type="button" data-section="movement"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #34d399"></span>Movement</button>
@@ -2109,7 +2109,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       [`<strong class="text-text-primary">${fmt1(recentAvg)} MET-hours</strong> a week, the last ${recent.length === 1 ? "week" : `${recent.length} weeks`}`,
        syncActs.length ? `<strong class="text-text-primary">${Math.round(perWeek)} session${Math.round(perWeek) === 1 ? "" : "s"}</strong> a week${[...kinds].length ? ` · ${esc([...kinds].sort((x, y) => y[1] - x[1]).slice(0, 3).map(([k, n]) => `${k} ${Math.round(n / Math.max(1, recent.length))}`).join(", "))}` : ""}` : "",
        syncActs.length ? `Longest gap <strong class="text-text-primary">${longestGap} day${longestGap === 1 ? "" : "s"}</strong> · ${sessionDays} of ${daysBetween(gridStart, today) + 1} days with a session` : ""].filter(Boolean),
-      syncActs.length ? panel(`<div class="flex flex-wrap items-center justify-between gap-2">${kicker("ONE DOT A DAY · THIS WEEK LAST")}${legend([["rgba(255,255,255,0.18)", "Rest"], ["#34d399", "Easy"], ["#f97316", "Moderate"], ["#f87171", "Vigorous"], ["#818cf8", "Strength", true]])}</div><div class="mt-3 overflow-x-auto"><svg viewBox="0 0 760 200" class="block h-auto w-full min-w-[560px]" role="img" aria-label="Twelve weeks as columns of seven dots, one a day, coloured by the day's hardest session">${rsvg}</svg></div>`)
+      syncActs.length ? panel(`<div class="flex flex-wrap items-center justify-between gap-2">${kicker("ONE DOT A DAY · THIS WEEK LAST")}${legend([["rgba(255,255,255,0.18)", "Rest"], ["#34d399", "Easy"], ["#f97316", "Moderate"], ["#f87171", "Vigorous"], ["#818cf8", "Strength", true]])}</div><div class="mt-3 overflow-x-auto"><svg viewBox="0 0 760 200" class="block h-auto w-full min-w-[440px]" role="img" aria-label="Twelve weeks as columns of seven dots, one a day, coloured by the day's hardest session">${rsvg}</svg></div>`)
       : panel(`<p class="text-[13px] leading-relaxed text-text-tertiary">${weeks.length ? `${weeks.length} week${weeks.length === 1 ? "" : "s"} on file from an export. Turn on Cloud Sync in the app for the days themselves.` : "No weeks on file."}</p>`));
 
     // ── 2 · load and intensity ───────────────────────────────────────────
@@ -2495,7 +2495,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     ["group", "overview", "labs", "reports", "depth"].forEach((x) => show("tab-" + x, x === t));
     show("pagehead", !group); show("personwrap", !group && people.some((x) => !!x.id));
     show("mhsearchwrap", t === "labs" || t === "reports");
-    document.querySelectorAll<HTMLElement>("[data-ovsections]").forEach((el) => el.classList.toggle("hidden", t !== "overview"));
+    document.querySelectorAll<HTMLElement>("[data-ovsections]").forEach((el) => { el.style.display = t === "overview" ? "" : "none"; });
     if (group !== wasGroup && people.some((x) => !!x.id)) renderPeople();
     if (switching) {
       const el = $("tab-" + t);
