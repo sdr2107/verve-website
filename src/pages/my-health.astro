@@ -109,11 +109,20 @@ import SiteHeader from "../components/SiteHeader.astro";
              in the app with Apple, hidden address and all, lands in the same
              account here. The email code below cannot reach a hidden address:
              Apple's relay delivers only mail from senders it knows. -->
-        <button type="button" id="apple"
-          class="mt-4 flex min-h-11 w-full items-center justify-center gap-2.5 rounded-xl bg-white px-4 py-3 text-sm font-bold text-black transition-opacity hover:opacity-90">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.37 12.7c-.02-2.3 1.88-3.4 1.96-3.45-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.48.83-.72 0-1.83-.81-3.01-.79-1.55.02-2.98.9-3.78 2.29-1.61 2.8-.41 6.94 1.16 9.21.77 1.11 1.68 2.36 2.87 2.31 1.15-.05 1.59-.75 2.98-.75 1.39 0 1.78.75 3 .72 1.24-.02 2.03-1.13 2.79-2.25.88-1.29 1.24-2.54 1.26-2.6-.03-.01-2.41-.93-2.43-3.72zM14.1 6.03c.63-.77 1.06-1.83.94-2.9-.91.04-2.02.61-2.67 1.38-.59.68-1.1 1.77-.96 2.82 1.02.08 2.06-.52 2.69-1.3z"/></svg>
-          <span id="applelabel">Sign in with Apple</span>
-        </button>
+        <div id="oauth" class="mt-4 grid gap-2.5 sm:grid-cols-2">
+          <button type="button" id="apple" data-provider="apple"
+            class="flex min-h-11 w-full items-center justify-center gap-2.5 rounded-xl bg-white px-4 py-3 text-sm font-bold text-black transition-opacity hover:opacity-90">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.37 12.7c-.02-2.3 1.88-3.4 1.96-3.45-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.48.83-.72 0-1.83-.81-3.01-.79-1.55.02-2.98.9-3.78 2.29-1.61 2.8-.41 6.94 1.16 9.21.77 1.11 1.68 2.36 2.87 2.31 1.15-.05 1.59-.75 2.98-.75 1.39 0 1.78.75 3 .72 1.24-.02 2.03-1.13 2.79-2.25.88-1.29 1.24-2.54 1.26-2.6-.03-.01-2.41-.93-2.43-3.72zM14.1 6.03c.63-.77 1.06-1.83.94-2.9-.91.04-2.02.61-2.67 1.38-.59.68-1.1 1.77-.96 2.82 1.02.08 2.06-.52 2.69-1.3z"/></svg>
+            <span data-oauthlabel>Sign in with Apple</span>
+          </button>
+          <!-- Google: the same door for a Gmail address. Supabase joins it to an
+               existing email-and-password account with the same address. -->
+          <button type="button" id="google" data-provider="google"
+            class="flex min-h-11 w-full items-center justify-center gap-2.5 rounded-xl border border-white/14 bg-white/[0.04] px-4 py-3 text-sm font-bold text-text-primary transition-colors hover:border-white/25">
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5a5.6 5.6 0 0 1-2.4 3.7v3h3.9c2.3-2.1 3.5-5.2 3.5-8.8z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3a7.2 7.2 0 0 1-10.8-3.8H1.3v3.1A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6H1.3a12 12 0 0 0 0 10.8l4-3.1z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.4.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1A7.2 7.2 0 0 1 12 4.8z"/></svg>
+            <span data-oauthlabel>Sign in with Google</span>
+          </button>
+        </div>
         <div id="appleor" class="mt-4 flex items-center gap-3">
           <div class="h-px flex-1 bg-white/10"></div>
           <span class="text-xs text-text-muted">or with email</span>
@@ -169,7 +178,8 @@ import SiteHeader from "../components/SiteHeader.astro";
         <p id="applenote" class="mt-3 text-xs leading-relaxed text-text-tertiary">
           A code you can type on any device, so a code read on your phone signs
           you in on your Mac. Signed up with Apple in the app? Use the Apple
-          button above: a code cannot reach an address Apple hides.
+          button above: a code cannot reach an address Apple hides. A Gmail
+          address works with either the Google button or the code.
         </p>
 
         <!-- ── the code step: the card flips to this once the email is sent ── -->
@@ -2569,17 +2579,15 @@ import SiteHeader from "../components/SiteHeader.astro";
       if (oauthError) msg("authmsg", `Apple sign-in did not finish: ${oauthError.replace(/\+/g, " ")}.`, true);
     }
   }
-  // Apple's door: Supabase sends the browser to Apple, Apple back to
-  // Supabase, Supabase back here with a code the client trades for a
-  // session. The landing address must be on Supabase's allowed list.
-  $("apple").addEventListener("click", async () => {
+  // Apple's and Google's doors: Supabase sends the browser to the provider,
+  // the provider back to Supabase, Supabase back here with a code the client
+  // trades for a session. The landing address must be on Supabase's allowed list.
+  document.querySelectorAll<HTMLElement>("[data-provider]").forEach((b) => b.addEventListener("click", async () => {
     msg("authmsg", "");
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "apple",
-      options: { redirectTo: `${location.origin}/my-health/` },
-    });
-    if (error) msg("authmsg", `Could not start Apple sign-in: ${error.message}`, true);
-  });
+    const provider = b.dataset.provider as "apple" | "google";
+    const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: `${location.origin}/my-health/` } });
+    if (error) msg("authmsg", `Could not start ${provider === "apple" ? "Apple" : "Google"} sign-in: ${error.message}`, true);
+  }));
 
   /**
    * The name the app greets you with, in the same order the app resolves
@@ -2840,7 +2848,10 @@ import SiteHeader from "../components/SiteHeader.astro";
     $("modenote").textContent = note;
     show("modenote", !!note);
     $("authsubmit").textContent = m === "signin" ? "Sign in" : "Create my account";
-    $("applelabel").textContent = m === "signin" ? "Sign in with Apple" : "Sign up with Apple";
+    document.querySelectorAll<HTMLElement>("[data-oauthlabel]").forEach((el) => {
+      const which = el.closest("[data-provider]")!.getAttribute("data-provider") === "apple" ? "Apple" : "Google";
+      el.textContent = `${m === "signin" ? "Sign in" : "Sign up"} with ${which}`;
+    });
     ($("password") as HTMLInputElement).placeholder = m === "signin" ? "Password" : "Choose a password (8+ characters)";
     ($("password") as HTMLInputElement).autocomplete = m === "signin" ? "current-password" : "new-password";
     show("forgot", m === "signin");
@@ -2924,7 +2935,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       : mode === "recovery" ? `We sent a code to ${to}. Enter it here, then choose a new password. It expires in one hour.`
       : `Sent to ${to}. It works on any device: read it on your phone, type it here. It expires in one hour.`;
     $("usepw").textContent = mode === "signin" ? "Use a password instead" : "Back";
-    ["modenote", "pwform", "ordiv", "magic", "applenote", "apple", "appleor"].forEach((id) => show(id, false));
+    ["modenote", "pwform", "ordiv", "magic", "applenote", "oauth", "appleor"].forEach((id) => show(id, false));
     document.querySelectorAll("[data-mode]").forEach((b) => (b as HTMLElement).parentElement!.classList.add("hidden"));
     show("codestep", true);
     ($("code") as HTMLInputElement).value = "";
@@ -2939,7 +2950,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     codeMode = "signin";
     show("codestep", false);
     document.querySelectorAll("[data-mode]").forEach((b) => (b as HTMLElement).parentElement!.classList.remove("hidden"));
-    show("pwform", true); show("apple", true); show("appleor", true);
+    show("pwform", true); show("oauth", true); $("oauth").classList.add("grid"); show("appleor", true);
     setAuthMode(authMode);
   }
 
