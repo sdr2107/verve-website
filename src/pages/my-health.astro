@@ -246,17 +246,25 @@ import SiteHeader from "../components/SiteHeader.astro";
         <nav id="tabbar" aria-label="Views" class="mt-4 flex gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5 sm:w-fit lg:mt-0 lg:w-auto lg:flex-col lg:gap-0.5 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0">
           <h3 id="tabhead" class="mb-2 hidden px-3 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary lg:block">Your page</h3>
           <button type="button" data-tab="overview"><svg class="hidden shrink-0 lg:block" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg><span>Overview</span></button>
+          <!-- the four sections, nested under Overview in the column; the phone's copy is under the pills -->
+          <div data-ovsections class="mb-1 hidden flex-col gap-0.5 pl-3 lg:flex">
+            <button type="button" data-section="all"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-text-secondary"></span>All</button>
+            <button type="button" data-section="fitness"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #f97316"></span>Fitness</button>
+            <button type="button" data-section="movement"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #34d399"></span>Movement</button>
+            <button type="button" data-section="heart"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #818cf8"></span>Sleep &amp; heart</button>
+            <button type="button" data-section="body"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #FBBF24"></span>Body</button>
+          </div>
           <button type="button" data-tab="labs"><svg class="hidden shrink-0 lg:block" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6l-5.5 9a2 2 0 0 0 1.7 3h11.6a2 2 0 0 0 1.7-3L14 9V3"/></svg><span>Labs</span><span data-count class="ml-auto hidden font-mono text-[10.5px] font-semibold text-text-tertiary lg:inline"></span></button>
           <button type="button" data-tab="reports"><svg class="hidden shrink-0 lg:block" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg><span>Reports</span><span data-count class="ml-auto hidden font-mono text-[10.5px] font-semibold text-text-tertiary lg:inline"></span></button>
           <button type="button" data-tab="depth"><svg class="hidden shrink-0 lg:block" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>In depth</span></button>
         </nav>
-        <!-- the four sections under Overview: chips under the pills on a phone, nested rows from lg -->
-        <div id="ovsections" class="mt-3 hidden flex-wrap gap-1.5 lg:-mt-4 lg:flex-col lg:gap-0.5 lg:pl-3">
+        <!-- the four sections under Overview: chips under the pills on a phone -->
+        <div data-ovsections class="mt-3 hidden flex-wrap gap-1.5 lg:hidden">
           <button type="button" data-section="all"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-text-secondary"></span>All</button>
-          <button type="button" data-section="fitness"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #f97316"></span>Fitness</button>
-          <button type="button" data-section="movement"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #34d399"></span>Movement</button>
-          <button type="button" data-section="heart"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #818cf8"></span>Sleep &amp; heart</button>
-          <button type="button" data-section="body"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #FBBF24"></span>Body</button>
+            <button type="button" data-section="fitness"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #f97316"></span>Fitness</button>
+            <button type="button" data-section="movement"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #34d399"></span>Movement</button>
+            <button type="button" data-section="heart"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #818cf8"></span>Sleep &amp; heart</button>
+            <button type="button" data-section="body"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #FBBF24"></span>Body</button>
         </div>
         <!-- who can see this page: the entry here opens the panel on the page -->
         <div id="accesswrap" class="hidden">
@@ -1578,13 +1586,31 @@ import SiteHeader from "../components/SiteHeader.astro";
   // through your own policies and a client's through the activity and
   // body scopes they ticked. An export is then only for what sync does
   // not have: weeks from before sync was on, or a person with no account.
+  /**
+   * Every row a query would return, a thousand at a time. Supabase answers
+   * one request with at most 1,000 rows whatever .limit() says, and a read
+   * of every workout oldest-first stopped in May for an account with 1,254
+   * rows: the site then said 141 days without a workout. The builder is a
+   * function because a query is spent once it runs.
+   */
+  async function pageAll(build: () => any, maxPages = 10): Promise<{ data: any[]; error: any }> {
+    const out: any[] = [];
+    for (let i = 0; i < maxPages; i++) {
+      const { data, error } = await build().range(i * 1000, i * 1000 + 999);
+      if (error) return { data: out, error };
+      out.push(...(data ?? []));
+      if (!data || data.length < 1000) break;
+    }
+    return { data: out, error: null };
+  }
+
   /** The app's daily read: resting heart rate, steps, the night, the day's recovery. One row a day, pushed on every sync. */
   let syncSignals: any[] = [];
   async function loadSynced(accountId: string) {
     const since = new Date(); since.setDate(since.getDate() - 400);
     const [a, c, w, pr, sg] = await Promise.all([
-      supabase.from("activities").select("timestamp, duration_minutes, met_hours, intensity_category, activity_name, activity_type, source, zone2_minutes")
-        .eq("user_id", accountId).is("deleted_at", null).order("timestamp", { ascending: true }).limit(6000),
+      pageAll(() => supabase.from("activities").select("timestamp, duration_minutes, met_hours, intensity_category, activity_name, activity_type, source, zone2_minutes")
+        .eq("user_id", accountId).is("deleted_at", null).neq("source", "passive-nakanishi").gte("timestamp", since.toISOString()).order("timestamp", { ascending: true })),
       supabase.from("crf_entries").select("timestamp, met_capacity, performance_category, estimation_method, vo2_max_estimate")
         .eq("user_id", accountId).is("deleted_at", null).order("timestamp", { ascending: true }).limit(300),
       supabase.from("waist_readings").select("measured_at, waist_cm")
@@ -2337,13 +2363,13 @@ import SiteHeader from "../components/SiteHeader.astro";
     const none = Promise.resolve({ data: [] as any[] });
     const LAB_COLS = "user_id, measured_at, review_status, lpa_unit, body_comp_method, sbp, dbp, glucose_mgdl, hba1c_pct, post_meal_glucose_mgdl, fasting_insulin_uiuml, triglycerides_mgdl, hdl_mgdl, waist_cm, apo_b_mgdl, ldl_mgdl, lpa_value, hs_crp_mgl, body_fat_pct, skel_musc_pct, alm_kg, ffm_kg, handgrip_kg, single_leg_balance_seconds, chair_stand_seconds, gait_speed_ms";
     const [labs, app, weeks, crf, body, acts, tests, profiles, asked] = await Promise.all([
-      supabase.from("web_labs").select("person_id, analyte, value, unit, ref_low, ref_high, ref_text, measured_on, created_at").in("person_id", ids).order("measured_on", { ascending: true }).limit(8000),
-      accounts.length ? supabase.from("lab_readings").select(LAB_COLS).in("user_id", accounts).is("deleted_at", null).order("measured_at", { ascending: true }).limit(accounts.length * 300 + 1) : none,
+      pageAll(() => supabase.from("web_labs").select("person_id, analyte, value, unit, ref_low, ref_high, ref_text, measured_on, created_at").in("person_id", ids).order("measured_on", { ascending: true })),
+      accounts.length ? pageAll(() => supabase.from("lab_readings").select(LAB_COLS).in("user_id", accounts).is("deleted_at", null).order("measured_at", { ascending: true })) : none,
       supabase.from("web_weeks").select("person_id, week_start, met_hours, minutes, vigorous_min, workouts").in("person_id", ids).order("week_start", { ascending: false }).limit(ids.length * 14 + 1),
       supabase.from("web_crf").select("person_id, measured_on, vo2max, method").in("person_id", ids).order("measured_on", { ascending: true }).limit(ids.length * 10 + 1),
       supabase.from("web_body").select("person_id, measured_on, waist_cm").in("person_id", ids).order("measured_on", { ascending: true }).limit(ids.length * 60 + 1),
       // the app's own rows, for everyone with an account: twelve weeks of workouts, every fitness test, the goal
-      accounts.length ? supabase.from("activities").select("user_id, timestamp, duration_minutes, met_hours, intensity_category, activity_name, source, zone2_minutes").in("user_id", accounts).is("deleted_at", null).neq("source", "passive-nakanishi").gte("timestamp", since).order("timestamp", { ascending: true }).limit(accounts.length * 400 + 1) : none,
+      accounts.length ? pageAll(() => supabase.from("activities").select("user_id, timestamp, duration_minutes, met_hours, intensity_category, activity_name, source, zone2_minutes").in("user_id", accounts).is("deleted_at", null).neq("source", "passive-nakanishi").gte("timestamp", since).order("timestamp", { ascending: true })) : none,
       accounts.length ? supabase.from("crf_entries").select("user_id, timestamp, met_capacity, performance_category, estimation_method, vo2_max_estimate").in("user_id", accounts).is("deleted_at", null).order("timestamp", { ascending: true }).limit(accounts.length * 40 + 1) : none,
       accounts.length ? supabase.from("profiles").select("user_id, weekly_met_hours_goal").in("user_id", accounts) : none,
       supabase.from("share_requests").select("target_email, created_at").eq("requester_id", userId).eq("status", "requested").order("created_at", { ascending: true }),
@@ -2469,7 +2495,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     ["group", "overview", "labs", "reports", "depth"].forEach((x) => show("tab-" + x, x === t));
     show("pagehead", !group); show("personwrap", !group && people.some((x) => !!x.id));
     show("mhsearchwrap", t === "labs" || t === "reports");
-    show("ovsections", t === "overview"); $("ovsections").classList.toggle("flex", t === "overview");
+    document.querySelectorAll<HTMLElement>("[data-ovsections]").forEach((el) => el.classList.toggle("hidden", t !== "overview"));
     if (group !== wasGroup && people.some((x) => !!x.id)) renderPeople();
     if (switching) {
       const el = $("tab-" + t);
@@ -2692,15 +2718,15 @@ import SiteHeader from "../components/SiteHeader.astro";
   /** Refetch web_labs + imaging_reports once; every surface renders from them. */
   async function refresh() {
     const [{ data: rows }, { data: imaging }, { data: app }] = await Promise.all([
-      scopeRows(supabase.from("web_labs")
+      pageAll(() => scopeRows(supabase.from("web_labs")
         .select("analyte, value, unit, ref_low, ref_high, ref_text, section, measured_on, report_path"))
-        .order("measured_on", { ascending: true }).limit(4000),
+        .order("measured_on", { ascending: true })),
       scopeRows(supabase.from("imaging_reports")
         .select("modality, report_date, report_path, impression, findings"))
         .order("report_date", { ascending: true }).limit(200),
       // the app's rows exist only for a person with an account of their own
       person?.account_id
-        ? supabase.from("lab_readings").select("*").eq("user_id", person.account_id).is("deleted_at", null).limit(2000)
+        ? pageAll(() => supabase.from("lab_readings").select("*").eq("user_id", person.account_id).is("deleted_at", null).order("measured_at", { ascending: true }))
         : Promise.resolve({ data: [] as any[] }),
     ]);
     allLabs = rows ?? [];
@@ -3452,7 +3478,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   function renderSection() {
     const sec = ovSection;
     show("ovall", sec === "all"); show("ovsection", sec !== "all");
-    $("ovsections").querySelectorAll<HTMLElement>("[data-section]").forEach((b) => {
+    document.querySelectorAll<HTMLElement>("[data-section]").forEach((b) => {
       const on = b.dataset.section === sec;
       b.setAttribute("aria-current", on ? "page" : "false");
       b.className = `flex min-h-8 items-center gap-2 rounded-full border px-3 py-1 text-[12.5px] font-semibold transition-colors lg:min-h-8 lg:w-full lg:rounded-lg lg:border-0 lg:border-l-2 lg:px-3 lg:py-1 lg:text-left lg:text-[13px] ${on
@@ -3534,7 +3560,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     renderSection();
     history.replaceState(null, "", k === "all" ? "#overview" : `#overview-${k}`);
   }
-  $("ovsections").querySelectorAll<HTMLElement>("[data-section]").forEach((b) => b.addEventListener("click", () => setSection(b.dataset.section as "all" | SecKey)));
+  document.querySelectorAll<HTMLElement>("[data-section]").forEach((b) => b.addEventListener("click", () => setSection(b.dataset.section as "all" | SecKey)));
 
   function renderOverview() {
     $("greet").textContent = greeting();
