@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verve — Privacy Policy</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #1a1a1a;
+      --muted: #666666;
+      --accent: #007AFF;
+      --border: #e5e5e5;
+      --card-bg: #f9f9f9;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1a1a;
+        --text: #f0f0f0;
+        --muted: #999999;
+        --accent: #0A84FF;
+        --border: #333333;
+        --card-bg: #252525;
+      }
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      padding: 2rem 1rem;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    h2 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      margin-top: 2.5rem;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 1px solid var(--border);
+    }
+    h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-top: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    p, li { margin-bottom: 0.6rem; }
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+    ul {
+      padding-left: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    li { margin-bottom: 0.4rem; }
+    strong { font-weight: 600; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.95rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid var(--border);
+    }
+    th {
+      background: var(--card-bg);
+      font-weight: 600;
+    }
+    .highlight {
+      background: var(--card-bg);
+      border-left: 3px solid var(--accent);
+      padding: 0.75rem 1rem;
+      margin: 1rem 0;
+      border-radius: 0 6px 6px 0;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    @media (max-width: 600px) {
+      body { padding: 1.5rem 1rem; }
+      h1 { font-size: 1.6rem; }
+      table { font-size: 0.85rem; }
+      th, td { padding: 0.4rem 0.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Verve &mdash; Privacy Policy</h1>
+  <p class="subtitle">Effective date: March 6, 2026 &middot; Last updated: September 19, 2026</p>
+
+  <h2>Overview</h2>
+  <p>Verve ("the App") is a cardiorespiratory fitness tracker designed with privacy as a core principle. Your health and fitness data is stored locally on your device by default. Cloud features (sync, AI&nbsp;Coach) are optional and require your explicit consent.</p>
+  <p>Verve is also a website, <a href="https://verve-app.health">verve-app.health</a> ("the Website"), where you sign in with the same account, read the science, and keep your lab and imaging reports on the My health page. This policy covers both.</p>
+
+  <h2>Data We Collect</h2>
+
+  <h3>Data You Provide</h3>
+  <p>When you use Verve, you may provide:</p>
+  <ul>
+    <li><strong>Account information</strong> &mdash; Email address (for sign-up) or Apple&nbsp;ID (for Apple Sign-In)</li>
+    <li><strong>Profile data</strong> &mdash; Name (optional), age, sex, weight, resting heart rate</li>
+    <li><strong>Health history</strong> &mdash; Smoking status and pack-years (optional), beta-blocker status</li>
+    <li><strong>Activity logs</strong> &mdash; Workout type, duration, intensity, heart rate, and notes</li>
+    <li><strong>Fitness assessments</strong> &mdash; CRF test results, MET capacity, VO2Max estimates</li>
+    <li><strong>Preferences</strong> &mdash; Weekly MET-hours goal, preferred units, display settings</li>
+  </ul>
+
+  <h3>Apple HealthKit Data (With Your Permission)</h3>
+  <p>When you grant HealthKit access, Verve reads:</p>
+  <ul>
+    <li>Workouts (type, duration, energy burned)</li>
+    <li>Heart rate and resting heart rate</li>
+    <li>VO2Max estimates</li>
+    <li>Height, weight, and biological sex</li>
+  </ul>
+  <div class="highlight">
+    <strong>Verve does not write any data to Apple HealthKit.</strong> All HealthKit data is processed locally on your device.
+  </div>
+
+  <h3>Automatically Collected Data</h3>
+  <p>If HealthKit is enabled, Verve may estimate background physical activity from heart rate data using published physiological models. These estimates are processed entirely on your device.</p>
+
+  <h2>How We Use Your Data</h2>
+
+  <h3>On-Device Processing (Default)</h3>
+  <p>By default, all data is stored and processed locally on your device. No data leaves your device unless you opt in to cloud features.</p>
+
+  <h3>Authentication</h3>
+  <p>If you create an account (via email or Apple Sign-In), we use Supabase for secure authentication. Supabase stores your email address and encrypted credentials.</p>
+
+  <h3>Cloud Sync (Optional)</h3>
+  <p>If you enable Cloud Sync in Settings, your profile, activities, and fitness data are synced to secure servers to enable cross-device access. You can disable Cloud Sync at any time.</p>
+
+  <h3>AI Coach (Optional, Subscription Required)</h3>
+  <p>If you use the AI Coach feature, anonymised fitness context is sent to our secure server to generate personalised activity suggestions. The data sent includes age, sex, weight, resting heart rate, weekly MET-hours, activity breakdown, and CRF level.</p>
+  <div class="highlight">
+    <strong>Your name is never sent.</strong> The AI provider deletes the request from its systems within 30 days and does not use it to train models.
+  </div>
+
+  <h3>Subscription Management</h3>
+  <p>We use RevenueCat to manage subscriptions. RevenueCat receives an anonymous user identifier and subscription status. No health or fitness data is shared with RevenueCat.</p>
+
+  <h2>The Website and My health</h2>
+
+  <h3>Signing in</h3>
+  <p>The Website uses the same account as the App. You sign in with a password or with a code we email you. The name you give at the greeting is stored in your profile and used in the App.</p>
+
+  <h3>Newsletter</h3>
+  <p>If you tick the newsletter box when you sign up, we record that choice and its time with your account. The weekly letter is sent through Substack, which holds your email address under its own privacy policy. Every letter carries an unsubscribe link.</p>
+
+  <h3>Reports you upload</h3>
+  <p>PDFs and photos of your reports are stored in a private folder that only your account can open, on Supabase servers in Mumbai, India. Photos are reduced in size in your browser before upload. Deleting a report removes the file at once.</p>
+
+  <h3>Reading a report</h3>
+  <p>When a report is read, the file is sent through Verve's server to Anthropic's Claude model, which returns the values, units, reference ranges, dates and the report's wording. Nothing else about you is sent with it. Under Anthropic's commercial terms the file and the reply are not used to train models and are deleted from Anthropic's systems within 30 days, unless retained to enforce its usage policy or as required by law. Verve counts how many reports each account reads per day, to enforce a limit.</p>
+
+  <h3>What Verve keeps</h3>
+  <p>Every value read, with its unit, the lab's printed reference range, its section and date; an imaging report's impression and findings as printed; and, for the markers the App tracks, a copy in your App's lab history, marked unchecked until you confirm it there. These stay on your Labs page and in the App after the file is deleted. Email us to have particular values removed, or delete your account in the App's Settings to remove everything.</p>
+
+  <h3>Whose reports</h3>
+  <p>My health is for your own reports. If you upload a report about someone else, you need their permission, and you should remove it rather than keep its values in your history.</p>
+
+  <h3>On your device</h3>
+  <p>The Website sets no cookies and loads no analytics, fonts or scripts from anyone else. Your browser keeps your sign-in session and two small preferences (whether you kept two copies of a report, and whether you postponed the name question) until you sign out or clear site data.</p>
+
+  <h2>Data Storage</h2>
+  <table>
+    <thead>
+      <tr><th>Data</th><th>Location</th><th>Protection</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Profile, activities, CRF entries</td><td>On-device</td><td>iOS file-level encryption</td></tr>
+      <tr><td>Auth tokens</td><td>iOS Keychain</td><td>Hardware-backed encryption</td></tr>
+      <tr><td>HealthKit data</td><td>Apple HealthKit</td><td>iOS HealthKit encryption</td></tr>
+      <tr><td>Cloud Sync data (if enabled)</td><td>Supabase (cloud)</td><td>TLS in transit, encrypted at rest</td></tr>
+      <tr><td>Reports and their values</td><td>Supabase (Mumbai, India)</td><td>Private storage, row-level security, TLS in transit, encrypted at rest</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Third-Party Services</h2>
+  <table>
+    <thead>
+      <tr><th>Service</th><th>Purpose</th><th>Data Shared</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Supabase</td><td>Authentication, cloud sync &amp; reports</td><td>Email, profile, activities (if sync enabled), reports and their values</td></tr>
+      <tr><td>RevenueCat</td><td>Subscription management</td><td>Anonymous user ID, subscription status</td></tr>
+      <tr><td>Anthropic</td><td>AI activity suggestions; reading uploaded reports</td><td>Anonymised fitness context (if AI Coach used); the report file (when you upload one)</td></tr>
+      <tr><td>Apple</td><td>HealthKit, Sign-In, App Store</td><td>Per Apple's privacy policies</td></tr>
+      <tr><td>GitHub</td><td>Hosts the Website</td><td>Visitor IP addresses in GitHub's logs, for security, under GitHub's privacy statement; Verve does not receive them</td></tr>
+      <tr><td>Substack</td><td>Sends the newsletter</td><td>Your email address, if you subscribe</td></tr>
+    </tbody>
+  </table>
+  <p>We do not use analytics, advertising, or tracking SDKs.</p>
+
+  <h2>Data Retention</h2>
+  <ul>
+    <li><strong>On-device data</strong> remains until you delete it or uninstall the app</li>
+    <li><strong>Cloud Sync data</strong> is retained while your account is active; deleted items are permanently removed after 30 days</li>
+    <li><strong>Uploaded reports</strong> are kept until you delete them; the values read from them are kept while your account is active</li>
+    <li><strong>AI requests</strong>, including report files sent for reading, are deleted by the AI provider within 30 days</li>
+    <li><strong>Account data</strong> is deleted when you delete your account</li>
+  </ul>
+
+  <h2>Your Rights and Controls</h2>
+  <p>You have full control over your data:</p>
+  <ul>
+    <li><strong>Export</strong> &mdash; Export all data as JSON from Settings</li>
+    <li><strong>Delete data</strong> &mdash; Clear all local data from Settings</li>
+    <li><strong>Delete account</strong> &mdash; Permanently delete your account and all cloud data</li>
+    <li><strong>Disable Cloud Sync</strong> &mdash; Stop syncing to the cloud at any time</li>
+    <li><strong>Disable AI Coach</strong> &mdash; Stop sending data to the AI service at any time</li>
+    <li><strong>Revoke HealthKit</strong> &mdash; Remove permissions in iOS Settings &rarr; Health &rarr; Verve</li>
+    <li><strong>Sign out</strong> &mdash; Disconnect from cloud services</li>
+    <li><strong>View or delete a report</strong> &mdash; From the Reports tab on the Website</li>
+    <li><strong>Unsubscribe</strong> &mdash; The link in any newsletter</li>
+  </ul>
+
+  <h2>Security</h2>
+  <ul>
+    <li>Authentication tokens stored in iOS Secure Keychain (hardware-encrypted)</li>
+    <li>All network communication uses HTTPS/TLS encryption</li>
+    <li>Cloud data protected by row-level security (users access only their own data)</li>
+    <li>Verve collects no device identifiers or location data. The Website's host, GitHub, logs visitor IP addresses for security; Verve does not see them</li>
+  </ul>
+
+  <h2>Children's Privacy</h2>
+  <p>Verve is not intended for use by children under 17. We do not knowingly collect personal information from children.</p>
+
+  <h2>Apple HealthKit Compliance</h2>
+  <ul>
+    <li>We do not use HealthKit data for advertising or marketing</li>
+    <li>We do not sell HealthKit data to third parties</li>
+    <li>We do not share HealthKit data with third parties for purposes unrelated to health or fitness</li>
+    <li>HealthKit data is not stored in iCloud or any external cloud service</li>
+    <li>HealthKit data sent to AI Coach is anonymised and limited to aggregate fitness metrics</li>
+  </ul>
+
+  <h2>Changes to This Policy</h2>
+  <p>We may update this Privacy Policy from time to time. Changes will be reflected in the "Last updated" date above. For material changes, we will notify you through the App or the Website.</p>
+
+  <h2>Contact</h2>
+  <p>For questions about this Privacy Policy or to exercise your data rights:</p>
+  <p><strong>Email:</strong> <a href="mailto:roplekarsudeep@gmail.com">roplekarsudeep@gmail.com</a><br>
+  <strong>Developer:</strong> Sudeep Roplekar</p>
+
+  <div class="footer">
+    <p>&copy; 2026 Verve. All rights reserved.</p>
+  </div>
+
+</body>
+</html>

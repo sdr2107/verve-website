@@ -32,7 +32,15 @@ export const AUTO_SEND_TO_APP = true;
 export const X_URL = "https://x.com/RoplekarSudeep";
 export const SUBSTACK_URL =
   "https://substack.com/@roplekarsudeep?r=596iu&utm_campaign=profile&utm_medium=profile-page";
-export const PRIVACY_URL = "https://sdr2107.github.io/verve-privacy/";
+/**
+ * The policy and the terms are served by this site at /privacy/ and /terms/,
+ * copies of privacy-policy.html and verve-terms-index.html in the app repo,
+ * which stays the place they are written. Google's sign-in consent screen
+ * needs both on a domain the project owns, which is why they moved here
+ * from the separate Pages site; that site still serves the same text.
+ */
+export const PRIVACY_URL = "/privacy/";
+export const TERMS_URL = "/terms/";
 
 export type NavKey = "science" | "my-health" | "plans" | "x" | "substack";
 
