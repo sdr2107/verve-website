@@ -103,6 +103,10 @@ import SiteHeader from "../components/SiteHeader.astro";
           <button type="button" data-mode="signup" class="min-h-10 flex-1 rounded-full px-4 py-1.5 text-[13px] font-semibold sm:flex-none">Create account</button>
         </div>
         <p id="modenote" class="mt-3 hidden text-sm leading-relaxed text-text-secondary"></p>
+        <!-- The door used last on this browser. Apple with a hidden address
+             makes an account nothing else can join, so the card says which
+             method worked before rather than leaving it to memory. -->
+        <p id="lastmethod" class="mt-3 hidden text-[13px] leading-relaxed text-text-secondary"></p>
 
         <!-- Sign in with Apple, the same door the app has. Apple hands the
              website the identity it gave the app, so a person who signed up
@@ -2553,6 +2557,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     const { data: { session } } = await supabase.auth.getSession();
     show("loading", false);
     if (session?.user) {
+      promotePendingDoor();
       userId = session.user.id;
       userEmail = session.user.email ?? "";
       firstName = await resolveFirstName(session.user);
@@ -2585,6 +2590,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   document.querySelectorAll<HTMLElement>("[data-provider]").forEach((b) => b.addEventListener("click", async () => {
     msg("authmsg", "");
     const provider = b.dataset.provider as "apple" | "google";
+    try { localStorage.setItem(PENDING_DOOR, provider); } catch { /* private mode */ }
     const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: `${location.origin}/my-health/` } });
     if (error) msg("authmsg", `Could not start ${provider === "apple" ? "Apple" : "Google"} sign-in: ${error.message}`, true);
   }));
@@ -2832,6 +2838,35 @@ import SiteHeader from "../components/SiteHeader.astro";
       .sort((a, b) => (appBoundFor(b).date || "").localeCompare(appBoundFor(a).date || ""));
   }
 
+  // ── the door used last on this browser ───────────────────────────────
+  // Set the moment a sign-in succeeds; Apple and Google leave the page, so
+  // their click leaves a pending mark that boot() promotes once a session
+  // is back. Kept across sign-out on purpose: that is when it is needed.
+  type Door = "apple" | "google" | "email";
+  const LAST_DOOR = "verve:last-sign-in", PENDING_DOOR = "verve:pending-sign-in";
+  function rememberDoor(d: Door) {
+    try { localStorage.setItem(LAST_DOOR, d); localStorage.removeItem(PENDING_DOOR); } catch { /* private mode */ }
+  }
+  function lastDoor(): Door | null {
+    try { const v = localStorage.getItem(LAST_DOOR); return v === "apple" || v === "google" || v === "email" ? v : null; }
+    catch { return null; }
+  }
+  function promotePendingDoor() {
+    try { const v = localStorage.getItem(PENDING_DOOR); if (v === "apple" || v === "google") rememberDoor(v); }
+    catch { /* private mode */ }
+  }
+  function showLastDoor(mode: "signin" | "signup") {
+    const d = mode === "signin" ? lastDoor() : null;
+    const name = d === "apple" ? "Apple" : d === "google" ? "Google" : "your email and password";
+    $("lastmethod").textContent = d ? `Last time you signed in here with ${name}. Using the same one keeps you in the same account.` : "";
+    show("lastmethod", !!d);
+    document.querySelectorAll<HTMLElement>("[data-provider]").forEach((b) => {
+      const on = !!d && b.dataset.provider === d;
+      b.style.outline = on ? "2px solid rgba(129,140,248,0.65)" : "";
+      b.style.outlineOffset = on ? "2px" : "";
+    });
+  }
+
   // ── two modes, one card: the same account works here and in the app ────
   let authMode: "signin" | "signup" = "signin";
   function setAuthMode(m: "signin" | "signup") {
@@ -2861,6 +2896,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     $("newsletterrow").classList.toggle("hidden", m !== "signup");
     $("newsletterrow").classList.toggle("flex", m === "signup");
     show("namerow", m === "signup");
+    showLastDoor(m);
     msg("authmsg", "");
   }
   document.querySelectorAll("[data-mode]").forEach((b) =>
@@ -2901,7 +2937,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     msg("authmsg", "Signing in…");
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) msg("authmsg", error.message, true);
-    else { msg("authmsg", ""); boot(); }
+    else { rememberDoor("email"); msg("authmsg", ""); boot(); }
   });
 
   // ── the code: one email carries the code and the link. The code
@@ -3011,6 +3047,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     btn.disabled = false;
     // Supabase answers a wrong code and a stale one with the same message.
     if (error) { recovering = false; msg("authmsg", "That code did not match, or has expired. Check it, or send a new one.", true); return; }
+    rememberDoor("email");
     msg("authmsg", "");
     const wasRecovery = codeMode === "recovery";
     leaveCodeStep();

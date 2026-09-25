@@ -317,6 +317,24 @@ import {
     Wearables shows which app wrote the latest sleep, heart-rate and
     workout sample, and when.
   </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">More than one wearable.</strong>
+    An Apple Watch writes to Health directly; Oura, Whoop and Garmin write
+    through their apps. Someone with a Watch and a Whoop therefore has two
+    writers, and Health keeps both copies. What reaches Verve then depends
+    on the data. <em>Steps</em>: Verve asks Health for its own daily total,
+    which follows the source order set in Health, so one source counts at
+    any moment. <em>Sleep and heart rate</em>: Verve reads the samples
+    themselves, and Health returns every source&rsquo;s, so two devices
+    both writing the same night can overlap. Two settings in Health decide
+    it; Verve has none of its own. <em>Which app may write what</em>:
+    Health &rarr; your picture &rarr; Apps &rarr; the app &rarr; untick the
+    types it should not write. This is the lever for sleep and heart rate,
+    because it stops the duplicate at the source. <em>Which source wins
+    when both exist</em>: Health &rarr; Browse &rarr; the data type, say
+    Steps &rarr; Data Sources &amp; Access &rarr; Edit &rarr; drag the
+    sources into order. This governs totals such as steps.
+  </p>
 </div>
 <div class="mt-4 grid gap-4 sm:grid-cols-2">
   {SLEEP_RHYTHM_SECTION.map((c) => <CitationCard {...c} />)}
