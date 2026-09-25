@@ -1188,6 +1188,93 @@ import SiteHeader from "../components/SiteHeader.astro";
       }));
     });
   }
+  // ── a duplicate account: the same email behind another login ─────────
+  // Apple with a hidden address, or Google beside a password, can leave a
+  // person with two accounts. merge_accounts_by_email (a database function
+  // the app also calls on sign-in) moves every row from the other account
+  // into this one and names the accounts it drained. The report PDFs do not
+  // move with rows: they sit in storage under the old account's folder, so
+  // this moves them here, one by one, re-pointing each row as its file
+  // lands. Every step is safe to repeat, so a failure part-way heals on the
+  // next visit. Never allowed to break the page.
+  let mergedThisLoad = false;
+  async function mergeOtherAccounts() {
+    if (mergedThisLoad) return;
+    mergedThisLoad = true;
+    try {
+      const { data } = await supabase.rpc("merge_accounts_by_email", { calling_user_id: userId });
+      const others: string[] = Array.isArray(data?.merged_from) ? data.merged_from : [];
+      if (!others.length) return;
+      await loadPeople();   // people that were the other account's are now here
+      let moved = 0;
+      for (const other of others) moved += await moveReportFiles(other);
+      if (moved) await renderReports();
+    } catch { /* the merge is a courtesy; the page works without it */ }
+  }
+
+  /**
+   * Bring one drained account's files into this one. The web_reports rows
+   * that came across are the manifest: each names its file and the person
+   * it is filed under, and that person's folder here is where it goes (the
+   * other account's own person may now be a looked-after one). Files with
+   * no row keep their relative place under this account.
+   */
+  async function moveReportFiles(other: string): Promise<number> {
+    let moved = 0;
+    const self = people.find((p) => p.self) ?? null;
+    const { data: rows } = await supabase.from("web_reports")
+      .select("path, person_id").eq("owner_id", userId).like("path", `${other}/%`);
+    for (const r of rows ?? []) {
+      const who = people.find((p) => p.id === r.person_id) ?? self;
+      const to = `${who ? folderOf(who) : userId}/${r.path.split("/").pop()}`;
+      if (await moveReportFile(r.path, to)) moved++;
+    }
+    for (const path of await listReportFiles(other)) {
+      if (await moveReportFile(path, `${userId}/${path.slice(other.length + 1)}`)) moved++;
+    }
+    return moved;
+  }
+
+  /** Every file under a folder, at any depth. Folders come back with no id. */
+  async function listReportFiles(prefix: string): Promise<string[]> {
+    const { data } = await supabase.storage.from("reports").list(prefix, { limit: 1000 });
+    const out: string[] = [];
+    for (const e of data ?? []) {
+      if (e.name.startsWith(".")) continue;
+      if (e.id) out.push(`${prefix}/${e.name}`);
+      else out.push(...await listReportFiles(`${prefix}/${e.name}`));
+    }
+    return out;
+  }
+
+  /**
+   * Move one file and re-point every row that names it. A file already at
+   * the destination (the same report uploaded on both accounts) is kept
+   * beside it with "-merged" in the name rather than lost. Rows keyed by
+   * path that would collide are dropped: the row already there describes
+   * the same file.
+   */
+  async function moveReportFile(from: string, to: string): Promise<boolean> {
+    let dest = to;
+    let { error } = await supabase.storage.from("reports").move(from, dest);
+    if (error && /exist|duplicate/i.test(error.message)) {
+      dest = to.replace(REPORT_EXT, (ext) => `-merged${ext}`);
+      if (dest === to) dest = `${to}-merged`;
+      ({ error } = await supabase.storage.from("reports").move(from, dest));
+    }
+    if (error) return false;
+    for (const t of ["web_reports", "report_notes"] as const) {
+      const { error: e } = await supabase.from(t).update({ path: dest }).eq("owner_id", userId).eq("path", from);
+      if (e) await supabase.from(t).delete().eq("owner_id", userId).eq("path", from);
+    }
+    await Promise.all([
+      supabase.from("imaging_reports").update({ report_path: dest }).eq("user_id", userId).eq("report_path", from),
+      supabase.from("web_labs").update({ report_path: dest }).eq("user_id", userId).eq("report_path", from),
+      supabase.from("lab_readings").update({ report_path: dest }).eq("user_id", userId).eq("report_path", from),
+    ]);
+    return true;
+  }
+
   /** What the reader learned about the document itself, one row per stored report. */
   async function rememberReport(path: string, who: Person, out: any, match: string | null) {
     if (!who.id) return;   // no people table yet, so no web_reports either
@@ -2572,6 +2659,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       if (wanted.startsWith("overview-") && SEC_ORDER.includes(wanted.slice(9) as SecKey)) ovSection = wanted.slice(9) as SecKey;
       setTab(["overview", "labs", "reports", "depth"].includes(wanted) || wanted.startsWith("overview-") ? wanted.split("-")[0] : "overview");
       await Promise.all([loadPeople(), loadPlan()]);
+      await mergeOtherAccounts();
       applyPersonMode();
       if (wanted === "group") setTab("group");   // only once the people are known
       await Promise.all([refresh(), loadPersonNote(), loadSharing(), loadInvites(), loadAsked(), loadRequests(), loadGlance(), loadAiSummary()]);
