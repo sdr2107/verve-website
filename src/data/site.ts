@@ -33,6 +33,12 @@ export const X_URL = "https://x.com/RoplekarSudeep";
 export const SUBSTACK_URL =
   "https://substack.com/@roplekarsudeep?r=596iu&utm_campaign=profile&utm_medium=profile-page";
 /**
+ * The app's own accounts. The footer carries them on every page; the header
+ * keeps to its four links, which are what fit in a phone's row.
+ */
+export const TIKTOK_URL = "https://www.tiktok.com/@verveapp.health";
+export const INSTAGRAM_URL = "https://www.instagram.com/verveapp.health/";
+/**
  * The policy and the terms are served by this site at /privacy/ and /terms/,
  * copies of privacy-policy.html and verve-terms-index.html in the app repo,
  * which stays the place they are written. Google's sign-in consent screen

@@ -4,8 +4,10 @@
  * index.astro and science.astro (already drifting: only one had a "Home"
  * link) — extracted here so a change only ever needs to happen once.
  *
- * The links are the header's four, in the header's order, plus Home and the
- * privacy policy. Both read their addresses from data/site.ts.
+ * The links are the header's four, in the header's order, then the app's
+ * TikTok and Instagram, plus Home and the privacy policy. The header keeps
+ * to its four, which are what fit in a phone's row. All read their addresses
+ * from data/site.ts.
  */
 interface Props {
   /** Show the "Home" link — omit on the homepage itself. */
@@ -15,7 +17,7 @@ interface Props {
 }
 const { showHome = true, showScience = true } = Astro.props;
 
-import { X_URL, SUBSTACK_URL, PRIVACY_URL } from "../data/site";
+import { X_URL, SUBSTACK_URL, TIKTOK_URL, INSTAGRAM_URL, PRIVACY_URL } from "../data/site";
 ---
 
 <footer class="border-t border-white/7 px-6 py-12 sm:px-10">
@@ -33,6 +35,12 @@ import { X_URL, SUBSTACK_URL, PRIVACY_URL } from "../data/site";
       </a>
       <a href={SUBSTACK_URL} target="_blank" rel="noopener noreferrer" class="hover:text-text-primary">
         Substack
+      </a>
+      <a href={TIKTOK_URL} target="_blank" rel="noopener noreferrer" class="hover:text-text-primary">
+        TikTok
+      </a>
+      <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" class="hover:text-text-primary">
+        Instagram
       </a>
       <a href={PRIVACY_URL} class="hover:text-text-primary">Privacy Policy</a>
     </nav>
