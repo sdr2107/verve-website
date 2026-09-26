@@ -175,7 +175,7 @@ export const TOPICS: Topic[] = [
   { slug: "run-protocols", label: "The run protocols", sub: "What the app’s checklist is short for", subject: "fitness", citations: [] },
 
   // ── Movement ───────────────────────────────────────────────────────────
-  { slug: "weekly-volume", label: "Weekly volume", sub: "How much per week, and why the summit sits well above 150 minutes", subject: "movement", citations: WEEKLY_VOLUME_SECTION },
+  { slug: "weekly-volume", label: "Weekly volume", sub: "How much per week, and why the third flag sits well above 150 minutes", subject: "movement", citations: WEEKLY_VOLUME_SECTION },
   {
     slug: "zone-2",
     label: "Zone 2 training",
