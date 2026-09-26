@@ -1,16 +1,16 @@
 ---
 /**
  * The header, the same on every page: the mark alone, as the app draws it,
- * then the four links the footer has, and the app button. The page you are on is lit; the app button stays
+ * then the links the footer has, and the app button. The page you are on is lit; the app button stays
  * a ghost so the download is the one filled button on the landing page.
  *
  * The app button opens /get in a new tab, which sends the visitor to the
  * store for their device; it carries data-nav="app" so a page with a
  * signed-in state (My health) can swap it for Sign out from its own script.
  *
- * On a phone it is two rows rather than a menu icon. Four short links fit,
- * and a hidden menu is the one place a first-time visitor will not look for
- * the science.
+ * On a phone the links sit in a row under the logo and wrap to a second
+ * row when six will not fit, rather than a menu icon: a hidden menu is the
+ * one place a first-time visitor will not look for the science.
  *
  * Deeper pages pass a breadcrumb, which takes the logo's row on a desktop; a
  * link already in the breadcrumb is not repeated in the nav. A topic page
@@ -111,7 +111,7 @@ const link = (key: NavKey) =>
     </div>
 
     {!back && (
-      <nav class="flex gap-5 pb-3 md:hidden" aria-label="Site">
+      <nav class="flex flex-wrap gap-x-5 gap-y-1.5 pb-3 md:hidden" aria-label="Site">
         {NAV.map((l) => (
           <a
             href={l.href}

@@ -1,11 +1,11 @@
 /**
  * The site's fixed addresses and its navigation, in one place.
  *
- * The header and the footer both read NAV, so the same four links appear at
- * the top and the bottom of every page, in the same order. Before this the
- * App Store address was written into five files and the header on each page
+ * The header and the footer both read NAV, so the same links appear at the
+ * top and the bottom of every page, in the same order. Before this the App
+ * Store address was written into five files and the header on each page
  * carried a different subset of the links; the footer was the only place all
- * four appeared.
+ * of them appeared.
  */
 
 import { PLANS_OPEN } from "./plans";
@@ -32,10 +32,7 @@ export const AUTO_SEND_TO_APP = true;
 export const X_URL = "https://x.com/RoplekarSudeep";
 export const SUBSTACK_URL =
   "https://substack.com/@roplekarsudeep?r=596iu&utm_campaign=profile&utm_medium=profile-page";
-/**
- * The app's own accounts. The footer carries them on every page; the header
- * keeps to its four links, which are what fit in a phone's row.
- */
+/** The app's own accounts, in the header and the footer of every page. */
 export const TIKTOK_URL = "https://www.tiktok.com/@verveapp.health";
 export const INSTAGRAM_URL = "https://www.instagram.com/verveapp.health/";
 /**
@@ -48,7 +45,7 @@ export const INSTAGRAM_URL = "https://www.instagram.com/verveapp.health/";
 export const PRIVACY_URL = "/privacy/";
 export const TERMS_URL = "/terms/";
 
-export type NavKey = "science" | "my-health" | "plans" | "x" | "substack";
+export type NavKey = "science" | "my-health" | "plans" | "x" | "substack" | "tiktok" | "instagram";
 
 export interface NavLink {
   key: NavKey;
@@ -65,4 +62,6 @@ export const NAV: NavLink[] = [
   ...(PLANS_OPEN ? [{ key: "plans" as const, label: "Plans", href: "/plans" }] : []),
   { key: "x", label: "X", href: X_URL, external: true },
   { key: "substack", label: "Substack", href: SUBSTACK_URL, external: true },
+  { key: "tiktok", label: "TikTok", href: TIKTOK_URL, external: true },
+  { key: "instagram", label: "Instagram", href: INSTAGRAM_URL, external: true },
 ];
