@@ -1,16 +1,20 @@
 ---
 /**
  * The header, the same on every page: the mark alone, as the app draws it,
- * then the links the footer has, and the app button. The page you are on is lit; the app button stays
+ * then the page links the footer has, the accounts under Social, and the
+ * app button. Social is one word that opens on hover or a tap: the four
+ * accounts, each with its handle, arriving one after another. The footer
+ * lists the same four under the same heading. The page you are on is lit; the app button stays
  * a ghost so the download is the one filled button on the landing page.
  *
  * The app button opens /get in a new tab, which sends the visitor to the
  * store for their device; it carries data-nav="app" so a page with a
  * signed-in state (My health) can swap it for Sign out from its own script.
  *
- * On a phone the links sit in a row under the logo and wrap to a second
- * row when six will not fit, rather than a menu icon: a hidden menu is the
- * one place a first-time visitor will not look for the science.
+ * On a phone the links sit in a row under the logo rather than behind a
+ * menu icon: a hidden menu is the one place a first-time visitor will not
+ * look for the science. Social there unfolds a list under the row, one
+ * account a line with its handle at the right, so no handle is cut short.
  *
  * Deeper pages pass a breadcrumb, which takes the logo's row on a desktop; a
  * link already in the breadcrumb is not repeated in the nav. A topic page
@@ -18,7 +22,8 @@
  * topic's place in its subject, which is what a reader mid-way through a
  * subject needs from the top of the screen.
  */
-import { NAV, GET_APP_PATH, type NavKey } from "../data/site";
+import { NAV, SOCIAL, GET_APP_PATH, type NavKey } from "../data/site";
+import SocialIcon from "./SocialIcon.astro";
 
 interface Crumb {
   /** No href: the current page, rendered as text. */
@@ -46,7 +51,7 @@ const link = (key: NavKey) =>
   key === current ? "text-text-primary" : "text-text-secondary";
 ---
 
-<header class="border-b border-white/[0.06]" transition:name="site-header" transition:animate="none">
+<header class="relative z-40 border-b border-white/[0.06]" transition:name="site-header" transition:animate="none">
   <div class="mx-auto max-w-6xl px-6 sm:px-10">
     <div class="flex items-center justify-between gap-6 py-4 md:py-5">
       <div class:list={["min-w-0 items-center gap-2.5 text-sm", back ? "hidden md:flex" : "flex"]}>
@@ -90,6 +95,37 @@ const link = (key: NavKey) =>
               {l.label}
             </a>
           ))}
+          <div class="vrv-social relative" data-social>
+            <button
+              type="button"
+              data-social-toggle
+              aria-expanded="false"
+              aria-controls="vrv-social-desktop"
+              class="flex items-center gap-1 text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
+            >
+              Social
+              <svg class="vrv-social-chevron h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            </button>
+            <div id="vrv-social-desktop" class="vrv-social-panel absolute right-0 top-full z-30 mt-3 w-60 rounded-2xl border border-white/10 bg-canvas/95 p-1.5 shadow-2xl shadow-black/50 backdrop-blur">
+              {SOCIAL.map((s, i) => (
+                <a
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={`--i: ${i}`}
+                  class="vrv-social-item group flex items-center gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-white/[0.06]"
+                >
+                  <span class="vrv-social-glyph flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-text-secondary transition-colors group-hover:text-text-primary">
+                    <SocialIcon name={s.key} />
+                  </span>
+                  <span class="min-w-0">
+                    <span class="block text-sm font-medium text-text-primary">{s.label}</span>
+                    <span class="block truncate font-mono text-[11px] text-text-tertiary">{s.handle}</span>
+                  </span>
+                </a>
+              ))}
+            </div>
+          </div>
         </nav>
         <slot name="extra" />
         <a
@@ -111,19 +147,146 @@ const link = (key: NavKey) =>
     </div>
 
     {!back && (
-      <nav class="flex flex-wrap gap-x-5 gap-y-1.5 pb-3 md:hidden" aria-label="Site">
-        {NAV.map((l) => (
-          <a
-            href={l.href}
-            target={l.external ? "_blank" : undefined}
-            rel={l.external ? "noopener noreferrer" : undefined}
-            aria-current={l.key === current ? "page" : undefined}
-            class:list={["text-[13px] font-medium transition-colors hover:text-text-primary", link(l.key)]}
+      <>
+        <nav class="flex flex-wrap items-center gap-x-5 gap-y-1.5 pb-3 md:hidden" aria-label="Site">
+          {NAV.map((l) => (
+            <a
+              href={l.href}
+              target={l.external ? "_blank" : undefined}
+              rel={l.external ? "noopener noreferrer" : undefined}
+              aria-current={l.key === current ? "page" : undefined}
+              class:list={["text-[13px] font-medium transition-colors hover:text-text-primary", link(l.key)]}
+            >
+              {l.label}
+            </a>
+          ))}
+          <button
+            type="button"
+            data-social-toggle
+            aria-expanded="false"
+            aria-controls="vrv-social-phone"
+            class="flex items-center gap-1 text-[13px] font-medium text-text-secondary transition-colors hover:text-text-primary"
           >
-            {l.label}
-          </a>
-        ))}
-      </nav>
+            Social
+            <svg class="vrv-social-chevron h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+          </button>
+        </nav>
+        <div id="vrv-social-phone" class="vrv-social-sheet md:hidden" data-social>
+          <div class="vrv-social-sheet-inner">
+            <div class="grid grid-cols-1 gap-1.5 pb-3">
+              {SOCIAL.map((s, i) => (
+                <a
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={`--i: ${i}`}
+                  class="vrv-social-item flex items-center gap-2.5 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2"
+                >
+                  <span class="vrv-social-glyph flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-text-secondary">
+                    <SocialIcon name={s.key} size={13} />
+                  </span>
+                  <span class="text-[13px] font-medium text-text-primary">{s.label}</span>
+                  <span class="ml-auto font-mono text-[10.5px] text-text-tertiary">{s.handle}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      </>
     )}
   </div>
 </header>
+
+<style is:global>
+  /* The desktop panel: hidden until hover, focus or a tap; it settles in
+     from a few pixels up, and its rows follow one after another. */
+  .vrv-social-panel {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-6px) scale(0.98);
+    transform-origin: top right;
+    transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s linear 0.22s;
+  }
+  .vrv-social-item {
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.28s ease, transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .vrv-social-chevron { transition: transform 0.2s ease; }
+  .vrv-social-panel[data-open="true"],
+  .vrv-social-sheet[data-open="true"] {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: none;
+    transition-delay: 0s;
+  }
+  .vrv-social-panel[data-open="true"] .vrv-social-item,
+  .vrv-social-sheet[data-open="true"] .vrv-social-item {
+    opacity: 1;
+    transform: none;
+    transition-delay: calc(var(--i) * 45ms + 60ms);
+  }
+  [data-social-toggle][aria-expanded="true"] .vrv-social-chevron { transform: rotate(180deg); }
+  @media (hover: hover) and (min-width: 768px) {
+    .vrv-social:hover > .vrv-social-panel,
+    .vrv-social:focus-within > .vrv-social-panel {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: none;
+      transition-delay: 0s;
+    }
+    .vrv-social:hover .vrv-social-item,
+    .vrv-social:focus-within .vrv-social-item {
+      opacity: 1;
+      transform: none;
+      transition-delay: calc(var(--i) * 45ms + 60ms);
+    }
+    .vrv-social:hover .vrv-social-chevron { transform: rotate(180deg); }
+  }
+  /* The phone grid unfolds from nothing to its height; the inner box clips
+     the rows while it does. */
+  .vrv-social-sheet {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .vrv-social-sheet-inner { min-height: 0; overflow: hidden; }
+  .vrv-social-sheet[data-open="true"] { grid-template-rows: 1fr; }
+  .vrv-social-glyph { transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.2s ease; }
+  .vrv-social-item:hover .vrv-social-glyph { transform: translateY(-1px) rotate(-6deg); }
+  @media (prefers-reduced-motion: reduce) {
+    .vrv-social-panel, .vrv-social-item, .vrv-social-chevron, .vrv-social-sheet, .vrv-social-glyph { transition: none; }
+  }
+</style>
+
+<script>
+  // One listener for every Social toggle, desktop and phone: a tap opens or
+  // closes its own panel and closes any other; a tap elsewhere, a link inside,
+  // or Escape closes them all. Registered on the document once, so it holds
+  // across the pages the ClientRouter swaps in.
+  const toggles = () => Array.from(document.querySelectorAll<HTMLButtonElement>("[data-social-toggle]"));
+  function setOpen(btn: HTMLButtonElement, open: boolean) {
+    btn.setAttribute("aria-expanded", String(open));
+    const id = btn.getAttribute("aria-controls");
+    const panel = id ? document.getElementById(id) : null;
+    if (panel) panel.dataset.open = String(open);
+  }
+  function closeAll(except?: HTMLButtonElement) {
+    for (const b of toggles()) if (b !== except) setOpen(b, false);
+  }
+  document.addEventListener("click", (e) => {
+    const t = e.target instanceof Element ? e.target : null;
+    const btn = t?.closest<HTMLButtonElement>("[data-social-toggle]");
+    if (btn) {
+      const open = btn.getAttribute("aria-expanded") !== "true";
+      closeAll(btn);
+      setOpen(btn, open);
+      return;
+    }
+    if (!t?.closest("[data-social]") || t?.closest(".vrv-social-item")) closeAll();
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAll(); });
+</script>

@@ -4,8 +4,11 @@
  * index.astro and science.astro (already drifting: only one had a "Home"
  * link) — extracted here so a change only ever needs to happen once.
  *
- * The links are the header's six, in the header's order, plus Home and the
- * privacy policy. All read their addresses from data/site.ts.
+ * Two parts. Social: the four accounts under one heading, each a card with
+ * its mark and its handle, the same four the header's Social opens; they
+ * rise into place one after another as the footer scrolls into view. Then
+ * the row the footer always had: the mark, the year, and the page links,
+ * plus Home and the privacy policy. All addresses come from data/site.ts.
  */
 interface Props {
   /** Show the "Home" link — omit on the homepage itself. */
@@ -15,32 +18,87 @@ interface Props {
 }
 const { showHome = true, showScience = true } = Astro.props;
 
-import { X_URL, SUBSTACK_URL, TIKTOK_URL, INSTAGRAM_URL, PRIVACY_URL } from "../data/site";
+import { SOCIAL, PRIVACY_URL } from "../data/site";
+import SocialIcon from "./SocialIcon.astro";
 ---
 
 <footer class="border-t border-white/7 px-6 py-12 sm:px-10">
-  <div class="mx-auto flex max-w-6xl flex-col items-center gap-6 text-center sm:flex-row sm:justify-between sm:text-left">
-    <div class="flex items-center gap-2.5">
-      <img src="/app-icon.png" alt="" class="h-6 w-6 rounded-md" />
-      <span class="text-sm font-medium text-text-secondary">&copy; {new Date().getFullYear()} Verve</span>
+  <div class="mx-auto max-w-6xl">
+    <section class="vrv-social-footer" data-social-footer aria-labelledby="vrv-social-heading">
+      <h2 id="vrv-social-heading" class="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-text-tertiary">Social</h2>
+      <ul class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" role="list">
+        {SOCIAL.map((s, i) => (
+          <li style={`--i: ${i}`} class="vrv-social-card">
+            <a
+              href={s.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="group flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.02] px-4 py-3 transition-colors hover:border-white/20 hover:bg-white/[0.05]"
+            >
+              <span class="vrv-social-glyph flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-text-secondary transition-colors group-hover:text-text-primary">
+                <SocialIcon name={s.key} size={16} />
+              </span>
+              <span class="min-w-0">
+                <span class="block text-sm font-medium text-text-primary">{s.label}</span>
+                <span class="vrv-social-handle block truncate font-mono text-[11px] text-text-tertiary">{s.handle}</span>
+              </span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <div class="mt-10 flex flex-col items-center gap-6 text-center sm:flex-row sm:justify-between sm:text-left">
+      <div class="flex items-center gap-2.5">
+        <img src="/app-icon.png" alt="" class="h-6 w-6 rounded-md" />
+        <span class="text-sm font-medium text-text-secondary">&copy; {new Date().getFullYear()} Verve</span>
+      </div>
+      <nav class="flex flex-wrap justify-center gap-6 text-sm text-text-secondary" aria-label="Pages">
+        {showHome && <a href="/" class="hover:text-text-primary">Home</a>}
+        {showScience && <a href="/science" class="hover:text-text-primary">Science</a>}
+        <a href="/my-health" class="hover:text-text-primary">My health</a>
+        <a href={PRIVACY_URL} class="hover:text-text-primary">Privacy Policy</a>
+      </nav>
     </div>
-    <nav class="flex flex-wrap justify-center gap-6 text-sm text-text-secondary">
-      {showHome && <a href="/" class="hover:text-text-primary">Home</a>}
-      {showScience && <a href="/science" class="hover:text-text-primary">Science</a>}
-      <a href="/my-health" class="hover:text-text-primary">My health</a>
-      <a href={X_URL} target="_blank" rel="noopener noreferrer" class="hover:text-text-primary">
-        X
-      </a>
-      <a href={SUBSTACK_URL} target="_blank" rel="noopener noreferrer" class="hover:text-text-primary">
-        Substack
-      </a>
-      <a href={TIKTOK_URL} target="_blank" rel="noopener noreferrer" class="hover:text-text-primary">
-        TikTok
-      </a>
-      <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" class="hover:text-text-primary">
-        Instagram
-      </a>
-      <a href={PRIVACY_URL} class="hover:text-text-primary">Privacy Policy</a>
-    </nav>
   </div>
 </footer>
+
+<style is:global>
+  /* The cards wait below their place until the footer is in view, then rise
+     one after another; a hovered card lifts its mark and draws a line under
+     the handle. */
+  .vrv-social-card {
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.55s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition-delay: calc(var(--i) * 80ms);
+  }
+  .vrv-social-footer.is-in .vrv-social-card { opacity: 1; transform: none; }
+  .vrv-social-handle {
+    background: linear-gradient(currentColor, currentColor) no-repeat 0 100% / 0 1px;
+    transition: background-size 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .group:hover .vrv-social-handle { background-size: 100% 1px; }
+  @media (prefers-reduced-motion: reduce) {
+    .vrv-social-card { opacity: 1; transform: none; transition: none; }
+    .vrv-social-handle { transition: none; }
+  }
+</style>
+
+<script>
+  // Mark the footer once it scrolls into view; the cards' transitions do
+  // the rest. Runs now and after each page the ClientRouter swaps in, and
+  // never watches the same footer twice.
+  function reveal() {
+    for (const el of document.querySelectorAll<HTMLElement>("[data-social-footer]:not([data-watched])")) {
+      el.dataset.watched = "1";
+      if (!("IntersectionObserver" in window)) { el.classList.add("is-in"); continue; }
+      const io = new IntersectionObserver((entries) => {
+        if (entries.some((en) => en.isIntersecting)) { el.classList.add("is-in"); io.disconnect(); }
+      }, { threshold: 0.15 });
+      io.observe(el);
+    }
+  }
+  reveal();
+  document.addEventListener("astro:page-load", reveal);
+</script>
