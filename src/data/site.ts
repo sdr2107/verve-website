@@ -35,6 +35,7 @@ export const SUBSTACK_URL =
   "https://substack.com/@roplekarsudeep?r=596iu&utm_campaign=profile&utm_medium=profile-page";
 export const TIKTOK_URL = "https://www.tiktok.com/@verveapp.health";
 export const INSTAGRAM_URL = "https://www.instagram.com/verveapp.health/";
+export const YOUTUBE_URL = "https://www.youtube.com/@verveapp.health";
 /**
  * The policy and the terms are served by this site at /privacy/ and /terms/,
  * copies of privacy-policy.html and verve-terms-index.html in the app repo,
@@ -62,7 +63,7 @@ export const NAV: NavLink[] = [
   ...(PLANS_OPEN ? [{ key: "plans" as const, label: "Plans", href: "/plans" }] : []),
 ];
 
-export type SocialKey = "x" | "substack" | "tiktok" | "instagram";
+export type SocialKey = "x" | "substack" | "tiktok" | "instagram" | "youtube";
 
 export interface SocialLink {
   key: SocialKey;
@@ -74,11 +75,12 @@ export interface SocialLink {
 
 /**
  * The accounts, under the one heading Social in the header and the footer.
- * X and Substack are Sudeep's own; TikTok and Instagram are the app's.
+ * X and Substack are Sudeep's own; TikTok, Instagram and YouTube are the app's.
  */
 export const SOCIAL: SocialLink[] = [
   { key: "x", label: "X", handle: "@RoplekarSudeep", href: X_URL },
   { key: "substack", label: "Substack", handle: "@roplekarsudeep", href: SUBSTACK_URL },
   { key: "tiktok", label: "TikTok", handle: "@verveapp.health", href: TIKTOK_URL },
   { key: "instagram", label: "Instagram", handle: "@verveapp.health", href: INSTAGRAM_URL },
+  { key: "youtube", label: "YouTube", handle: "@verveapp.health", href: YOUTUBE_URL },
 ];
