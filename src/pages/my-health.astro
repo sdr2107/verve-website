@@ -749,6 +749,9 @@ import SiteHeader from "../components/SiteHeader.astro";
 
   /* the page opens: the greeting fades up, tiles and cards rise in, staggered by --i */
   .mh-rise { opacity: 0; transform: translateY(6px); animation: mh-rise 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; animation-delay: calc(var(--i, 0) * 60ms); }
+  /* a tile not tapped steps aside: it fades, blurs and shrinks before the page redraws without it */
+  .mh-dim { opacity: 0 !important; filter: blur(3px); transform: scale(0.96); transition: opacity 0.2s ease, filter 0.2s ease, transform 0.2s ease; }
+  @media (prefers-reduced-motion: reduce) { .mh-dim { transition: none; filter: none; transform: none; } }
   /* a section ring draws itself: --len is the arc, set where the ring is drawn */
   .mh-ring { stroke-dashoffset: var(--len, 0); animation: mh-draw 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards; animation-delay: calc(var(--i, 0) * 60ms + 0.2s); }
   /* a tab switch, and a chart opening */
@@ -1725,7 +1728,9 @@ import SiteHeader from "../components/SiteHeader.astro";
   /** The app's daily read: resting heart rate, steps, the night, the day's recovery. One row a day, pushed on every sync. */
   let syncSignals: any[] = [];
   async function loadSynced(accountId: string) {
-    const since = new Date(); since.setDate(since.getDate() - 400);
+    // as far back as the rows go: a coach wants 2025 month by month, and
+    // an import can reach years further than the app's own sync
+    const since = new Date(2000, 0, 1);
     const [a, c, w, pr, sg, wt] = await Promise.all([
       pageAll(() => supabase.from("activities").select("timestamp, duration_minutes, met_hours, intensity_category, activity_name, activity_type, source, zone2_minutes")
         .eq("user_id", accountId).is("deleted_at", null).neq("source", "passive-nakanishi").gte("timestamp", since.toISOString()).order("timestamp", { ascending: true })),
@@ -1735,11 +1740,11 @@ import SiteHeader from "../components/SiteHeader.astro";
         .eq("user_id", accountId).is("deleted_at", null).order("measured_at", { ascending: true }).limit(600),
       supabase.from("profiles").select("weekly_met_hours_goal, height_cm, sex, age").eq("user_id", accountId).maybeSingle(),
       // every column: the app adds activity level, standing, sitting and cadence as it learns to send them
-      supabase.from("daily_signals").select("*")
-        .eq("user_id", accountId).gte("day", since.toLocaleDateString("en-CA")).order("day", { ascending: true }).limit(420),
-      // weight, one row a day a source; until the table exists the query errors and this reads as none
-      supabase.from("weight_readings").select("measured_on, weight_kg, source").eq("user_id", accountId)
-        .gte("measured_on", addDays(new Date().toLocaleDateString("en-CA"), -800)).order("measured_on", { ascending: true }).limit(1200).then((r) => r, () => ({ data: null as any[] | null })),
+      pageAll(() => supabase.from("daily_signals").select("*")
+        .eq("user_id", accountId).gte("day", since.toLocaleDateString("en-CA")).order("day", { ascending: true })),
+      // weight, one row a day a source
+      pageAll(() => supabase.from("weight_readings").select("measured_on, weight_kg, source").eq("user_id", accountId)
+        .gte("measured_on", since.toLocaleDateString("en-CA")).order("measured_on", { ascending: true })),
     ]);
     // Workouts only. The app also syncs its background-movement rows
     // (source "passive-nakanishi", one per day), which are not sessions:
@@ -1782,9 +1787,10 @@ import SiteHeader from "../components/SiteHeader.astro";
     const p = person;
     if (!p?.id) { show("appimports", false); return; }
     const [w, c, b, synced] = await Promise.all([
-      supabase.from("web_weeks").select("week_start, met_hours, minutes, moderate_min, vigorous_min, workouts, import_tag").eq("person_id", p.id).order("week_start", { ascending: true }).limit(260),
-      supabase.from("web_crf").select("measured_on, vo2max, met_capacity, method, import_tag").eq("person_id", p.id).order("measured_on", { ascending: true }).limit(100),
-      supabase.from("web_body").select("measured_on, waist_cm, weight_kg, import_tag").eq("person_id", p.id).order("measured_on", { ascending: true }).limit(400),
+      // every row an import left, however far back it reaches
+      pageAll(() => supabase.from("web_weeks").select("week_start, met_hours, minutes, moderate_min, vigorous_min, workouts, import_tag").eq("person_id", p.id).order("week_start", { ascending: true })),
+      pageAll(() => supabase.from("web_crf").select("measured_on, vo2max, met_capacity, method, import_tag").eq("person_id", p.id).order("measured_on", { ascending: true })),
+      pageAll(() => supabase.from("web_body").select("measured_on, waist_cm, weight_kg, import_tag").eq("person_id", p.id).order("measured_on", { ascending: true })),
       p.account_id ? loadSynced(p.account_id) : Promise.resolve(null),
     ]);
     if (person?.id !== p.id) return;   // switched away meanwhile
@@ -3437,6 +3443,10 @@ import SiteHeader from "../components/SiteHeader.astro";
   let ovSection: "all" | SecKey = "all";
   let openMarkerKey = "";
   let openRange: Rng | "" = "";
+  /** A year chosen under Years (or All): that year alone, month by month. */
+  let openYear: number | null = null;
+  /** A tile tapped: the others step aside and the marker opens right under it. */
+  let focusTile = false;
   // The entrance animation plays the first time a list is drawn, never on a
   // redraw: a tile that only changed its number must not rise again.
   const risen = new Set<string>();
@@ -3624,8 +3634,8 @@ import SiteHeader from "../components/SiteHeader.astro";
   const markerByKey = (k: string) => MARKERS.find((m) => m.key === k)!;
 
   // ── one range of one marker: the points to draw, the headline, the caption ──
-  type Drawn = { pts: { x: string; v: number | null; tone?: string; note?: string }[]; headline: string; caption: string; labelEvery: number; goalLine?: number | null };
-  function drawnFor(m: Marker, range: Rng): Drawn | null {
+  type Drawn = { pts: { x: string; v: number | null; tone?: string; note?: string }[]; headline: string; caption: string; labelEvery: number; goalLine?: number | null; monthLabels?: boolean };
+  function drawnFor(m: Marker, range: Rng, year: number | null = null): Drawn | null {
     const all = m.series();
     if (!all.length) return null;
     const t = todayStr();
@@ -3634,6 +3644,21 @@ import SiteHeader from "../components/SiteHeader.astro";
     const agg = (from: string, to: string) => { const xs = all.filter((p) => p.d >= from && p.d <= to).map((p) => p.v); return xs.length ? (summing ? xs.reduce((a, b) => a + b, 0) : xs.reduce((a, b) => a + b, 0) / xs.length) : null; };
     const band = m.band?.() ?? null;
     const toneOf = (v: number | null) => v == null ? "" : band ? (v > band.hi ? "warn" : v < band.lo ? "low" : "") : "";
+    if (year != null && m.daily) {
+      // one year, month by month: the Years lens with a year chosen
+      const nowY = new Date().getFullYear(), nowM = new Date().getMonth();
+      const pts = []; for (let mo = 0; mo < 12; mo++) { const from = `${year}-${String(mo + 1).padStart(2, "0")}-01`, to = new Date(year, mo + 1, 0).toLocaleDateString("en-CA"); const future = year > nowY || (year === nowY && mo > nowM); pts.push({ x: from, v: future ? null : agg(from, to), tone: year === nowY && mo === nowM ? "today" : "" }); }
+      const have = pts.filter((p) => p.v != null).map((p) => p.v!);
+      const val = have.length ? (summing ? have.reduce((a, b) => a + b, 0) : have.reduce((a, b) => a + b, 0) / have.length) : null;
+      return { pts, headline: val != null ? m.fmt(val) : "—", caption: `${m.unit ? `${m.unit} ` : ""}${summing ? `over ${year}, month by month` : `a day, averaged over ${year}, month by month`}`, labelEvery: 1, goalLine: null, monthLabels: true };
+    }
+    if (year != null) {
+      // a sparse marker: the readings of one year
+      const sel = all.filter((p) => p.d.startsWith(`${year}-`));
+      const pts = sel.map((p) => ({ x: p.d, v: p.v, note: p.note, tone: toneOf(p.v) }));
+      const l = sel[sel.length - 1] ?? null;
+      return { pts, headline: l ? (m.pointLabel ? m.pointLabel(l) : m.fmt(l.v)) : "—", caption: l ? `${m.unit ? `${m.unit}, ` : ""}${sel.length} reading${sel.length === 1 ? "" : "s"} in ${year}, latest ${esc(fmtDay(l.d))}` : `nothing read in ${year}`, labelEvery: 1, goalLine: null };
+    }
     if (range === "week") {
       const start = mondayOf(new Date());
       const pts = []; for (let d = start, i = 0; i < 7; d = addDays(d, 1), i++) { const v = by.has(d) ? by.get(d)! : null; pts.push({ x: d, v, tone: d === t ? "today" : toneOf(v) }); }
@@ -3721,7 +3746,7 @@ import SiteHeader from "../components/SiteHeader.astro";
         if (n <= 14) s += `<text x="${xf(i).toFixed(1)}" y="${(yf(p.v!) - 11).toFixed(1)}" text-anchor="middle" fill="${p.tone === "warn" ? "#FBBF24" : "#c7d2fe"}" font-size="11" font-weight="700">${m.fmt(p.v!)}</text>`;
       }
     }
-    const label = (x: string) => range === "months" ? new Date(x + "T00:00:00").toLocaleDateString(undefined, { month: "short" }).toUpperCase() : range === "week" ? new Date(x + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" }).toUpperCase() : range === "4w" ? new Date(x + "T00:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short" }).toUpperCase() : range === "years" ? x.slice(0, 4) : new Date(x + "T00:00:00").toLocaleDateString(undefined, { month: "short", year: "2-digit" }).toUpperCase();
+    const label = (x: string) => (range === "months" || dr.monthLabels) ? new Date(x + "T00:00:00").toLocaleDateString(undefined, { month: "short" }).toUpperCase() : range === "week" ? new Date(x + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" }).toUpperCase() : range === "4w" ? new Date(x + "T00:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short" }).toUpperCase() : range === "years" ? x.slice(0, 4) : new Date(x + "T00:00:00").toLocaleDateString(undefined, { month: "short", year: "2-digit" }).toUpperCase();
     dr.pts.forEach((p, i) => { if (i % dr.labelEvery === 0 || i === n - 1) s += `<text x="${xf(i).toFixed(1)}" y="${H - B + 16}" text-anchor="middle" fill="${p.tone === "today" ? "#f1f5f9" : "#94a3b8"}" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${label(p.x)}</text>`; });
     return s;
   }
@@ -3778,18 +3803,36 @@ import SiteHeader from "../components/SiteHeader.astro";
     };
     // Body: the app's three shelves, each a kicker and its tiles; the other sections one grid
     const SHELVES: Array<["metabolic" | "heart" | "muscle", string]> = [["metabolic", "Metabolic"], ["heart", "Heart"], ["muscle", "Muscle"]];
-    $("sectiles").innerHTML = sec === "body"
+    const focusOn = focusTile ? ms.find((m) => m.key === openMarkerKey) ?? null : null;
+    $("sectiles").innerHTML = focusOn
+      ? `<div class="col-span-full flex flex-wrap items-center gap-3">${tile(focusOn, 0)}<button type="button" id="secall" class="min-h-9 rounded-full border border-white/14 px-3.5 text-[12.5px] font-semibold text-text-secondary transition-colors hover:border-white/30 hover:text-text-primary">All markers</button></div>`
+      : sec === "body"
       ? SHELVES.map(([g, name]) => { const gm = ms.filter((m) => m.group === g); if (!gm.length) return ""; const read = gm.filter((m) => m.series().length).length;
           return `<div class="col-span-full mt-2 flex items-baseline gap-2 first:mt-0"><span class="font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary">${name.toUpperCase()} · ${gm.length}</span><span class="text-[11px] text-text-muted">${read} of ${gm.length} read</span></div>` + gm.map((m) => tile(m, ms.indexOf(m))).join(""); }).join("")
       : ms.map(tile).join("");
-    $("sectiles").querySelectorAll<HTMLElement>("[data-marker]").forEach((b) => b.addEventListener("click", () => { openMarkerKey = b.dataset.marker!; openRange = ""; renderSection(); }));
+    $("sectiles").querySelectorAll<HTMLElement>("[data-marker]").forEach((b) => b.addEventListener("click", () => {
+      const key = b.dataset.marker!;
+      if (focusTile) { openMarkerKey = key; openRange = ""; openYear = null; renderSection(); return; }
+      // the others fade and blur, then the page redraws with this one alone and its marker right under it
+      $("sectiles").querySelectorAll<HTMLElement>("[data-marker]").forEach((o) => { if (o !== b) o.classList.add("mh-dim"); });
+      setTimeout(() => { openMarkerKey = key; openRange = ""; openYear = null; focusTile = true; renderSection(); }, 220);
+    }));
+    document.getElementById("secall")?.addEventListener("click", () => { focusTile = false; renderSection(); });
 
     // the open marker
     // the app's Over Time lenses, by the same names, drawing the same bars
     const ranges: Rng[] = open.daily ? ["week", "4w", "months", "years"] : ["6m", "1y", "all"];
     const RANGE_LABEL: Record<Rng, string> = { week: "Week", "4w": "4 weeks", months: "Months", years: "Years", "6m": "6 months", "1y": "Year", all: "All" };
     if (!openRange || !ranges.includes(openRange as Rng)) openRange = open.daily ? "week" : "1y";
-    const dr = drawnFor(open, openRange as Rng);
+    const dr = drawnFor(open, openRange as Rng, openYear);
+    // the years on file, newest first, for the year menu under Years and All
+    const years = [...new Set(open.series().map((p) => Number(p.d.slice(0, 4))))].sort((a, b) => b - a);
+    const yearMenu = (open.daily ? openRange === "years" : openRange === "all") && years.length
+      ? `<label class="flex items-center gap-2 text-[12px] text-text-tertiary">Year
+          <select data-year class="min-h-8 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 text-[13px] font-semibold text-text-primary focus:border-accent focus:outline-none">
+            <option value="">all</option>${years.map((y) => `<option value="${y}"${y === openYear ? " selected" : ""}>${y}</option>`).join("")}
+          </select></label>`
+      : "";
     const band = open.daily && openRange === "week" ? (open.band?.() ?? null) : null;
     const pts = open.series();
     const reads = open.reads(pts);
@@ -3806,6 +3849,7 @@ import SiteHeader from "../components/SiteHeader.astro";
           <div class="flex gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1" role="group" aria-label="Range">
             ${ranges.map((r) => `<button type="button" data-range="${r}" class="min-h-8 rounded-lg px-3.5 text-[13px] font-semibold transition-colors ${r === openRange ? "bg-accent/20 text-text-primary" : "text-text-tertiary hover:text-text-primary"}">${RANGE_LABEL[r]}</button>`).join("")}
           </div>
+          ${yearMenu}
         </div>
         ${dr ? `
         <div class="mt-4 flex flex-wrap items-end justify-between gap-3">
@@ -3832,7 +3876,8 @@ import SiteHeader from "../components/SiteHeader.astro";
         <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4">${kicker(open.daily ? "LAST 12 MONTHS" : "THE YEAR BEFORE")}<div class="mt-1.5 font-mono text-[20px] font-bold text-text-primary">${open.daily ? (y1 ? open.fmt(y1.v) : "—") : (y2 ? open.fmt(y2.v) : "—")} <span class="text-[11px] font-semibold text-text-tertiary">${open.daily ? (y1 ? `${open.unit}${open.sum ? " in all" : " a day"}` : "") : (y2 ? `${open.unit} average` : "")}</span></div><div class="mt-0.5 text-[12px] text-text-tertiary">${open.daily ? (y1 && y2 ? `the year before: ${open.fmt(y2.v)}` : y1 ? `${y1.n} days read` : "nothing read") : (y2 ? `${y2.n} reading${y2.n === 1 ? "" : "s"}` : "no reading")}</div></div>
         <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4">${kicker("SOURCE")}<div class="mt-1.5 text-[13px] leading-relaxed text-text-secondary">${esc(open.source)}</div></div>
       </div>`;
-    $("secopen").querySelectorAll<HTMLElement>("[data-range]").forEach((b) => b.addEventListener("click", () => { openRange = b.dataset.range as Rng; renderSection(); }));
+    $("secopen").querySelectorAll<HTMLElement>("[data-range]").forEach((b) => b.addEventListener("click", () => { openRange = b.dataset.range as Rng; openYear = null; renderSection(); }));
+    $("secopen").querySelector<HTMLSelectElement>("[data-year]")?.addEventListener("change", (e) => { openYear = Number((e.target as HTMLSelectElement).value) || null; renderSection(); });
     if (open.key === "sessions") $("secopen").insertAdjacentHTML("beforeend", workoutsListHtml(openRange as Rng));
   }
   /** The sessions themselves, newest first, for the lens in view: the receipts under the Workouts tile. */
@@ -3857,6 +3902,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   }
   function setSection(k: "all" | SecKey) {
     ovSection = k;
+    focusTile = false; openYear = null;
     if (activeTab !== "overview") setTab("overview");
     renderSection();
     history.replaceState(null, "", k === "all" ? "#overview" : `#overview-${k}`);
