@@ -262,7 +262,7 @@ import SiteHeader from "../components/SiteHeader.astro";
           <button type="button" data-tab="overview"><svg class="hidden shrink-0 lg:block" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg><span>Overview</span></button>
           <!-- the four sections, nested under Overview in the column; the phone's copy is under the pills -->
           <div data-ovsections class="mb-1 hidden flex-col gap-0.5 pl-3 lg:flex" style="display: none">
-            <button type="button" data-section="all"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-text-secondary"></span>All</button>
+            
             <button type="button" data-section="fitness"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #f97316"></span>Fitness</button>
             <button type="button" data-section="movement"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #34d399"></span>Movement</button>
             <button type="button" data-section="heart"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #818cf8"></span>Sleep &amp; heart</button>
@@ -274,7 +274,7 @@ import SiteHeader from "../components/SiteHeader.astro";
         </nav>
         <!-- the four sections under Overview: chips under the pills on a phone -->
         <div data-ovsections class="mt-3 flex flex-wrap gap-1.5 lg:hidden" style="display: none">
-          <button type="button" data-section="all"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-text-secondary"></span>All</button>
+          
             <button type="button" data-section="fitness"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #f97316"></span>Fitness</button>
             <button type="button" data-section="movement"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #34d399"></span>Movement</button>
             <button type="button" data-section="heart"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #818cf8"></span>Sleep &amp; heart</button>
@@ -487,44 +487,13 @@ import SiteHeader from "../components/SiteHeader.astro";
           <button id="emptyadd" class="mt-4 min-h-11 rounded-xl bg-accent px-5 py-2.5 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Add a report</button>
         </div>
 
-        <!-- ═══ WORTH A LOOK: what moved, first ═══════════════════════════
-             Two rows. Today is the app's daily read (resting heart rate,
-             sleep, steps, recovery), judged against the person's own normal;
-             This week is the app's week against the goal, the latest lab
-             values outside their range, and the nearest retest. Each card
-             opens where it came from. -->
-        <section id="worthwrap" class="mb-7 hidden">
-          <div class="flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <h2 class="text-[17px] font-bold tracking-tight text-text-primary">Worth a look</h2>
-              <p class="mt-0.5 text-[12.5px] text-text-tertiary">What moved, from the app and from the labs. Each card opens where it came from.</p>
-            </div>
-            <button id="worthall" data-goto="labs" class="text-[13px] font-medium text-accent-light hover:text-text-primary"></button>
-          </div>
-          <div id="worthtoday" class="mt-4 hidden">
-            <div class="flex items-center gap-3">
-              <span id="worthtodaykick" class="font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary"></span>
-              <span class="h-px flex-1 bg-white/[0.07]" aria-hidden="true"></span>
-              <span class="text-[12px] text-text-muted">from the app</span>
-            </div>
-            <div id="worthtodaycards" class="mt-2.5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"></div>
-          </div>
-          <div id="worthweek" class="mt-4 hidden">
-            <div class="flex items-center gap-3">
-              <span id="worthweekkick" class="font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary"></span>
-              <span class="h-px flex-1 bg-white/[0.07]" aria-hidden="true"></span>
-              <span class="text-[12px] text-text-muted">the app&rsquo;s week, and the labs</span>
-            </div>
-            <div id="worth" class="mt-2.5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"></div>
-          </div>
-        </section>
-
-        <!-- your sections: the same split as Labs, each a way in -->
-        <section id="secwrap" class="hidden">
-          <h2 class="text-[17px] font-bold tracking-tight text-text-primary">Your sections</h2>
-          <p class="mt-0.5 text-[12.5px] text-text-tertiary">In range against each lab&rsquo;s own printed range. Tap one to open it in Labs.</p>
-          <div id="sections" class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"></div>
-        </section>
+        <!-- ═══ THE GLANCE: four cards, one a section ═══════════════════════
+             One number, two words of context and one sentence each; a line
+             under the greeting that says the week in a breath. The lab values
+             stay on Labs; the Body card carries the count and what is due.
+             A card opens its section. -->
+        <p id="ovline" class="mb-5 hidden text-[14px] leading-relaxed text-text-secondary"></p>
+        <div id="ovglance" class="grid gap-4 sm:grid-cols-2"></div>
 
         <p class="mt-7 font-mono text-[10.5px] text-text-muted lg:hidden">Drag a PDF anywhere on this page to add it.</p>
        </div>
@@ -2631,7 +2600,13 @@ import SiteHeader from "../components/SiteHeader.astro";
   $("accessgo").addEventListener("click", openAccess);
   $("accessgophone").addEventListener("click", openAccess);
   $("tabbar").querySelectorAll("[data-tab]").forEach((b) =>
-    b.addEventListener("click", () => setTab((b as HTMLElement).dataset.tab!)));
+    b.addEventListener("click", () => {
+      const t = (b as HTMLElement).dataset.tab!;
+      // Overview is the glance; a section stays open only while its own row is lit
+      if (t === "overview") ovSection = "all";
+      setTab(t);
+      if (t === "overview") renderSection();
+    }));
 
   // ── session ────────────────────────────────────────────────────────────
   const appLink = document.querySelector('[data-nav="app"]') as HTMLElement | null;
@@ -3287,112 +3262,83 @@ import SiteHeader from "../components/SiteHeader.astro";
   }
 
   /**
-   * Worth a look: what moved, first. Two rows.
-   *
-   * Today is the app's daily read, judged the way the app's Today tile
-   * judges it: the resting rate against the median of the person's own
-   * prior 30 mornings, the night against the usual and the 7 to 9 hour
-   * band, steps as counted, recovery against the one cited line. This
-   * week is the app's week against the goal, the latest lab values outside
-   * their lab's own range, worst first, and the nearest retest. A card
-   * opens where its number came from. Runs once the labs and the app's rows
-   * are both in, from renderOverview, so the cards rise once.
+   * The glance: four cards, one a section, each with one number, two words
+   * of context and one sentence; and a line under the greeting that says
+   * the week in a breath. Every figure comes through the same summaries In
+   * depth uses, so the two never disagree. No lab values here: those stay
+   * on Labs, and the Body card carries the count and what is due.
    */
-  function renderWorth() {
-    const today = new Date().toLocaleDateString("en-CA"), thisMonday = mondayOf(new Date());
-    const rise = riseOnce("worth");
-    const tagOf = (t: string) => `<span class="shrink-0 rounded-md bg-white/[0.06] px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-text-secondary">${t}</span>`;
-    const card = (o: { title: string; tag: string; value: string; unit?: string; tone?: string; spark?: string; line: string; go: string; i: number }) => `
-      <button type="button" data-go="${o.go}" style="--i: ${o.i}" class="${rise} grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 rounded-2xl border bg-white/4 p-3.5 text-left transition-colors sm:flex sm:flex-col sm:items-stretch sm:gap-1.5 sm:p-4 ${o.tone === "warn" ? "border-warning/35 hover:border-warning/60" : o.tone === "bad" ? "border-danger/35 hover:border-danger/60" : "border-white/8 hover:border-white/16"}">
-        <span class="flex min-w-0 items-center gap-2 sm:justify-between"><span class="min-w-0 truncate text-sm font-semibold text-text-primary">${o.title}</span>${tagOf(o.tag)}</span>
-        <span class="row-span-2 flex items-end justify-between gap-3 sm:row-span-1"><span class="font-mono text-[22px] font-bold leading-none sm:text-[26px] ${o.tone === "warn" ? "text-warning" : o.tone === "bad" ? "text-danger" : o.tone === "met" ? "text-met-hero" : o.tone === "ok" ? "text-success-light" : "text-text-primary"}">${o.value}${o.unit ? ` <span class="text-xs font-semibold">${o.unit}</span>` : ""}</span>${o.spark ? `<span class="hidden sm:block">${o.spark}</span>` : ""}</span>
-        <span class="text-xs leading-snug text-text-tertiary">${o.line}</span>
-      </button>`;
-
-    // ── today: the app's daily read ──────────────────────────────────────
+  function renderGlance() {
+    const today = todayStr(), thisMonday = mondayOf(new Date());
+    const rise = riseOnce("glance");
+    const you = person?.self ? "your" : "their";
     const heart = sleepHeartSummary(syncSignals, today);
-    const t: string[] = [];
-    if (heart) {
-      const r = heart.rhr;
-      if (r.latest != null) t.push(card({ title: "Resting heart rate", tag: "App", value: String(r.latest), unit: "bpm", i: t.length, go: "depth",
-        tone: r.status === "stronglyElevated" ? "bad" : r.status === "elevated" ? "warn" : "",
-        line: r.baseline != null
-          ? `${r.delta === 0 ? "At" : `${Math.abs(r.delta!)} ${r.delta! > 0 ? "above" : "below"}`} ${person?.self ? "your" : "their"} own normal of ${r.baseline}${r.run > 1 ? ` · ${r.run} mornings running` : ""}`
-          : `${esc(dayWord(r.latestDay!))} · a normal needs 14 mornings, ${r.priors} so far` }));
-      const sl = heart.sleep;
-      if (sl.last) t.push(card({ title: "Sleep", tag: "App", i: t.length, go: "depth", tone: sl.last.band === "inRange" ? "" : "warn",
-        value: `${Math.floor(sl.last.min / 60)}<span class="text-xs font-semibold">h</span> ${String(Math.round(sl.last.min % 60)).padStart(2, "0")}<span class="text-xs font-semibold">m</span>`,
-        line: `${sl.usual != null ? (Math.abs(sl.last.min - sl.usual) < 20 ? "About the usual" : `${fmtSleepMin(Math.abs(sl.last.min - sl.usual))} ${sl.last.min < sl.usual ? "under" : "over"} the usual`) : sl.last.band === "short" ? "Under 7 h" : sl.last.band === "long" ? "Over 9 h" : "In the 7 to 9 h band"}${sl.last.bed ? ` · in bed ${esc(sl.last.bed)}` : ""}` }));
-      if (heart.steps.latest) t.push(card({ title: "Steps", tag: "App", value: heart.steps.latest.steps.toLocaleString(), i: t.length, go: "depth",
-        line: `${esc(dayWord(heart.steps.latest.day))}${heart.steps.avg != null ? ` · ${heart.steps.avg.toLocaleString()} a day over the last 7` : ""}` }));
-      const h = heart.hrr;
-      if (h.latest != null) t.push(card({ title: "Heart rate recovery", tag: "App", value: String(h.latest), unit: "bpm", i: t.length, go: "depth", tone: h.latest <= 12 ? "bad" : "",
-        line: `${esc(dayWord(h.latestDay!))}${h.median != null ? ` · own median ${h.median}` : ""}${h.latest <= 12 ? " · at or under the cited 12" : ""}` }));
-    }
-    const newest = syncSignals.length ? String(syncSignals[syncSignals.length - 1].day) : "";
-    $("worthtodaykick").textContent = newest === today ? `TODAY · ${new Date().toLocaleDateString(undefined, { weekday: "long" }).toUpperCase()}` : newest ? `LATEST FROM THE APP · ${fmtDay(newest).toUpperCase()}` : "";
-    show("worthtoday", t.length > 0);
-    $("worthtodaycards").innerHTML = t.join("");
-
-    // ── this week: the app's week, the labs, the nearest retest ───────────
-    const w: string[] = [];
-    const left = 6 - daysBetween(thisMonday, today);
-    if (allWeeks.length) {
-      const goal = Number(syncProfile?.weekly_met_hours_goal) || 7.5;
-      const act = activitySummary(allWeeks, syncActs, goal, today, thisMonday);
-      const tw = act.thisWeek ? Number(act.thisWeek.met_hours) : 0, n = act.thisWeek ? Number(act.thisWeek.workouts) : 0;
-      w.push(card({ title: "MET-hours", tag: "App", value: fmt1(tw), unit: `of ${goal}`, tone: tw >= goal ? "ok" : "met", i: 4, go: "depth",
-        line: `${n === 0 ? "No workout yet this week" : `${n} workout${n === 1 ? "" : "s"} so far`} · ${tw >= goal ? "at goal" : `${fmt1(goal - tw)} to go, ${left === 0 ? "today is the last day" : `${left} day${left === 1 ? "" : "s"} left`}`}${act.streak ? ` · ${act.streak} week${act.streak === 1 ? "" : "s"} at goal in a row` : ""}` }));
-    }
-
-    // the latest reading out of its own range, worst first
-    type Finding = { sec: string; name: string; rs: any[]; latest: any; n: number; first: any; sev: number };
-    const findings: Finding[] = [];
-    let inCount = 0, judged = 0;
-    for (const [sec, m] of labSecs) for (const [name2, rs] of m) {
-      const latest = rs[rs.length - 1];
-      const ok = inRange(latest);
-      if (ok !== null) judged++;
-      if (ok === true) inCount++;
-      if (ok !== false) continue;
-      const lo = latest.ref_low, hi = latest.ref_high;
-      const width = lo != null && hi != null ? hi - lo : Math.abs(hi ?? lo ?? 1) || 1;
-      const dist = lo != null && latest.value < lo ? lo - latest.value : latest.value - (hi ?? 0);
-      findings.push({ sec, name: name2, rs, latest, n: rs.length, first: rs[0], sev: dist / (width || 1) });
-    }
-    findings.sort((a, b) => b.sev - a.sev);
-    const top = findings.slice(0, w.length ? 2 : 3);
-    setTabCount("labs", findings.length ? `${findings.length} outside` : "", findings.length ? "text-warning" : "text-text-tertiary");
-    $("worthall").textContent = findings.length > top.length
-      ? `All ${findings.length} outside range in Labs →` : findings.length ? "Open in Labs →" : "";
-    show("worthall", findings.length > 0);
-    for (const f of top) {
-      const dir = f.latest.ref_low != null && f.latest.value < f.latest.ref_low ? "below" : "above";
-      const trend = f.n > 1 ? `${f.first.value} → ${f.latest.value} across ${f.n} reports` : `from ${fmtDay(f.latest.measured_on)}`;
-      w.push(card({ title: esc(f.name), tag: esc(SECTIONS[f.sec]), value: String(f.latest.value), unit: f.latest.unit ? esc(f.latest.unit) : "", tone: "warn", spark: sparkline(f.rs, "#FBBF24"), i: w.length + 4,
-        go: `marker:${encodeURIComponent(f.sec)}|${encodeURIComponent(f.name)}`, line: `${dir} the lab&rsquo;s range ${esc(rangeLabel(f.latest))} · ${esc(trend)}` }));
-    }
-    if (!findings.length && judged) w.push(card({ title: "Labs", tag: "Labs", value: `${inCount} <span class="text-xs font-semibold">of ${judged}</span>`, tone: "ok", i: w.length + 4, go: "labs", line: "Nothing outside its lab&rsquo;s printed range right now" }));
-
-
-    // the nearest retest, from the cited cadences the In depth tab uses
+    const goal = weeklyGoal();
+    const act = allWeeks.length || syncActs.length ? activitySummary(allWeeks, syncActs, goal, today, thisMonday) : null;
+    const fit = fitnessSummary(allCrf, today);
     const by = markerPoints();
-    const dues = [...labRowsFrom(by, today).map((r) => r.due), fitnessSummary(allCrf, today).due, bodyDueFrom(by, today)]
+    const dues = [...labRowsFrom(by, today).map((r) => r.due), fit.due, bodyDueFrom(by, today)]
       .filter((d): d is Due => !!d).sort((x, y) => x.days - y.days);
-    if (dues[0]) w.push(card({ title: `${esc(dues[0].what)} retest`, tag: "Due", i: w.length + 4, go: "depth",
-      value: dues[0].days === 0 ? "Today" : String(Math.abs(dues[0].days)), unit: dues[0].days === 0 ? "" : dues[0].days < 0 ? "days overdue" : "days",
-      tone: dues[0].days < 0 ? "bad" : dues[0].days <= 30 ? "warn" : "", line: esc(dues[0].why) }));
+    // the labs: how many series, and how many latest values sit outside their lab's own range
+    let outside = 0, judged = 0;
+    for (const m of labSecs.values()) for (const rs of m.values()) { const ok = inRange(rs[rs.length - 1]); if (ok !== null) judged++; if (ok === false) outside++; }
+    setTabCount("labs", outside ? `${outside} outside` : "", outside ? "text-warning" : "text-text-tertiary");
+    const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
-    $("worthweekkick").textContent = `THIS WEEK · ${left === 0 ? "LAST DAY" : `${left} DAY${left === 1 ? "" : "S"} LEFT`}`;
-    show("worthweek", w.length > 0);
-    $("worth").innerHTML = w.join("");
-    show("worthwrap", t.length > 0 || w.length > 0);
+    type Glance = { sec: SecKey; value: string; beside: string; line: string };
+    const cards: Glance[] = [];
+    // fitness: the latest test, in METs, and when the next is due
+    { const l = fit.latest;
+      const mets = l ? (l.met_capacity != null ? Number(l.met_capacity) : l.v / 3.5) : null;
+      const ago = l ? daysBetween(l.measured_on, today) : 0;
+      const dueLine = fit.due ? (fit.due.days < 0 ? ` A retest is ${plural(-fit.due.days, "day")} overdue.` : fit.due.days === 0 ? " A retest is due today." : ` Next test in ${plural(fit.due.days, "day")}.`) : "";
+      cards.push({ sec: "fitness", value: mets != null ? fmt1(mets) : "—",
+        beside: l ? `METs · ${esc(methodLabel(l.method))}${fit.trendWord ? ` · ${fit.trendWord}` : ""}` : "no test on file",
+        line: l ? `Tested ${ago === 0 ? "today" : `${plural(ago, "day")} ago`}.${dueLine}` : "The app offers a test in six to twelve minutes." }); }
+    // movement: the week against the goal, Zone 2, the sessions, the steps
+    { const tw = act?.thisWeek ? Number(act.thisWeek.met_hours) : 0, n = act?.thisWeek ? Number(act.thisWeek.workouts) : 0;
+      const z2 = [...actsByDay()].filter(([d]) => d >= thisMonday).reduce((t, [, r]) => t + r.z2, 0);
+      const lastRow = allWeeks.find((w) => String(w.week_start) === addDays(thisMonday, -7));
+      const steps = heart?.steps.avg;
+      cards.push({ sec: "movement", value: act ? fmt1(tw) : "—",
+        beside: act ? `of ${fmt1(goal)} MET-hours this week${z2 ? ` · ${round0(z2)} min in Zone 2` : ""}` : "nothing from the app yet",
+        line: act ? `${n === 0 ? "No workout yet this week" : plural(n, "workout")}${steps ? `, ${steps.toLocaleString()} steps a day` : ""}.${lastRow ? ` Last week ended at ${fmt1(Number(lastRow.met_hours))}.` : ""}` : "Cloud sync in the app fills this in." }); }
+    // sleep and heart: last night, the resting rate, the recovery, each against the person's own usual
+    { const sl = heart?.sleep.last ?? null, usual = heart?.sleep.usual ?? null, r = heart?.rhr, h = heart?.hrr;
+      const beside = [sl ? "last night" : "", r?.latest != null ? `resting ${r.latest}` : "", h?.latest != null ? `recovery ${h.latest}` : ""].filter(Boolean).join(" · ");
+      const sleepLine = sl ? (usual != null ? (Math.abs(sl.min - usual) < 20 ? "Sleep is about the usual." : `Sleep is ${fmtSleepMin(Math.abs(sl.min - usual))} ${sl.min < usual ? "under" : "over"} ${you} usual.`) : sl.band === "short" ? "Sleep was under seven hours." : "") : "";
+      const heartLine = r?.latest != null ? (r.baseline != null ? ((r.status === "elevated" || r.status === "stronglyElevated") && r.delta ? `Resting heart rate ${Math.abs(r.delta)} above ${you} own normal${r.run > 1 ? `, ${r.run} mornings running` : ""}.` : "The heart is where it usually is.") : "A normal for the heart needs 14 mornings.") : "";
+      cards.push({ sec: "heart", value: sl ? fmtSleepMin(sl.min) : r?.latest != null ? String(r.latest) : "—",
+        beside: sl ? beside : r?.latest != null ? `bpm resting${h?.latest != null ? ` · recovery ${h.latest}` : ""}` : "nothing from the watch yet",
+        line: [sleepLine, heartLine].filter(Boolean).join(" ") || "A watch worn to bed and a synced app fill this in." }); }
+    // body: waist to height when both are known, the grip, the count, and what is due
+    { const waist = (by.get("waist_cm") ?? []).slice(-1)[0] ?? null, grip = (by.get("handgrip_kg") ?? []).slice(-1)[0] ?? null;
+      const height = Number(syncProfile?.height_cm) || null;
+      const whr = waist && height ? waist.v / height : null;
+      const read = [...by.values()].filter((v) => v.length).length;
+      const due = dues[0] ?? null;
+      const dueText = due ? (due.days < 0 ? ` ${esc(due.what)} is ${plural(-due.days, "day")} overdue.` : due.days === 0 ? ` ${esc(due.what)} is due today.` : due.days <= 31 ? ` ${esc(due.what)} is due in ${plural(due.days, "day")}.` : "") : "";
+      cards.push({ sec: "body", value: whr != null ? whr.toFixed(2) : grip ? fmt1(grip.v) : read ? String(read) : "—",
+        beside: whr != null ? `waist to height${grip ? ` · grip ${fmt1(grip.v)} kg` : ""}` : grip ? "kg grip" : read ? "markers read" : "nothing read yet",
+        line: `${read ? `${plural(read, "marker")} read${outside ? `, ${outside} outside ${outside === 1 ? "its" : "their"} range` : judged ? ", all in range" : ""}.` : "No marker read yet: drop a report on Reports."}${dueText}${read ? " The values themselves are on Labs." : ""}` }); }
+
+    // the line under the greeting
+    const bits: string[] = [];
+    if (act?.thisWeek) { const tw = Number(act.thisWeek.met_hours); bits.push(tw >= goal ? "a week past the goal" : tw >= goal / 2 ? "halfway to the week's goal" : "a quiet week so far"); }
+    if (heart?.sleep.last && heart.sleep.usual != null) { const d = heart.sleep.last.min - heart.sleep.usual; bits.push(Math.abs(d) < 20 ? "sleep as usual" : d < 0 ? "sleep a little short" : "sleep a little long"); }
+    if (outside) bits.push(`${plural(outside, "lab value")} outside range`);
+    if (dues[0] && dues[0].days <= 31) bits.push(dues[0].days < 0 ? `${dues[0].what.toLowerCase()} overdue` : "one retest due this month");
+    const line = bits.length ? `${bits[0].charAt(0).toUpperCase()}${bits[0].slice(1)}${bits.slice(1).map((x) => `, ${x}`).join("")}. The four cards say the rest.` : "";
+    $("ovline").textContent = line; show("ovline", !!line);
+
+    $("ovglance").innerHTML = cards.map((c, i) => `
+      <button type="button" data-glance="${c.sec}" style="--i: ${i}" class="${rise} flex min-h-[150px] flex-col gap-2.5 rounded-[20px] border border-white/10 bg-white/[0.03] p-5 text-left transition-colors hover:border-white/20 hover:bg-white/[0.05]">
+        <span class="flex items-center gap-2"><span class="h-2 w-2 shrink-0 rounded-full" style="background: ${SEC_META[c.sec].dot}"></span><span class="text-[12px] font-bold tracking-[0.08em] text-text-secondary">${SEC_META[c.sec].label.toUpperCase()}</span><svg class="ml-auto shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
+        <span class="flex flex-wrap items-baseline gap-x-2 gap-y-1"><span class="font-mono text-[34px] font-bold leading-none" style="color: ${SEC_META[c.sec].dot}">${c.value}</span><span class="text-[13px] text-text-secondary">${c.beside}</span></span>
+        <span class="text-[13px] leading-relaxed text-text-secondary">${c.line}</span>
+      </button>`).join("");
+    $("ovglance").querySelectorAll<HTMLElement>("[data-glance]").forEach((b) => b.addEventListener("click", () => setSection(b.dataset.glance as SecKey)));
     show("emptycard", !allLabs.length && !allWeeks.length && !syncSignals.length);
-    $("worthwrap").querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => {
-      const go = (b as HTMLElement).dataset.go!;
-      if (go.startsWith("marker:")) { const [sec, name3] = go.slice(7).split("|").map(decodeURIComponent); openMarker(sec, name3); }
-      else setTab(go);
-    }));
     wireGoto();
     renderSection();
   }
@@ -3744,10 +3690,7 @@ import SiteHeader from "../components/SiteHeader.astro";
 
   function renderOverview() {
     $("greet").textContent = greeting();
-
-    const dates = [...new Set(allLabs.map((r) => r.measured_on))].sort();
-    renderWorth();
-    if (dates.length === 0) { show("secwrap", false); return; }
+    renderGlance();
     const waiting = pendingReports();
     const unchecked = uncheckedInApp();
     show("tosend", waiting.length > 0 || unchecked > 0);
@@ -3762,34 +3705,6 @@ import SiteHeader from "../components/SiteHeader.astro";
       // sent as they were read: the look happens in the app
       $("tosendtext").textContent = `${unchecked} value${unchecked === 1 ? "" : "s"} from your reports ${unchecked === 1 ? "is" : "are"} in your app, unchecked. Open the app's Body page to look ${unchecked === 1 ? "it" : "them"} over.`;
     }
-
-    // ── your sections: the same split as Labs, each a way in ─────────────
-    show("secwrap", true);
-    const rise = riseOnce("sections");
-    $("sections").innerHTML = SECTION_ORDER.filter((s) => labSecs.has(s)).map((s, i) => {
-      const series = [...labSecs.get(s)!.values()];
-      let ok = 0, judged = 0;
-      for (const rs of series) {
-        const v = inRange(rs[rs.length - 1]);
-        if (v !== null) judged++;
-        if (v === true) ok++;
-      }
-      const flagged = judged - ok;
-      const status = flagged
-        ? `<span class="text-warning">${flagged} outside range</span>`
-        : judged ? `<span class="text-success">all in range</span>` : `<span class="text-text-tertiary">no printed ranges</span>`;
-      return `
-        <button data-opensec="${s}" style="--i: ${i}" class="${rise} flex items-center gap-3 rounded-2xl border border-white/8 bg-white/4 px-3.5 py-3 text-left transition-colors hover:border-white/16">
-          ${ringSvg(ok, judged, i)}
-          <span class="min-w-0 flex-1">
-            <span class="block truncate text-sm font-semibold text-text-primary">${SECTIONS[s]}</span>
-            <span class="block text-xs leading-snug">${series.length} marker${series.length === 1 ? "" : "s"} · ${status}</span>
-          </span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
-        </button>`;
-    }).join("");
-    $("sections").querySelectorAll("[data-opensec]").forEach((b) =>
-      b.addEventListener("click", () => openSection((b as HTMLElement).dataset.opensec!)));
 
     wireGoto();
   }
