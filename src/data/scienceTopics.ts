@@ -217,7 +217,7 @@ export const TOPICS: Topic[] = [
     sub: "Metabolic syndrome screening, beyond BMI",
     subject: "body",
     citations: BODY_PHENOTYPING_SECTION,
-    subAnchors: ["health-picture", "body-markers"],
+    subAnchors: ["health-picture", "body-markers", "weight-bmi"],
   },
   { slug: "muscle-health", label: "Muscle health", sub: "Why grip strength is in a fitness app at all", subject: "body", citations: MUSCLE_HEALTH_SECTION },
   { slug: "intrinsic-capacity", label: "Intrinsic capacity", sub: "Why grip, walking speed, chair stand and SPPB belong in the same room — and which parts of the picture Verve does not measure", subject: "body", citations: [] },

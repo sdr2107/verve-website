@@ -20,6 +20,34 @@ import { BODY_MARKERS, BODY_MARKER_CONTEXT, BODY_GROUPS } from "../../data/bodyM
   {BODY_PHENOTYPING_SECTION.map((c) => <CitationCard {...c} />)}
 </div>
 
+<!-- ── Weight and BMI ──────────────────────────────────────────────
+     The app's Weight & BMI card keeps to the numbers and links here. What
+     BMI is, the two sets of cut-offs, and why Verve leads with waist to
+     height instead, in one place. ── -->
+<ScienceSection
+  id="weight-bmi"
+  title="Weight and BMI"
+  sub="Every weighing, the number every report asks for, and why it is not the first ratio Verve reads"
+>
+  <div class="mt-[18px] grid gap-4 text-[13.5px] leading-relaxed text-text-secondary sm:grid-cols-2">
+    <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+      <h4 class="text-[15px] font-semibold text-text-primary">What the app shows</h4>
+      <p class="mt-2">Every weighing on file: Apple Health&rsquo;s, and the weight typed in Settings dated the day it was set, one a day with Health&rsquo;s winning. The card reads the latest, how it moved over four weeks, and twelve weeks as bars.</p>
+      <p class="mt-2">BMI is weight in kilograms divided by height in metres squared. It is worked out from each weighing and the height on the profile, never stored, so it cannot disagree with the weight it came from.</p>
+    </div>
+    <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+      <h4 class="text-[15px] font-semibold text-text-primary">The two sets of lines</h4>
+      <p class="mt-2">The WHO&rsquo;s general cut-offs: under 18.5 underweight, 18.5 to 24.9 normal, 25 to 29.9 overweight, 30 and over obese.</p>
+      <p class="mt-2">For Asian adults, including South Asian, the WHO Expert Consultation of 2004 set action points lower, at 23 and 27.5, because risk rises at a lower BMI. The app uses these when the profile says so, the same rule its Body page applies to the metabolic criteria.</p>
+    </div>
+    <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5 sm:col-span-2">
+      <h4 class="text-[15px] font-semibold text-text-primary">Why waist to height comes first</h4>
+      <p class="mt-2">BMI moves with muscle as much as with fat: a person who trains can gain weight and lose fat in the same season and watch the number rise. Waist to height needs only a tape and a height, and it tracks the fat around the organs, which is the fat that carries the metabolic risk. Verve leads with it, and keeps BMI because every report, every clinic and every study still speaks in it.</p>
+      <p class="mt-2 text-text-tertiary">Screening lines, not targets. What counts as a good number for you is a conversation with your doctor.</p>
+    </div>
+  </div>
+</ScienceSection>
+
 <!-- ── Body markers ──────────────────────────────────────────────────────
      One entry per marker the Body page can record, anchored so the app
      links straight to the parameter a reader is looking at. It rides on
