@@ -55,11 +55,11 @@ import SiteHeader from "../components/SiteHeader.astro";
            is how the sign-in card stayed on screen after signing in. -->
       <div class="gap-10 lg:grid lg:grid-cols-[minmax(0,1.1fr)_440px] lg:items-center lg:gap-16">
       <div class="flex flex-col gap-4 lg:gap-[22px]">
-        <span class="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-accent-light">My health</span>
-        <h1 class="text-[30px] font-bold leading-[1.1] tracking-[-0.025em] text-text-primary sm:text-[46px] sm:leading-[1.06] sm:tracking-[-0.03em]">
+        <span id="authkick" class="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-accent-light">My health</span>
+        <h1 id="authtitle" class="text-[30px] font-bold leading-[1.1] tracking-[-0.025em] text-text-primary sm:text-[46px] sm:leading-[1.06] sm:tracking-[-0.03em]">
           Your lab reports, read and filed for you.
         </h1>
-        <p class="max-w-[520px] text-[14.5px] leading-[1.6] text-text-secondary sm:text-base sm:leading-[1.65]">
+        <p id="authlede" class="max-w-[520px] text-[14.5px] leading-[1.6] text-text-secondary sm:text-base sm:leading-[1.65]">
           Drop a PDF from any lab. Verve reads every value, sends the markers
           the app tracks to your phone on one tap, and keeps the rest charted
           here.
@@ -414,6 +414,16 @@ import SiteHeader from "../components/SiteHeader.astro";
       <div id="tab-group" class="hidden pt-5 sm:pt-8">
         <!-- the plan gate: the group view is on Max -->
         <div id="glancelocked" class="mb-7 hidden max-w-2xl flex-col gap-3 rounded-2xl border border-dashed border-accent/50 bg-accent/[0.05] p-5"></div>
+        <!-- the coach's door with no one sharing yet: the ask, and the way to your own page -->
+        <div id="glanceempty" class="hidden max-w-2xl rounded-2xl border border-dashed border-accent/40 bg-accent/[0.04] p-6">
+          <div class="font-mono text-[10px] font-semibold tracking-[0.14em] text-accent-light">COACH · THE GROUP</div>
+          <h1 class="mt-2 text-[24px] font-extrabold tracking-[-0.02em] text-text-primary">No one shares with you yet.</h1>
+          <p class="mt-2 text-[13.5px] leading-relaxed text-text-secondary">Ask someone by email. They choose what you see, labs, imaging, activity, body or notes, and can stop at any time. Once they say yes they appear here, ranked by the week's movement.</p>
+          <div class="mt-4 flex flex-wrap gap-3">
+            <button type="button" id="glanceask" class="min-h-11 rounded-xl bg-accent px-5 py-2.5 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Ask someone to share</button>
+            <button type="button" id="glanceself" class="min-h-11 rounded-xl border border-white/14 px-5 py-2.5 text-sm font-semibold text-text-primary transition-colors hover:border-white/25">Your own page</button>
+          </div>
+        </div>
         <section id="glance" class="hidden">
           <div class="flex flex-wrap items-end justify-between gap-4">
             <div class="min-w-0">
@@ -2447,6 +2457,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       $("glancelocked").querySelector("[data-goto]")?.addEventListener("click", () => { show("glancelocked", false); $("glancelocked").classList.remove("flex"); });
     }
     show("glance", on && !locked);
+    show("glanceempty", !on);
     if (!on || locked) return;
     const managed = others.filter((p) => p.mine).length, shared = others.length - managed;
     const coach = shared > 0 && managed === 0;
@@ -2588,7 +2599,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   function setTab(t: string) {
     // Everyone is a view of the account, not of a person: the greeting and
     // the person's own rows step aside, and no person is lit in the sidebar
-    if (t === "group" && !people.some((x) => x.id && !x.self)) t = "overview";
+    // a group with no one in it is still a page: the coach's door lands there with the ask
     const switching = activeTab !== t;
     const wasGroup = activeTab === "group", group = t === "group";
     activeTab = t;
@@ -2639,12 +2650,18 @@ import SiteHeader from "../components/SiteHeader.astro";
     // session on its own; what is left is to tidy the address, and to say
     // so if Apple or Supabase sent an error back instead
     const oauthError = url.searchParams.get("error_description") || url.searchParams.get("error");
-    if (url.searchParams.has("code") || oauthError) history.replaceState(null, "", location.pathname + location.hash);
+    // /coach hands over here with the door named and, when a button was pressed
+    // there, the method to start; the door is kept across the provider's round trip
+    const door = url.searchParams.get("door"), start = url.searchParams.get("start");
+    if (door === "coach") { try { localStorage.setItem(COACH_DOOR, "1"); } catch { /* private mode */ } }
+    if (url.searchParams.has("code") || oauthError || door || start) history.replaceState(null, "", location.pathname + location.hash);
     const { data: { session } } = await supabase.auth.getSession();
     // signed in, the line stays until the numbers are drawn, so nothing is drawn twice
     if (session?.user) $("loading").textContent = "Reading your numbers…"; else show("loading", false);
     if (session?.user) {
       promotePendingDoor();
+      let coachDoor = false;
+      try { coachDoor = localStorage.getItem(COACH_DOOR) === "1"; localStorage.removeItem(COACH_DOOR); } catch { /* private mode */ }
       userId = session.user.id;
       userEmail = session.user.email ?? "";
       firstName = await resolveFirstName(session.user);
@@ -2655,7 +2672,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       else hideNameForm();
       appLink?.classList.add("hidden");
       show("signout", true); show("home", true); show("auth", false);
-      const wanted = window.location.hash.replace("#", "");
+      const wanted = window.location.hash.replace("#", "") || (coachDoor ? "group" : "");
       if (wanted.startsWith("overview-") && SEC_ORDER.includes(wanted.slice(9) as SecKey)) ovSection = wanted.slice(9) as SecKey;
       setTab(["overview", "labs", "reports", "depth"].includes(wanted) || wanted.startsWith("overview-") ? wanted.split("-")[0] : "overview");
       await Promise.all([loadPeople(), loadPlan()]);
@@ -2670,18 +2687,25 @@ import SiteHeader from "../components/SiteHeader.astro";
       appLink?.classList.remove("hidden");
       show("auth", true); show("home", false); show("signout", false);
       if (oauthError) msg("authmsg", `Apple sign-in did not finish: ${oauthError.replace(/\+/g, " ")}.`, true);
+      if (door === "coach") {
+        $("authkick").textContent = "Coach · the coach's door";
+        $("authtitle").textContent = "Everyone who shares with you.";
+        $("authlede").textContent = "Sign in with the account you use in the app. You land on the group: who shares with you, ranked by this week's movement, with what is due.";
+      }
+      if (start === "apple" || start === "google") startProvider(start);
+      else if (start === "email") $("email").focus();
     }
   }
   // Apple's and Google's doors: Supabase sends the browser to the provider,
   // the provider back to Supabase, Supabase back here with a code the client
   // trades for a session. The landing address must be on Supabase's allowed list.
-  document.querySelectorAll<HTMLElement>("[data-provider]").forEach((b) => b.addEventListener("click", async () => {
+  async function startProvider(provider: "apple" | "google") {
     msg("authmsg", "");
-    const provider = b.dataset.provider as "apple" | "google";
     try { localStorage.setItem(PENDING_DOOR, provider); } catch { /* private mode */ }
     const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: `${location.origin}/my-health/` } });
     if (error) msg("authmsg", `Could not start ${provider === "apple" ? "Apple" : "Google"} sign-in: ${error.message}`, true);
-  }));
+  }
+  document.querySelectorAll<HTMLElement>("[data-provider]").forEach((b) => b.addEventListener("click", () => startProvider(b.dataset.provider as "apple" | "google")));
 
   /**
    * The name the app greets you with, in the same order the app resolves
@@ -2816,6 +2840,9 @@ import SiteHeader from "../components/SiteHeader.astro";
     hideNameForm();
   });
   $("emptyadd").addEventListener("click", pickReport);
+  // the empty group: ask someone, or go to your own page
+  $("glanceask").addEventListener("click", () => { setTab("overview"); openPersonForm(null); setPersonMode("ask"); });
+  $("glanceself").addEventListener("click", () => setTab("overview"));
 
   /** Refetch web_labs + imaging_reports once; every surface renders from them. */
   async function refresh() {
@@ -2932,7 +2959,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   // their click leaves a pending mark that boot() promotes once a session
   // is back. Kept across sign-out on purpose: that is when it is needed.
   type Door = "apple" | "google" | "email";
-  const LAST_DOOR = "verve:last-sign-in", PENDING_DOOR = "verve:pending-sign-in";
+  const LAST_DOOR = "verve:last-sign-in", PENDING_DOOR = "verve:pending-sign-in", COACH_DOOR = "verve:coach-door";
   function rememberDoor(d: Door) {
     try { localStorage.setItem(LAST_DOOR, d); localStorage.removeItem(PENDING_DOOR); } catch { /* private mode */ }
   }

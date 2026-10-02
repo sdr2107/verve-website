@@ -1,0 +1,88 @@
+---
+/**
+ * /coach — the coach's door to the same account.
+ *
+ * Nothing to sign up for twice. A coach is a person with people who share
+ * with them; this door signs them in with the account they use in the app
+ * and lands them on the group: everyone who shares with them, ranked by
+ * this week's movement, with what is due and who is waiting. My health is
+ * the other door, which lands on your own numbers.
+ *
+ * The three buttons hand over to My health with the door named, so the
+ * sign-in code lives in one place; My health starts the chosen method on
+ * arrival and remembers the door across the provider's round trip.
+ */
+import Layout from "../layouts/Layout.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import Footer from "../components/Footer.astro";
+---
+
+<Layout
+  title="Coach — Verve"
+  description="The coach's door to Verve: sign in with the account you use in the app and land on everyone who shares with you, ranked by this week's movement."
+  cardType="summary"
+>
+  <SiteHeader current="coach" />
+
+  <main class="mx-auto max-w-6xl px-6 py-10 sm:px-10 lg:py-16">
+    <section class="max-w-[1120px]">
+      <div class="gap-10 lg:grid lg:grid-cols-[minmax(0,1.1fr)_440px] lg:items-center lg:gap-16">
+        <div class="flex flex-col gap-4 lg:gap-[22px]">
+          <span class="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-accent-light">Coach · the coach's door</span>
+          <h1 class="text-[30px] font-bold leading-[1.1] tracking-[-0.025em] text-text-primary sm:text-[46px] sm:leading-[1.06] sm:tracking-[-0.03em]">
+            Everyone who shares with you.
+          </h1>
+          <p class="max-w-[520px] text-[14.5px] leading-[1.6] text-text-secondary sm:text-base sm:leading-[1.65]">
+            The same account, a different landing: the group, ranked by this
+            week's movement, with what is due and who is waiting. A client's
+            page is one tap away.
+          </p>
+          <ul class="mt-1 flex flex-col gap-3.5">
+            <li class="flex items-start gap-3.5">
+              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-accent/[0.14]">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.5a5 5 0 0 1 6 5"/></svg>
+              </span>
+              <span>
+                <span class="block text-[15px] font-semibold text-text-primary">One account, two doors</span>
+                <span class="block text-[13px] leading-relaxed text-text-tertiary">Signing in here makes no second login. The door only decides where you land: My health on you, Coach on the group.</span>
+              </span>
+            </li>
+            <li class="flex items-start gap-3.5">
+              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-success/[0.12]">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l4 4L19 7"/></svg>
+              </span>
+              <span>
+                <span class="block text-[15px] font-semibold text-text-primary">They choose what you see</span>
+                <span class="block text-[13px] leading-relaxed text-text-tertiary">A person shares labs, imaging, activity, body or notes, and can stop or change it at any time. You look; you do not change.</span>
+              </span>
+            </li>
+            <li class="flex items-start gap-3.5">
+              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-warning/[0.12]">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              </span>
+              <span>
+                <span class="block text-[15px] font-semibold text-text-primary">No clients yet</span>
+                <span class="block text-[13px] leading-relaxed text-text-tertiary">You land on the empty group with the form that asks someone to share, and a link to your own page.</span>
+              </span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="mt-6 rounded-[20px] border border-accent/45 bg-accent/[0.06] p-5 sm:p-7 lg:mt-0">
+          <p class="text-[13px] leading-relaxed text-text-secondary">Sign in with the account you use in the app.</p>
+          <div class="mt-4 flex flex-col gap-2.5">
+            <a href="/my-health/?door=coach&start=apple" class="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-text-primary px-4 text-[14px] font-semibold text-canvas transition-opacity hover:opacity-90">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.365 1.43c0 1.14-.42 2.2-1.24 3.1-.98 1.07-2.13 1.7-3.4 1.6a3.5 3.5 0 0 1-.03-.42c0-1.1.47-2.26 1.3-3.14.42-.46.95-.84 1.6-1.14.64-.3 1.25-.46 1.82-.5.02.17.03.33.03.5zm3.95 16.24c-.33.78-.72 1.5-1.17 2.16-.62.9-1.13 1.52-1.52 1.86-.6.56-1.25.85-1.95.86-.5 0-1.1-.14-1.8-.43-.7-.29-1.35-.43-1.94-.43-.62 0-1.29.14-2 .43-.72.29-1.3.44-1.74.46-.67.03-1.34-.27-2-.9-.42-.37-.95-1.02-1.6-1.94-.7-.99-1.27-2.14-1.72-3.45-.48-1.41-.72-2.78-.72-4.1 0-1.52.33-2.83.98-3.92a5.76 5.76 0 0 1 2.06-2.09 5.52 5.52 0 0 1 2.78-.79c.53 0 1.23.17 2.1.49.86.33 1.42.5 1.66.5.18 0 .8-.2 1.85-.58.99-.36 1.83-.5 2.52-.45 1.86.15 3.26.89 4.19 2.21-1.67 1.01-2.49 2.42-2.47 4.24.01 1.41.53 2.59 1.54 3.53.46.44.98.78 1.55 1.02-.12.36-.26.7-.4 1.02z"/></svg>
+              Continue with Apple
+            </a>
+            <a href="/my-health/?door=coach&start=google" class="flex min-h-11 items-center justify-center rounded-xl border border-white/14 px-4 text-[14px] font-semibold text-text-primary transition-colors hover:border-white/25">Continue with Google</a>
+            <a href="/my-health/?door=coach&start=email" class="flex min-h-11 items-center justify-center rounded-xl border border-white/14 px-4 text-[14px] font-semibold text-text-primary transition-colors hover:border-white/25">Email me a link</a>
+          </div>
+          <p class="mt-4 text-[12px] leading-relaxed text-text-tertiary">A coach is a person with people who share with them. When plans open, Coach is the door the Max and Enterprise seats are counted at.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>
