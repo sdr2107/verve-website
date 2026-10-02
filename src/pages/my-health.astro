@@ -1774,7 +1774,6 @@ import SiteHeader from "../components/SiteHeader.astro";
     syncActs = synced?.activities ?? [];
     syncProfile = synced?.profile ?? null;
     syncSignals = synced?.signals ?? [];
-    renderWorth();
     renderAppImports();
     renderDepth();
   }
@@ -2642,7 +2641,8 @@ import SiteHeader from "../components/SiteHeader.astro";
     const oauthError = url.searchParams.get("error_description") || url.searchParams.get("error");
     if (url.searchParams.has("code") || oauthError) history.replaceState(null, "", location.pathname + location.hash);
     const { data: { session } } = await supabase.auth.getSession();
-    show("loading", false);
+    // signed in, the line stays until the numbers are drawn, so nothing is drawn twice
+    if (session?.user) $("loading").textContent = "Reading your numbers…"; else show("loading", false);
     if (session?.user) {
       promotePendingDoor();
       userId = session.user.id;
@@ -2662,7 +2662,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       await mergeOtherAccounts();
       applyPersonMode();
       if (wanted === "group") setTab("group");   // only once the people are known
-      await Promise.all([refresh(), loadPersonNote(), loadSharing(), loadInvites(), loadAsked(), loadRequests(), loadGlance(), loadAiSummary()]);
+      await Promise.all([refresh().finally(() => show("loading", false)), loadPersonNote(), loadSharing(), loadInvites(), loadAsked(), loadRequests(), loadGlance(), loadAiSummary()]);
     } else {
       firstName = "";
       people = []; person = null;
@@ -2835,10 +2835,11 @@ import SiteHeader from "../components/SiteHeader.astro";
     allImaging = imaging ?? [];
     allApp = app ?? [];
     groupLabs();
+    // the app's weeks, tests and days first, so the Overview is drawn once with everything in
+    await loadActivity();
     renderOverview();
     renderLabsRail(); renderLabsPanel();
     await renderReports();
-    await loadActivity();
   }
 
   // ═══ THE APP'S SHARE OF A REPORT ═════════════════════════════════════════
@@ -3267,14 +3268,15 @@ import SiteHeader from "../components/SiteHeader.astro";
    * band, steps as counted, recovery against the one cited line. This
    * week is the app's week against the goal, the latest lab values outside
    * their lab's own range, worst first, and the nearest retest. A card
-   * opens where its number came from. Runs when the labs arrive and again
-   * when the app's rows do, since the two come at different times.
+   * opens where its number came from. Runs once the labs and the app's rows
+   * are both in, from renderOverview, so the cards rise once.
    */
   function renderWorth() {
     const today = new Date().toLocaleDateString("en-CA"), thisMonday = mondayOf(new Date());
+    const rise = riseOnce("worth");
     const tagOf = (t: string) => `<span class="shrink-0 rounded-md bg-white/[0.06] px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-text-secondary">${t}</span>`;
     const card = (o: { title: string; tag: string; value: string; unit?: string; tone?: string; spark?: string; line: string; go: string; i: number }) => `
-      <button type="button" data-go="${o.go}" style="--i: ${o.i}" class="mh-rise grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 rounded-2xl border bg-white/4 p-3.5 text-left transition-colors sm:flex sm:flex-col sm:items-stretch sm:gap-1.5 sm:p-4 ${o.tone === "warn" ? "border-warning/35 hover:border-warning/60" : o.tone === "bad" ? "border-danger/35 hover:border-danger/60" : "border-white/8 hover:border-white/16"}">
+      <button type="button" data-go="${o.go}" style="--i: ${o.i}" class="${rise} grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 rounded-2xl border bg-white/4 p-3.5 text-left transition-colors sm:flex sm:flex-col sm:items-stretch sm:gap-1.5 sm:p-4 ${o.tone === "warn" ? "border-warning/35 hover:border-warning/60" : o.tone === "bad" ? "border-danger/35 hover:border-danger/60" : "border-white/8 hover:border-white/16"}">
         <span class="flex min-w-0 items-center gap-2 sm:justify-between"><span class="min-w-0 truncate text-sm font-semibold text-text-primary">${o.title}</span>${tagOf(o.tag)}</span>
         <span class="row-span-2 flex items-end justify-between gap-3 sm:row-span-1"><span class="font-mono text-[22px] font-bold leading-none sm:text-[26px] ${o.tone === "warn" ? "text-warning" : o.tone === "bad" ? "text-danger" : o.tone === "met" ? "text-met-hero" : o.tone === "ok" ? "text-success-light" : "text-text-primary"}">${o.value}${o.unit ? ` <span class="text-xs font-semibold">${o.unit}</span>` : ""}</span>${o.spark ? `<span class="hidden sm:block">${o.spark}</span>` : ""}</span>
         <span class="text-xs leading-snug text-text-tertiary">${o.line}</span>
@@ -3406,6 +3408,10 @@ import SiteHeader from "../components/SiteHeader.astro";
   let ovSection: "all" | SecKey = "all";
   let openMarkerKey = "";
   let openRange: Rng | "" = "";
+  // The entrance animation plays the first time a list is drawn, never on a
+  // redraw: a tile that only changed its number must not rise again.
+  const risen = new Set<string>();
+  const riseOnce = (key: string) => risen.has(key) ? "" : (risen.add(key), "mh-rise");
 
   const todayStr = () => new Date().toLocaleDateString("en-CA");
   const round0 = (v: number) => String(Math.round(v));
@@ -3631,9 +3637,10 @@ import SiteHeader from "../components/SiteHeader.astro";
     if (!openMarkerKey || markerByKey(openMarkerKey).section !== sec) { openMarkerKey = (have[0] ?? ms[0]).key; openRange = ""; }
     const open = markerByKey(openMarkerKey);
     // the tiles: a marker with nothing yet is a dashed tile, never hidden
+    const rise = riseOnce(`tiles:${sec}`);
     $("sectiles").innerHTML = ms.map((m, i) => {
       const pts = m.series(); const l = pts[pts.length - 1] ?? null; const on = m.key === openMarkerKey;
-      return `<button type="button" data-marker="${m.key}" style="--i: ${i}" aria-current="${on ? "true" : "false"}" class="mh-rise flex flex-col gap-1 rounded-2xl border p-3.5 text-left transition-colors ${on ? "border-accent/60 bg-accent/[0.08]" : l ? "border-white/8 bg-white/4 hover:border-white/16" : "border-dashed border-white/10 hover:border-white/20"}">
+      return `<button type="button" data-marker="${m.key}" style="--i: ${i}" aria-current="${on ? "true" : "false"}" class="${rise} flex flex-col gap-1 rounded-2xl border p-3.5 text-left transition-colors ${on ? "border-accent/60 bg-accent/[0.08]" : l ? "border-white/8 bg-white/4 hover:border-white/16" : "border-dashed border-white/10 hover:border-white/20"}">
         <span class="text-[12px] text-text-secondary">${esc(m.label)}</span>
         <span class="font-mono text-[20px] font-bold leading-none ${l ? "" : "text-text-muted"}" style="${l ? `color: ${m.color}` : ""}">${l ? m.fmt(l.v) : "—"}${l && m.unit ? ` <span class="text-[10px] text-text-tertiary">${esc(m.unit)}</span>` : ""}</span>
         <span class="text-[11.5px] leading-snug text-text-tertiary">${l ? (l.d === todayStr() ? "today" : esc(dayWord(l.d))) : "not read yet"}</span>
@@ -3721,6 +3728,7 @@ import SiteHeader from "../components/SiteHeader.astro";
 
     // ── your sections: the same split as Labs, each a way in ─────────────
     show("secwrap", true);
+    const rise = riseOnce("sections");
     $("sections").innerHTML = SECTION_ORDER.filter((s) => labSecs.has(s)).map((s, i) => {
       const series = [...labSecs.get(s)!.values()];
       let ok = 0, judged = 0;
@@ -3734,7 +3742,7 @@ import SiteHeader from "../components/SiteHeader.astro";
         ? `<span class="text-warning">${flagged} outside range</span>`
         : judged ? `<span class="text-success">all in range</span>` : `<span class="text-text-tertiary">no printed ranges</span>`;
       return `
-        <button data-opensec="${s}" style="--i: ${i}" class="mh-rise flex items-center gap-3 rounded-2xl border border-white/8 bg-white/4 px-3.5 py-3 text-left transition-colors hover:border-white/16">
+        <button data-opensec="${s}" style="--i: ${i}" class="${rise} flex items-center gap-3 rounded-2xl border border-white/8 bg-white/4 px-3.5 py-3 text-left transition-colors hover:border-white/16">
           ${ringSvg(ok, judged, i)}
           <span class="min-w-0 flex-1">
             <span class="block truncate text-sm font-semibold text-text-primary">${SECTIONS[s]}</span>
