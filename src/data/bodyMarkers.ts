@@ -60,7 +60,11 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     purpose: "Blood sugar after an overnight fast",
     note: "HbA1c is recorded separately — either one satisfies this criterion.",
     units: ["mg/dL"],
-    howTo: [],
+    howTo: [
+      "Fast for 8 to 12 hours; water is fine, coffee is not.",
+      "Have the blood drawn in the morning, before exercise.",
+      "Enter the value as the lab printed it, in mg/dL.",
+    ],
     bands: [
       "In range: < 100 mg/dL",
       "Elevated: ≥ 100 mg/dL",
@@ -86,7 +90,11 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     purpose: "Your average blood sugar over the last three months",
     note: "No fasting needed — it can be drawn at any time of day.",
     units: ["%"],
-    howTo: [],
+    howTo: [
+      "No fasting needed; any time of day.",
+      "Ask for HbA1c by name on a routine panel.",
+      "Enter the percentage as printed.",
+    ],
     bands: [
       "In range: < 5.7%",
       "Prediabetes: 5.7–6.4%",
@@ -146,7 +154,10 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     purpose: "Fat circulating in fasting blood",
     note: "Fasting blood panel.",
     units: ["mg/dL"],
-    howTo: [],
+    howTo: [
+      "Ask for a lipid panel; fasting is not required for most people, but do it the same way each time.",
+      "Enter triglycerides in mg/dL as printed.",
+    ],
     bands: [
       "In range: < 150",
       "Elevated: ≥ 150",
@@ -172,7 +183,10 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     purpose: "Cholesterol carried away from vessel walls",
     note: "Fasting blood panel.",
     units: ["mg/dL"],
-    howTo: [],
+    howTo: [
+      "Ask for a lipid panel; HDL is on every one.",
+      "Enter in mg/dL as printed.",
+    ],
     bands: [
       "In range: ≥ 40",
       "Low: < 40",
@@ -249,7 +263,11 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     purpose: "Blood sugar two hours after eating",
     note: "Home glucometer reading, 1–2 hours after starting a meal.",
     units: ["mg/dL"],
-    howTo: [],
+    howTo: [
+      "Start the clock at the first bite of a usual meal.",
+      "Test with a home meter one to two hours later.",
+      "Enter in mg/dL; note what the meal was if it was unusual.",
+    ],
     bands: [
       "In range: < 180",
       "Elevated: ≥ 180",
@@ -267,7 +285,11 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     purpose: "Fasting insulin, and the insulin resistance it implies",
     note: "",
     units: ["uIU/mL"],
-    howTo: [],
+    howTo: [
+      "Fast for 8 to 12 hours.",
+      "Ask for fasting insulin alongside fasting glucose; HOMA-IR is worked out from the pair.",
+      "Enter the insulin in uIU/mL as printed.",
+    ],
     bands: [],
     citation: "No universally accepted single cutoff exists for HOMA-IR — results vary by population, assay, and lab. This threshold is derived from a Spanish cohort; some populations, including South Asian, tend to show insulin resistance at somewhat lower absolute values (MDCalc/NHANES-referenced range approximately 1.4-2.5). Not part of any validated management algorithm — a screening signal, not a diagnosis.",
     detail: [],
@@ -290,7 +312,11 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     purpose: "The particles that carry cholesterol into artery walls",
     note: "ApoB counts atherogenic particles directly — one ApoB per LDL, IDL, VLDL and Lp(a) particle — so it captures risk that LDL-C alone can miss, particularly in insulin resistance and high triglycerides.",
     units: ["mg/dL"],
-    howTo: [],
+    howTo: [
+      "Ask for apolipoprotein B by name; it is not on a standard lipid panel.",
+      "No fasting needed.",
+      "Enter in mg/dL as printed.",
+    ],
     bands: [
       "Optimal: ≤ 79",
       "Borderline: 80–99",
@@ -317,7 +343,10 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     purpose: "Cholesterol on its way toward vessel walls",
     note: "LDL cholesterol measures the cholesterol carried by LDL particles, not the particle count itself. Where the two disagree, ApoB is the better risk marker.",
     units: ["mg/dL"],
-    howTo: [],
+    howTo: [
+      "Ask for a lipid panel; LDL is on every one, calculated or measured.",
+      "Enter in mg/dL as printed.",
+    ],
     bands: [
       "Optimal: ≤ 99",
       "Borderline: 100–129",
@@ -344,7 +373,10 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     purpose: "An inherited particle that adds risk on its own",
     note: "Lp(a) is ~90% genetically determined and stable through life — a single measurement is usually sufficient. Unit conversion between nmol/L and mg/dL is only approximate because it depends on apolipoprotein(a) isoform size; Verve stores the unit you entered and marks any converted value as approximate.",
     units: [],
-    howTo: [],
+    howTo: [
+      "Ask for lipoprotein(a) once; it is set by your genes and rarely changes.",
+      "Enter the value with the unit the lab used, nmol/L or mg/dL; the two are not interchangeable.",
+    ],
     bands: [
       "Low: ≤ 74 nmol/L · ≤ 29 mg/dL",
       "Intermediate: 75–124 nmol/L",
@@ -363,7 +395,11 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     purpose: "Low-grade inflammation in blood vessels",
     note: "Values above 10 mg/L usually reflect acute infection or inflammation rather than chronic cardiovascular risk — the AHA/CDC statement advises discarding the result and re-testing once well.",
     units: ["mg/L"],
-    howTo: [],
+    howTo: [
+      "Ask for high-sensitivity CRP, not the ordinary CRP.",
+      "Skip it during a cold, an injury or the week after a hard race; it rises with any inflammation.",
+      "Enter in mg/L as printed.",
+    ],
     bands: [
       "Low: < 1",
       "Average: 1–3",
@@ -449,7 +485,11 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     purpose: "Share of body mass that is fat",
     note: "Whole-body fat-free mass ÷ height², computed from your body fat %, weight and height. A NUTRITION measure, not a sarcopenia one: EWGSOP2 and AWGS do not use FFMI at all — they use ALM and ALMI, which isolate limb muscle, while fat-free mass includes the trunk and its organs.",
     units: ["%"],
-    howTo: [],
+    howTo: [
+      "Use the same method each time: a DXA scan, a bioimpedance scale or calipers; methods disagree by several points.",
+      "Measure in the morning, before food, after the bathroom.",
+      "Enter the percentage.",
+    ],
     bands: [
       "In range: 8–24.9%",
       "Borderline: 25–28.9%",
@@ -482,7 +522,11 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     purpose: "Everything except fat, from your body fat and weight",
     note: "",
     units: ["kg"],
-    howTo: [],
+    howTo: [
+      "From a DXA report, or a bioimpedance scale that prints lean or fat-free mass.",
+      "Same method, same morning conditions each time.",
+      "Enter in kg.",
+    ],
     bands: [],
     citation: "Fat-free mass from body fat and weight, plus the essential fat every body carries (3% men, 5% women).",
     detail: [],
@@ -497,7 +541,11 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     purpose: "Share of body mass that is skeletal muscle",
     note: "Skeletal muscle percentage, as reported by a BIA scale.",
     units: ["%"],
-    howTo: [],
+    howTo: [
+      "From a bioimpedance scale or a DXA report that prints skeletal muscle as a share of weight.",
+      "Same method, same morning conditions each time.",
+      "Enter the percentage.",
+    ],
     bands: [],
     citation: "Janssen et al. 2000 (NHANES) with BIA population survey norms.",
     detail: [],
@@ -559,7 +607,10 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     purpose: "Balance, walking speed and chair stand, scored together",
     note: "The Short Physical Performance Battery — three timed tests scored 0-4 each, totalling 0-12. Verve works the score out from the balance, walking-speed and chair-stand results you record; there is nothing to type.",
     units: [],
-    howTo: [],
+    howTo: [
+      "Do the three tests in one session: the side-by-side, semi-tandem and tandem stands, each held up to 10 seconds; the 4-metre walk at your usual pace; five rises from a chair without using your arms.",
+      "Enter each test's result; the 0 to 12 score is worked out from them.",
+    ],
     bands: [
       "Good: 10–12",
       "Intermediate: 7–9",
