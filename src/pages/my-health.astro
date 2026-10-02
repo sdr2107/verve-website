@@ -1734,7 +1734,8 @@ import SiteHeader from "../components/SiteHeader.astro";
       supabase.from("waist_readings").select("measured_at, waist_cm")
         .eq("user_id", accountId).is("deleted_at", null).order("measured_at", { ascending: true }).limit(600),
       supabase.from("profiles").select("weekly_met_hours_goal, height_cm, sex, age").eq("user_id", accountId).maybeSingle(),
-      supabase.from("daily_signals").select("day, resting_hr, steps, sleep_minutes, sleep_start, sleep_end, sleep_staged, hrr_bpm, hrr_n, hrr_source")
+      // every column: the app adds activity level, standing, sitting and cadence as it learns to send them
+      supabase.from("daily_signals").select("*")
         .eq("user_id", accountId).gte("day", since.toLocaleDateString("en-CA")).order("day", { ascending: true }).limit(420),
     ]);
     // Workouts only. The app also syncs its background-movement rows
@@ -3533,6 +3534,27 @@ import SiteHeader from "../components/SiteHeader.astro";
       series: () => signalSeries("steps"),
       reads: (pts) => { const h = sleepHeartSummary(syncSignals, todayStr()); if (!h?.steps.avg) return ["No steps on file yet."]; return [`<strong class="text-text-primary">${h.steps.avg.toLocaleString()} a day</strong> over the last seven${h.steps.prior != null ? `, ${h.steps.avg >= h.steps.prior ? "up" : "down"} from ${h.steps.prior.toLocaleString()} the week before` : ""}.`, "Paluch's 2023 pooled cohorts found the mortality curve flattening around 7,000 to 8,000 a day for adults over 60, higher for younger adults, with the fall steepest from the lowest counts."]; } },
     // ── sleep & heart ──
+    { key: "strength", section: "movement", label: "Strength", unit: "min", sub: "Minutes of strength work, by day", daily: true, sum: true, color: "#a78bfa",
+      science: "/science/movement/strength-training", source: "Sessions the app graded as strength, each as the watch or the person recorded it.", fmt: (v) => round0(v),
+      series: () => { const by = new Map<string, number>(); for (const a of syncActs) { if (!a?.timestamp || a.activity_type !== "strength") continue; const d = localDay(a.timestamp); by.set(d, (by.get(d) ?? 0) + (Number(a.duration_minutes) || 0)); } return [...by].map(([d, v]) => ({ d, v })).sort((a, b) => a.d.localeCompare(b.d)); },
+      goal: () => 60,
+      reads: (pts) => { const m = mondayOf(new Date()); const wk = pts.filter((p) => p.d >= m).reduce((t, p) => t + p.v, 0); return [`<strong class="text-text-primary">${round0(wk)} min</strong> this week, Monday to today, against the cited 60 a week.`]; } },
+    { key: "pal", section: "movement", label: "Activity level", unit: "", sub: "The day's energy over the energy at rest, in the app's four bands", daily: true, color: "#34d399",
+      science: "/science/movement/activity-level", source: "Worked out on the phone from Apple Health's energy, one figure a day, sent on each sync.", fmt: (v) => v.toFixed(2),
+      series: () => signalSeries("pal"),
+      reads: (pts) => { if (!pts.length) return ["No activity level yet: it needs a week of energy data in Apple Health, and an app that sends it."]; const l = pts[pts.length - 1]; const band = l.v < 1.4 ? "sedentary, 1.0 to 1.39" : l.v < 1.6 ? "low active, 1.4 to 1.59" : l.v < 1.9 ? "active, 1.6 to 1.89" : "very active, 1.9 and up"; return [`<strong class="text-text-primary">${l.v.toFixed(2)}</strong> ${l.d === todayStr() ? "today" : `on ${esc(fmtDay(l.d))}`}: ${band}, the same four bands the app's Physical activity level row uses.`]; } },
+    { key: "standing", section: "movement", label: "Standing", unit: "min", sub: "Movement balance: minutes on your feet, with a watch", daily: true, color: "#34d399",
+      science: "/science/movement/movement-balance", source: "Apple Health's stand minutes, one total a day, sent by the app on each sync.", fmt: (v) => round0(v),
+      series: () => signalSeries("standing_minutes"),
+      reads: (pts) => pts.length ? [`<strong class="text-text-primary">${round0(pts[pts.length - 1].v)} min</strong> standing ${pts[pts.length - 1].d === todayStr() ? "today" : `on ${esc(fmtDay(pts[pts.length - 1].d))}`}; the other side of the day is Sitting, beside this.`] : ["No standing minutes yet: a watch writes them, and the app sends them."] },
+    { key: "sitting", section: "movement", label: "Sitting", unit: "h", sub: "Movement balance: hours seated, from the day's energy", daily: true, color: "#f87171",
+      science: "/science/movement/movement-balance", source: "The app's own reading of the day's sedentary hours, sent on each sync.", fmt: (v) => fmt1(v),
+      series: () => signalSeries("sedentary_minutes").map((p) => ({ d: p.d, v: p.v / 60 })),
+      reads: (pts) => pts.length ? [`<strong class="text-text-primary">${fmt1(pts[pts.length - 1].v)} h</strong> seated ${pts[pts.length - 1].d === todayStr() ? "today" : `on ${esc(fmtDay(pts[pts.length - 1].d))}`}. The app marks more than eight as a long day and more than ten as a very long one.`] : ["No sitting hours yet: the app reads them from the day's energy and sends them."] },
+    { key: "cadence", section: "movement", label: "Cadence", unit: "spm", sub: "The day's best thirty minutes, steps a minute", daily: true, color: "#34d399",
+      science: "/science/movement/steps", source: "Apple Health's walking cadence, the day's best half hour, sent by the app on each sync.", fmt: (v) => round0(v),
+      series: () => signalSeries("cadence_spm"),
+      reads: (pts) => pts.length ? [`<strong class="text-text-primary">${round0(pts[pts.length - 1].v)} steps a minute</strong> for the best thirty minutes ${pts[pts.length - 1].d === todayStr() ? "today" : `on ${esc(fmtDay(pts[pts.length - 1].d))}`}; a hundred is the brisk line the app cites.`] : ["No cadence yet: a watch or phone in the pocket writes it, and the app sends it."] },
     { key: "rhr", section: "heart", label: "Resting heart rate", unit: "bpm", sub: "Every morning, against your own normal", daily: true, color: "#818cf8",
       science: "/science/sleep-heart/resting-heart-rate", source: "Apple's one figure per day, from heart rate during stillness, weighted to sleep and the early morning.", fmt: (v) => round0(v),
       series: () => signalSeries("resting_hr"), band: () => ownBand(signalSeries("resting_hr"), 5, "the median of the prior 30 mornings, five either side"),
@@ -3791,6 +3813,27 @@ import SiteHeader from "../components/SiteHeader.astro";
         <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4">${kicker("SOURCE")}<div class="mt-1.5 text-[13px] leading-relaxed text-text-secondary">${esc(open.source)}</div></div>
       </div>`;
     $("secopen").querySelectorAll<HTMLElement>("[data-range]").forEach((b) => b.addEventListener("click", () => { openRange = b.dataset.range as Rng; renderSection(); }));
+    if (open.key === "sessions") $("secopen").insertAdjacentHTML("beforeend", workoutsListHtml(openRange as Rng));
+  }
+  /** The sessions themselves, newest first, for the lens in view: the receipts under the Workouts tile. */
+  function workoutsListHtml(range: Rng): string {
+    const t = todayStr();
+    const from = range === "week" ? mondayOf(new Date()) : range === "4w" ? addDays(mondayOf(new Date()), -21) : range === "months" ? addDays(t, -365) : "0000";
+    const rows = syncActs.filter((a) => a?.timestamp && localDay(a.timestamp) >= from).sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)));
+    if (!rows.length) return `<div class="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-[13px] text-text-tertiary">No session in this range.</div>`;
+    const dot: Record<string, string> = { light: "#38bdf8", moderate: "#fbbf24", vigorous: "#f87171" };
+    const srcWord = (a: any) => a.source === "healthkit" ? "Apple Health" : a.source === "hr-estimated" ? "heart rate" : "logged by hand";
+    const shown = rows.slice(0, 40);
+    return `<div class="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+      ${kicker(`THE SESSIONS · ${rows.length}`)}
+      <div class="mt-2 flex flex-col">${shown.map((a) => `
+        <div class="flex items-center gap-3 border-t border-white/[0.06] py-2.5 first:border-t-0">
+          <span class="h-2 w-2 shrink-0 rounded-full" style="background: ${dot[String(a.intensity_category)] ?? "#64748b"}"></span>
+          <span class="min-w-0 flex-1"><span class="block truncate text-[13.5px] font-semibold text-text-primary">${esc(String(a.activity_name || "Workout"))}</span><span class="block text-[11.5px] text-text-tertiary">${esc(fmtDay(localDay(a.timestamp)))} · ${round0(Number(a.duration_minutes) || 0)} min · ${esc(srcWord(a))}${a.activity_type === "strength" ? " · strength" : ""}</span></span>
+          <span class="font-mono text-[13px] font-bold text-text-primary">${fmt1(Number(a.met_hours) || 0)} <span class="text-[10px] font-medium text-text-tertiary">MET-h</span></span>
+        </div>`).join("")}</div>
+      ${rows.length > shown.length ? `<p class="mt-2 text-[12px] text-text-muted">and ${rows.length - shown.length} more in this range</p>` : ""}
+    </div>`;
   }
   function setSection(k: "all" | SecKey) {
     ovSection = k;
