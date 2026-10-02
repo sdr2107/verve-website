@@ -1021,7 +1021,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     if (p.id === person?.id) { if (activeTab === "group") setTab("overview"); closePersonForm(); closeAccess(); return; }
     person = p;
     if (activeTab === "group") setTab("overview");
-    syncSignals = []; syncActs = []; syncProfile = null; allWeeks = []; allCrf = []; allBody = [];   // the last person's, until loadActivity brings this one's
+    syncSignals = []; syncActs = []; syncProfile = null; syncWeights = []; allWeeks = []; allCrf = []; allBody = [];   // the last person's, until loadActivity brings this one's
     try { sessionStorage.setItem(PERSON_KEY, id); } catch { /* fine */ }
     msg("upmsg", ""); msg("sharemsg", "");
     show("review", false); show("echoreview", false); show("namecheck", false);
@@ -1726,7 +1726,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   let syncSignals: any[] = [];
   async function loadSynced(accountId: string) {
     const since = new Date(); since.setDate(since.getDate() - 400);
-    const [a, c, w, pr, sg] = await Promise.all([
+    const [a, c, w, pr, sg, wt] = await Promise.all([
       pageAll(() => supabase.from("activities").select("timestamp, duration_minutes, met_hours, intensity_category, activity_name, activity_type, source, zone2_minutes")
         .eq("user_id", accountId).is("deleted_at", null).neq("source", "passive-nakanishi").gte("timestamp", since.toISOString()).order("timestamp", { ascending: true })),
       supabase.from("crf_entries").select("timestamp, met_capacity, performance_category, estimation_method, vo2_max_estimate")
@@ -1737,12 +1737,15 @@ import SiteHeader from "../components/SiteHeader.astro";
       // every column: the app adds activity level, standing, sitting and cadence as it learns to send them
       supabase.from("daily_signals").select("*")
         .eq("user_id", accountId).gte("day", since.toLocaleDateString("en-CA")).order("day", { ascending: true }).limit(420),
+      // weight, one row a day a source; until the table exists the query errors and this reads as none
+      supabase.from("weight_readings").select("measured_on, weight_kg, source").eq("user_id", accountId)
+        .gte("measured_on", addDays(new Date().toLocaleDateString("en-CA"), -800)).order("measured_on", { ascending: true }).limit(1200).then((r) => r, () => ({ data: null as any[] | null })),
     ]);
     // Workouts only. The app also syncs its background-movement rows
     // (source "passive-nakanishi", one per day), which are not sessions:
     // counted here they inflated every week's MET-hours and workout count
     // against the app's own Trends, which keeps background out of training.
-    return { activities: (a.data ?? []).filter(isWorkout), crf: c.data ?? [], waist: w.data ?? [], profile: pr.data ?? null, signals: sg.data ?? [] };
+    return { activities: (a.data ?? []).filter(isWorkout), crf: c.data ?? [], waist: w.data ?? [], profile: pr.data ?? null, signals: sg.data ?? [], weights: wt.data ?? [] };
   }
   /** A synced activity row that is a session someone did, not the day's background movement. */
   const isWorkout = (a: any) => a && a.source !== "passive-nakanishi";
@@ -1792,6 +1795,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     syncActs = synced?.activities ?? [];
     syncProfile = synced?.profile ?? null;
     syncSignals = synced?.signals ?? [];
+    syncWeights = synced?.weights ?? [];
     renderAppImports();
     renderDepth();
   }
@@ -1873,6 +1877,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   // page already holds. Nothing here is written anywhere.
   let syncActs: any[] = [];
   let syncProfile: any = null;
+  let syncWeights: any[] = [];   // weight_readings: one row a day a source
 
   /**
    * The cited retest cadences, in days, from the app's own threshold table:
@@ -3500,6 +3505,12 @@ import SiteHeader from "../components/SiteHeader.astro";
     }
     return out.sort((x, y) => x.d.localeCompare(y.d));
   }
+  /** The weighings, one a day, Health's over Settings' on the same day. */
+  function weightSeries(): Pt2[] {
+    const by = new Map<string, { v: number; health: boolean }>();
+    for (const r of syncWeights) { const d = String(r.measured_on).slice(0, 10), v = Number(r.weight_kg); if (!Number.isFinite(v)) continue; const cur = by.get(d); if (cur && cur.health && r.source !== "health") continue; by.set(d, { v, health: r.source === "health" }); }
+    return [...by].map(([d, x]) => ({ d, v: x.v })).sort((a, b) => a.d.localeCompare(b.d));
+  }
   const dbpOn = (d: string) => (markerPoints().get("dbp") ?? []).find((q) => q.d === d) ?? null;
 
   const MARKERS: Marker[] = [
@@ -3572,6 +3583,15 @@ import SiteHeader from "../components/SiteHeader.astro";
       science: "/science/body/body-phenotyping", source: "Measured in the app or read from a report; the app's row wins on the same day.", fmt: (v) => fmt1(v),
       series: () => sparseFrom("waist_cm"),
       reads: (pts) => { if (!pts.length) return ["No waist on file."]; const l = pts[pts.length - 1], h = Number(syncProfile?.height_cm) || null; const out = [`<strong class="text-text-primary">${fmt1(l.v)} cm</strong> on ${esc(fmtDay(l.d))}${pts.length > 1 ? `, ${l.v === pts[0].v ? "the same as" : `${fmt1(Math.abs(l.v - pts[0].v))} cm ${l.v < pts[0].v ? "less than" : "more than"}`} the first on ${esc(fmtDay(pts[0].d))}` : ""}.`]; if (h) out.push(`Waist-to-height <strong class="text-text-primary">${(l.v / h).toFixed(2)}</strong> at ${h} cm; the screening line is 0.5.`); return out; } },
+    { key: "weight", section: "body", group: "metabolic", label: "Weight", unit: "kg", sub: "Every weighing, from Apple Health or Settings", daily: true, color: "#FBBF24",
+      science: "/science/body/body-phenotyping", source: "Apple Health's weighings and the weight typed in Settings, one row a day a source; a day with both keeps Health's.", fmt: (v) => fmt1(v),
+      series: () => weightSeries(),
+      band: () => { const pts = weightSeries(); return ownBand(pts, 1, "within a kilo of your own 30-day median"); },
+      reads: (pts) => { if (!pts.length) return ["No weighing yet. The app sends Apple Health's weighings, and the weight in Settings, once it learns to."]; const l = pts[pts.length - 1]; const ago = pts.filter((p) => p.d >= addDays(l.d, -28) && p.d < l.d); const first = ago[0] ?? null; return [`<strong class="text-text-primary">${fmt1(l.v)} kg</strong> ${l.d === todayStr() ? "today" : `on ${esc(fmtDay(l.d))}`}${first ? `, ${Math.abs(l.v - first.v) < 0.05 ? "the same as" : `${l.v < first.v ? "down" : "up"} ${fmt1(Math.abs(l.v - first.v))} kg from`} four weeks ago` : ""}. ${pts.length} weighing${pts.length === 1 ? "" : "s"} on file.`]; } },
+    { key: "bmi", section: "body", group: "metabolic", label: "BMI", unit: "", sub: "Weight against height, the number every report asks for", daily: true, color: "#FBBF24",
+      science: "/science/body/body-phenotyping", source: "Worked out here from each weighing and the height on the profile, never stored, so it cannot disagree with the weight.", fmt: (v) => fmt1(v),
+      series: () => { const h = Number(syncProfile?.height_cm) || 0; if (!(h > 0)) return []; const m = h / 100; return weightSeries().map((p) => ({ d: p.d, v: p.v / (m * m) })); },
+      reads: (pts) => { const h = Number(syncProfile?.height_cm) || 0; if (!(h > 0)) return ["BMI needs a height on the profile; the app's Settings takes it."]; if (!pts.length) return ["No weighing yet, so no BMI."]; const l = pts[pts.length - 1]; const band = l.v < 18.5 ? "under the 18.5 line" : l.v < 25 ? "in the 18.5 to 24.9 band" : l.v < 30 ? "in the 25 to 29.9 band, overweight by the WHO's general cut-offs" : "at or over 30, obese by the WHO's general cut-offs"; return [`<strong class="text-text-primary">${fmt1(l.v)}</strong> from ${fmt1(weightSeries()[weightSeries().length - 1].v)} kg at ${h} cm: ${band}. For South Asian adults the WHO's action points sit lower, at 23 and 27.5. Waist to height is Verve's first ratio for the fat that matters; BMI moves with muscle as much as fat.`]; } },
     { key: "body_fat_pct", section: "body", group: "muscle", label: "Body fat", unit: "%", sub: "Composition, by whichever method the report used", daily: false, color: "#FBBF24", science: "/science/body/body-phenotyping", source: "From a body-composition report or the app.", fmt: (v) => fmt1(v), series: () => sparseFrom("body_fat_pct"), reads: (pts) => pts.length ? [`<strong class="text-text-primary">${fmt1(pts[pts.length - 1].v)}%</strong> on ${esc(fmtDay(pts[pts.length - 1].d))}. Methods differ; compare only within one.`] : ["No body fat on file."] },
     { key: "skel_musc_pct", section: "body", group: "muscle", label: "Skeletal muscle", unit: "%", sub: "Muscle as a share of weight", daily: false, color: "#FBBF24", science: "/science/body/muscle-health", source: "From a body-composition report or the app.", fmt: (v) => fmt1(v), series: () => sparseFrom("skel_musc_pct"), reads: (pts) => pts.length ? [`<strong class="text-text-primary">${fmt1(pts[pts.length - 1].v)}%</strong> on ${esc(fmtDay(pts[pts.length - 1].d))}.`] : ["No muscle mass on file."] },
     { key: "handgrip_kg", section: "body", group: "muscle", label: "Grip strength", unit: "kg", sub: "Why grip is in a fitness app at all", daily: false, color: "#FBBF24", science: "/science/body/muscle-health", source: "The app's grip test, or a report.", fmt: (v) => fmt1(v), series: () => sparseFrom("handgrip_kg"), reads: (pts) => { if (!pts.length) return ["No grip test on file."]; const cut = String(syncProfile?.sex ?? "") === "female" ? 16 : 27; const l = pts[pts.length - 1]; return [`<strong class="text-text-primary">${fmt1(l.v)} kg</strong> on ${esc(fmtDay(l.d))}, <span class="${l.v >= cut ? "text-success-light" : "text-warning"}">${l.v >= cut ? "above" : "below"} the EWGSOP2 cut-off of ${cut}</span>.`]; } },
