@@ -569,7 +569,7 @@ import SiteHeader from "../components/SiteHeader.astro";
 
       <!-- ═══ REPORTS ════════════════════════════════════════════════════ -->
       <div id="tab-reports" class="mt-6 hidden">
-        <p class="mb-5 max-w-3xl text-[13.5px] leading-relaxed text-text-secondary"><span class="font-semibold text-text-primary">This page:</span> the paper. The files every value came from, by year and month, and the app's exports.</p>
+        <p class="mb-5 max-w-3xl text-[13.5px] leading-relaxed text-text-secondary"><span class="font-semibold text-text-primary">This page:</span> the paper, and the years. The files every value came from, by year and month, and the history you brought in: the app's exports and workout CSVs. Every row stays on the Overview, however far back it reaches.</p>
         <!-- ── the archive first: a timeline, one card per original PDF, a year and a month at a time ── -->
         <div id="repcards" class="flex max-w-3xl flex-col gap-3"></div>
 
@@ -577,7 +577,14 @@ import SiteHeader from "../components/SiteHeader.astro";
         <section id="appimports" class="mt-6 hidden max-w-3xl rounded-2xl border border-white/10 bg-white/[0.03] p-4">
           <div class="font-mono text-[10px] font-semibold tracking-widest text-text-tertiary">FROM THE VERVE APP</div>
           <div id="appimportrows" class="mt-2 flex flex-col gap-2"></div>
-          <p class="mt-2 text-[12px] text-text-muted">The weeks, fitness tests and waist readings are on the Overview; the lab values are on Labs with everything else.</p>
+          <p class="mt-2 text-[12px] text-text-muted">The weeks, fitness tests and waist readings are on the Overview; the lab values are on Labs with everything else. Where a week came from both sync and a file, sync wins.</p>
+        </section>
+
+        <!-- every year with movement on file, a column each: what the history you brought in reaches back to -->
+        <section id="yearsonfile" class="mt-6 hidden max-w-3xl rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <div class="flex items-baseline justify-between"><div class="font-mono text-[10px] font-semibold tracking-widest text-text-tertiary">YEARS ON FILE</div><span id="yearsonfilecount" class="font-mono text-[10.5px] text-text-tertiary"></span></div>
+          <div id="yearsonfilebars" class="mt-3 flex items-end gap-2" style="height:110px" aria-hidden="true"></div>
+          <p id="yearsonfilenote" class="mt-3 text-[12px] leading-relaxed text-text-secondary"></p>
         </section>
 
         <!-- ── then the one place to add a report; dragging anywhere on the page lands here too ── -->
@@ -589,12 +596,23 @@ import SiteHeader from "../components/SiteHeader.astro";
             </svg>
           </span>
           <span class="min-w-0 flex-1">
-            <span class="block text-sm font-semibold text-text-primary">Add older reports: drop them here, or tap to choose</span>
-            <span class="mt-0.5 block text-xs leading-relaxed text-text-tertiary">A PDF, a photo of the report as JPG, PNG or WebP, or the JSON your Verve app exports &middot; up to 15 MB each &middot; several at once &middot; originals stay in your private archive &middot; a file you already have is spotted before it is filed</span>
+            <span class="block text-sm font-semibold text-text-primary">Add older reports or history: drop them here, or tap to choose</span>
+            <span class="mt-0.5 block text-xs leading-relaxed text-text-tertiary">A PDF, a photo of the report as JPG, PNG or WebP, the JSON your Verve app exports, or a CSV of workouts from Garmin, Strava or a spreadsheet (date, sport, minutes, average heart rate) &middot; up to 15 MB each &middot; several at once &middot; originals stay in your private archive &middot; a file you already have is spotted before it is filed</span>
           </span>
           <span class="hidden shrink-0 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-bold text-accent-light sm:inline-block">Choose files</span>
-          <input id="file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif,application/json,.json" multiple class="hidden" />
+          <input id="file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif,application/json,.json,text/csv,.csv" multiple class="hidden" />
         </label>
+
+        <!-- who pays for what: shown once the plans are open -->
+        <section id="whopays" class="mt-6 hidden max-w-3xl rounded-2xl border border-accent/40 bg-accent/[0.06] p-4">
+          <div class="font-mono text-[10px] font-semibold tracking-widest text-accent-light">WHO PAYS FOR WHAT</div>
+          <dl class="mt-2 grid gap-x-4 gap-y-2 text-[13px] leading-relaxed text-text-secondary sm:grid-cols-[88px_1fr]">
+            <dt class="font-bold text-text-primary">Free</dt><dd>Two reports read. The app's export and a CSV are not imported: a look, nothing kept from before.</dd>
+            <dt class="font-bold text-text-primary">Pro</dt><dd>Exports and CSVs imported, every year kept, In depth on your own page. The athlete's plan.</dd>
+            <dt class="font-bold text-text-primary">Enterprise</dt><dd>Client seats, counted at Coach. In depth on each client, the group table. The coach's plan; a client's history stays theirs, on their Pro.</dd>
+          </dl>
+          <p class="mt-3 text-[12px] leading-relaxed text-text-muted">Everything already on file stays visible if a plan lapses: the trends, the years, View PDF, sending to the app. The gate is on new drops only. <a href="/plans" class="font-semibold text-accent-light hover:text-text-primary">See the plans</a></p>
+        </section>
 
         <!-- the report names someone else: held here, nothing filed, until you say whose it is -->
         <div id="namecheck" class="mt-6 hidden max-w-3xl flex-col gap-3 rounded-2xl border border-warning/50 bg-warning/[0.06] p-5"></div>
@@ -871,6 +889,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     } catch { /* the function may not exist yet: free */ }
     ent = entitlements(plan);
     show("planline", PLANS_OPEN);
+    show("whopays", PLANS_OPEN);
     if (PLANS_OPEN) $("planline").innerHTML = plan === "free"
       ? `Free plan · <a href="/plans" class="font-semibold text-accent-light hover:text-text-primary">see the plans</a>`
       : `${esc(planOf(plan).name)} plan · <a href="/plans" class="font-semibold text-accent-light hover:text-text-primary">plans</a>`;
@@ -1645,6 +1664,95 @@ import SiteHeader from "../components/SiteHeader.astro";
     return "ok";
   }
 
+  // A CSV of workouts — Garmin's, Strava's, a spreadsheet's. Four columns are
+  // enough: a date, a sport, a duration, an average heart rate. The file's
+  // minutes and sessions are kept as they are; MET-hours and the bands are
+  // ESTIMATED from the average heart rate where the file carries one, with
+  // the rule the app keeps for a person with no profile (lib/calculations'
+  // last tier), and left at 0 where it does not. Every week carries source
+  // "csv" so a reader can tell an estimate from a measured week, and the
+  // import's tag so the whole file can be undone in one press.
+  const isCsv = (f: File) => f.type === "text/csv" || /\.csv$/i.test(f.name);
+  function parseCsv(text: string): string[][] {
+    const rows: string[][] = []; let row: string[] = [], cell = "", q = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (q) { if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; continue; }
+      if (c === '"') q = true;
+      else if (c === ",") { row.push(cell); cell = ""; }
+      else if (c === "\n" || c === "\r") { if (c === "\r" && text[i + 1] === "\n") i++; row.push(cell); cell = ""; if (row.some((x) => x.trim())) rows.push(row); row = []; }
+      else cell += c;
+    }
+    row.push(cell); if (row.some((x) => x.trim())) rows.push(row);
+    return rows;
+  }
+  /** Minutes from "42", "42:10", "1:02:10", "42 min", or seconds when the column says so. */
+  function minutesOf(raw: string, header: string): number | null {
+    const v = (raw ?? "").trim(); if (!v) return null;
+    if (/^\d+:\d{2}(:\d{2})?$/.test(v)) { const p = v.split(":").map(Number); return p.length === 3 ? p[0] * 60 + p[1] + p[2] / 60 : p[0] + p[1] / 60; }
+    const n = parseFloat(v.replace(/[^\d.]/g, "")); if (!Number.isFinite(n)) return null;
+    if (/sec|\(s\)/i.test(header) || /\ds$/.test(v)) return n / 60;
+    if (/hour|\(h\)/i.test(header) && n < 24) return n * 60;
+    return n;
+  }
+  const dateOfCell = (raw: string): Date | null => { const v = (raw ?? "").trim(); if (!v) return null; let d = new Date(v); if (isNaN(d.getTime())) d = new Date(v.replace(" ", "T")); return isNaN(d.getTime()) ? null : d; };
+
+  async function importCsv(file: File, rid: string): Promise<"ok" | "bad" | "skip"> {
+    const who = person!;
+    qset(rid, "READING…", "busy", "Reading the CSV");
+    let rows: string[][];
+    try { rows = parseCsv(await file.text()); } catch { qset(rid, "FAILED", "bad", "Not a readable text file"); return "bad"; }
+    if (rows.length < 2) { qset(rid, "SKIPPED", "bad", "Nothing in the file after the header"); return "skip"; }
+    const head = rows[0].map((h) => h.trim().toLowerCase());
+    const find = (re: RegExp, not?: RegExp) => head.findIndex((h) => re.test(h) && !(not && not.test(h)));
+    const iDate = find(/^(date|start date|start|activity date|day|started|begin|start time|timestamp)/, /end/);
+    const iSport = find(/(sport|activity type|type|activity name|activity|name|title)/, /date|time|id/);
+    const iMin = find(/(moving time|duration|minutes|elapsed|time)/, /^(date|start|activity date)|pace|zone|split/);
+    const iHr = find(/(avg.*(hr|heart)|average heart|heart rate avg|avg_hr|avghr|mean heart|heart rate)/, /max|peak|zone/);
+    if (iDate < 0 || iMin < 0) { qset(rid, "SKIPPED", "bad", `Needs a date column and a duration column. Found: ${head.slice(0, 8).join(", ")}`); return "skip"; }
+    if (!who.id) { qset(rid, "SKIPPED", "bad", "The people tables are not set up yet, so there is nowhere to keep this"); return "skip"; }
+    if (enforced && !ent.importExport) { qset(rid, "ON PRO", "bad", "A CSV of workouts is imported on Pro and above. The file was not kept; the plans page has the details."); return "skip"; }
+    type Session = { d: Date; sport: string; minutes: number; hr: number | null };
+    const sessions: Session[] = [];
+    for (const r of rows.slice(1)) {
+      const d = dateOfCell(r[iDate] ?? ""); const minutes = minutesOf(r[iMin] ?? "", head[iMin]);
+      if (!d || minutes == null || minutes <= 0 || minutes > 24 * 60) continue;
+      const hr = iHr >= 0 ? parseFloat(String(r[iHr] ?? "").replace(/[^\d.]/g, "")) : NaN;
+      sessions.push({ d, sport: iSport >= 0 ? String(r[iSport] ?? "").trim() : "", minutes, hr: Number.isFinite(hr) && hr > 30 && hr < 230 ? hr : null });
+    }
+    if (!sessions.length) { qset(rid, "SKIPPED", "bad", "No row had a readable date and duration"); return "skip"; }
+    sessions.sort((a, b) => a.d.getTime() - b.d.getTime());
+    const first = localDay(sessions[0].d.toISOString()), last = localDay(sessions[sessions.length - 1].d.toISOString());
+    const tag = `csv:${first}:${Date.now()}`;
+    const byWeek = new Map<string, any>();
+    for (const sn of sessions) {
+      const start = mondayOf(sn.d);
+      const w = byWeek.get(start) ?? { met_hours: 0, minutes: 0, light_min: 0, moderate_min: 0, vigorous_min: 0, workouts: 0 };
+      const met = sn.hr != null ? 0.05 * sn.hr + 2 : null;
+      const mins = Math.round(sn.minutes);
+      w.minutes += mins; w.workouts += 1;
+      if (met != null) { w.met_hours += (met * sn.minutes) / 60; if (met >= 6) w.vigorous_min += mins; else if (met >= 3) w.moderate_min += mins; else w.light_min += mins; }
+      byWeek.set(start, w);
+    }
+    const weeks = [...byWeek].map(([week_start, w]) => ({ user_id: userId, person_id: who.id, week_start, ...w, met_hours: Math.round(w.met_hours * 100) / 100, source: "csv", import_tag: tag }));
+    qset(rid, "FILING…", "busy", `${weeks.length} weeks · ${sessions.length} sessions · ${fmtDay(first)} to ${fmtDay(last)}`);
+    const { error } = await supabase.from("web_weeks").upsert(weeks, { onConflict: "person_id,week_start" });
+    if (error) { qset(rid, "FAILED", "bad", `weeks: ${error.message}`); return "bad"; }
+    const withHr = sessions.filter((sn) => sn.hr != null).length;
+    const under = who.self ? "" : ` · under ${who.name}`;
+    qset(rid, "IMPORTED ✓", "ok", `${sessions.length} sessions in ${weeks.length} week${weeks.length === 1 ? "" : "s"}, ${fmtDay(first)} to ${fmtDay(last)}${withHr ? ` · ${withHr} with heart rate` : " · no heart rate, so no MET-hours"}${under}`);
+    $("importcard").innerHTML = `<span class="min-w-0 flex-1">Imported ${sessions.length} workouts from ${esc(file.name)}${esc(under)}: ${weeks.length} week${weeks.length === 1 ? "" : "s"}, ${esc(fmtDay(first))} to ${esc(fmtDay(last))}. The Overview's Years lens lists every year; this tab lists the file under From the Verve app.</span>
+      <button type="button" data-undo="${tag}" class="min-h-9 rounded-lg border border-white/14 px-3 py-1.5 text-xs font-semibold text-text-secondary hover:text-danger">Undo this import</button>`;
+    show("importcard", true); $("importcard").classList.add("flex");
+    $("importcard").querySelector("[data-undo]")!.addEventListener("click", async () => {
+      await removeImport(tag, who);
+      show("importcard", false); $("importcard").classList.remove("flex");
+      msg("upmsg", "The import is undone; nothing from that file remains.");
+      await refresh();
+    });
+    return "ok";
+  }
+
   /** Everything one export brought, gone: its weeks, fitness tests, waist readings and lab values. The app is untouched. */
   async function removeImport(tag: string, who: Person) {
     await Promise.all([
@@ -1655,23 +1763,52 @@ import SiteHeader from "../components/SiteHeader.astro";
     ]);
   }
 
-  /** The exports dropped on this person, rebuilt from the rows they left: one line each, with Remove. */
+  /** Every year with movement on file, a column each; dim where the year came from a CSV alone. */
+  function renderYearsOnFile() {
+    const by = new Map<string, { weeks: number; csvOnly: boolean }>();
+    for (const w of allWeeks) {
+      if (!(Number(w.minutes) > 0 || Number(w.workouts) > 0 || Number(w.met_hours) > 0)) continue;
+      const y = String(w.week_start).slice(0, 4);
+      const e = by.get(y) ?? { weeks: 0, csvOnly: true };
+      e.weeks++; if (w.source !== "csv") e.csvOnly = false;
+      by.set(y, e);
+    }
+    const years = [...by.keys()].sort();
+    show("yearsonfile", years.length > 1);
+    if (years.length <= 1) return;
+    const total = years.reduce((t, y) => t + by.get(y)!.weeks, 0);
+    const max = Math.max(...years.map((y) => by.get(y)!.weeks));
+    const thisY = String(new Date().getFullYear());
+    $("yearsonfilecount").textContent = `${years.length} years · ${total} weeks`;
+    $("yearsonfilebars").innerHTML = years.map((y) => {
+      const e = by.get(y)!; const h = Math.max(4, Math.round((e.weeks / max) * 72));
+      return `<div class="flex flex-1 flex-col items-center gap-1.5"><span class="font-mono text-[10.5px] font-semibold text-text-primary">${e.weeks}</span><span class="w-full rounded-t-[3px] ${y === thisY ? "bg-success" : "bg-accent"}" style="height:${h}px;opacity:${e.csvOnly ? 0.45 : y === thisY ? 1 : 0.8}"></span><span class="font-mono text-[10px] ${y === thisY ? "text-text-primary" : "text-text-tertiary"}">${y}</span></div>`;
+    }).join("");
+    const csvYears = years.filter((y) => by.get(y)!.csvOnly);
+    $("yearsonfilenote").textContent = `Weeks with movement on file, a column a year.${csvYears.length ? " Dim columns came from a CSV: minutes and heart rate, with MET-hours estimated from the heart rate rather than measured in your bands." : ""} The Overview's Years lens lists every year here; pick one and it draws month by month.`;
+  }
+
+  /** The exports and CSVs dropped on this person, rebuilt from the rows they left: one line each, with Remove. */
   function renderAppImports() {
-    type Imp = { tag: string; exported: string; imported: string; weeks: number; crf: number; body: number; labs: number };
+    renderYearsOnFile();
+    type Imp = { tag: string; kind: "export" | "csv"; exported: string; imported: string; weeks: number; crf: number; body: number; labs: number; sessions: number; from: string; to: string };
     const by = new Map<string, Imp>();
-    const isTag = (t: unknown): t is string => typeof t === "string" && t.startsWith("export:");
+    const isTag = (t: unknown): t is string => typeof t === "string" && (t.startsWith("export:") || t.startsWith("csv:"));
     const get = (tag: string) => {
       if (by.has(tag)) return by.get(tag)!;
-      const [, exported = "", stamp = ""] = tag.split(":");
+      const [kind, exported = "", stamp = ""] = tag.split(":");
       const imp: Imp = {
-        tag, exported: /^\d{4}-\d{2}-\d{2}$/.test(exported) ? exported : "",
+        tag, kind: kind === "csv" ? "csv" : "export", exported: /^\d{4}-\d{2}-\d{2}$/.test(exported) ? exported : "",
         imported: /^\d{10,}$/.test(stamp) ? new Date(Number(stamp)).toLocaleDateString("en-CA") : "",
-        weeks: 0, crf: 0, body: 0, labs: 0,
+        weeks: 0, crf: 0, body: 0, labs: 0, sessions: 0, from: "", to: "",
       };
       by.set(tag, imp);
       return imp;
     };
-    for (const w of exportRows.weeks) if (isTag(w.import_tag)) get(w.import_tag).weeks++;
+    for (const w of exportRows.weeks) if (isTag(w.import_tag)) {
+      const im = get(w.import_tag); im.weeks++; im.sessions += Number(w.workouts) || 0;
+      const ws = String(w.week_start); if (!im.from || ws < im.from) im.from = ws; if (!im.to || ws > im.to) im.to = ws;
+    }
     for (const c of exportRows.crf) if (isTag(c.import_tag)) get(c.import_tag).crf++;
     for (const b of exportRows.body) if (isTag(b.import_tag)) get(b.import_tag).body++;
     for (const r of allLabs) if (isTag(r.report_path)) get(r.report_path).labs++;
@@ -1681,13 +1818,15 @@ import SiteHeader from "../components/SiteHeader.astro";
     const n = (k: number, one: string, many: string) => k ? `${k} ${k === 1 ? one : many}` : "";
     $("appimportrows").innerHTML = imps.map((im) => `
       <div class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-white/[0.08] px-3 py-2 text-[13px]">
-        <span class="font-semibold text-text-primary">Export of ${esc(im.exported ? fmtDay(im.exported) : "an unknown date")}</span>
+        <span class="font-semibold text-text-primary">${im.kind === "csv" ? "Workouts CSV" : `Export of ${esc(im.exported ? fmtDay(im.exported) : "an unknown date")}`}</span>
         ${im.imported ? `<span class="text-text-muted">dropped here ${esc(fmtDay(im.imported))}</span>` : ""}
-        <span class="text-text-tertiary">${esc([n(im.weeks, "week", "weeks"), n(im.crf, "fitness test", "fitness tests"), n(im.body, "waist day", "waist days"), n(im.labs, "lab value", "lab values")].filter(Boolean).join(" · "))}</span>
+        <span class="text-text-tertiary">${esc(im.kind === "csv"
+          ? [n(im.weeks, "week", "weeks"), n(im.sessions, "session", "sessions"), im.from && im.to ? (im.from.slice(0, 4) === im.to.slice(0, 4) ? im.from.slice(0, 4) : `${im.from.slice(0, 4)} to ${im.to.slice(0, 4)}`) : "", "MET-hours estimated from heart rate"].filter(Boolean).join(" · ")
+          : [n(im.weeks, "week", "weeks"), n(im.crf, "fitness test", "fitness tests"), n(im.body, "waist day", "waist days"), n(im.labs, "lab value", "lab values")].filter(Boolean).join(" · "))}</span>
         ${canWrite() ? `<button type="button" data-rmimport="${esc(im.tag)}" class="ml-auto min-h-9 text-[12px] font-semibold text-text-tertiary hover:text-danger">Remove</button>` : ""}
       </div>`).join("");
     $("appimportrows").querySelectorAll("[data-rmimport]").forEach((b) => b.addEventListener("click", async () => {
-      if (!confirm("Remove everything this export brought? Its weeks, fitness tests, waist readings and lab values are deleted from this page. The app itself is untouched.")) return;
+      if (!confirm("Remove everything this file brought? Its weeks, fitness tests, waist readings and lab values are deleted from this page. The app itself is untouched.")) return;
       await removeImport((b as HTMLElement).dataset.rmimport!, person!);
       show("importcard", false); $("importcard").classList.remove("flex");
       msg("upmsg", "Removed; nothing from that export remains here.");
@@ -1788,7 +1927,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     if (!p?.id) { show("appimports", false); return; }
     const [w, c, b, synced] = await Promise.all([
       // every row an import left, however far back it reaches
-      pageAll(() => supabase.from("web_weeks").select("week_start, met_hours, minutes, moderate_min, vigorous_min, workouts, import_tag").eq("person_id", p.id).order("week_start", { ascending: true })),
+      pageAll(() => supabase.from("web_weeks").select("week_start, met_hours, minutes, moderate_min, vigorous_min, workouts, source, import_tag").eq("person_id", p.id).order("week_start", { ascending: true })),
       pageAll(() => supabase.from("web_crf").select("measured_on, vo2max, met_capacity, method, import_tag").eq("person_id", p.id).order("measured_on", { ascending: true })),
       pageAll(() => supabase.from("web_body").select("measured_on, waist_cm, weight_kg, import_tag").eq("person_id", p.id).order("measured_on", { ascending: true })),
       p.account_id ? loadSynced(p.account_id) : Promise.resolve(null),
@@ -4488,9 +4627,14 @@ import SiteHeader from "../components/SiteHeader.astro";
         if (r === "ok") filedN++; else if (r === "bad") failedN++; else skippedN++;
         continue;
       }
+      if (isCsv(f)) {
+        const r = await importCsv(f, rowId(i));
+        if (r === "ok") filedN++; else if (r === "bad") failedN++; else skippedN++;
+        continue;
+      }
       const isPdf = f.type === "application/pdf" || /\.pdf$/i.test(f.name);
       const isPhoto = PHOTO_TYPES.has(f.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name);
-      if (!isPdf && !isPhoto) { qset(rowId(i), "SKIPPED", "bad", "Not a PDF or a photo (JPG, PNG, WebP)"); skippedN++; continue; }
+      if (!isPdf && !isPhoto) { qset(rowId(i), "SKIPPED", "bad", "Not a PDF, a photo (JPG, PNG, WebP), the app's JSON export or a CSV of workouts"); skippedN++; continue; }
       if (f.size > 15 * 1024 * 1024) { qset(rowId(i), "SKIPPED", "bad", "Over 15 MB"); skippedN++; continue; }
       const asStored = `${f.size}|${pretty(f.name.replace(/[^\w.\-]+/g, "_")).toLowerCase()}`;
       if (isPdf && already.has(asStored)) { qset(rowId(i), "ALREADY HERE", "ok", "This file is in your archive. Its card's Read again re-reads it."); skippedN++; continue; }

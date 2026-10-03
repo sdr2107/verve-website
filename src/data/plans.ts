@@ -90,6 +90,8 @@ export const FEATURE_ROWS: { section: string; rows: { label: string; cells: [boo
     { label: "Values sent to the app", cells: [true, true, true, true] },
     { label: "Photos of reports", cells: [true, true, true, true] },
     { label: "The app's export, imported", cells: [false, true, true, true] },
+    { label: "A CSV of workouts, imported", cells: [false, true, true, true] },
+    { label: "Every year of history kept", cells: ["what sync brings", true, true, "every client's"] },
   ] },
   { section: "Your numbers", rows: [
     { label: "Overview, Labs, Reports", cells: [true, true, true, true] },
