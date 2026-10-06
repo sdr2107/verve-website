@@ -7,10 +7,11 @@
  * tables the app uses, with the study named under each. Everything on the
  * page is public and needs no app.
  *
- * The email box is a Substack subscription: the welcome email carries the
- * A4 sheet (public/start/your-first-fitness-number.pdf, made from
- * /start/sheet), and the letter follows once a week. No address is stored
- * here; Substack holds the list, as the privacy policy says.
+ * The email box is Substack's own embedded subscribe box, in an iframe, so
+ * the subscription completes on the page: the welcome email carries the A4
+ * sheet (public/start/your-first-fitness-number.pdf, made from /start/sheet),
+ * and the letter follows once a week. No address is stored here; Substack
+ * holds the list, as the privacy policy says.
  *
  * Built 2026-10-06 from the Design canvas "Your first fitness number".
  */
@@ -20,7 +21,7 @@ import Footer from "../components/Footer.astro";
 import { GET_APP_PATH, SUBSTACK_URL, X_URL } from "../data/site";
 import {
   TIERS_MEN, TIERS_WOMEN, TIER_SHORT, TIER_SOURCES, tierRanges,
-  RUN, WALK, RETEST, SAFETY, SUBSTACK_SUBSCRIBE_ACTION,
+  RUN, WALK, RETEST, SAFETY, SUBSTACK_EMBED,
 } from "../data/fitness-tiers";
 
 const LETTERS = "https://roplekarsudeep.substack.com";
@@ -54,20 +55,24 @@ const steps = [
     </section>
 
     <!-- The sheet by email: a Substack subscription; the welcome email carries the PDF -->
-    <section class="flex flex-wrap items-end gap-5 rounded-[20px] border border-white/[0.08] bg-white/[0.04] p-6 sm:p-7">
+    <section class="flex flex-wrap items-start gap-5 rounded-[20px] border border-white/[0.08] bg-white/[0.04] p-6 sm:p-7">
       <div class="flex min-w-[280px] flex-1 flex-col gap-1.5">
         <h2 class="text-[22px] font-bold text-text-primary">The sheet, as one A4 page</h2>
         <p class="text-[15px] text-text-secondary sm:text-base">Print it, do the test, write the result in the box. It arrives by email, and the letter follows once a week: one number, its threshold, the study, and what to check. Unsubscribe any time.</p>
       </div>
-      <form action={SUBSTACK_SUBSCRIBE_ACTION} method="post" target="_blank" class="flex min-w-[280px] flex-1 flex-col gap-3">
-        <div class="flex flex-wrap gap-2.5">
-          <label for="email" class="sr-only">Your email</label>
-          <input id="email" name="email" type="email" required autocomplete="email" placeholder="you@example.com"
-            class="min-h-12 min-w-[200px] flex-1 rounded-xl border border-white/[0.16] bg-[#15151F] px-4 text-[17px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
-          <button type="submit" class="min-h-12 rounded-xl bg-accent px-5 text-[17px] font-bold text-canvas transition-opacity hover:opacity-90">Send me the sheet</button>
+      <div class="flex min-w-[280px] flex-1 flex-col gap-2">
+        <div class="overflow-hidden rounded-xl bg-white">
+          <iframe
+            src={SUBSTACK_EMBED}
+            title="Get the sheet by email: subscribe on Substack"
+            width="100%"
+            height="320"
+            style="border: 0; display: block"
+            loading="lazy"
+          ></iframe>
         </div>
         <p class="text-[13px] leading-snug text-text-tertiary">Substack sends it, from the same list as <a href={LETTERS} class="text-accent-light hover:underline">the letters</a>. One email with the sheet, then one a week.</p>
-      </form>
+      </div>
     </section>
 
     <!-- Three steps -->

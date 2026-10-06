@@ -94,5 +94,10 @@ export const SAFETY =
 /** Where the A4 sheet lives; linked from the welcome email, not from the page. */
 export const SHEET_PDF = "/start/your-first-fitness-number.pdf";
 
-/** The Substack form the page posts to; a new free subscriber gets the welcome email with the sheet. */
-export const SUBSTACK_SUBSCRIBE_ACTION = "https://roplekarsudeep.substack.com/api/v1/free?nojs=true";
+/**
+ * Substack's embedded subscribe box, in an iframe: it subscribes in place
+ * and a new free subscriber gets the welcome email with the sheet. A plain
+ * form posting to Substack's no-script endpoint was tried first and bounced
+ * the person to the publication page to type the address again.
+ */
+export const SUBSTACK_EMBED = "https://roplekarsudeep.substack.com/embed";
