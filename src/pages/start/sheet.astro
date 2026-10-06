@@ -1,0 +1,136 @@
+---
+/**
+ * /start/sheet — the A4 sheet, as a page to print.
+ *
+ * The same content as /start, on one white page, for the PDF the welcome
+ * email carries. Not linked from the site and marked noindex; the PDF at
+ * public/start/your-first-fitness-number.pdf is printed from this page
+ * (headless Chrome, A4, no margins) whenever the data file changes:
+ *
+ *   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+ *     --headless=new --no-pdf-header-footer \
+ *     --print-to-pdf=public/start/your-first-fitness-number.pdf \
+ *     http://localhost:4321/start/sheet/
+ *
+ * Standalone on purpose: no site header, no footer, its own light palette,
+ * so the print is one page with nothing to cut.
+ */
+import { TIERS_MEN, TIERS_WOMEN, TIER_SHORT, TIER_SOURCES, tierRanges, RUN, WALK, RETEST, SAFETY } from "../../data/fitness-tiers";
+
+const tables = [
+  { title: "Men, METs by age", rows: TIERS_MEN },
+  { title: "Women, METs by age", rows: TIERS_WOMEN },
+];
+const resultCols = ["Date", "Walk or run", "Metres", "VO2max", "METs", "Tier"];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Your first fitness number — the sheet</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;800&family=JetBrains+Mono:wght@400;600&display=swap" />
+    <style>
+      @page { size: A4; margin: 0; }
+      html, body { margin: 0; background: #fff; }
+      body { font-family: "Hanken Grotesk", system-ui, sans-serif; color: #141413; font-size: 12.5px; line-height: 1.4; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .sheet { width: 210mm; height: 297mm; box-sizing: border-box; padding: 12mm 13mm 10mm; display: flex; flex-direction: column; gap: 14px; margin: 0 auto; overflow: hidden; }
+      .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+      .eyebrow { margin: 0; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #4338CA; }
+      h1 { margin: 0; font-size: 30px; line-height: 1.05; letter-spacing: -0.02em; font-weight: 800; }
+      h2 { margin: 0; font-size: 14px; font-weight: 700; }
+      p { margin: 0; }
+      .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; border-bottom: 2px solid #141413; padding-bottom: 12px; }
+      .mark { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 16px; white-space: nowrap; }
+      .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+      .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      .card { box-sizing: border-box; padding: 12px; border: 1px solid #D6D3D1; border-radius: 8px; display: flex; flex-direction: column; gap: 5px; }
+      .step { font-size: 10px; color: #4338CA; }
+      .warn { padding: 8px 12px; border-left: 3px solid #B45309; background: #FEF3C7; font-size: 11.5px; }
+      .eq { font-size: 11px; line-height: 1.6; }
+      .sub { color: #44403C; }
+      .src { color: #78716C; font-size: 10.5px; }
+      table { width: 100%; border-collapse: collapse; font-size: 10px; }
+      th { padding: 4px 3px; border-bottom: 1px solid #141413; font-weight: 400; color: #57534E; text-align: left; }
+      td { padding: 4px 3px; text-align: left; }
+      td.age { color: #57534E; }
+      .note { color: #57534E; font-size: 10.5px; }
+      .result { box-sizing: border-box; padding: 12px 14px; border: 2px solid #141413; border-radius: 8px; display: flex; flex-direction: column; gap: 8px; }
+      .cells { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; font-size: 10px; color: #57534E; }
+      .cell { border-bottom: 1px solid #A8A29E; padding-bottom: 18px; }
+      .foot { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; border-top: 1px solid #D6D3D1; padding-top: 10px; font-size: 11px; color: #57534E; }
+    </style>
+  </head>
+  <body>
+    <div class="sheet">
+      <div class="head">
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <p class="eyebrow mono">A free sheet · Dr Sudeep Roplekar, radiologist</p>
+          <h1>Your first fitness number</h1>
+          <p style="font-size: 13px; color: #44403C">Six minutes of walking, or twelve of running, on flat ground. Then one line of arithmetic and a table.</p>
+        </div>
+        <div class="mark">
+          <svg width="24" height="24" viewBox="0 0 100 100" aria-hidden="true"><path d="M57 11 A40 40 0 0 1 81 82" fill="none" stroke="#10B981" stroke-width="10" stroke-linecap="round"></path><path d="M74 88 A40 40 0 0 1 12 62" fill="none" stroke="#7C5CFC" stroke-width="10" stroke-linecap="round"></path><path d="M10 41 A40 40 0 0 1 43 11" fill="none" stroke="#F59E0B" stroke-width="10" stroke-linecap="round"></path><text x="50" y="64" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-weight="800" font-size="40" fill="#141413">V</text></svg>
+          Verve
+        </div>
+      </div>
+
+      <div class="grid3">
+        <div class="card"><span class="step mono">1 · PICK YOUR TEST</span><p>Walk six minutes as far as you can. If you already run, run twelve minutes. Flat ground: a track, a park loop, a quiet road.</p></div>
+        <div class="card"><span class="step mono">2 · MEASURE THE DISTANCE</span><p>In metres. A 400 m track makes it easy; otherwise a phone map or a watch. Write it down the moment you stop.</p></div>
+        <div class="card"><span class="step mono">3 · FIND YOUR TIER</span><p>Turn the distance into METs with the line below, then read your age row. One MET is you at rest; ten is ten times that.</p></div>
+      </div>
+
+      <p class="warn">{SAFETY}</p>
+
+      <div class="grid2">
+        <div class="card">
+          <h2>If you ran twelve minutes</h2>
+          <p class="eq mono">{RUN.lines[0]}<br />{RUN.lines[1]}</p>
+          <p class="sub">2,400 m: (2400 − 504.9) ÷ 44.73 = 42.4; 42.4 ÷ 3.5 = <strong>{RUN.exampleMets}</strong>.</p>
+          <p class="src">{RUN.source}</p>
+        </div>
+        <div class="card">
+          <h2>If you walked six minutes</h2>
+          <p class="eq mono">{WALK.lines[0]}<br />{WALK.lines[1]} · {WALK.lines[2]}</p>
+          <p class="sub">A man of 45, 80 kg, 600 m: 61.1 − 11.1 − 18 − 16 + 12 = 28.1; 28.1 ÷ 3.5 = <strong>{WALK.exampleMets}</strong>.</p>
+          <p class="src">{WALK.source}</p>
+        </div>
+      </div>
+
+      <div class="grid2">
+        {tables.map((t) => (
+          <div>
+            <h2 style="margin-bottom: 6px">{t.title}</h2>
+            <table class="mono">
+              <thead><tr><th>Age</th>{TIER_SHORT.map((l) => <th>{l}</th>)}</tr></thead>
+              <tbody>
+                {t.rows.map((row) => (
+                  <tr><td class="age">{row.age}</td>{tierRanges(row).map((r) => <td>{r}</td>)}</tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
+      </div>
+      <p class="note">{TIER_SOURCES.over40} {TIER_SOURCES.under40} {TIER_SOURCES.meaning}</p>
+
+      <div class="result">
+        <h2>Your result. Keep this sheet, and test again.</h2>
+        <div class="cells mono">
+          {resultCols.map((c) => <div class="cell">{c}</div>)}
+          {resultCols.map(() => <div class="cell"></div>)}
+        </div>
+        <p class="sub" style="font-size: 11.5px">The number only means something next to the one before it. {RETEST}</p>
+      </div>
+
+      <div class="foot">
+        <p style="max-width: 520px">Written by Dr Sudeep Roplekar, radiologist, who built Verve to see his own numbers move against the thresholds the studies use. The app does this arithmetic for you and reads twenty other numbers the same way. The letters: roplekarsudeep.substack.com</p>
+        <p class="mono" style="font-size: 11px; color: #141413; white-space: nowrap">verve-app.health/start</p>
+      </div>
+    </div>
+  </body>
+</html>
