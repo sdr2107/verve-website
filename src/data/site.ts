@@ -46,7 +46,7 @@ export const YOUTUBE_URL = "https://www.youtube.com/@verveapp.health";
 export const PRIVACY_URL = "/privacy/";
 export const TERMS_URL = "/terms/";
 
-export type NavKey = "science" | "my-health" | "coach" | "plans";
+export type NavKey = "start" | "science" | "my-health" | "coach" | "plans";
 
 export interface NavLink {
   key: NavKey;
@@ -57,6 +57,8 @@ export interface NavLink {
 }
 
 export const NAV: NavLink[] = [
+  // the free sheet: where a visitor with no number yet begins
+  { key: "start", label: "Start", href: "/start" },
   { key: "science", label: "Science", href: "/science" },
   { key: "my-health", label: "My health", href: "/my-health" },
   // the same account, a second door: it lands on the people who share with you
