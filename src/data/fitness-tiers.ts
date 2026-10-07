@@ -61,13 +61,13 @@ export function tierRanges(row: TierRow): string[] {
 export const TIER_SOURCES = {
   over40: "Ages 40 and over: Mandsager K et al., JAMA Network Open, 2018, 122,007 patients at the Cleveland Clinic, treadmill tested.",
   under40: "Under 40: Cooper Institute and ACSM norms, 1997, VO2max ÷ 3.5.",
-  meaning: "In the Cleveland Clinic study, being below average rather than above carried about the same risk of dying as smoking or diabetes. A tier is a place in a table, not a score, and it moves.",
+  meaning: "In the Cleveland Clinic study, below average rather than above carried about the same risk of dying as smoking or diabetes. A tier is a place in a table, and it moves.",
 };
 
 /** The Cooper 12-minute run (Cooper KH, JAMA, 1968), as the app computes it. */
 export const RUN = {
   lines: ["VO2max = (metres − 504.9) ÷ 44.73", "METs = VO2max ÷ 3.5"],
-  example: "Example: 2,400 m. (2400 − 504.9) ÷ 44.73 = 42.4. Then 42.4 ÷ 3.5 = 12.1 METs.",
+  example: "2,400 m: (2400 − 504.9) ÷ 44.73 = 42.4, and 42.4 ÷ 3.5 = 12.1 METs.",
   exampleMets: "12.1 METs",
   source: "Cooper KH, JAMA, 1968.",
 };
@@ -79,17 +79,17 @@ export const WALK = {
     "sex: 1 for a man, 2 for a woman",
     "METs = VO2max ÷ 3.5",
   ],
-  example: "Example: a man of 45, 80 kg, 600 m. 61.1 − 11.1 − 18 − 16 + 12 = 28.1. Then 28.1 ÷ 3.5 = 8.0 METs.",
+  example: "A man of 45, 80 kg, 600 m: 61.1 − 11.1 − 18 − 16 + 12 = 28.1, and 28.1 ÷ 3.5 = 8.0 METs.",
   exampleMets: "8.0 METs",
-  source: "Hong SH et al., 2019, from a study of young adults. Over 60, Verve uses a line that also takes height (Šagát et al., J Clin Med, 2023).",
+  source: "Hong et al., 2019, young adults. Over 60 the app uses a line that also takes height (Šagát et al., 2023).",
 };
 
 /** The retest window, as the app states it (thresholds file, crfRetestOutlook). */
 export const RETEST =
-  "Test again after about eight weeks of training: a real change in fitness takes that long to show, and sooner is hard to tell from a good or bad day (Hickson et al., Medicine and Science in Sports and Exercise, 1981). That is the window the app uses.";
+  "Test again after about eight weeks of training. Sooner is hard to tell from a good or bad day (Hickson et al., 1981). That is the window the app uses.";
 
 export const SAFETY =
-  "If you have a heart condition, get chest pain or breathlessness on exertion, or have been told not to exert yourself, do the walk, not the run, and ask your doctor first.";
+  "A heart condition, chest pain on exertion, or told not to exert yourself? Walk, do not run, and ask your doctor first.";
 
 /** Where the A4 sheet lives; linked from the welcome email, not from the page. */
 export const SHEET_PDF = "/start/your-first-fitness-number.pdf";
@@ -101,4 +101,4 @@ export const SHEET_PDF = "/start/your-first-fitness-number.pdf";
  * changes with it for new rows only.
  */
 export const NEWSLETTER_CONSENT =
-  "Your address is used for the Verve newsletter: one letter a week on one number, its threshold, the study behind it, and what changed in the app. Nothing else, and no one else. Unsubscribe any time by replying to a letter.";
+  "We use your address for the Verve newsletter, one letter a week, and for nothing else. Unsubscribe any time by replying to a letter.";

@@ -33,15 +33,15 @@ const tables = [
   { title: "Women", rows: TIERS_WOMEN },
 ];
 const steps = [
-  { n: "1", title: "Pick your test", body: "Walk for six minutes as far as you can. If you already run, run for twelve minutes instead. Flat ground: a track, a park loop, a quiet road." },
-  { n: "2", title: "Measure the distance", body: "In metres. A 400 m track makes it easy. Otherwise a phone map or a watch. Write it down the moment you stop." },
-  { n: "3", title: "Find your tier", body: "Turn the distance into METs with the line below, then read your age row in the table. METs is the unit exercise tests use: one MET is you at rest." },
+  { n: "1", title: "Pick your test", body: "Walk six minutes as far as you can, on flat ground. Runners: run twelve." },
+  { n: "2", title: "Measure the distance", body: "In metres. A track, a watch, or a phone map." },
+  { n: "3", title: "Find your tier", body: "Turn metres into METs below, then read your age row. One MET is you at rest." },
 ];
 ---
 
 <Layout
   title="Your first fitness number — a free sheet by Dr Sudeep Roplekar"
-  description="Six minutes of walking or twelve of running, one line of arithmetic, and the fitness tier tables the studies use, with the study named. Free, no app needed."
+  description="Walk six minutes or run twelve, one line of arithmetic, and the fitness tier tables the studies use. Free, no app needed."
   cardType="summary"
 >
   <SiteHeader current="start" />
@@ -50,18 +50,18 @@ const steps = [
 
     <!-- Hero -->
     <section class="flex max-w-[760px] flex-col gap-5">
-      <span class="font-mono text-xs font-semibold uppercase tracking-[0.1em] text-accent-light">A free sheet · by Dr Sudeep Roplekar, radiologist</span>
+      <span class="font-mono text-xs font-semibold uppercase tracking-[0.1em] text-accent-light">A free sheet · Dr Sudeep Roplekar, radiologist</span>
       <h1 class="text-[40px] font-extrabold leading-[1.04] tracking-[-0.03em] text-text-primary sm:text-[56px]">Your first fitness number</h1>
-      <p class="text-[19px] font-medium leading-[1.35] text-[#c7d2fe] sm:text-[22px]">Six minutes of walking, or twelve of running, on flat ground. That is the whole test, and it gives you the number almost nobody has on file.</p>
-      <p class="text-[16px] leading-relaxed text-text-secondary sm:text-[18px]">The tables below are the ones Verve uses, with the study named under each. No app needed to use this page. The app does the arithmetic for you, and tells you when to test again.</p>
+      <p class="text-[19px] font-medium leading-[1.35] text-[#c7d2fe] sm:text-[22px]">Walk six minutes, or run twelve. One line of arithmetic. A table.</p>
+      <p class="text-[16px] leading-relaxed text-text-secondary sm:text-[18px]">The number almost nobody has on file. No app needed.</p>
     </section>
 
     <!-- The sheet by email: the site's own box. The address goes to Supabase
          with the consent sentence; the sheet opens at once. -->
     <section class="flex flex-wrap items-start gap-5 rounded-[20px] border border-white/[0.08] bg-white/[0.04] p-6 sm:p-7">
       <div class="flex min-w-[280px] flex-1 flex-col gap-1.5">
-        <h2 class="text-[22px] font-bold text-text-primary">The sheet, as one A4 page</h2>
-        <p class="text-[15px] text-text-secondary sm:text-base">Print it, do the test, write the result in the box. Leave your email and the sheet opens right away; the letter follows once a week.</p>
+        <h2 class="text-[22px] font-bold text-text-primary">Get the sheet</h2>
+        <p class="text-[15px] text-text-secondary sm:text-base">One A4 page: the test, the arithmetic, the table, and a box for your result. Leave your email and it opens at once.</p>
       </div>
       <form id="sheetform" class="flex min-w-[280px] flex-1 flex-col gap-3" novalidate>
         <div class="flex flex-wrap gap-2.5">
@@ -74,9 +74,9 @@ const steps = [
         <p id="sheetmsg" class="hidden text-[14px] leading-snug text-text-primary" role="status" aria-live="polite"></p>
       </form>
       <div id="sheetdone" class="hidden min-w-[280px] flex-1 flex-col gap-3 rounded-xl border border-accent/40 bg-accent/[0.08] p-5">
-        <p class="text-[17px] font-bold text-text-primary">You are on the list. Here is the sheet.</p>
+        <p class="text-[17px] font-bold text-text-primary">Here is your sheet.</p>
         <a id="sheetlink" href={SHEET_PDF} target="_blank" rel="noopener" class="inline-flex min-h-11 items-center self-start rounded-xl bg-accent px-5 font-bold text-canvas transition-opacity hover:opacity-90">Open the A4 sheet (PDF)</a>
-        <p class="text-[14px] text-text-secondary">The letter comes once a week. Reply to any of them to stop.</p>
+        <p class="text-[14px] text-text-secondary">One letter a week. Reply to any of them to stop.</p>
       </div>
     </section>
 
@@ -100,13 +100,13 @@ const steps = [
       <h2 class="text-[26px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[30px]">The arithmetic</h2>
       <div class="grid gap-4 sm:grid-cols-2">
         <div class="flex flex-col gap-3 rounded-2xl border border-white/[0.08] p-6">
-          <h3 class="text-[20px] font-bold text-text-primary">If you ran twelve minutes</h3>
+          <h3 class="text-[20px] font-bold text-text-primary">Ran twelve minutes</h3>
           <p class="font-mono text-[14px] leading-[1.7] text-[#c7d2fe] sm:text-[15px]">{RUN.lines.map((l, i) => (<>{i > 0 && <br />}{l}</>))}</p>
           <p class="text-base text-text-secondary">{RUN.example.replace(RUN.exampleMets + ".", "")}<strong class="text-text-primary">{RUN.exampleMets}</strong>.</p>
           <p class="text-sm text-text-tertiary">{RUN.source}</p>
         </div>
         <div class="flex flex-col gap-3 rounded-2xl border border-white/[0.08] p-6">
-          <h3 class="text-[20px] font-bold text-text-primary">If you walked six minutes</h3>
+          <h3 class="text-[20px] font-bold text-text-primary">Walked six minutes</h3>
           <p class="font-mono text-[14px] leading-[1.7] text-[#c7d2fe] sm:text-[15px]">{WALK.lines.map((l, i) => (<>{i > 0 && <br />}{l}</>))}</p>
           <p class="text-base text-text-secondary">{WALK.example.replace(WALK.exampleMets + ".", "")}<strong class="text-text-primary">{WALK.exampleMets}</strong>.</p>
           <p class="text-sm text-text-tertiary">{WALK.source}</p>
@@ -117,7 +117,7 @@ const steps = [
     <!-- The tables -->
     <section class="flex flex-col gap-5">
       <h2 class="text-[26px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[30px]">Where your number lands</h2>
-      <p class="max-w-[760px] text-text-secondary">METs by age. {TIER_SOURCES.meaning}</p>
+      <p class="max-w-[760px] text-text-secondary">METs, by age. {TIER_SOURCES.meaning}</p>
       <div class="grid gap-4 sm:grid-cols-2">
         {tables.map((t) => (
           <div class="overflow-x-auto rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5">
@@ -143,18 +143,18 @@ const steps = [
           </div>
         ))}
       </div>
-      <p class="max-w-[900px] text-sm text-text-tertiary">{TIER_SOURCES.over40} {TIER_SOURCES.under40} Same tables as the app, <a href="/science" class="text-accent-light hover:underline">verve-app.health/science</a>.</p>
+      <p class="max-w-[900px] text-sm text-text-tertiary">{TIER_SOURCES.over40} {TIER_SOURCES.under40} The same tables as the app; the studies are on the <a href="/science" class="text-accent-light hover:underline">Science</a> page.</p>
     </section>
 
     <!-- After the test: on paper, or in the app -->
     <section class="grid gap-4 sm:grid-cols-2">
       <div class="flex flex-col gap-2.5 rounded-2xl border border-white/[0.08] p-6">
-        <h3 class="text-[20px] font-bold text-text-primary">On paper: write it down, test again in eight weeks</h3>
-        <p class="text-base text-text-secondary">Date, test, metres, METs, tier. One line. The number only means something next to the one before it. {RETEST}</p>
+        <h3 class="text-[20px] font-bold text-text-primary">On paper</h3>
+        <p class="text-base text-text-secondary">Write it down: date, test, metres, METs, tier. {RETEST}</p>
       </div>
       <div class="flex flex-col gap-2.5 rounded-2xl border border-accent/40 bg-accent/[0.08] p-6">
-        <h3 class="text-[20px] font-bold text-text-primary">In the app: it does the arithmetic and the reminder</h3>
-        <p class="text-base text-[#c7d2fe]">Log the test and Verve turns the metres into METs, places them in the table, and tells you when eight weeks are up. It reads twenty other numbers the same way: movement, sleep, heart and blood, each against its threshold, each with its study named.</p>
+        <h3 class="text-[20px] font-bold text-text-primary">In the app</h3>
+        <p class="text-base text-[#c7d2fe]">Verve does the arithmetic, places the number in the table, and tells you when eight weeks are up. Twenty other numbers get the same treatment.</p>
         <a href={GET_APP_PATH} target="_blank" rel="noopener" class="mt-1.5 inline-flex min-h-11 items-center self-start rounded-xl bg-accent px-5 font-bold text-canvas transition-opacity hover:opacity-90">Get the app</a>
       </div>
     </section>
@@ -163,7 +163,7 @@ const steps = [
     <section class="flex flex-wrap items-center gap-5 border-t border-white/[0.08] pt-6">
       <div class="flex min-w-[280px] flex-1 flex-col gap-1">
         <p class="font-bold text-text-primary">Dr Sudeep Roplekar</p>
-        <p class="text-base text-text-secondary">Radiologist. I built Verve to see my own numbers move against the thresholds the studies use. I write one letter a week on one number. <a href={SUBSTACK_URL} class="text-accent-light hover:underline">Read the letters</a> · <a href={X_URL} class="text-accent-light hover:underline">X</a></p>
+        <p class="text-base text-text-secondary">Radiologist. I built Verve to see my own numbers against the thresholds the studies use. One letter a week. <a href={SUBSTACK_URL} class="text-accent-light hover:underline">The letters</a> · <a href={X_URL} class="text-accent-light hover:underline">X</a></p>
       </div>
     </section>
 
