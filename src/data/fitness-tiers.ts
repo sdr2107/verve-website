@@ -95,9 +95,10 @@ export const SAFETY =
 export const SHEET_PDF = "/start/your-first-fitness-number.pdf";
 
 /**
- * Substack's embedded subscribe box, in an iframe: it subscribes in place
- * and a new free subscriber gets the welcome email with the sheet. A plain
- * form posting to Substack's no-script endpoint was tried first and bounced
- * the person to the publication page to type the address again.
+ * The sentence a person agrees to when they leave an address on /start. It
+ * is stored with the row in newsletter_signups, so the record says what was
+ * consented to, not just when. Change the wording here and the stored text
+ * changes with it for new rows only.
  */
-export const SUBSTACK_EMBED = "https://roplekarsudeep.substack.com/embed";
+export const NEWSLETTER_CONSENT =
+  "Your address is used for the Verve newsletter: one letter a week on one number, its threshold, the study behind it, and what changed in the app. Nothing else, and no one else. Unsubscribe any time by replying to a letter.";

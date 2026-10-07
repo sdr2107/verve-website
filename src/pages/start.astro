@@ -7,11 +7,12 @@
  * tables the app uses, with the study named under each. Everything on the
  * page is public and needs no app.
  *
- * The email box is Substack's own embedded subscribe box, in an iframe, so
- * the subscription completes on the page: the welcome email carries the A4
- * sheet (public/start/your-first-fitness-number.pdf, made from /start/sheet),
- * and the letter follows once a week. No address is stored here; Substack
- * holds the list, as the privacy policy says.
+ * The email box is the site's own: the address and the consent sentence go
+ * into newsletter_signups in Supabase (anon insert only; nobody reads it
+ * through the API), the A4 sheet opens on the page at once, and the letter
+ * follows once a week after the list is moved to Substack by hand. Nothing
+ * depends on a Substack account. The sheet lives at
+ * public/start/your-first-fitness-number.pdf, printed from /start/sheet.
  *
  * Built 2026-10-06 from the Design canvas "Your first fitness number".
  */
@@ -21,8 +22,9 @@ import Footer from "../components/Footer.astro";
 import { GET_APP_PATH, SUBSTACK_URL, X_URL } from "../data/site";
 import {
   TIERS_MEN, TIERS_WOMEN, TIER_SHORT, TIER_SOURCES, tierRanges,
-  RUN, WALK, RETEST, SAFETY, SUBSTACK_EMBED,
+  RUN, WALK, RETEST, SAFETY, NEWSLETTER_CONSENT, SHEET_PDF,
 } from "../data/fitness-tiers";
+import { PRIVACY_URL } from "../data/site";
 
 const LETTERS = "https://roplekarsudeep.substack.com";
 const tierColor = ["text-danger", "text-warning", "text-accent-light", "text-cyan", "text-success"];
@@ -42,7 +44,7 @@ const steps = [
   description="Six minutes of walking or twelve of running, one line of arithmetic, and the fitness tier tables the studies use, with the study named. Free, no app needed."
   cardType="summary"
 >
-  <SiteHeader />
+  <SiteHeader current="start" />
 
   <main class="mx-auto flex w-full max-w-[1040px] flex-col gap-14 px-4 pb-20 pt-12 sm:px-6 lg:gap-16 lg:pt-14">
 
@@ -54,24 +56,27 @@ const steps = [
       <p class="text-[16px] leading-relaxed text-text-secondary sm:text-[18px]">The tables below are the ones Verve uses, with the study named under each. No app needed to use this page. The app does the arithmetic for you, and tells you when to test again.</p>
     </section>
 
-    <!-- The sheet by email: a Substack subscription; the welcome email carries the PDF -->
+    <!-- The sheet by email: the site's own box. The address goes to Supabase
+         with the consent sentence; the sheet opens at once. -->
     <section class="flex flex-wrap items-start gap-5 rounded-[20px] border border-white/[0.08] bg-white/[0.04] p-6 sm:p-7">
       <div class="flex min-w-[280px] flex-1 flex-col gap-1.5">
         <h2 class="text-[22px] font-bold text-text-primary">The sheet, as one A4 page</h2>
-        <p class="text-[15px] text-text-secondary sm:text-base">Print it, do the test, write the result in the box. It arrives by email, and the letter follows once a week: one number, its threshold, the study, and what to check. Unsubscribe any time.</p>
+        <p class="text-[15px] text-text-secondary sm:text-base">Print it, do the test, write the result in the box. Leave your email and the sheet opens right away; the letter follows once a week.</p>
       </div>
-      <div class="flex min-w-[280px] flex-1 flex-col gap-2">
-        <div class="overflow-hidden rounded-xl bg-white">
-          <iframe
-            src={SUBSTACK_EMBED}
-            title="Get the sheet by email: subscribe on Substack"
-            width="100%"
-            height="320"
-            style="border: 0; display: block"
-            loading="lazy"
-          ></iframe>
+      <form id="sheetform" class="flex min-w-[280px] flex-1 flex-col gap-3" novalidate>
+        <div class="flex flex-wrap gap-2.5">
+          <label for="email" class="sr-only">Your email</label>
+          <input id="email" name="email" type="email" required autocomplete="email" placeholder="you@example.com"
+            class="min-h-12 min-w-[200px] flex-1 rounded-xl border border-white/[0.16] bg-[#15151F] px-4 text-[17px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
+          <button type="submit" id="sheetsubmit" class="min-h-12 rounded-xl bg-accent px-5 text-[17px] font-bold text-canvas transition-opacity hover:opacity-90 disabled:opacity-60">Send me the sheet</button>
         </div>
-        <p class="text-[13px] leading-snug text-text-tertiary">Substack sends it, from the same list as <a href={LETTERS} class="text-accent-light hover:underline">the letters</a>. One email with the sheet, then one a week.</p>
+        <p class="text-[13px] leading-snug text-text-tertiary">{NEWSLETTER_CONSENT} <a href={PRIVACY_URL} class="text-accent-light hover:underline">Privacy policy</a>.</p>
+        <p id="sheetmsg" class="hidden text-[14px] leading-snug text-text-primary" role="status" aria-live="polite"></p>
+      </form>
+      <div id="sheetdone" class="hidden min-w-[280px] flex-1 flex-col gap-3 rounded-xl border border-accent/40 bg-accent/[0.08] p-5">
+        <p class="text-[17px] font-bold text-text-primary">You are on the list. Here is the sheet.</p>
+        <a id="sheetlink" href={SHEET_PDF} target="_blank" rel="noopener" class="inline-flex min-h-11 items-center self-start rounded-xl bg-accent px-5 font-bold text-canvas transition-opacity hover:opacity-90">Open the A4 sheet (PDF)</a>
+        <p class="text-[14px] text-text-secondary">The letter comes once a week. Reply to any of them to stop.</p>
       </div>
     </section>
 
@@ -166,3 +171,41 @@ const steps = [
 
   <Footer />
 </Layout>
+
+<script>
+  import { supabase } from "../lib/supabase";
+  import { NEWSLETTER_CONSENT } from "../data/fitness-tiers";
+
+  const form = document.getElementById("sheetform") as HTMLFormElement;
+  const input = document.getElementById("email") as HTMLInputElement;
+  const button = document.getElementById("sheetsubmit") as HTMLButtonElement;
+  const msg = document.getElementById("sheetmsg") as HTMLParagraphElement;
+  const done = document.getElementById("sheetdone") as HTMLDivElement;
+
+  function say(text: string) {
+    msg.textContent = text;
+    msg.classList.toggle("hidden", !text);
+  }
+  function finish() {
+    form.classList.add("hidden");
+    done.classList.remove("hidden");
+    done.classList.add("flex");
+    (document.getElementById("sheetlink") as HTMLAnchorElement).focus();
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = input.value.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { say("That does not look like an email address."); input.focus(); return; }
+    button.disabled = true;
+    say("Saving…");
+    // a signed-in person's row carries their id, so the two lists can be joined later
+    let userId: string | null = null;
+    try { userId = (await supabase.auth.getSession()).data.session?.user.id ?? null; } catch { /* not signed in */ }
+    const { error } = await supabase.from("newsletter_signups").insert({ email, consent_text: NEWSLETTER_CONSENT, source: "start", user_id: userId });
+    button.disabled = false;
+    if (!error || error.code === "23505") { say(""); finish(); return; }   // 23505: already on the list, which is fine
+    say("Could not save that just now. The sheet is still yours: open it below, and try the email again later.");
+    done.classList.remove("hidden"); done.classList.add("flex");
+  });
+</script>
