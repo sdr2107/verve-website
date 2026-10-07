@@ -8,7 +8,8 @@
  * its mark and its handle, the same five the header's Social opens; they
  * rise into place one after another as the footer scrolls into view. Then
  * the row the footer always had: the mark, the year, and the page links,
- * plus Home and the privacy policy. All addresses come from data/site.ts.
+ * the same NAV the header prints, plus Home and the privacy policy. All
+ * addresses come from data/site.ts.
  */
 interface Props {
   /** Show the "Home" link — omit on the homepage itself. */
@@ -18,7 +19,7 @@ interface Props {
 }
 const { showHome = true, showScience = true } = Astro.props;
 
-import { SOCIAL, PRIVACY_URL } from "../data/site";
+import { NAV, SOCIAL, PRIVACY_URL } from "../data/site";
 import SocialIcon from "./SocialIcon.astro";
 ---
 
@@ -55,11 +56,9 @@ import SocialIcon from "./SocialIcon.astro";
       </div>
       <nav class="flex flex-wrap justify-center gap-6 text-sm text-text-secondary" aria-label="Pages">
         {showHome && <a href="/" class="hover:text-text-primary">Home</a>}
-        {showScience && <a href="/science" class="hover:text-text-primary">Science</a>}
-        <a href="/my-health" class="hover:text-text-primary">My health</a>
-        <a href="/coach" class="hover:text-text-primary">Coach</a>
-        <a href="/clinician" class="hover:text-text-primary">Clinician</a>
-        <a href="/start" class="hover:text-text-primary">Start</a>
+        {NAV.filter((l) => showScience || l.key !== "science").map((l) => (
+          <a href={l.href} class="hover:text-text-primary">{l.label}</a>
+        ))}
         <a href={PRIVACY_URL} class="hover:text-text-primary">Privacy Policy</a>
       </nav>
     </div>

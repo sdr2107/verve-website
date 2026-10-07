@@ -46,7 +46,7 @@ export const YOUTUBE_URL = "https://www.youtube.com/@verveapp.health";
 export const PRIVACY_URL = "/privacy/";
 export const TERMS_URL = "/terms/";
 
-export type NavKey = "start" | "science" | "my-health" | "coach" | "plans";
+export type NavKey = "start" | "science" | "my-health" | "coach" | "clinician" | "plans";
 
 export interface NavLink {
   key: NavKey;
@@ -58,11 +58,12 @@ export interface NavLink {
 
 export const NAV: NavLink[] = [
   // the free sheet: where a visitor with no number yet begins
-  { key: "start", label: "Start", href: "/start" },
+  { key: "start", label: "Start here", href: "/start" },
   { key: "science", label: "Science", href: "/science" },
   { key: "my-health", label: "My health", href: "/my-health" },
-  // the same account, a second door: it lands on the people who share with you
+  // the same account, two more doors: each lands on the people who share with you
   { key: "coach", label: "Coach", href: "/coach" },
+  { key: "clinician", label: "Clinician", href: "/clinician" },
   // the plans page joins the nav when plans open; until then it is a preview at /plans
   ...(PLANS_OPEN ? [{ key: "plans" as const, label: "Plans", href: "/plans" }] : []),
 ];
