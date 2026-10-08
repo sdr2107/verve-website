@@ -61,9 +61,6 @@ export const NAV: NavLink[] = [
   { key: "start", label: "Start here", href: "/start" },
   { key: "science", label: "Science", href: "/science" },
   { key: "my-health", label: "My health", href: "/my-health" },
-  // the same account, two more doors: each lands on the people who share with you
-  { key: "coach", label: "Coach", href: "/coach" },
-  { key: "clinician", label: "Clinician", href: "/clinician" },
   // the plans page joins the nav when plans open; until then it is a preview at /plans
   ...(PLANS_OPEN ? [{ key: "plans" as const, label: "Plans", href: "/plans" }] : []),
 ];
@@ -82,6 +79,23 @@ export interface SocialLink {
  * The accounts, under the one heading Social in the header and the footer.
  * X and Substack are Sudeep's own; TikTok, Instagram and YouTube are the app's.
  */
+/**
+ * The two doors for professionals. Out of the header since 8 October 2026:
+ * one Sign in works out who is who, so nobody needs a door. The pages
+ * stay as the pitch a coach or a doctor reads first, reached from Start
+ * here and from the footer.
+ */
+export const PRO_PAGES: NavLink[] = [
+  { key: "coach", label: "Coach", href: "/coach" },
+  { key: "clinician", label: "Clinician", href: "/clinician" },
+];
+
+/**
+ * The free fifteen-minute call: the Calendly event's address. Null until
+ * the event exists; Start here shows the call section only when it is set.
+ */
+export const CALENDLY_URL: string | null = null;
+
 export const SOCIAL: SocialLink[] = [
   { key: "x", label: "X", handle: "@RoplekarSudeep", href: X_URL },
   { key: "substack", label: "Substack", handle: "@roplekarsudeep", href: SUBSTACK_URL },

@@ -19,7 +19,7 @@ interface Props {
 }
 const { showHome = true, showScience = true } = Astro.props;
 
-import { NAV, SOCIAL, PRIVACY_URL } from "../data/site";
+import { NAV, PRO_PAGES, SOCIAL, PRIVACY_URL } from "../data/site";
 import SocialIcon from "./SocialIcon.astro";
 ---
 
@@ -57,6 +57,9 @@ import SocialIcon from "./SocialIcon.astro";
       <nav class="flex flex-wrap justify-center gap-6 text-sm text-text-secondary" aria-label="Pages">
         {showHome && <a href="/" class="hover:text-text-primary">Home</a>}
         {NAV.filter((l) => showScience || l.key !== "science").map((l) => (
+          <a href={l.href} class="hover:text-text-primary">{l.label}</a>
+        ))}
+        {PRO_PAGES.map((l) => (
           <a href={l.href} class="hover:text-text-primary">{l.label}</a>
         ))}
         <a href={PRIVACY_URL} class="hover:text-text-primary">Privacy Policy</a>

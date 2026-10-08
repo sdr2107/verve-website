@@ -10,6 +10,9 @@
  * The app button opens /get in a new tab, which sends the visitor to the
  * store for their device; it carries data-nav="app" so a page with a
  * signed-in state (My health) can swap it for Sign out from its own script.
+ * Beside it, since 8 October 2026, one Sign in (data-nav="signin"), which
+ * is the same account as the app and works out who you are; it is hidden
+ * on My health itself, which carries the sign-in card.
  *
  * On a phone the links sit in a row under the logo rather than behind a
  * menu icon: a hidden menu is the one place a first-time visitor will not
@@ -128,6 +131,17 @@ const link = (key: NavKey) =>
           </div>
         </nav>
         <slot name="extra" />
+        <a
+          href="/my-health"
+          data-nav="signin"
+          class:list={[
+            "whitespace-nowrap rounded-full px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:text-text-primary",
+            back && "hidden md:inline-block",
+            current === "my-health" && "hidden",
+          ]}
+        >
+          Sign in
+        </a>
         <a
           href={GET_APP_PATH}
           target="_blank"
