@@ -1,0 +1,40 @@
+---
+/**
+ * /unsubscribe — one click from the Unsubscribe button in any letter the
+ * site sends. The link carries the row's own token (?t=...); the page calls
+ * newsletter_unsubscribe with the anon key, which marks the row and
+ * returns the address, and says done. No sign-in, no email, no second
+ * step. A missing or unknown token says so and points at the Start page.
+ */
+import Layout from "../layouts/Layout.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import Footer from "../components/Footer.astro";
+---
+
+<Layout title="Unsubscribe — Verve" description="One click, and no more letters." cardType="summary">
+  <SiteHeader />
+  <main class="mx-auto flex w-full max-w-[720px] flex-col gap-5 px-4 pb-24 pt-16 sm:px-6">
+    <h1 id="title" class="text-[34px] font-extrabold leading-[1.05] tracking-[-0.03em] text-text-primary sm:text-[40px]">One moment.</h1>
+    <p id="body" class="text-[17px] leading-relaxed text-text-secondary">Taking your address off the list.</p>
+    <a href="/start" class="mt-2 inline-flex min-h-11 items-center self-start rounded-xl border border-white/20 px-5 font-semibold text-text-primary transition-colors hover:border-white/35">Back to Start here</a>
+  </main>
+  <Footer />
+</Layout>
+
+<script>
+  import { supabase } from "../lib/supabase";
+  const title = document.getElementById("title")!, body = document.getElementById("body")!;
+  const token = new URLSearchParams(location.search).get("t") ?? "";
+  (async () => {
+    if (!token) { title.textContent = "No link to act on."; body.textContent = "Open the Unsubscribe button in one of the letters; it carries the link that does this."; return; }
+    const { data, error } = await supabase.rpc("newsletter_unsubscribe", { token });
+    const email = Array.isArray(data) && data[0]?.email ? String(data[0].email) : "";
+    if (error || !email) {
+      title.textContent = "That link is not one of ours.";
+      body.textContent = "Nothing was changed. If you still get letters, reply to one with the word stop and it is done by hand.";
+      return;
+    }
+    title.textContent = "Done. No more letters.";
+    body.textContent = `${email} is off the list, as of now. The sheet you have is yours to keep. If this was a mistake, the box on the Start page puts you back on.`;
+  })();
+</script>

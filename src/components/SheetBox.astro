@@ -1,0 +1,95 @@
+---
+/**
+ * The email box that hands over the sheet. One component, used on Start
+ * here and on the sheet's own page, so the two cannot drift.
+ *
+ * On submit: the address and the consent sentence go into
+ * newsletter_signups (anon insert; nobody reads the table through the
+ * API), the sheet opens on the page at once, and then the page asks the
+ * newsletter-welcome function to email the same sheet from hello@. The
+ * email is a copy, never the gate: if the save or the send fails, the
+ * sheet still opens and the page says so.
+ */
+import { NEWSLETTER_CONSENT, SHEET_PDF } from "../data/fitness-tiers";
+import { PRIVACY_URL } from "../data/site";
+
+interface Props {
+  /** The heading over the box. */
+  title?: string;
+  /** The line under it. */
+  lede?: string;
+  /** Where the address came from, for the row; the policy allows "start". */
+  source?: "start";
+}
+const { title = "Get the sheet", lede = "One A4 page: the test, the arithmetic, the table, and a box for your result. Leave your email and it opens at once.", source = "start" } = Astro.props;
+---
+
+<section class="flex flex-wrap items-start gap-5 rounded-[20px] border border-accent/40 bg-accent/[0.08] p-6 sm:p-7" data-sheetbox data-source={source}>
+  <div class="flex min-w-[280px] flex-1 flex-col gap-1.5">
+    <h2 class="text-[22px] font-bold text-text-primary">{title}</h2>
+    <p class="text-[15px] text-[#c7d2fe] sm:text-base">{lede}</p>
+  </div>
+  <form id="sheetform" class="flex min-w-[280px] flex-1 flex-col gap-3" novalidate>
+    <div class="flex flex-wrap gap-2.5">
+      <label for="email" class="sr-only">Your email</label>
+      <input id="email" name="email" type="email" required autocomplete="email" placeholder="you@example.com"
+        class="min-h-12 min-w-[200px] flex-1 rounded-xl border border-white/[0.16] bg-[#15151F] px-4 text-[17px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
+      <button type="submit" id="sheetsubmit" class="min-h-12 rounded-xl bg-accent px-5 text-[17px] font-bold text-canvas transition-opacity hover:opacity-90 disabled:opacity-60">Send me the sheet</button>
+    </div>
+    <p class="text-[13px] leading-snug text-text-tertiary">{NEWSLETTER_CONSENT} <a href={PRIVACY_URL} class="text-accent-light hover:underline">Privacy policy</a>.</p>
+    <p id="sheetmsg" class="hidden text-[14px] leading-snug text-text-primary" role="status" aria-live="polite"></p>
+  </form>
+  <div id="sheetdone" class="hidden min-w-[280px] flex-1 flex-col gap-3 rounded-xl border border-white/[0.12] bg-[#15151F] p-5">
+    <p class="text-[17px] font-bold text-text-primary">Here is your sheet.</p>
+    <a id="sheetlink" href={SHEET_PDF} target="_blank" rel="noopener" class="inline-flex min-h-11 items-center self-start rounded-xl bg-accent px-5 font-bold text-canvas transition-opacity hover:opacity-90">Open the A4 sheet (PDF)</a>
+    <p id="sheetmail" class="text-[14px] text-text-secondary">A copy is on its way to your inbox, from hello@verve-app.health. One letter a week follows; every one has an Unsubscribe button.</p>
+  </div>
+</section>
+
+<script>
+  import { supabase } from "../lib/supabase";
+  import { NEWSLETTER_CONSENT } from "../data/fitness-tiers";
+
+  const box = document.querySelector<HTMLElement>("[data-sheetbox]");
+  if (box) {
+    const form = box.querySelector("#sheetform") as HTMLFormElement;
+    const input = box.querySelector("#email") as HTMLInputElement;
+    const button = box.querySelector("#sheetsubmit") as HTMLButtonElement;
+    const msg = box.querySelector("#sheetmsg") as HTMLParagraphElement;
+    const done = box.querySelector("#sheetdone") as HTMLDivElement;
+    const mail = box.querySelector("#sheetmail") as HTMLParagraphElement;
+    const source = box.dataset.source ?? "start";
+
+    const say = (text: string) => { msg.textContent = text; msg.classList.toggle("hidden", !text); };
+    const finish = () => {
+      form.classList.add("hidden");
+      done.classList.remove("hidden"); done.classList.add("flex");
+      (box.querySelector("#sheetlink") as HTMLAnchorElement).focus();
+    };
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = input.value.trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { say("That does not look like an email address."); input.focus(); return; }
+      button.disabled = true;
+      say("Saving…");
+      let userId: string | null = null;
+      try { userId = (await supabase.auth.getSession()).data.session?.user.id ?? null; } catch { /* not signed in */ }
+      const { error } = await supabase.from("newsletter_signups").insert({ email, consent_text: NEWSLETTER_CONSENT, source, user_id: userId });
+      button.disabled = false;
+      if (error && error.code !== "23505") {        // 23505: already on the list, which is fine
+        say("Could not save that just now. The sheet is still yours: open it below, and try the email again later.");
+        done.classList.remove("hidden"); done.classList.add("flex");
+        return;
+      }
+      say(""); finish();
+      // the copy by email, after the sheet is already on screen; never the gate
+      try {
+        const { data, error: fnErr } = await supabase.functions.invoke("newsletter-welcome", { body: { email } });
+        if (fnErr || !data?.sent) mail.textContent = data?.reason === "already sent"
+          ? "You already had the sheet by email; the link above is the same one. One letter a week follows."
+          : "The email copy could not be sent just now; it will go out within a day. The link above is the same sheet.";
+      } catch { mail.textContent = "The email copy could not be sent just now; it will go out within a day. The link above is the same sheet."; }
+    });
+  }
+</script>
