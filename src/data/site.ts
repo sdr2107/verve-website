@@ -94,7 +94,7 @@ export const PRO_PAGES: NavLink[] = [
  * The free fifteen-minute call: the Calendly event's address. Null until
  * the event exists; Start here shows the call section only when it is set.
  */
-export const CALENDLY_URL: string | null = null;
+export const CALENDLY_URL: string | null = "https://calendly.com/sudeep-verve-app/first-number";
 
 export const SOCIAL: SocialLink[] = [
   { key: "x", label: "X", handle: "@RoplekarSudeep", href: X_URL },
