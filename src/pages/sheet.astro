@@ -1,0 +1,151 @@
+---
+/**
+ * /sheet — the free sheet, on a page: your first fitness number.
+ *
+ * The page for the person who does not know where to start. Six minutes of
+ * walking or twelve of running, one line of arithmetic, and the same tier
+ * tables the app uses, with the study named under each. Everything on the
+ * page is public and needs no app.
+ *
+ * The email box is the site's own: the address and the consent sentence go
+ * into newsletter_signups in Supabase (anon insert only; nobody reads it
+ * through the API), the A4 sheet opens on the page at once, and the letter
+ * follows once a week after the list is moved to Substack by hand. Nothing
+ * depends on a Substack account. The sheet lives at
+ * public/start/your-first-fitness-number.pdf, printed from /start/sheet.
+ *
+ * Built 2026-10-06 from the Design canvas "Your first fitness number".
+ */
+import Layout from "../layouts/Layout.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import Footer from "../components/Footer.astro";
+import { GET_APP_PATH, SUBSTACK_URL, X_URL } from "../data/site";
+import SheetBox from "../components/SheetBox.astro";
+import {
+  TIERS_MEN, TIERS_WOMEN, TIER_SHORT, TIER_SOURCES, tierRanges,
+  RUN, WALK, RETEST, SAFETY,
+} from "../data/fitness-tiers";
+
+const LETTERS = "https://roplekarsudeep.substack.com";
+const tierColor = ["text-danger", "text-warning", "text-accent-light", "text-cyan", "text-success"];
+const tables = [
+  { title: "Men", rows: TIERS_MEN },
+  { title: "Women", rows: TIERS_WOMEN },
+];
+const steps = [
+  { n: "1", title: "Pick your test", body: "Walk six minutes as far as you can, on flat ground. Runners: run twelve." },
+  { n: "2", title: "Measure the distance", body: "In metres. A track, a watch, or a phone map." },
+  { n: "3", title: "Find your tier", body: "Turn metres into METs below, then read your age row. One MET is you at rest." },
+];
+---
+
+<Layout
+  title="Your first fitness number — a free sheet by Dr Sudeep Roplekar"
+  description="Walk six minutes or run twelve, one line of arithmetic, and the fitness tier tables the studies use. Free, no app needed."
+  cardType="summary"
+>
+  <SiteHeader current="start" />
+
+  <main class="mx-auto flex w-full max-w-[1040px] flex-col gap-14 px-4 pb-20 pt-12 sm:px-6 lg:gap-16 lg:pt-14">
+
+    <!-- Hero -->
+    <section class="flex max-w-[760px] flex-col gap-5">
+      <span class="font-mono text-xs font-semibold uppercase tracking-[0.1em] text-accent-light">A free sheet · Dr Sudeep Roplekar, radiologist</span>
+      <h1 class="text-[40px] font-extrabold leading-[1.04] tracking-[-0.03em] text-text-primary sm:text-[56px]">Your first fitness number</h1>
+      <p class="text-[19px] font-medium leading-[1.35] text-[#c7d2fe] sm:text-[22px]">Walk six minutes, or run twelve. One line of arithmetic. A table.</p>
+      <p class="text-[16px] leading-relaxed text-text-secondary sm:text-[18px]">The number almost nobody has on file. No app needed.</p>
+    </section>
+
+    <SheetBox />
+
+    <!-- Three steps -->
+    <section class="flex flex-col gap-5">
+      <h2 class="text-[26px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[30px]">Three steps</h2>
+      <div class="grid gap-4 sm:grid-cols-3">
+        {steps.map((s) => (
+          <div class="flex flex-col gap-2.5 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
+            <span class="font-mono text-[13px] text-accent-light">{s.n}</span>
+            <h3 class="text-[20px] font-bold text-text-primary">{s.title}</h3>
+            <p class="text-base text-text-secondary">{s.body}</p>
+          </div>
+        ))}
+      </div>
+      <p class="rounded-r-xl border-l-[3px] border-warning bg-warning/[0.08] px-5 py-4 text-base text-text-primary">{SAFETY}</p>
+    </section>
+
+    <!-- The arithmetic -->
+    <section class="flex flex-col gap-5">
+      <h2 class="text-[26px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[30px]">The arithmetic</h2>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div class="flex flex-col gap-3 rounded-2xl border border-white/[0.08] p-6">
+          <h3 class="text-[20px] font-bold text-text-primary">Ran twelve minutes</h3>
+          <p class="font-mono text-[14px] leading-[1.7] text-[#c7d2fe] sm:text-[15px]">{RUN.lines.map((l, i) => (<>{i > 0 && <br />}{l}</>))}</p>
+          <p class="text-base text-text-secondary">{RUN.example.replace(RUN.exampleMets + ".", "")}<strong class="text-text-primary">{RUN.exampleMets}</strong>.</p>
+          <p class="text-sm text-text-tertiary">{RUN.source}</p>
+        </div>
+        <div class="flex flex-col gap-3 rounded-2xl border border-white/[0.08] p-6">
+          <h3 class="text-[20px] font-bold text-text-primary">Walked six minutes</h3>
+          <p class="font-mono text-[14px] leading-[1.7] text-[#c7d2fe] sm:text-[15px]">{WALK.lines.map((l, i) => (<>{i > 0 && <br />}{l}</>))}</p>
+          <p class="text-base text-text-secondary">{WALK.example.replace(WALK.exampleMets + ".", "")}<strong class="text-text-primary">{WALK.exampleMets}</strong>.</p>
+          <p class="text-sm text-text-tertiary">{WALK.source}</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- The tables -->
+    <section class="flex flex-col gap-5">
+      <h2 class="text-[26px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[30px]">Where your number lands</h2>
+      <p class="max-w-[760px] text-text-secondary">METs, by age. {TIER_SOURCES.meaning}</p>
+      <div class="grid gap-4 sm:grid-cols-2">
+        {tables.map((t) => (
+          <div class="overflow-x-auto rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5">
+            <h3 class="mb-3 text-[18px] font-bold text-text-primary">{t.title}</h3>
+            <table class="w-full border-collapse font-mono text-[13px]">
+              <thead>
+                <tr class="text-text-secondary">
+                  <th class="whitespace-nowrap border-b border-white/[0.12] px-1.5 py-2 text-left font-normal">Age</th>
+                  {TIER_SHORT.map((label, i) => (
+                    <th class={`whitespace-nowrap border-b border-white/[0.12] px-1.5 py-2 text-left font-normal ${tierColor[i]}`}>{label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {t.rows.map((row) => (
+                  <tr>
+                    <td class="whitespace-nowrap px-1.5 py-2 text-text-secondary">{row.age}</td>
+                    {tierRanges(row).map((r) => (<td class="whitespace-nowrap px-1.5 py-2 text-text-primary">{r}</td>))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
+      </div>
+      <p class="max-w-[900px] text-sm text-text-tertiary">{TIER_SOURCES.over40} {TIER_SOURCES.under40} The same tables as the app; the studies are on the <a href="/science" class="text-accent-light hover:underline">Science</a> page.</p>
+    </section>
+
+    <!-- After the test: on paper, or in the app -->
+    <section class="grid gap-4 sm:grid-cols-2">
+      <div class="flex flex-col gap-2.5 rounded-2xl border border-white/[0.08] p-6">
+        <h3 class="text-[20px] font-bold text-text-primary">On paper</h3>
+        <p class="text-base text-text-secondary">Write it down: date, test, metres, METs, tier. {RETEST}</p>
+      </div>
+      <div class="flex flex-col gap-2.5 rounded-2xl border border-accent/40 bg-accent/[0.08] p-6">
+        <h3 class="text-[20px] font-bold text-text-primary">In the app</h3>
+        <p class="text-base text-[#c7d2fe]">Verve does the arithmetic, places the number in the table, and tells you when eight weeks are up. Twenty other numbers get the same treatment.</p>
+        <a href={GET_APP_PATH} target="_blank" rel="noopener" class="mt-1.5 inline-flex min-h-11 items-center self-start rounded-xl bg-accent px-5 font-bold text-canvas transition-opacity hover:opacity-90">Get the app</a>
+      </div>
+    </section>
+
+    <!-- Byline -->
+    <section class="flex flex-wrap items-center gap-5 border-t border-white/[0.08] pt-6">
+      <div class="flex min-w-[280px] flex-1 flex-col gap-1">
+        <p class="font-bold text-text-primary">Dr Sudeep Roplekar</p>
+        <p class="text-base text-text-secondary">Radiologist. I built Verve to see my own numbers against the thresholds the studies use. One letter a week. <a href={SUBSTACK_URL} class="text-accent-light hover:underline">The letters</a> · <a href={X_URL} class="text-accent-light hover:underline">X</a></p>
+      </div>
+    </section>
+
+  </main>
+
+  <Footer />
+</Layout>

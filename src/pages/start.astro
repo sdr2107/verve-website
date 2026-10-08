@@ -1,162 +1,210 @@
 ---
 /**
- * /start — the free sheet: your first fitness number.
+ * /start — Start here: the first page a stranger reads.
  *
- * The page for the person who does not know where to start. Six minutes of
- * walking or twelve of running, one line of arithmetic, and the same tier
- * tables the app uses, with the study named under each. Everything on the
- * page is public and needs no app.
- *
- * The email box is the site's own: the address and the consent sentence go
- * into newsletter_signups in Supabase (anon insert only; nobody reads it
- * through the API), the A4 sheet opens on the page at once, and the letter
- * follows once a week after the list is moved to Substack by hand. Nothing
- * depends on a Substack account. The sheet lives at
- * public/start/your-first-fitness-number.pdf, printed from /start/sheet.
- *
- * Built 2026-10-06 from the Design canvas "Your first fitness number".
+ * Built 2026-10-08 from the Design canvas "Start here, redesigned". In
+ * order: what Verve is and the three things it stands for; who it is for;
+ * what you get on the site and in the app, with the price stated once;
+ * what the website does; the three free things, the sheet first with its
+ * email box; then the order to do things in; the free call, only once its
+ * Calendly address exists; and sign in, for the person who already has the
+ * app. Two asks on the whole page, the email and the sign-in, never on
+ * the same screen. The sheet itself, with the tables, is at /sheet.
  */
 import Layout from "../layouts/Layout.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import Footer from "../components/Footer.astro";
-import { GET_APP_PATH, SUBSTACK_URL, X_URL } from "../data/site";
-import {
-  TIERS_MEN, TIERS_WOMEN, TIER_SHORT, TIER_SOURCES, tierRanges,
-  RUN, WALK, RETEST, SAFETY, NEWSLETTER_CONSENT, SHEET_PDF,
-} from "../data/fitness-tiers";
-import { PRIVACY_URL } from "../data/site";
+import SheetBox from "../components/SheetBox.astro";
+import { GET_APP_PATH, SUBSTACK_URL, X_URL, YOUTUBE_URL, TIKTOK_URL, INSTAGRAM_URL, CALENDLY_URL } from "../data/site";
+import { AI_SUMMARY_OPEN } from "../data/plans";
 
 const LETTERS = "https://roplekarsudeep.substack.com";
-const tierColor = ["text-danger", "text-warning", "text-accent-light", "text-cyan", "text-success"];
-const tables = [
-  { title: "Men", rows: TIERS_MEN },
-  { title: "Women", rows: TIERS_WOMEN },
+const claims = [
+  { n: "01", color: "text-success", title: "Every line names its study.", body: "The threshold, the journal, the year. Nothing you cannot check." },
+  { n: "02", color: "text-accent-light", title: "Your labs and your training in one place.", body: "A watch cannot read a blood report. Verve reads both." },
+  { n: "03", color: "text-warning", title: "Built by a doctor, for the person the doctor sends home.", body: "No ads, no data sold, no score nobody can explain." },
 ];
-const steps = [
-  { n: "1", title: "Pick your test", body: "Walk six minutes as far as you can, on flat ground. Runners: run twelve." },
-  { n: "2", title: "Measure the distance", body: "In metres. A track, a watch, or a phone map." },
-  { n: "3", title: "Find your tier", body: "Turn metres into METs below, then read your age row. One MET is you at rest." },
+const who = [
+  { title: "Starting again", grey: "After surgery, a diagnosis, or years away. Told to get fitter and given nothing to see it with.", white: "Verve shows the category climbing and the markers moving toward range, in plain words. Your family can watch too." },
+  { title: "Already tracking", grey: "A watch or a ring, workouts logged, and a number on the maker's own scale.", white: "The same number against the published threshold, with the study named, beside the blood markers the watch cannot see." },
+  { title: "Coaches and clinicians", grey: "People who share their pages with you, and you with your own sign-in.", white: "Their numbers in one place, only what each chose to share, and your note kept as a copy. Reading is free.", href: "/clinician" },
+];
+const site = [
+  { k: "REPORTS", color: "text-success", title: "Drop a lab report, done", body: "A PDF or a photo of any lab's report. The values are read, filed under the right person, dated, and sent to the app marked unchecked until you look. The file stays in a folder only you can open." },
+  { k: "PEOPLE", color: "text-accent-light", title: "Add your family", body: "A parent's reports live in a WhatsApp chat. Give them a page of their own, file their results under it, and give a doctor access to that page and nothing else. They can stop it any time." },
+  { k: "IN DEPTH", color: "text-warning", title: "The working, in five chapters", body: "Rhythm, load and intensity, sessions, fitness and recovery, labs and body. The page a coach reads, and the page you read when you want to know why a number moved." },
+  ...(AI_SUMMARY_OPEN ? [{ k: "IN VERVE'S WORDS", color: "text-[#c4b5fd]", title: "A summary, written from your numbers", body: "A few paragraphs on In depth that say what this month's numbers mean against the thresholds, every figure traceable to a card above it. Opt in, never on by default, your name never sent." }] : []),
+  { k: "COACHES AND CLINICIANS", color: "text-success-light", title: "Share a page, not an account", body: "Tick what a coach or a doctor may see: labs, imaging, activity, body, heart. They sign in with their own account and land on everyone who shares with them. Verified ones carry a badge." },
+];
+const order = [
+  { title: "Read the Science page", body: "Pick the marker you care about. See where the line comes from.", href: "/science" },
+  { title: "Follow along", body: "X and Substack for the letters. TikTok, Instagram and YouTube for the videos.", href: LETTERS },
+  { title: "Get the app, free", body: "Your first test in the app places you in the table. Retest in eight weeks.", href: GET_APP_PATH },
+  { title: "Try Pro for 14 days", body: "Keep it if The Guide earns its place. If not, the free app stays yours.", href: GET_APP_PATH },
 ];
 ---
 
 <Layout
-  title="Your first fitness number — a free sheet by Dr Sudeep Roplekar"
-  description="Walk six minutes or run twelve, one line of arithmetic, and the fitness tier tables the studies use. Free, no app needed."
+  title="Start here — Verve"
+  description="What Verve is, who it is for, what you get on the site and in the app, and three things that are free today, starting with your first fitness number."
   cardType="summary"
 >
   <SiteHeader current="start" />
 
-  <main class="mx-auto flex w-full max-w-[1040px] flex-col gap-14 px-4 pb-20 pt-12 sm:px-6 lg:gap-16 lg:pt-14">
+  <main class="mx-auto flex w-full max-w-[1080px] flex-col gap-20 px-4 pb-20 pt-14 sm:px-6 lg:gap-24 lg:pt-16">
 
-    <!-- Hero -->
-    <section class="flex max-w-[760px] flex-col gap-5">
-      <span class="font-mono text-xs font-semibold uppercase tracking-[0.1em] text-accent-light">A free sheet · Dr Sudeep Roplekar, radiologist</span>
-      <h1 class="text-[40px] font-extrabold leading-[1.04] tracking-[-0.03em] text-text-primary sm:text-[56px]">Your first fitness number</h1>
-      <p class="text-[19px] font-medium leading-[1.35] text-[#c7d2fe] sm:text-[22px]">Walk six minutes, or run twelve. One line of arithmetic. A table.</p>
-      <p class="text-[16px] leading-relaxed text-text-secondary sm:text-[18px]">The number almost nobody has on file. No app needed.</p>
-    </section>
-
-    <!-- The sheet by email: the site's own box. The address goes to Supabase
-         with the consent sentence; the sheet opens at once. -->
-    <section class="flex flex-wrap items-start gap-5 rounded-[20px] border border-white/[0.08] bg-white/[0.04] p-6 sm:p-7">
-      <div class="flex min-w-[280px] flex-1 flex-col gap-1.5">
-        <h2 class="text-[22px] font-bold text-text-primary">Get the sheet</h2>
-        <p class="text-[15px] text-text-secondary sm:text-base">One A4 page: the test, the arithmetic, the table, and a box for your result. Leave your email and it opens at once.</p>
+    <!-- 1. What Verve is, and what it stands for -->
+    <section class="flex flex-col gap-7">
+      <div class="flex max-w-[820px] flex-col gap-4">
+        <span class="font-mono text-xs font-semibold uppercase tracking-[0.12em] text-accent-light">Start here</span>
+        <h1 class="text-[42px] font-extrabold leading-[1.02] tracking-[-0.03em] text-text-primary sm:text-[60px]">Your health, read against the evidence.</h1>
+        <p class="text-[19px] font-medium leading-[1.35] text-[#c7d2fe] sm:text-[22px]">Verve reads your fitness, movement, sleep, heart and blood against the thresholds clinicians use, shows how each moves over months, and names the study behind every line.</p>
       </div>
-      <form id="sheetform" class="flex min-w-[280px] flex-1 flex-col gap-3" novalidate>
-        <div class="flex flex-wrap gap-2.5">
-          <label for="email" class="sr-only">Your email</label>
-          <input id="email" name="email" type="email" required autocomplete="email" placeholder="you@example.com"
-            class="min-h-12 min-w-[200px] flex-1 rounded-xl border border-white/[0.16] bg-[#15151F] px-4 text-[17px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
-          <button type="submit" id="sheetsubmit" class="min-h-12 rounded-xl bg-accent px-5 text-[17px] font-bold text-canvas transition-opacity hover:opacity-90 disabled:opacity-60">Send me the sheet</button>
-        </div>
-        <p class="text-[13px] leading-snug text-text-tertiary">{NEWSLETTER_CONSENT} <a href={PRIVACY_URL} class="text-accent-light hover:underline">Privacy policy</a>.</p>
-        <p id="sheetmsg" class="hidden text-[14px] leading-snug text-text-primary" role="status" aria-live="polite"></p>
-      </form>
-      <div id="sheetdone" class="hidden min-w-[280px] flex-1 flex-col gap-3 rounded-xl border border-accent/40 bg-accent/[0.08] p-5">
-        <p class="text-[17px] font-bold text-text-primary">Here is your sheet.</p>
-        <a id="sheetlink" href={SHEET_PDF} target="_blank" rel="noopener" class="inline-flex min-h-11 items-center self-start rounded-xl bg-accent px-5 font-bold text-canvas transition-opacity hover:opacity-90">Open the A4 sheet (PDF)</a>
-        <p class="text-[14px] text-text-secondary">One letter a week. Reply to any of them to stop.</p>
-      </div>
-    </section>
-
-    <!-- Three steps -->
-    <section class="flex flex-col gap-5">
-      <h2 class="text-[26px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[30px]">Three steps</h2>
       <div class="grid gap-4 sm:grid-cols-3">
-        {steps.map((s) => (
-          <div class="flex flex-col gap-2.5 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-6">
-            <span class="font-mono text-[13px] text-accent-light">{s.n}</span>
-            <h3 class="text-[20px] font-bold text-text-primary">{s.title}</h3>
-            <p class="text-base text-text-secondary">{s.body}</p>
+        {claims.map((c) => (
+          <div class="flex flex-col gap-1.5 rounded-2xl border border-white/[0.08] bg-white/[0.04] px-6 py-5">
+            <span class={`font-mono text-[11px] tracking-[0.1em] ${c.color}`}>{c.n}</span>
+            <p class="text-[18px] font-bold text-text-primary">{c.title}</p>
+            <p class="text-[15px] text-text-secondary">{c.body}</p>
           </div>
         ))}
       </div>
-      <p class="rounded-r-xl border-l-[3px] border-warning bg-warning/[0.08] px-5 py-4 text-base text-text-primary">{SAFETY}</p>
     </section>
 
-    <!-- The arithmetic -->
+    <!-- 2. Who it is for -->
     <section class="flex flex-col gap-5">
-      <h2 class="text-[26px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[30px]">The arithmetic</h2>
-      <div class="grid gap-4 sm:grid-cols-2">
-        <div class="flex flex-col gap-3 rounded-2xl border border-white/[0.08] p-6">
-          <h3 class="text-[20px] font-bold text-text-primary">Ran twelve minutes</h3>
-          <p class="font-mono text-[14px] leading-[1.7] text-[#c7d2fe] sm:text-[15px]">{RUN.lines.map((l, i) => (<>{i > 0 && <br />}{l}</>))}</p>
-          <p class="text-base text-text-secondary">{RUN.example.replace(RUN.exampleMets + ".", "")}<strong class="text-text-primary">{RUN.exampleMets}</strong>.</p>
-          <p class="text-sm text-text-tertiary">{RUN.source}</p>
-        </div>
-        <div class="flex flex-col gap-3 rounded-2xl border border-white/[0.08] p-6">
-          <h3 class="text-[20px] font-bold text-text-primary">Walked six minutes</h3>
-          <p class="font-mono text-[14px] leading-[1.7] text-[#c7d2fe] sm:text-[15px]">{WALK.lines.map((l, i) => (<>{i > 0 && <br />}{l}</>))}</p>
-          <p class="text-base text-text-secondary">{WALK.example.replace(WALK.exampleMets + ".", "")}<strong class="text-text-primary">{WALK.exampleMets}</strong>.</p>
-          <p class="text-sm text-text-tertiary">{WALK.source}</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- The tables -->
-    <section class="flex flex-col gap-5">
-      <h2 class="text-[26px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[30px]">Where your number lands</h2>
-      <p class="max-w-[760px] text-text-secondary">METs, by age. {TIER_SOURCES.meaning}</p>
-      <div class="grid gap-4 sm:grid-cols-2">
-        {tables.map((t) => (
-          <div class="overflow-x-auto rounded-2xl border border-white/[0.08] bg-white/[0.04] p-5">
-            <h3 class="mb-3 text-[18px] font-bold text-text-primary">{t.title}</h3>
-            <table class="w-full border-collapse font-mono text-[13px]">
-              <thead>
-                <tr class="text-text-secondary">
-                  <th class="whitespace-nowrap border-b border-white/[0.12] px-1.5 py-2 text-left font-normal">Age</th>
-                  {TIER_SHORT.map((label, i) => (
-                    <th class={`whitespace-nowrap border-b border-white/[0.12] px-1.5 py-2 text-left font-normal ${tierColor[i]}`}>{label}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {t.rows.map((row) => (
-                  <tr>
-                    <td class="whitespace-nowrap px-1.5 py-2 text-text-secondary">{row.age}</td>
-                    {tierRanges(row).map((r) => (<td class="whitespace-nowrap px-1.5 py-2 text-text-primary">{r}</td>))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <h2 class="text-[28px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[32px]">Who it is for</h2>
+      <div class="grid gap-4 sm:grid-cols-3">
+        {who.map((w) => (
+          <div class="flex flex-col gap-2.5 rounded-[18px] border border-white/[0.08] p-6">
+            <h3 class="text-[21px] font-bold text-text-primary">{w.title}</h3>
+            <p class="text-[15.5px] text-text-secondary">{w.grey}</p>
+            <p class="text-[15.5px] text-text-primary">{w.white}</p>
+            {w.href && <a href={w.href} class="mt-1 text-[14px] font-semibold text-accent-light hover:underline">The clinician's door</a>}
           </div>
         ))}
       </div>
-      <p class="max-w-[900px] text-sm text-text-tertiary">{TIER_SOURCES.over40} {TIER_SOURCES.under40} The same tables as the app; the studies are on the <a href="/science" class="text-accent-light hover:underline">Science</a> page.</p>
     </section>
 
-    <!-- After the test: on paper, or in the app -->
-    <section class="grid gap-4 sm:grid-cols-2">
-      <div class="flex flex-col gap-2.5 rounded-2xl border border-white/[0.08] p-6">
-        <h3 class="text-[20px] font-bold text-text-primary">On paper</h3>
-        <p class="text-base text-text-secondary">Write it down: date, test, metres, METs, tier. {RETEST}</p>
+    <!-- 3. What you get: the site and the app, the price said once -->
+    <section class="flex flex-col gap-5">
+      <h2 class="text-[28px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[32px]">What you get</h2>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div class="flex flex-col gap-3.5 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-7">
+          <span class="font-mono text-[11px] tracking-[0.1em] text-accent-light">ON THIS SITE · FREE</span>
+          <div class="flex flex-col gap-1">
+            <p class="text-[19px] font-bold text-text-primary">Science</p>
+            <p class="text-[15.5px] text-text-secondary">Every threshold Verve uses, traced to its source. One search box. No account.</p>
+          </div>
+          <div class="flex flex-col gap-1">
+            <p class="text-[19px] font-bold text-text-primary">My health</p>
+            <p class="text-[15.5px] text-text-secondary">Drop a lab report as a PDF or a photo. The values file themselves, and go to the app. Share a page with a coach, a clinician, or family. Needs the same account as the app.</p>
+          </div>
+        </div>
+        <div class="flex flex-col gap-3.5 rounded-[18px] border border-accent/40 bg-accent/[0.08] p-7">
+          <span class="font-mono text-[11px] tracking-[0.1em] text-accent-light">IN THE APP · iPHONE NOW, ANDROID SOON</span>
+          <div class="flex flex-col gap-1">
+            <p class="text-[19px] font-bold text-text-primary">Your numbers, against their thresholds</p>
+            <p class="text-[15.5px] text-[#c7d2fe]">Fitness in METs and your tier by age, movement, sleep, heart and body, each read against the line the studies draw, each over months.</p>
+          </div>
+          <div class="flex flex-col gap-1">
+            <p class="text-[19px] font-bold text-text-primary">Free, and then Pro</p>
+            <p class="text-[15.5px] text-[#c7d2fe]">The app is free. Pro adds The Guide and In depth: $3.99 a month or $29.99 a year, after a 14-day trial. Nothing free is taken away.</p>
+          </div>
+        </div>
       </div>
-      <div class="flex flex-col gap-2.5 rounded-2xl border border-accent/40 bg-accent/[0.08] p-6">
-        <h3 class="text-[20px] font-bold text-text-primary">In the app</h3>
-        <p class="text-base text-[#c7d2fe]">Verve does the arithmetic, places the number in the table, and tells you when eight weeks are up. Twenty other numbers get the same treatment.</p>
-        <a href={GET_APP_PATH} target="_blank" rel="noopener" class="mt-1.5 inline-flex min-h-11 items-center self-start rounded-xl bg-accent px-5 font-bold text-canvas transition-opacity hover:opacity-90">Get the app</a>
+    </section>
+
+    <!-- 4. What the website does -->
+    <section class="flex flex-col gap-5">
+      <div class="flex flex-col gap-1.5">
+        <h2 class="text-[28px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[32px]">What the website does</h2>
+        <p class="max-w-[860px] text-text-secondary">The app reads your phone. The website reads what your phone cannot: the paper in the drawer, the people around you, and the working behind every number.</p>
       </div>
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {site.map((c) => (
+          <div class="flex flex-col gap-2 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-6">
+            <span class={`font-mono text-[11px] tracking-[0.1em] ${c.color}`}>{c.k}</span>
+            <h3 class="text-[20px] font-bold text-text-primary">{c.title}</h3>
+            <p class="text-[15px] text-text-secondary">{c.body}</p>
+          </div>
+        ))}
+        <div class="flex flex-col gap-2 rounded-[18px] border border-accent/40 bg-accent/[0.08] p-6">
+          <span class="font-mono text-[11px] tracking-[0.1em] text-accent-light">ONE ACCOUNT</span>
+          <h3 class="text-[20px] font-bold text-text-primary">The app and the website share it</h3>
+          <p class="text-[15px] text-[#c7d2fe]">Sign in once, with Apple, Google or an emailed link. What you file here appears in the app; what the app records appears here. Delete the account and everything goes with it.</p>
+          <a href="/my-health" class="mt-1 inline-flex min-h-11 items-center self-start rounded-xl bg-accent px-5 font-bold text-canvas transition-opacity hover:opacity-90">Open My health</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Free, today -->
+    <section class="flex flex-col gap-5">
+      <div class="flex flex-col gap-1.5">
+        <h2 class="text-[28px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[32px]">Free, today</h2>
+        <p class="max-w-[720px] text-text-secondary">Three things you can use before you decide anything.</p>
+      </div>
+      <SheetBox title="Your first fitness number" lede="Walk six minutes or run twelve, one line of arithmetic, and the tier tables by age. One A4 page, and the same on the sheet's page." />
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div class="flex flex-col gap-3 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-6">
+          <span class="font-mono text-[11px] tracking-[0.1em] text-success">THE LETTERS</span>
+          <h3 class="text-[21px] font-bold text-text-primary">One number a week</h3>
+          <p class="text-[15.5px] text-text-secondary">The threshold it is measured against, the study behind it, and what you can check today. Written by a radiologist, read in five minutes.</p>
+          <a href={LETTERS} class="mt-auto inline-flex min-h-11 items-center self-start rounded-xl border border-white/[0.16] px-[18px] font-semibold text-text-primary transition-colors hover:border-white/30">Read the letters</a>
+        </div>
+        <div class="flex flex-col gap-3 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-6">
+          <span class="font-mono text-[11px] tracking-[0.1em] text-warning">THE VIDEOS</span>
+          <h3 class="text-[21px] font-bold text-text-primary">One a day, under a minute</h3>
+          <p class="text-[15.5px] text-text-secondary">One number against its threshold. The study is in the caption.</p>
+          <p class="mt-auto flex flex-wrap gap-x-4 gap-y-2 text-[15px] font-semibold">
+            <a href={YOUTUBE_URL} class="text-accent-light hover:underline">YouTube</a>
+            <a href={INSTAGRAM_URL} class="text-accent-light hover:underline">Instagram</a>
+            <a href={TIKTOK_URL} class="text-accent-light hover:underline">TikTok</a>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Then, in this order -->
+    <section class="flex flex-col gap-5">
+      <h2 class="text-[28px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[32px]">Then, in this order</h2>
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {order.map((o, i) => (
+          <a href={o.href} class="flex flex-col gap-2 rounded-2xl border border-white/[0.08] p-6 transition-colors hover:border-white/20">
+            <span class="font-mono text-[13px] text-accent-light">{i + 1}</span>
+            <p class="text-[17px] font-bold text-text-primary">{o.title}</p>
+            <p class="text-[14.5px] text-text-secondary">{o.body}</p>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <!-- 7. The call, once its address exists -->
+    {CALENDLY_URL && (
+      <section class="flex flex-wrap items-center gap-7 rounded-[20px] border border-white/[0.08] bg-white/[0.04] p-7 sm:p-8">
+        <div class="flex min-w-[280px] flex-1 flex-col gap-3.5">
+          <div class="flex flex-col gap-1.5">
+            <h2 class="text-[26px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[28px]">Fifteen minutes with Dr Sudeep Roplekar. Free.</h2>
+            <p class="text-text-secondary">Bring your number from the sheet. We talk through three things.</p>
+          </div>
+          <div class="grid gap-3.5 sm:grid-cols-3">
+            <div class="flex flex-col gap-1"><span class="font-mono text-[12px] text-accent-light">1</span><p class="font-bold text-text-primary">Who you are</p><p class="text-[14.5px] text-text-secondary">Your week, your health, what you want from the next few months.</p></div>
+            <div class="flex flex-col gap-1"><span class="font-mono text-[12px] text-accent-light">2</span><p class="font-bold text-text-primary">What your sheet says</p><p class="text-[14.5px] text-text-secondary">The row you landed in, what it means, and what the next row up would take.</p></div>
+            <div class="flex flex-col gap-1"><span class="font-mono text-[12px] text-accent-light">3</span><p class="font-bold text-text-primary">A training week you can keep</p><p class="text-[14.5px] text-text-secondary">Two or three things to build it around, and the first one to do this week.</p></div>
+          </div>
+          <p class="text-[13.5px] text-text-tertiary">Wellness, not medical advice. Nothing on the call replaces your doctor.</p>
+        </div>
+        <a href={CALENDLY_URL} target="_blank" rel="noopener" class="inline-flex min-h-12 items-center rounded-xl bg-accent px-6 font-bold text-canvas transition-opacity hover:opacity-90">Pick a time</a>
+      </section>
+    )}
+
+    <!-- 8. Sign in -->
+    <section class="flex flex-wrap items-center gap-5 border-t border-white/[0.08] pt-8">
+      <div class="flex min-w-[280px] flex-1 flex-col gap-1.5">
+        <h2 class="text-[24px] font-extrabold tracking-[-0.02em] text-text-primary">Already have the app?</h2>
+        <p class="text-text-secondary">Sign in with the same account. You land on your own numbers. A coach or clinician lands on the people who share with them. One account; the site works out which you are.</p>
+      </div>
+      <a href="/my-health" class="inline-flex min-h-12 items-center rounded-xl border border-white/20 px-6 font-bold text-text-primary transition-colors hover:border-white/35">Sign in</a>
     </section>
 
     <!-- Byline -->
@@ -171,41 +219,3 @@ const steps = [
 
   <Footer />
 </Layout>
-
-<script>
-  import { supabase } from "../lib/supabase";
-  import { NEWSLETTER_CONSENT } from "../data/fitness-tiers";
-
-  const form = document.getElementById("sheetform") as HTMLFormElement;
-  const input = document.getElementById("email") as HTMLInputElement;
-  const button = document.getElementById("sheetsubmit") as HTMLButtonElement;
-  const msg = document.getElementById("sheetmsg") as HTMLParagraphElement;
-  const done = document.getElementById("sheetdone") as HTMLDivElement;
-
-  function say(text: string) {
-    msg.textContent = text;
-    msg.classList.toggle("hidden", !text);
-  }
-  function finish() {
-    form.classList.add("hidden");
-    done.classList.remove("hidden");
-    done.classList.add("flex");
-    (document.getElementById("sheetlink") as HTMLAnchorElement).focus();
-  }
-
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = input.value.trim();
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { say("That does not look like an email address."); input.focus(); return; }
-    button.disabled = true;
-    say("Saving…");
-    // a signed-in person's row carries their id, so the two lists can be joined later
-    let userId: string | null = null;
-    try { userId = (await supabase.auth.getSession()).data.session?.user.id ?? null; } catch { /* not signed in */ }
-    const { error } = await supabase.from("newsletter_signups").insert({ email, consent_text: NEWSLETTER_CONSENT, source: "start", user_id: userId });
-    button.disabled = false;
-    if (!error || error.code === "23505") { say(""); finish(); return; }   // 23505: already on the list, which is fine
-    say("Could not save that just now. The sheet is still yours: open it below, and try the email again later.");
-    done.classList.remove("hidden"); done.classList.add("flex");
-  });
-</script>
