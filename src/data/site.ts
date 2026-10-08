@@ -80,10 +80,10 @@ export interface SocialLink {
  * X and Substack are Sudeep's own; TikTok, Instagram and YouTube are the app's.
  */
 /**
- * The two doors for professionals. Out of the header since 8 October 2026:
- * one Sign in works out who is who, so nobody needs a door. The pages
- * stay as the pitch a coach or a doctor reads first, reached from Start
- * here and from the footer.
+ * The two doors for professionals. Out of the header and the footer since
+ * 8 October 2026: My health works out who is who, so nobody needs a door.
+ * The pages stay as the pitch a coach or a doctor reads first, linked from
+ * the "Coaches and clinicians" card on Start here.
  */
 export const PRO_PAGES: NavLink[] = [
   { key: "coach", label: "Coach", href: "/coach" },
