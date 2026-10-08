@@ -30,6 +30,8 @@ import {
   RESTING_HR_SECTION,
   HEART_RATE_RECOVERY_SECTION,
   SLEEP_TRAINING_SECTION,
+  NIGHT_HRV_SECTION,
+  EFFORT_SECTION,
 } from "./science";
 import { BODY_MARKERS } from "./bodyMarkers";
 
@@ -185,6 +187,7 @@ export const TOPICS: Topic[] = [
   },
   { slug: "strength-training", label: "Strength training", sub: "Where the 60 minutes a week comes from, and why the app no longer draws it as a bar to clear", subject: "movement", citations: [] },
   { slug: "a-workout", label: "A workout, as Verve reads it", sub: "What the page keeps, what it only reads, and why one session shows one MET figure", subject: "movement", citations: [] },
+  { slug: "effort", label: "Effort, when heart rate cannot be trusted", sub: "Why a beta-blocker breaks the heart-rate bands, and the 1-to-10 scale used instead", subject: "movement", citations: EFFORT_SECTION },
   { slug: "steps", label: "Steps & cadence", sub: "Daily step tiers and cadence zones", subject: "movement", citations: STEPS_SECTION },
   {
     slug: "movement-balance",
@@ -208,6 +211,7 @@ export const TOPICS: Topic[] = [
   { slug: "sleep-and-training", label: "Sleep and training", sub: "What the Guide’s sleep line is, and what it refuses to claim", subject: "sleep-heart", citations: SLEEP_TRAINING_SECTION },
   { slug: "resting-heart-rate", label: "Resting heart rate", sub: "Measured against your own normal, not a population range", subject: "sleep-heart", citations: RESTING_HR_SECTION },
   { slug: "heart-rate-recovery", label: "Heart rate recovery", sub: "One cited line, and why there is no second one", subject: "sleep-heart", citations: HEART_RATE_RECOVERY_SECTION },
+  { slug: "night-hrv", label: "Night HRV", sub: "Your own baseline, one writer at a time — and what SDNN is not", subject: "sleep-heart", citations: NIGHT_HRV_SECTION },
 
   // ── Body ───────────────────────────────────────────────────────────────
   { slug: "heart-health", label: "Heart health", sub: "ApoB · LDL-C · Lp(a) · hs-CRP — screening bands, not treatment targets", subject: "body", citations: HEART_HEALTH_SECTION },

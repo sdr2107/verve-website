@@ -1,0 +1,172 @@
+---
+/**
+ * Your own baseline, one writer at a time — and what SDNN is not. Rendered by
+ * /science/sleep-heart/night-hrv; see scienceTopics.ts.
+ *
+ * The wearables table below is checked against each vendor's own pages
+ * before every release of the app; a row that cannot be confirmed is removed
+ * rather than left to age.
+ */
+import CitationCard from "../../components/CitationCard.astro";
+import { NIGHT_HRV_SECTION } from "../../data/science";
+import { topicHref } from "../../data/scienceTopics";
+const rhr = topicHref("resting-heart-rate");
+const hrr = topicHref("heart-rate-recovery");
+const sleep = topicHref("sleep-rhythm");
+
+const wearables: Array<[string, string, string, string]> = [
+  ["Apple Watch", "SDNN", "Yes, as SDNN", "Samples of about 1 minute, several a night; Verve takes the median of the ones inside the sleep window."],
+  ["Oura", "rMSSD", "No HRV, per third-party reports", "Sleep and resting rate reach Apple Health; the HRV stays in the Oura app."],
+  ["WHOOP", "rMSSD", "No HRV, per third-party reports", "WHOOP's stated reason: writing rMSSD into a field defined as SDNN would mislead."],
+  ["Garmin", "rMSSD", "No HRV, per third-party reports", "Garmin's own status reads rMSSD over the night; it is not written to Health."],
+  ["HRV4Training, Elite HRV", "rMSSD-based", "Yes, into the SDNN field", "A chest-strap or camera reading, written by the app under Apple's one HRV type."],
+];
+---
+
+<div class="mt-[18px] rounded-2xl border border-white/8 bg-white/4 p-5 sm:px-[22px]">
+  <p class="font-mono text-[9px] uppercase tracking-[0.1em] text-text-tertiary">
+    How a night is read
+  </p>
+  <div class="mt-3 grid gap-2 sm:grid-cols-2">
+    {[
+      ["The reading", "the median of the samples inside the night's sleep window, ms"],
+      ["The usual", "the median of your last 30 nights, from the same writer"],
+      ["The band", "the middle 50% of those 30 nights"],
+      ["The card", "the writer and its method: Apple Watch · SDNN"],
+      ["What it is not", "a population figure, a readiness score, a verdict"],
+    ].map(([k, v]) => (
+      <div class="flex flex-col gap-0.5 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2.5">
+        <span class="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">{k}</span>
+        <span class="text-[12.5px] text-text-secondary">{v}</span>
+      </div>
+    ))}
+  </div>
+</div>
+
+<div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+  <p class="text-sm leading-relaxed text-text-secondary">
+    Heart rate variability is the beat-to-beat unevenness of a resting heart.
+    A heart that speeds a little on each breath in and slows on each breath
+    out is being steered by the vagus nerve; the more freely it is steered,
+    the larger the variation. That is what the number measures, and it is all
+    it measures. It is not a fitness score, and it is not a readiness score,
+    whatever the dashboard beside it says.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">Why night only.</strong>
+    A watch samples HRV through the day, and the daytime samples are
+    contaminated: standing up, talking, a flight of stairs and a coffee all
+    change the interval between beats for reasons that have nothing to do
+    with the nervous system at rest. The night is the one stretch of the
+    day when the body is still, the breathing is regular and the
+    sympathetic drive is low, so the night is the only window Verve reads.
+    The reading for a night is the median of the samples that fall inside
+    that night&rsquo;s sleep window, the same window the
+    <a href={sleep}>sleep timing</a> page describes. A median, not a mean, so
+    one sample taken during a turn in bed does not drag the night with it.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">Your own baseline, nothing against a population.</strong>
+    The usual is the median of your own last 30 nights with a reading, and
+    the band is the middle 50% of those nights: the quarter above and the
+    quarter below are left outside it, so a night inside the band is a night
+    like most of yours. There is no population figure to compare against,
+    and Verve does not print one. HRV spans roughly a fivefold range between
+    healthy people of the same age, and it falls with age in everyone, so a
+    &ldquo;normal&rdquo; of 20 to 100&nbsp;ms says nothing about whether
+    your 34 is good. Whether your 34 is your usual 34 or a fall from your
+    usual 48 is the only question the number can answer, and it is the same
+    rule <a href={rhr}>resting heart rate</a> is read by.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">SDNN and rMSSD, plainly.</strong>
+    Two ways to turn a list of beat intervals into one number.
+    <em>SDNN</em> is the standard deviation of all the intervals in the
+    window: how widely the beats are spread around their own average. It
+    takes in every rhythm present, fast and slow, and because the slow
+    rhythms need time to show, its value depends on how long the window is;
+    a 1-minute SDNN and a 24-hour SDNN are different quantities with one
+    name. <em>rMSSD</em> is the root mean square of the differences between
+    each beat and the next: how much the interval jumps from one beat to the
+    one after. Only a fast rhythm can move a beat against its neighbour, and
+    the fast rhythm at rest is breathing, steered by the vagus nerve, so
+    rMSSD is close to a pure read of vagal tone and barely cares how long the
+    window is. Its cost is that it needs clean beats: a single missed or
+    doubled beat is a large jump, and the squaring makes it larger.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">Which is better.</strong>
+    At night, at rest, with the sympathetic drive low, the two track each
+    other closely, because both are then dominated by the same thing: the
+    breathing-driven vagal variation. rMSSD is the better short-window index
+    of vagal tone and the research favourite for athlete monitoring; the
+    papers on training load are written in it. SDNN over Apple&rsquo;s
+    windows of about 1 minute is noisier sample by sample, but a night&rsquo;s
+    median of those samples is a sound within-person trend. For a personal
+    baseline neither is &ldquo;better&rdquo;, provided the two are never
+    mixed on one line: an rMSSD of 60 and an SDNN of 60 are not the same
+    night, and a chart that holds both is a chart of the switch between
+    them.
+  </p>
+
+  <div class="mt-6 overflow-x-auto rounded-xl border border-white/10 bg-black/20">
+    <table class="w-full min-w-[620px] text-[12.5px]">
+      <thead>
+        <tr class="text-left font-mono text-[10px] uppercase tracking-wider text-text-tertiary">
+          <th class="px-3 py-2.5 font-semibold">Wearable</th>
+          <th class="px-3 py-2.5 font-semibold">Computes</th>
+          <th class="px-3 py-2.5 font-semibold">Writes to Apple Health</th>
+          <th class="px-3 py-2.5 font-semibold">Note</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-white/[0.06]">
+        {wearables.map(([w, m, writes, note]) => (
+          <tr class="align-top">
+            <td class="px-3 py-2.5 font-semibold text-text-primary">{w}</td>
+            <td class="px-3 py-2.5 font-mono text-text-secondary">{m}</td>
+            <td class="px-3 py-2.5 text-text-secondary">{writes}</td>
+            <td class="px-3 py-2.5 text-text-tertiary">{note}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p class="mt-3 text-xs leading-relaxed text-text-tertiary">
+    Apple Health has one HRV type, and its definition is SDNN. Apple Watch
+    writes SDNN into it. Oura, WHOOP and Garmin compute rMSSD and, per
+    third-party reports, do not write HRV to Apple Health at all. Some
+    chest-strap and camera apps write rMSSD-based values into the SDNN
+    field, which is why Verve reads the writer&rsquo;s name as well as the
+    number. This table is checked against the vendors&rsquo; pages before
+    each release.
+  </p>
+
+  <p class="mt-6 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">Verve&rsquo;s rules.</strong>
+    One writer per night: a night with samples from two sources is read
+    from one of them, never averaged across both. The writer and its method
+    are printed on the card, &ldquo;Apple Watch · SDNN&rdquo;, or
+    &ldquo;HRV4Training · rMSSD&rdquo;, or &ldquo;method undeclared&rdquo;
+    where the writer does not say. The baseline is kept per writer, so a new
+    writer starts a new band from its own first night rather than being
+    judged against the old writer&rsquo;s. Two methods never share a line.
+    And there is no readiness score: a number that folds HRV, sleep and
+    resting rate into one figure with a cheerful word under it has no study
+    behind the fold.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">When the Guide says anything at all.</strong>
+    A single low night is a night: a late meal, a drink, heat, a hard
+    session and the first day of a cold all do this, and the number cannot
+    tell them apart. The Guide names a pattern only when night HRV,
+    <a href={rhr}>resting heart rate</a> and
+    <a href={hrr}>one-minute recovery</a> all leave their own bands in the
+    same direction, HRV low, resting rate high, recovery small, for 3 nights.
+    Three readings agreeing for three nights is a pattern worth a sentence.
+    One reading on one night is not, and the Guide stays quiet.
+  </p>
+</div>
+
+<div class="mt-4 grid gap-4 sm:grid-cols-2">
+  {NIGHT_HRV_SECTION.map((c) => <CitationCard {...c} />)}
+</div>

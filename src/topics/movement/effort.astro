@@ -1,0 +1,126 @@
+---
+/**
+ * Why a beta-blocker breaks the heart-rate bands, and the 1-to-10 scale used
+ * instead. Rendered by /science/movement/effort; see scienceTopics.ts.
+ */
+import CitationCard from "../../components/CitationCard.astro";
+import { EFFORT_SECTION } from "../../data/science";
+import { topicHref } from "../../data/scienceTopics";
+const zone2 = topicHref("zone-2");
+const volume = topicHref("weekly-volume");
+const workout = topicHref("a-workout");
+
+/** Apple's four words, Verve's three bands, and the ACSM scales they line up with. */
+const mapping: Array<[string, string, string, string, string]> = [
+  ["1–3", "Easy", "light", "under 3", "under 12"],
+  ["4–6", "Moderate", "moderate", "3–4", "12–13"],
+  ["7–8", "Hard", "vigorous", "5 and up", "14 and up"],
+  ["9–10", "All out", "vigorous", "5 and up", "14 and up"],
+];
+---
+
+<div class="mt-[18px] rounded-2xl border border-white/8 bg-white/4 p-5 sm:px-[22px]">
+  <p class="font-mono text-[9px] uppercase tracking-[0.1em] text-text-tertiary">
+    One rating, three bands
+  </p>
+  <div class="mt-3 overflow-x-auto">
+    <table class="w-full min-w-[520px] text-[12.5px]">
+      <thead>
+        <tr class="text-left font-mono text-[10px] uppercase tracking-wider text-text-tertiary">
+          <th class="px-3 py-2 font-semibold">Apple 1–10</th>
+          <th class="px-3 py-2 font-semibold">Apple's word</th>
+          <th class="px-3 py-2 font-semibold">Verve counts it as</th>
+          <th class="px-3 py-2 font-semibold">Borg CR10</th>
+          <th class="px-3 py-2 font-semibold">Borg RPE 6–20</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-white/[0.06]">
+        {mapping.map(([a, w, v, cr, rpe]) => (
+          <tr>
+            <td class="px-3 py-2 font-mono font-semibold text-text-primary">{a}</td>
+            <td class="px-3 py-2 text-text-secondary">{w}</td>
+            <td class={`px-3 py-2 font-mono text-[11px] font-semibold uppercase tracking-wider ${v === "vigorous" ? "text-danger" : v === "moderate" ? "text-met-hero" : "text-success-light"}`}>{v}</td>
+            <td class="px-3 py-2 font-mono text-text-secondary">{cr}</td>
+            <td class="px-3 py-2 font-mono text-text-secondary">{rpe}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p class="mt-3 text-[12.5px] leading-relaxed text-text-tertiary">
+    The two right-hand columns are the ACSM cut-points: CR10 3–4 or RPE
+    12–13 is moderate, CR10 5 and above or RPE 14 and above is vigorous.
+    Apple&rsquo;s four words are mapped onto them; nothing finer than that is
+    claimed.
+  </p>
+</div>
+
+<div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+  <p class="text-sm leading-relaxed text-text-secondary">
+    Everything on the <a href={workout}>workout page</a> that says how hard a
+    session was is read from heart rate: the three bands, the Zone 2 minutes,
+    the moderate and vigorous minutes that climb the Weekly Ascent. For most
+    people that is the right instrument. For a person on a beta-blocker it is
+    the wrong one, and this page is about what Verve does instead.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">What a beta-blocker does to the number.</strong>
+    Beta-blockers blunt the heart-rate response to exertion: at a given
+    workload the rate runs roughly 20 to 30 bpm lower than it would
+    unmedicated, and the peak rate is held down the same way. The effort is
+    real and the body is working as hard; the heart is simply not
+    reporting it. So every band drawn from heart rate undercounts. A walk
+    that would have sat in the middle of the moderate band reads as light;
+    an interval session that would have been vigorous reads as moderate;
+    the Zone 2 minutes are a fraction of the real ones. Re-drawing the bands
+    lower does not fix it, because the blunting is not a fixed offset and
+    the dose changes. The ACSM guideline&rsquo;s answer is the one Verve
+    follows: on rate-limiting medication, prescribe and judge intensity by
+    perceived exertion, not by heart rate.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">The 1-to-10 scale.</strong>
+    From watchOS 11 and iOS 18, Apple Watch asks for an effort rating when
+    a workout ends: 1 to 10, with Easy, Moderate, Hard and All out as the
+    four words along it. The rating is stored in Apple Health as the Workout
+    Effort Score, and for a session that was not rated Apple can store an
+    estimated score of its own. Verve reads the rating as it is, with no
+    smoothing and no re-scoring from heart rate, and the card says which
+    kind it was: rated by you, or estimated. A watch that does not ask, or
+    an older one, gets a row on the workout page where the rating can be
+    typed. The scale is Borg&rsquo;s: the perceived strain tracks the
+    physiological strain closely enough to stand in for it, which is the
+    whole reason a number typed after the session can be a measure.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">How the rating becomes minutes.</strong>
+    One effort per session. A 32-minute walk rated 6 is 32 moderate
+    minutes; rated 8, it is 32 vigorous minutes. Heart rate can grade a
+    session minute by minute, and this cannot: there is no warm-up
+    discounted, no hard middle picked out, no cool-down trimmed. It is
+    coarser, and honest about being coarser.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">What switches over.</strong>
+    When the profile says beta-blocker, the minutes, the <a href={zone2}>Zone
+    2</a> total and the <a href={volume}>Weekly Ascent</a> are counted by
+    effort instead of heart rate: a session rated 4 to 6 is a Zone 2 session
+    in full, 7 and above climbs the Ascent as vigorous. The heart-rate trace
+    is still drawn on the workout page, because it is what the watch
+    measured, but nothing is graded from it. Strength, flexibility and
+    balance are not affected: they were never graded by heart rate, and
+    they still are not.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">What does not switch over.</strong>
+    The resting heart rate tile, one-minute recovery and night HRV are read
+    against your own band as before. A beta-blocker lowers all three
+    baselines, and the band moves with them, which is the point of a band
+    that is yours. What the medication changes is the response to effort,
+    and that is the only place the heart-rate reading has been retired.
+  </p>
+</div>
+
+<div class="mt-4 grid gap-4 sm:grid-cols-2">
+  {EFFORT_SECTION.map((c) => <CitationCard {...c} />)}
+</div>

@@ -517,3 +517,54 @@ export const MUSCLE_HEALTH_SECTION: Citation[] = [
     color: "#0e7490",
   },
 ];
+
+/**
+ * Night HRV. Four sources: the measurement standard, the plain-language
+ * overview of the metrics, the athlete-monitoring paper that settled the
+ * rMSSD question, and nothing on readiness because there is nothing to cite.
+ */
+export const NIGHT_HRV_SECTION: Citation[] = [
+  {
+    title: "Task Force of the ESC and NASPE — Heart rate variability: standards of measurement, physiological interpretation, and clinical use, Circulation 1996",
+    summary:
+      "The standard every HRV metric is defined against. It names SDNN as the standard deviation of all normal-to-normal intervals over the recording, and rMSSD as the root mean square of successive differences, and warns that SDNN depends on the length of the recording, so values from recordings of different lengths cannot be compared. That is the reason a 5-minute SDNN and a 24-hour SDNN are different numbers, and the reason Verve never puts two methods on one line.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/8598068/",
+    color: "#4338ca",
+  },
+  {
+    title: "Shaffer & Ginsberg — An Overview of Heart Rate Variability Metrics and Norms, Frontiers in Public Health 2017",
+    summary:
+      "The review that sets out what each metric indexes and what it is not. rMSSD is the primary time-domain measure of vagally mediated variation and the one with the best short-term reliability; SDNN over a short window reflects mostly the same parasympathetic, breathing-driven variation, while over 24 hours it takes in the slow rhythms as well. HRV spans a wide range between healthy people and falls with age, which is why Verve reads yours against your own nights and never against a population figure.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/29034226/",
+    color: "#7e22ce",
+  },
+  {
+    title: "Plews, Laursen, Stanley, Kilding & Buchheit — Training adaptation and heart rate variability in elite endurance athletes: opening the door to effective monitoring, Sports Medicine 2013",
+    summary:
+      "The case for rMSSD as the index to monitor training with: it can be taken over a short window, it is less sensitive to breathing rate than the frequency-domain measures, and a weekly or 7-day rolling average tracks adaptation where a single morning reading does not. The reason the research on athlete monitoring is written in rMSSD, and the reason a single night is read by Verve as a night, not a verdict.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/23852425/",
+    color: "#15803d",
+  },
+];
+
+/**
+ * Effort, for the person whose heart rate cannot be trusted. Two sources: the
+ * guideline that says what to do on rate-limiting medication, and the scale
+ * it points to.
+ */
+export const EFFORT_SECTION: Citation[] = [
+  {
+    title: "American College of Sports Medicine — ACSM's Guidelines for Exercise Testing and Prescription, 11th edition, 2021",
+    summary:
+      "The exercise-prescription chapter sets out the intensity bands in several currencies at once, so that one can stand in for another: on the Borg 6–20 scale, 12–13 is moderate and 14 and above is vigorous; on the CR10 scale, 3–4 is moderate and 5 and above is vigorous. It recommends perceived exertion for prescribing and judging intensity in people on medication that limits the heart-rate response, beta-blockers chief among them, because for them a heart-rate band no longer means what it was set to mean.",
+    url: "https://www.acsm.org/education-resources/books/guidelines-exercise-testing-prescription",
+    color: "#b45309",
+  },
+  {
+    title: "Borg — Psychophysical bases of perceived exertion, Medicine & Science in Sports & Exercise 1982",
+    summary:
+      "The paper behind both scales: the 6–20 rating, built so that the number times ten approximates the heart rate of a young adult at that effort, and the category-ratio CR10 scale with verbal anchors. Its finding is the one a watch rating depends on: how hard an effort feels tracks the physiological strain closely enough to be used as a measure of it.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/7154893/",
+    color: "#c2410c",
+  },
+];
