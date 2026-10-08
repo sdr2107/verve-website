@@ -2886,6 +2886,7 @@ import SiteHeader from "../components/SiteHeader.astro";
 
   // ── session ────────────────────────────────────────────────────────────
   const appLink = document.querySelector('[data-nav="app"]') as HTMLElement | null;
+  const signinLink = document.querySelector('[data-nav="signin"]') as HTMLElement | null;
 
   async function boot() {
     // an invitation's button: the link carries a token the site verifies
@@ -2923,12 +2924,13 @@ import SiteHeader from "../components/SiteHeader.astro";
       if (!firstName) askForName(guessNameFromEmail(userEmail));
       else hideNameForm();
       askForNewsletter(session.user);
-      appLink?.classList.add("hidden");
+      appLink?.classList.add("hidden"); signinLink?.classList.add("hidden");
       show("signout", true); show("home", true); show("auth", false);
       const wanted = window.location.hash.replace("#", "") || (coachDoor ? "group" : "");
       if (wanted.startsWith("overview-") && SEC_ORDER.includes(wanted.slice(9) as SecKey)) ovSection = wanted.slice(9) as SecKey;
       setTab(["overview", "labs", "reports", "depth"].includes(wanted) || wanted.startsWith("overview-") ? wanted.split("-")[0] : "overview");
       await Promise.all([loadPeople(), loadPlan(), loadMyRole().then((r) => { myRole = r; })]);
+      void showRoleChip();
       await mergeOtherAccounts();
       applyPersonMode();
       if (wanted === "group") setTab("group");   // only once the people are known
@@ -2937,7 +2939,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       firstName = "";
       people = []; person = null;
       show("peoplewrap", false);
-      appLink?.classList.remove("hidden");
+      appLink?.classList.remove("hidden"); signinLink?.classList.add("hidden");
       show("auth", true); show("home", false); show("signout", false);
       if (oauthError) msg("authmsg", `Apple sign-in did not finish: ${oauthError.replace(/\+/g, " ")}.`, true);
       if (door === "coach") {
@@ -3239,6 +3241,38 @@ import SiteHeader from "../components/SiteHeader.astro";
   const LAST_DOOR = "verve:last-sign-in", PENDING_DOOR = "verve:pending-sign-in", COACH_DOOR = "verve:coach-door";
   /** The vetted role on this account, if one has been entered: it names the group (Clients, Patients) and nothing more. */
   let myRole: "coach" | "clinician" | null = null;
+  /**
+   * The label by the greeting, worked out, never chosen: a vetted row makes
+   * a coach or a clinician; an active share to a vetted coach makes a
+   * client of that coach; everyone else is an individual, which says
+   * nothing. It changes by itself when a share starts or stops.
+   */
+  async function showRoleChip() {
+    const greet = $("greet");
+    let chip = document.getElementById("rolechip");
+    if (!chip) {
+      chip = document.createElement("span");
+      chip.id = "rolechip";
+      chip.className = "hidden rounded-md px-1.5 py-0.5 font-mono text-[9.5px] tracking-wider";
+      greet.insertAdjacentElement("afterend", chip);
+    }
+    let text = "", tone = "";
+    if (myRole === "clinician") { text = "CLINICIAN · VERIFIED"; tone = "bg-accent/15 text-accent-light"; }
+    else if (myRole === "coach") { text = "COACH · VERIFIED"; tone = "bg-accent/15 text-accent-light"; }
+    else {
+      try {
+        const { data: gs } = await supabase.from("grants").select("viewer_email").eq("owner_id", userId).eq("status", "active");
+        const emails = [...new Set((gs ?? []).map((g: any) => String(g.viewer_email).toLowerCase()))];
+        if (emails.length) {
+          const { data: pros } = await supabase.from("professionals").select("email, role, title").in("email", emails).eq("role", "coach").limit(1);
+          const c = pros?.[0];
+          if (c) { text = `CLIENT OF ${String(c.title || c.email).split(/[,\s]+/)[0].toUpperCase()}`; tone = "bg-success/15 text-success-light"; }
+        }
+      } catch { /* the table may not exist yet */ }
+    }
+    chip.textContent = text;
+    chip.className = `${text ? "" : "hidden "}ml-2 rounded-md px-1.5 py-0.5 font-mono text-[9.5px] tracking-wider ${tone}`;
+  }
   async function loadMyRole(): Promise<"coach" | "clinician" | null> {
     try {
       const { data } = await supabase.from("professionals").select("role").eq("email", userEmail.toLowerCase()).maybeSingle();
