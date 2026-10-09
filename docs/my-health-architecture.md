@@ -317,3 +317,32 @@ the Reports, Labs and In depth code loaded on first opening, and the
 Supabase client loaded after the first paint. Both need the page split
 into modules first; splitting one 5,700-line script by hand would be a
 patch.
+
+**Step 3, first two commits** (2026-10-09):
+
+- *The derive layer* (`src/my-health/derive/`): 828 lines left the page.
+  format, markers, activity, heart, lenses, labs, person. Every function is
+  a function of its arguments; `derivePerson(document)` is one object per
+  document, kept. Nine node tests (`npm test`) on the shapes the document
+  carries. The page reads the same functions by import and its globals are
+  set from the derived person, so the numbers could not change.
+- *The Overview as views* (`src/my-health/state.ts`, `motion.ts`,
+  `views/Overview.tsx`): the line under the greeting, the four cards and
+  one section with its tiles and the open marker are Preact components
+  reading signals (the document, the person, the section, the open marker,
+  the range, the year, the focus). A tap changes a signal and the diff
+  touches only the nodes whose values changed; the entrance animation is
+  asked for by key and granted once per session. The page's old
+  `renderGlance` and `renderSection` are gone; what stays on the page is the
+  chrome around the views (the Labs count, the empty card, the sidebar's lit
+  row, the hash), driven by an `effect` on the section signal.
+- Verified on the production build (`astro preview` on port 4322, since
+  the dev server on 4321 belongs to another session and served a stale
+  bundle after the Preact install): glance → Fitness → a tile in focus →
+  the All range with its year menu → All markers → Body's three shelves →
+  back to the Overview tab, with no console errors and the same words and
+  figures as before.
+
+Still to come in step 3: Labs, In depth, Reports, People as views, one
+tab per commit; then the dynamic imports per tab and the Supabase client
+loaded after the first paint.

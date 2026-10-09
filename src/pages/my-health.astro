@@ -551,8 +551,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
              stay on Labs; the Body card carries the count and what is due.
              A card opens its section. -->
         <p id="ovline" class="mb-5 min-h-[22px] text-[14px] leading-relaxed text-text-secondary"></p>
-        <!-- the four cards' frames are painted by the script before any request leaves (glanceFrame),
-             so the page has its height from the first paint and nothing below them jumps -->
+        <!-- the four cards are a view (src/my-health/views/Overview): their frames are mounted
+             before any request leaves, so the page has its height from the first paint -->
         <div id="ovglance" class="grid min-h-[150px] gap-4 sm:grid-cols-2"></div>
 
         <p class="mt-7 font-mono text-[10.5px] text-text-muted lg:hidden">Drag a PDF anywhere on this page to add it.</p>
@@ -560,20 +560,9 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
 
        <!-- ═══ ONE SECTION: its markers as tiles, one of them open ═════════
             Fitness, Movement, Sleep & heart or Body, picked in the sidebar.
-            Everything here is drawn by renderSection() from rows the page
-            already holds; nothing is fetched for it. -->
-       <div id="ovsection" class="hidden">
-         <div class="flex flex-wrap items-end justify-between gap-4">
-           <div class="min-w-0">
-             <div id="seckick" class="font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary"></div>
-             <h2 class="mt-1.5 flex items-center gap-2.5 text-[24px] font-extrabold tracking-[-0.02em] text-text-primary"><span id="secdot" class="h-2.5 w-2.5 shrink-0 rounded-full"></span><span id="secname"></span></h2>
-             <p id="secsub" class="mt-1.5 text-[13px] text-text-tertiary"></p>
-           </div>
-           <a id="seclink" href="/science" class="text-[13px] font-medium text-accent-light hover:text-text-primary">The science behind these &rarr;</a>
-         </div>
-         <div id="sectiles" class="mt-5 grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6"></div>
-         <div id="secopen" class="mt-4"></div>
-       </div>
+            A view (src/my-health/views/Overview) of the document; nothing
+            is fetched for it. -->
+       <div id="ovsection" class="hidden"></div>
         <!-- the next step in the chain: picture, what moved, values, paper -->
         <button type="button" data-goto="depth" class="mt-8 flex w-full max-w-3xl items-center justify-between gap-4 rounded-2xl border border-white/12 bg-white/[0.03] px-5 py-4 text-left transition-colors hover:border-white/25 hover:bg-white/[0.05]">
           <span class="min-w-0"><span class="block font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary">NEXT · 2 OF 4</span><span class="mt-1 block text-[14.5px] font-bold text-text-primary">In depth: why the week read that way</span></span>
@@ -885,6 +874,10 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   import { HRV_MIN_NIGHTS, sleepHeartSummary, sleepHeartSummaryRaw } from "../my-health/derive/heart";
   import { type SecKey, type Rng, type Pt2, type Marker, type Drawn, SEC_META, SEC_ORDER, RANGE_LABEL, SHELVES, ownBand, weightSeries, sppbSeries, drawnFor, chartSvg, alongsideHtml, workoutsListHtml } from "../my-health/derive/lenses";
   import { derivePerson, type PersonData } from "../my-health/derive/person";
+  import { labsJudged } from "../my-health/derive/labs";
+  import { effect } from "@preact/signals";
+  import { doc as docSignal, person as personSignal, ovSection as ovSectionSignal, setSection as setSectionState } from "../my-health/state";
+  import { mountOverview } from "../my-health/views/Overview";
   import { readDocument, writeDocument, pruneDocuments, clearDocuments, sameDocument } from "../my-health/store";
 
   // ── the ruler ─────────────────────────────────────────────────────────
@@ -1098,6 +1091,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     let wanted = "";
     try { wanted = sessionStorage.getItem(PERSON_KEY) ?? ""; } catch { /* fine */ }
     person = people.find((p) => p.id && p.id === wanted) ?? people.find((p) => p.self) ?? people[0];
+    personSignal.value = person;
     // the document in hand is this person's, or it is fetched again for them
     if (doc && (doc.person?.id ?? "") === (person?.id ?? "")) docFor = person?.id ?? ""; else invalidateDocument();
   }
@@ -2752,7 +2746,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       b.className = `flex min-h-9 flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors sm:flex-none lg:min-h-10 lg:w-full lg:justify-start lg:gap-2.5 lg:rounded-[10px] lg:border-l-2 lg:px-3 lg:py-2 lg:text-[13.5px] ${
         on ? "bg-accent/20 text-text-primary lg:border-accent lg:bg-white/6" : "text-text-tertiary hover:text-text-primary lg:border-transparent lg:text-text-secondary lg:hover:bg-white/[0.04]"}`;
     });
-    history.replaceState(null, "", t === "overview" && ovSection !== "all" ? `#overview-${ovSection}` : "#" + t);
+    history.replaceState(null, "", t === "overview" && ovSectionSignal.value !== "all" ? `#overview-${ovSectionSignal.value}` : "#" + t);
   }
   /** The small figure beside a tab in the sidebar: how many outside range, how many reports. */
   function setTabCount(t: string, text: string, tone = "text-text-tertiary") {
@@ -2776,9 +2770,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     b.addEventListener("click", () => {
       const t = (b as HTMLElement).dataset.tab!;
       // Overview is the glance; a section stays open only while its own row is lit
-      if (t === "overview") ovSection = "all";
+      if (t === "overview") setSectionState("all");
       setTab(t);
-      if (t === "overview") renderSection();
     }));
 
   // ── session ────────────────────────────────────────────────────────────
@@ -2828,7 +2821,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       appLink?.classList.add("hidden"); signinLink?.classList.add("hidden");
       show("signout", true); show("home", true); show("auth", false);
       const wanted = window.location.hash.replace("#", "") || (coachDoor ? "group" : "");
-      if (wanted.startsWith("overview-") && SEC_ORDER.includes(wanted.slice(9) as SecKey)) ovSection = wanted.slice(9) as SecKey;
+      if (wanted.startsWith("overview-") && SEC_ORDER.includes(wanted.slice(9) as SecKey)) setSectionState(wanted.slice(9) as SecKey);
       setTab(["overview", "labs", "reports", "depth"].includes(wanted) || wanted.startsWith("overview-") ? wanted.split("-")[0] : "overview");
       // The first round trip, one for everything the page needs before it
       // can say whose page this is: the name, the people, the plan, the
@@ -3131,6 +3124,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     allLabs = d.labs; allImaging = d.imaging; allApp = d.app_labs;
     groupLabs();
     applyActivity(d);
+    docSignal.value = d; personSignal.value = person;
     mark("document");
     renderGlance();
     renderOverview();
@@ -3557,104 +3551,32 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       <circle cx="${x(last).toFixed(1)}" cy="${y(vals[last]).toFixed(1)}" r="2.6" fill="${color}"/></svg>`;
   }
 
-  /**
-   * The glance: four cards, one a section, each with one number, two words
-   * of context and one sentence; and a line under the greeting that says
-   * the week in a breath. Every figure comes through the same summaries In
-   * depth uses, so the two never disagree. No lab values here: those stay
-   * on Labs, and the Body card carries the count and what is due.
-   */
-  /** A card's frame before its rows land: the label and the height, so nothing moves when the numbers arrive. */
-  const glanceFrame = (sec: SecKey) => `
-      <div class="flex min-h-[150px] flex-col gap-2.5 rounded-[20px] border border-white/10 bg-white/[0.03] p-5" aria-hidden="true">
-        <span class="flex items-center gap-2"><span class="h-2 w-2 shrink-0 rounded-full" style="background: ${SEC_META[sec].dot}"></span><span class="text-[12px] font-bold tracking-[0.08em] text-text-secondary">${SEC_META[sec].label.toUpperCase()}</span></span>
-        <span class="mt-1 h-8 w-28 animate-pulse rounded-md bg-white/[0.05]"></span>
-        <span class="h-3.5 w-3/4 animate-pulse rounded bg-white/[0.04]"></span>
-      </div>`;
-  /** The four cards; `pending` names the sections whose rows have not landed yet, drawn as frames. */
-  function renderGlance(pending: Set<SecKey> = new Set()) {
-    const today = todayStr(), thisMonday = mondayOf(new Date());
-    const rise = riseOnce("glance");
-    const you = person?.self ? "your" : "their";
-    const heart = sleepHeartSummary(syncSignals, today);
-    const goal = weeklyGoal();
-    const act = allWeeks.length || syncActs.length ? activitySummary(allWeeks, syncActs, goal, today, thisMonday) : null;
-    const fit = fitnessSummary(allCrf, today);
-    const by = markerPoints();
-    const dues = [...labRowsFrom(by, today).map((r) => r.due), fit.due, bodyDueFrom(by, today)]
-      .filter((d): d is Due => !!d).sort((x, y) => x.days - y.days);
-    // the labs: how many series, and how many latest values sit outside their lab's own range
-    let outside = 0, judged = 0;
-    for (const m of labSecs.values()) for (const rs of m.values()) { const ok = inRange(rs[rs.length - 1]); if (ok !== null) judged++; if (ok === false) outside++; }
+  // ── the glance and the sections are views now ──────────────────────────
+  // src/my-health/views/Overview renders the line under the greeting, the
+  // four cards and one section with its tiles and the open marker, from
+  // the document signal; a tap or a fresh document changes only the nodes
+  // whose values changed. What stays here is the page's chrome around
+  // them: the Labs tab's count, the empty card, the goto buttons, the
+  // sidebar's lit section and the hash.
+  function renderGlance() {
+    const { outside } = labsJudged(allLabs);
     setTabCount("labs", outside ? `${outside} outside` : "", outside ? "text-warning" : "text-text-tertiary");
-    const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
-
-    type Glance = { sec: SecKey; value: string; beside: string; line: string };
-    const cards: Glance[] = [];
-    // fitness: the latest test, in METs, and when the next is due
-    { const l = fit.latest;
-      const mets = l ? (l.met_capacity != null ? Number(l.met_capacity) : l.v / 3.5) : null;
-      const ago = l ? daysBetween(l.measured_on, today) : 0;
-      const dueLine = fit.due ? (fit.due.days < 0 ? ` A retest is ${plural(-fit.due.days, "day")} overdue.` : fit.due.days === 0 ? " A retest is due today." : ` Next test in ${plural(fit.due.days, "day")}.`) : "";
-      cards.push({ sec: "fitness", value: mets != null ? fmt1(mets) : "—",
-        beside: l ? `METs · ${esc(methodLabel(l.method))}${fit.trendWord ? ` · ${fit.trendWord}` : ""}` : "no test on file",
-        line: l ? `Tested ${ago === 0 ? "today" : `${plural(ago, "day")} ago`}.${dueLine}` : "The app offers a test in six to twelve minutes." }); }
-    // movement: the week against the goal, Zone 2, the sessions, the steps
-    { const tw = act?.thisWeek ? Number(act.thisWeek.met_hours) : 0, n = act?.thisWeek ? Number(act.thisWeek.workouts) : 0;
-      const z2 = [...actsByDay(syncActs)].filter(([d]) => d >= thisMonday).reduce((t, [, r]) => t + r.z2, 0);
-      const lastRow = allWeeks.find((w) => String(w.week_start) === addDays(thisMonday, -7));
-      const steps = heart?.steps.avg;
-      cards.push({ sec: "movement", value: act ? fmt1(tw) : "—",
-        beside: act ? `of ${fmt1(goal)} MET-hours this week${z2 ? ` · ${round0(z2)} min in Zone 2` : ""}` : "nothing from the app yet",
-        line: act ? `${n === 0 ? "No workout yet this week" : plural(n, "workout")}${steps ? `, ${steps.toLocaleString()} steps a day` : ""}.${lastRow ? ` Last week ended at ${fmt1(Number(lastRow.met_hours))}.` : ""}` : "Cloud sync in the app fills this in." }); }
-    // sleep and heart: last night, the resting rate, the recovery, each against the person's own usual
-    { const sl = heart?.sleep.last ?? null, usual = heart?.sleep.usual ?? null, r = heart?.rhr, h = heart?.hrr;
-      const beside = [sl ? "last night" : "", r?.latest != null ? `resting ${r.latest}` : "", h?.latest != null ? `recovery ${h.latest}` : ""].filter(Boolean).join(" · ");
-      const sleepLine = sl ? (usual != null ? (Math.abs(sl.min - usual) < 20 ? "Sleep is about the usual." : `Sleep is ${fmtSleepMin(Math.abs(sl.min - usual))} ${sl.min < usual ? "under" : "over"} ${you} usual.`) : sl.band === "short" ? "Sleep was under seven hours." : "") : "";
-      const heartLine = r?.latest != null ? (r.baseline != null ? ((r.status === "elevated" || r.status === "stronglyElevated") && r.delta ? `Resting heart rate ${Math.abs(r.delta)} above ${you} own normal${r.run > 1 ? `, ${r.run} mornings running` : ""}.` : "The heart is where it usually is.") : "A normal for the heart needs 14 mornings.") : "";
-      cards.push({ sec: "heart", value: sl ? fmtSleepMin(sl.min) : r?.latest != null ? String(r.latest) : "—",
-        beside: sl ? beside : r?.latest != null ? `bpm resting${h?.latest != null ? ` · recovery ${h.latest}` : ""}` : "nothing from the watch yet",
-        line: [sleepLine, heartLine].filter(Boolean).join(" ") || "A watch worn to bed and a synced app fill this in." }); }
-    // body: waist to height when both are known, the grip, the count, and what is due
-    { const waist = (by.get("waist_cm") ?? []).slice(-1)[0] ?? null, grip = (by.get("handgrip_kg") ?? []).slice(-1)[0] ?? null;
-      const height = Number(syncProfile?.height_cm) || null;
-      const whr = waist && height ? waist.v / height : null;
-      const read = [...by.values()].filter((v) => v.length).length;
-      const due = dues[0] ?? null;
-      const dueText = due ? (due.days < 0 ? ` ${esc(due.what)} is ${plural(-due.days, "day")} overdue.` : due.days === 0 ? ` ${esc(due.what)} is due today.` : due.days <= 31 ? ` ${esc(due.what)} is due in ${plural(due.days, "day")}.` : "") : "";
-      cards.push({ sec: "body", value: whr != null ? whr.toFixed(2) : grip ? fmt1(grip.v) : read ? String(read) : "—",
-        beside: whr != null ? `waist to height${grip ? ` · grip ${fmt1(grip.v)} kg` : ""}` : grip ? "kg grip" : read ? "markers read" : "nothing read yet",
-        line: `${read ? `${plural(read, "marker")} read${outside ? `, ${outside} outside ${outside === 1 ? "its" : "their"} range` : judged ? ", all in range" : ""}.` : "No marker read yet: drop a report on Reports."}${dueText}${read ? " The values themselves are on Labs." : ""}` }); }
-
-    // the line under the greeting
-    const bits: string[] = [];
-    if (act?.thisWeek) { const tw = Number(act.thisWeek.met_hours); bits.push(tw >= goal ? "a week past the goal" : tw >= goal / 2 ? "halfway to the week's goal" : "a quiet week so far"); }
-    if (heart?.sleep.last && heart.sleep.usual != null) { const d = heart.sleep.last.min - heart.sleep.usual; bits.push(Math.abs(d) < 20 ? "sleep as usual" : d < 0 ? "sleep a little short" : "sleep a little long"); }
-    if (outside) bits.push(`${plural(outside, "lab value")} outside range`);
-    if (dues[0] && dues[0].days <= 31) bits.push(dues[0].days < 0 ? `${dues[0].what.toLowerCase()} overdue` : "one retest due this month");
-    const line = bits.length ? `${bits[0].charAt(0).toUpperCase()}${bits[0].slice(1)}${bits.slice(1).map((x) => `, ${x}`).join("")}. The four cards say the rest.` : "";
-    if (!pending.size || line) $("ovline").textContent = line;   // the line keeps its height either way
-
-    $("ovglance").innerHTML = cards.map((c, i) => pending.has(c.sec) ? glanceFrame(c.sec) : `
-      <button type="button" data-glance="${c.sec}" style="--i: ${i}" class="${rise} flex min-h-[150px] flex-col gap-2.5 rounded-[20px] border border-white/10 bg-white/[0.03] p-5 text-left transition-colors hover:border-white/20 hover:bg-white/[0.05]">
-        <span class="flex items-center gap-2"><span class="h-2 w-2 shrink-0 rounded-full" style="background: ${SEC_META[c.sec].dot}"></span><span class="text-[12px] font-bold tracking-[0.08em] text-text-secondary">${SEC_META[c.sec].label.toUpperCase()}</span><svg class="ml-auto shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
-        <span class="flex flex-wrap items-baseline gap-x-2 gap-y-1"><span class="font-mono text-[34px] font-bold leading-none" style="color: ${SEC_META[c.sec].dot}">${c.value}</span><span class="text-[13px] text-text-secondary">${c.beside}</span></span>
-        <span class="text-[13px] leading-relaxed text-text-secondary">${c.line}</span>
-      </button>`).join("");
-    $("ovglance").querySelectorAll<HTMLElement>("[data-glance]").forEach((b) => b.addEventListener("click", () => setSection(b.dataset.glance as SecKey)));
-    if (pending.size) return;   // the rest waits for every row: it decides what the page says, not how tall it is
     show("emptycard", !allLabs.length && !allWeeks.length && !syncSignals.length);
     wireGoto();
-    renderSection();
   }
-
-  let ovSection: "all" | SecKey = "all";
-  let openMarkerKey = "";
-  let openRange: Rng | "" = "";
-  /** A year chosen under Years (or All): that year alone, month by month. */
-  let openYear: number | null = null;
-  /** A tile tapped: the others step aside and the marker opens right under it. */
-  let focusTile = false;
+  function renderSection() { /* the section is a view of ovSectionSignal; nothing to draw here */ }
+  effect(() => {
+    const sec = ovSectionSignal.value;
+    show("ovall", sec === "all"); show("ovsection", sec !== "all");
+    document.querySelectorAll<HTMLElement>("[data-section]").forEach((b) => {
+      const on = b.dataset.section === sec;
+      b.setAttribute("aria-current", on ? "page" : "false");
+      b.className = `flex min-h-8 items-center gap-2 rounded-full border px-3 py-1 text-[12.5px] font-semibold transition-colors lg:min-h-8 lg:w-full lg:rounded-lg lg:border-0 lg:border-l-2 lg:px-3 lg:py-1 lg:text-left lg:text-[13px] ${on
+        ? "border-accent/70 bg-accent/15 text-text-primary lg:border-accent lg:bg-white/6"
+        : "border-white/14 text-text-secondary hover:border-white/30 hover:text-text-primary lg:border-transparent lg:hover:bg-white/[0.04]"}`;
+    });
+    if (activeTab === "overview" && marked.has("painted")) history.replaceState(null, "", sec === "all" ? "#overview" : `#overview-${sec}`);
+  });
   // The entrance animation plays the first time a list is drawn, never on a
   // redraw: a tile that only changed its number must not rise again.
   const risen = new Set<string>();
@@ -3666,131 +3588,10 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
 
 
 
-  function renderSection() {
-    const sec = ovSection;
-    show("ovall", sec === "all"); show("ovsection", sec !== "all");
-    document.querySelectorAll<HTMLElement>("[data-section]").forEach((b) => {
-      const on = b.dataset.section === sec;
-      b.setAttribute("aria-current", on ? "page" : "false");
-      b.className = `flex min-h-8 items-center gap-2 rounded-full border px-3 py-1 text-[12.5px] font-semibold transition-colors lg:min-h-8 lg:w-full lg:rounded-lg lg:border-0 lg:border-l-2 lg:px-3 lg:py-1 lg:text-left lg:text-[13px] ${on
-        ? "border-accent/70 bg-accent/15 text-text-primary lg:border-accent lg:bg-white/6"
-        : "border-white/14 text-text-secondary hover:border-white/30 hover:text-text-primary lg:border-transparent lg:hover:bg-white/[0.04]"}`;
-    });
-    if (sec === "all") return;
-    const meta = SEC_META[sec];
-    const ms = markers.filter((m) => m.section === sec);
-    const have = ms.filter((m) => m.series().length);
-    $("seckick").textContent = `OVERVIEW · ${meta.label.toUpperCase()} · ${sec === "body" ? "FROM THE APP AND THE REPORTS" : "FROM THE APP"}`;
-    $("secname").textContent = meta.label; ($("secdot") as HTMLElement).style.background = meta.dot;
-    $("secsub").textContent = meta.blurb; ($("seclink") as HTMLAnchorElement).href = meta.science;
-    // Nothing is open until a tile is tapped: the section is its grid of
-    // tiles, and a marker's chart appears only in focus, under the one tile
-    // chosen. The first marker used to open itself, which read as a choice
-    // nobody made, 23 tiles down on Body.
-    if (openMarkerKey && markerByKey(openMarkerKey).section !== sec) { openMarkerKey = ""; openRange = ""; }
-    // A short section (six tiles or fewer) opens its first marker itself: the
-    // chart sits right under the grid and reads as part of it. Body, with its
-    // three shelves, waits for a tap.
-    if (!openMarkerKey && ms.length <= 6) { openMarkerKey = (have[0] ?? ms[0]).key; openRange = ""; }
-    const open = openMarkerKey ? markerByKey(openMarkerKey) : null;
-    // a figure is white; amber only when the latest reading sits outside its own lab's range
-    const outKeys = new Set(labRowsFrom(markerPoints(), todayStr()).filter((r) => r.out).map((r) => r.key));
-    // the tiles: a marker with nothing yet is a dashed tile, never hidden
-    const rise = riseOnce(`tiles:${sec}`);
-    const tile = (m: Marker, i: number) => {
-      const pts = m.series(); const l = pts[pts.length - 1] ?? null; const on = m.key === openMarkerKey;
-      return `<button type="button" data-marker="${m.key}" style="--i: ${i}" aria-current="${on ? "true" : "false"}" class="${rise} flex flex-col gap-1 rounded-2xl border p-3.5 text-left transition-colors ${on ? "border-accent/60 bg-accent/[0.08]" : l ? "border-white/8 bg-white/4 hover:border-white/16" : "border-dashed border-white/10 hover:border-white/20"}">
-        <span class="text-[12px] text-text-secondary">${esc(m.label)}</span>
-        <span class="font-mono text-[20px] font-bold leading-none ${l ? (outKeys.has(m.key) ? "text-warning" : "text-text-primary") : "text-text-muted"}">${l ? (m.pointLabel ? m.pointLabel(l) : m.fmt(l.v)) : "—"}${l && m.unit ? ` <span class="text-[10px] text-text-tertiary">${esc(m.unit)}</span>` : ""}</span>
-        <span class="text-[11.5px] leading-snug text-text-tertiary">${l ? (l.d === todayStr() ? "today" : esc(dayWord(l.d))) : "not read yet"}</span>
-      </button>`;
-    };
-    // Body: the app's three shelves, each a kicker and its tiles; the other sections one grid
-    const SHELVES: Array<["metabolic" | "heart" | "muscle", string]> = [["metabolic", "Metabolic"], ["heart", "Heart"], ["muscle", "Muscle"]];
-    const focusOn = focusTile ? ms.find((m) => m.key === openMarkerKey) ?? null : null;
-    $("sectiles").innerHTML = focusOn
-      ? `<div class="col-span-full flex flex-wrap items-center gap-3">${tile(focusOn, 0)}<button type="button" id="secall" class="min-h-9 rounded-full border border-white/14 px-3.5 text-[12.5px] font-semibold text-text-secondary transition-colors hover:border-white/30 hover:text-text-primary">All markers</button></div>`
-      : sec === "body"
-      ? SHELVES.map(([g, name]) => { const gm = ms.filter((m) => m.group === g); if (!gm.length) return ""; const read = gm.filter((m) => m.series().length).length;
-          return `<div class="col-span-full mt-2 flex items-baseline gap-2 first:mt-0"><span class="font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary">${name.toUpperCase()} · ${gm.length}</span><span class="text-[11px] text-text-muted">${read} of ${gm.length} read</span></div>` + gm.map((m) => tile(m, ms.indexOf(m))).join(""); }).join("")
-      : ms.map(tile).join("");
-    $("sectiles").querySelectorAll<HTMLElement>("[data-marker]").forEach((b) => b.addEventListener("click", () => {
-      const key = b.dataset.marker!;
-      if (focusTile) { openMarkerKey = key; openRange = ""; openYear = null; renderSection(); return; }
-      // the others fade and blur, then the page redraws with this one alone and its marker right under it
-      $("sectiles").querySelectorAll<HTMLElement>("[data-marker]").forEach((o) => { if (o !== b) o.classList.add("mh-dim"); });
-      setTimeout(() => { openMarkerKey = key; openRange = ""; openYear = null; focusTile = true; renderSection(); }, 220);
-    }));
-    document.getElementById("secall")?.addEventListener("click", () => { focusTile = false; openMarkerKey = ""; renderSection(); });
-    if (!open) { $("secopen").innerHTML = ""; return; }
-
-    // the open marker
-    // the app's Over Time lenses, by the same names, drawing the same bars
-    const ranges: Rng[] = open.daily ? ["week", "4w", "months", "years"] : ["6m", "1y", "all"];
-    const RANGE_LABEL: Record<Rng, string> = { week: "Week", "4w": "4 weeks", months: "Months", years: "Years", "6m": "6 months", "1y": "Year", all: "All" };
-    if (!openRange || !ranges.includes(openRange as Rng)) openRange = open.daily ? "week" : "1y";
-    const dr = drawnFor(open, openRange as Rng, openYear);
-    // the years on file, newest first, for the year menu under Years and All
-    const years = [...new Set(open.series().map((p) => Number(p.d.slice(0, 4))))].sort((a, b) => b - a);
-    const yearMenu = (open.daily ? openRange === "years" : openRange === "all") && years.length
-      ? `<label class="flex items-center gap-2 text-[12px] text-text-tertiary">Year
-          <select data-year class="min-h-8 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 text-[13px] font-semibold text-text-primary focus:border-accent focus:outline-none">
-            <option value="">all</option>${years.map((y) => `<option value="${y}"${y === openYear ? " selected" : ""}>${y}</option>`).join("")}
-          </select></label>`
-      : "";
-    const band = open.daily && openRange === "week" ? (open.band?.() ?? null) : null;
-    const pts = open.series();
-    const reads = open.reads(pts);
-    const t = todayStr();
-    const monthAgg = (from: string, to: string) => { const xs = pts.filter((p) => p.d >= from && p.d <= to).map((p) => p.v); return xs.length ? { v: open.sum ? xs.reduce((a, b) => a + b, 0) : xs.reduce((a, b) => a + b, 0) / xs.length, n: xs.length } : null; };
-    const m30 = monthAgg(addDays(t, -29), t), y1 = monthAgg(addDays(t, -364), t), y2 = monthAgg(addDays(t, -729), addDays(t, -365));
-    $("secopen").innerHTML = `
-      <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-        <div class="flex flex-wrap items-start justify-between gap-3">
-          <div class="min-w-0">
-            <h3 class="text-[20px] font-extrabold tracking-[-0.02em] text-text-primary">${esc(open.label)}</h3>
-            <p class="mt-0.5 text-[12.5px] text-text-tertiary">${esc(open.sub)}</p>
-          </div>
-          <div class="flex gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1" role="group" aria-label="Range">
-            ${ranges.map((r) => `<button type="button" data-range="${r}" class="min-h-8 rounded-lg px-3.5 text-[13px] font-semibold transition-colors ${r === openRange ? "bg-accent/20 text-text-primary" : "text-text-tertiary hover:text-text-primary"}">${RANGE_LABEL[r]}</button>`).join("")}
-          </div>
-          ${yearMenu}
-        </div>
-        ${dr ? `
-        <div class="mt-4 flex flex-wrap items-end justify-between gap-3">
-          <div class="flex items-baseline gap-2.5"><span class="font-mono text-[38px] font-bold leading-none ${outKeys.has(open.key) ? "text-warning" : "text-text-primary"}">${dr.headline}</span><span class="text-[13.5px] text-text-secondary">${dr.caption}</span></div>
-          <div class="flex flex-wrap gap-4 text-[12px] text-text-secondary">
-            ${band ? `<span><span class="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm border border-success/50 bg-success/20 align-[-1px]"></span>${esc(band.why)}</span>` : ""}
-            ${openRange === "week" && open.goal?.() ? `<span><span class="mr-1.5 inline-block h-0.5 w-3 bg-accent-light align-[3px]"></span>the week's running total, against the goal</span>` : ""}
-          </div>
-        </div>
-        <div class="mt-2 overflow-x-auto"><svg viewBox="0 0 820 200" class="block h-auto w-full min-w-[560px]" role="img" aria-label="${esc(open.label)}, ${RANGE_LABEL[openRange as Rng].toLowerCase()} view">${chartSvg(open, openRange as Rng, dr)}</svg></div>` : `<p class="mt-4 text-[13px] text-text-tertiary">Nothing read yet for ${esc(open.label.toLowerCase())}.${open.section === "heart" || open.key === "steps" ? " The app sends it on every sync once Apple Health is on." : ""}</p>`}
-        <div class="mt-4 grid gap-4 border-t border-white/[0.07] pt-4 lg:grid-cols-2">
-          <div>
-            ${kicker("WHAT VERVE READS")}
-            <div class="mt-2 flex flex-col gap-2 text-[13.5px] leading-relaxed text-text-secondary">${reads.map((r) => `<p>${r}</p>`).join("")}</div>
-            <a href="${open.science}" class="mt-2.5 inline-block text-[12.5px] font-semibold text-accent-light hover:text-text-primary">The science behind this &rarr;</a>
-          </div>
-          <div>
-            ${dr && open.daily && openRange === "week" ? kicker("ALONGSIDE · THE SAME DAYS") + `<div class="mt-2">${alongsideHtml(markers, open, openRange as Rng, dr) || `<p class="text-[12.5px] text-text-tertiary">Nothing else read on these days yet.</p>`}</div>` : kicker("SOURCE") + `<p class="mt-2 text-[13px] leading-relaxed text-text-secondary">${esc(open.source)}</p>`}
-          </div>
-        </div>
-      </div>
-      <div class="mt-3 grid gap-3 sm:grid-cols-3">
-        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4">${kicker(open.daily ? "LAST 30 DAYS" : "LAST YEAR")}<div class="mt-1.5 font-mono text-[20px] font-bold text-text-primary">${open.daily ? (m30 ? open.fmt(m30.v) : "—") : (y1 ? open.fmt(y1.v) : "—")} <span class="text-[11px] font-semibold text-text-tertiary">${open.daily ? (m30 ? `${open.unit}${open.sum ? "" : " a day"}` : "") : (y1 ? `${open.unit} average` : "")}</span></div><div class="mt-0.5 text-[12px] text-text-tertiary">${open.daily ? (m30 ? `${m30.n} days read` : "nothing read") : (y1 ? `${y1.n} reading${y1.n === 1 ? "" : "s"}` : "no reading")}</div></div>
-        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4">${kicker(open.daily ? "LAST 12 MONTHS" : "THE YEAR BEFORE")}<div class="mt-1.5 font-mono text-[20px] font-bold text-text-primary">${open.daily ? (y1 ? open.fmt(y1.v) : "—") : (y2 ? open.fmt(y2.v) : "—")} <span class="text-[11px] font-semibold text-text-tertiary">${open.daily ? (y1 ? `${open.unit}${open.sum ? " in all" : " a day"}` : "") : (y2 ? `${open.unit} average` : "")}</span></div><div class="mt-0.5 text-[12px] text-text-tertiary">${open.daily ? (y1 && y2 ? `the year before: ${open.fmt(y2.v)}` : y1 ? `${y1.n} days read` : "nothing read") : (y2 ? `${y2.n} reading${y2.n === 1 ? "" : "s"}` : "no reading")}</div></div>
-        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4">${kicker("SOURCE")}<div class="mt-1.5 text-[13px] leading-relaxed text-text-secondary">${esc(open.source)}</div></div>
-      </div>`;
-    $("secopen").querySelectorAll<HTMLElement>("[data-range]").forEach((b) => b.addEventListener("click", () => { openRange = b.dataset.range as Rng; openYear = null; renderSection(); }));
-    $("secopen").querySelector<HTMLSelectElement>("[data-year]")?.addEventListener("change", (e) => { openYear = Number((e.target as HTMLSelectElement).value) || null; renderSection(); });
-    if (open.key === "sessions") $("secopen").insertAdjacentHTML("beforeend", workoutsListHtml(syncActs, openRange as Rng));
-  }
   function setSection(k: "all" | SecKey) {
     if (marked.has("painted")) mark("interaction");
-    ovSection = k;
-    focusTile = false; openYear = null; openMarkerKey = "";
+    setSectionState(k);
     if (activeTab !== "overview") setTab("overview");
-    renderSection();
     history.replaceState(null, "", k === "all" ? "#overview" : `#overview-${k}`);
   }
   document.querySelectorAll<HTMLElement>("[data-section]").forEach((b) => b.addEventListener("click", () => setSection(b.dataset.section as "all" | SecKey)));
@@ -3823,9 +3624,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       el.dataset.wired = "1";
       el.addEventListener("click", () => {
         const t = el.dataset.goto!;
-        if (t === "overview") ovSection = "all";
+        if (t === "overview") setSectionState("all");
         setTab(t);
-        if (t === "overview") renderSection();
       });
     });
   }
@@ -4937,7 +4737,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   });
 
   // the Overview's four frames, before the session is even checked: the page has its shape from the first paint
-  $("ovglance").innerHTML = SEC_ORDER.map(glanceFrame).join("");
+  mountOverview({ line: $("ovline"), glance: $("ovglance"), section: $("ovsection") });
   boot();
   supabase.auth.onAuthStateChange((event) => {
     // A reset link lands with a recovery session, and a recovery code signs
