@@ -4389,6 +4389,10 @@ import SiteHeader from "../components/SiteHeader.astro";
     // chosen. The first marker used to open itself, which read as a choice
     // nobody made, 23 tiles down on Body.
     if (openMarkerKey && markerByKey(openMarkerKey).section !== sec) { openMarkerKey = ""; openRange = ""; }
+    // A short section (six tiles or fewer) opens its first marker itself: the
+    // chart sits right under the grid and reads as part of it. Body, with its
+    // three shelves, waits for a tap.
+    if (!openMarkerKey && ms.length <= 6) { openMarkerKey = (have[0] ?? ms[0]).key; openRange = ""; }
     const open = openMarkerKey ? markerByKey(openMarkerKey) : null;
     // a figure is white; amber only when the latest reading sits outside its own lab's range
     const outKeys = new Set(labRowsFrom(markerPoints(), todayStr()).filter((r) => r.out).map((r) => r.key));
