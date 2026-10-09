@@ -846,6 +846,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   import { canonName, unitKey } from "../lib/canon.js";
   import { AUTO_SEND_TO_APP } from "../data/site";
   import { PLANS_ENFORCED, PLANS_OPEN, AI_SUMMARY_OPEN, entitlements, planOf, type PlanKey } from "../data/plans";
+  import type { MyHealthDocument } from "../my-health/document";
 
   // ── the ruler ─────────────────────────────────────────────────────────
   // Six marks on the way to a drawn page, measured from the script's first
@@ -869,6 +870,33 @@ import SiteHeader from "../components/SiteHeader.astro";
     el.textContent = "ruler · " + rows.map((r) => `${r.mark} ${r.ms} ms`).join(" · ") + ` · ${Math.round(performance.now() - t0)} ms since script`;
   }
   mark("script");
+
+  // ── the document ──────────────────────────────────────────────────────
+  // Everything the page reads for a person comes from my_health_document,
+  // one SQL function, one round trip (docs/my-health-architecture.md, step
+  // 1). Every loader below reads from it; however many ask at once, there
+  // is one request in flight. A write invalidates it and the next loader
+  // fetches it again. The function is SECURITY INVOKER: row-level security
+  // decides the content, so a viewer without a scope sees an empty list.
+  let doc: MyHealthDocument | null = null;
+  let docPromise: Promise<MyHealthDocument> | null = null;
+  let docFor = "";   // the person id the document in hand (or in flight) is for; "" = the account's own
+  function invalidateDocument() { doc = null; docPromise = null; }
+  async function fetchDocument(personId: string | null): Promise<MyHealthDocument> {
+    const { data, error } = await supabase.rpc("my_health_document", personId ? { person: personId } : {});
+    if (error) throw error;
+    return data as MyHealthDocument;
+  }
+  /** The person's document: in hand, in flight, or fetched now. */
+  function ensureDocument(): Promise<MyHealthDocument> {
+    const want = person?.id ?? "";
+    if (doc && docFor === want) return Promise.resolve(doc);
+    if (!docPromise || docFor !== want) {
+      docFor = want;
+      docPromise = fetchDocument(want || null).then((d) => { if (docFor === want) doc = d; return d; });
+    }
+    return docPromise;
+  }
 
   // ── tiny DOM helpers ───────────────────────────────────────────────────
   const $ = (id: string) => document.getElementById(id)!;
@@ -936,12 +964,10 @@ import SiteHeader from "../components/SiteHeader.astro";
   let ent = entitlements("free");
   const enforced = (() => { try { return PLANS_ENFORCED || sessionStorage.getItem("mh-plans-enforce") === "1"; } catch { return PLANS_ENFORCED; } })();
   async function loadPlan() {
+    // Everyone is on the free plan while the plans are dormant (PLANS_OPEN).
+    // The my_plan function was asked for on every load and does not exist;
+    // when plans open, the plan joins the document.
     plan = "free";
-    try {
-      const { data, error } = await supabase.rpc("my_plan");
-      const row = Array.isArray(data) ? data[0] : data;
-      if (!error && row?.plan && ["free", "pro", "max", "enterprise"].includes(row.plan)) plan = row.plan;
-    } catch { /* the function may not exist yet: free */ }
     ent = entitlements(plan);
     show("planline", PLANS_OPEN);
     show("whopays", PLANS_OPEN);
@@ -991,12 +1017,10 @@ import SiteHeader from "../components/SiteHeader.astro";
   const standIn = (): Person => ({ id: "", owner_id: userId, account_id: userId, name: fullName, born_year: null, mine: true, self: true, scopes: ALL_SCOPES });
 
   async function loadPeople() {
-    const [{ data: rows, error }, { data: grants }] = await Promise.all([
-      supabase.from("people").select("id, owner_id, account_id, name, born_year").order("created_at", { ascending: true }),
-      supabase.from("grants").select("id, person_id, scopes").eq("viewer_id", userId).eq("status", "active"),
-    ]);
-    let list = (error ? [] : rows ?? []) as any[];
-    if (!error && !list.some((p) => p.account_id === userId)) {
+    const d = await ensureDocument();
+    const rows = d.people, grants = d.grants_to_me;
+    let list = [...rows] as any[];
+    if (!list.some((p) => p.account_id === userId)) {
       // the account's own person, when the database has not made one yet
       const { data: made } = await supabase.from("people")
         .insert({ owner_id: userId, account_id: userId, name: fullName })
@@ -1018,6 +1042,8 @@ import SiteHeader from "../components/SiteHeader.astro";
     let wanted = "";
     try { wanted = sessionStorage.getItem(PERSON_KEY) ?? ""; } catch { /* fine */ }
     person = people.find((p) => p.id && p.id === wanted) ?? people.find((p) => p.self) ?? people[0];
+    // the document in hand is this person's, or it is fetched again for them
+    if (doc && (doc.person?.id ?? "") === (person?.id ?? "")) docFor = person?.id ?? ""; else invalidateDocument();
   }
 
   /** What the page lets you do depends on whose page it is. */
@@ -1107,7 +1133,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     $("upqueue").innerHTML = ""; show("upqueue", false);
     applyPersonMode();
     if (!p.mine && p.id) supabase.rpc("note_grant_view", { person: p.id }).then(() => {}, () => {});   // they can see when you last looked
-    await Promise.all([refresh(), loadPersonNote(), loadSharing(), loadGlance(), loadAiSummary()]);
+    await Promise.all([refresh(false), loadPersonNote(), loadSharing(), loadGlance(), loadAiSummary()]);
   }
 
   // ── add, edit, remove someone you look after ──────────────────────────
@@ -1195,7 +1221,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       const { error } = await supabase.from("people").update({ name, born_year: born }).eq("id", editingPerson.id);
       if (error) { msg("upmsg", `Could not save: ${error.message}`, true); return; }
       closePersonForm();
-      await loadPeople(); applyPersonMode(); renderOverview();
+      invalidateDocument(); await loadPeople(); applyPersonMode(); renderOverview();
       return;
     }
     const made = await addPerson(name, born);
@@ -1208,7 +1234,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       .insert({ owner_id: userId, account_id: null, name, born_year: born })
       .select("id, owner_id, account_id, name, born_year").maybeSingle();
     if (error || !data) { msg("upmsg", `Could not add ${name}: ${error?.message ?? "no row came back"}`, true); return null; }
-    await loadPeople();
+    invalidateDocument(); await loadPeople();
     renderPeople();
     return people.find((p) => p.id === data.id) ?? null;
   }
@@ -1220,7 +1246,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     const { error } = await supabase.from("people").delete().eq("id", p.id);
     if (error) { msg("upmsg", `Could not remove ${p.name}: ${error.message}`, true); return; }
     person = null;
-    await loadPeople();
+    invalidateDocument(); await loadPeople();
     const self = people.find((x) => x.self)!;
     person = self;
     try { sessionStorage.setItem(PERSON_KEY, self.id); } catch { /* fine */ }
@@ -1234,8 +1260,8 @@ import SiteHeader from "../components/SiteHeader.astro";
     ($("personnote") as HTMLTextAreaElement).value = "";
     void loadViewerNote();
     if (!p?.id || !p.mine || p.self) return;
-    const { data } = await supabase.from("person_notes").select("note").eq("person_id", p.id).maybeSingle();
-    if (person?.id === p.id) ($("personnote") as HTMLTextAreaElement).value = data?.note ?? "";
+    const d = await ensureDocument();
+    if (person?.id === p.id) ($("personnote") as HTMLTextAreaElement).value = d.note ?? "";
   }
   $("personnote").addEventListener("blur", async () => {
     const p = person;
@@ -1434,18 +1460,12 @@ import SiteHeader from "../components/SiteHeader.astro";
       c.closest("label")!.classList.toggle("hidden", appOnly && !p.account_id);
       if (appOnly && !p.account_id) c.checked = false;
     });
-    const { data, error } = await supabase.from("grants")
-      .select("id, viewer_email, viewer_id, scopes, status, invited_at, accepted_at, last_viewed_at")
-      .eq("person_id", p.id).neq("status", "stopped").order("invited_at", { ascending: true });
+    const d = await ensureDocument();
     if (person?.id !== p.id) return;   // switched away meanwhile
-    const rows = error ? [] : (data ?? []);
+    const rows = d.sharing as any[];
     // a vetted coach or clinician carries a badge, from the moment the address is typed
     const pros = new Map<string, { role: string; title: string }>();
-    if (rows.length) {
-      const { data: pr } = await supabase.from("professionals").select("email, role, title")
-        .in("email", rows.map((g: any) => String(g.viewer_email).toLowerCase()));
-      (pr ?? []).forEach((x: any) => pros.set(x.email, { role: x.role, title: x.title }));
-    }
+    d.sharing_pros.forEach((x: any) => pros.set(x.email, { role: x.role, title: x.title }));
     const badge = (email: string) => {
       const x = pros.get(String(email).toLowerCase());
       return x ? `<span class="rounded-md bg-accent/15 px-1.5 py-0.5 font-mono text-[9px] tracking-wider text-accent-light" title="${esc(x.title)}">VERIFIED ${esc(x.role.toUpperCase())}</span>` : "";
@@ -1481,7 +1501,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       const { error: e } = await supabase.from("grants")
         .update({ status: "stopped", stopped_at: new Date().toISOString() }).eq("id", (b as HTMLElement).dataset.stop);
       if (e) msg("sharemsg", `Could not stop: ${e.message}`, true);
-      else { msg("sharemsg", ""); await loadSharing(); }
+      else { msg("sharemsg", ""); invalidateDocument(); await loadSharing(); }
     }));
     // Change: the ticks open under the row; Save writes them to the same grant
     $("sharelist").querySelectorAll("[data-change]").forEach((b) => b.addEventListener("click", () => {
@@ -1500,7 +1520,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       const { error: e2 } = await supabase.from("grants").update({ scopes }).eq("id", f.dataset.edit);
       if (e2) { msg("sharemsg", `Could not change: ${e2.message}`, true); return; }
       msg("sharemsg", "Changed. They see the new set from their next look.");
-      await loadSharing();
+      invalidateDocument(); await loadSharing();
     }));
   }
 
@@ -1528,7 +1548,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     msg("sharemsg", sent
       ? `Invited. ${email} gets an email; the moment they accept, they see what you ticked, and you see it here.`
       : `Invited. The email could not be sent just now; ${email} still finds the invitation under their greeting when they sign in with that address.`);
-    await loadSharing();
+    invalidateDocument(); await loadSharing();
   });
 
   /** The email, through the share-invite function, for an invitation or a request; false when it could not go. */
@@ -1560,30 +1580,26 @@ import SiteHeader from "../components/SiteHeader.astro";
     msg("upmsg", sent
       ? `Asked. ${email} gets an email and decides what you may see; their page appears here when they do.`
       : `Asked. The email could not be sent just now; ${email} still finds the request under their greeting when they sign in with that address.`);
-    await loadAsked();
+    invalidateDocument(); await loadAsked();
   }
 
   /** The people you asked, still waiting. */
   async function loadAsked() {
     if (!people.some((p) => !!p.id)) return;
-    const { data, error } = await supabase.from("share_requests").select("id, target_email, created_at")
-      .eq("requester_id", userId).eq("status", "requested").order("created_at", { ascending: true });
-    const rows = error ? [] : (data ?? []);
+    const rows = (await ensureDocument()).asked as any[];
     show("asked", rows.length > 0);
     $("asked").innerHTML = rows.length ? "Asked to share their page with you: " + rows.map((r: any) =>
       `<span class="text-text-secondary">${esc(r.target_email)}</span> (waiting since ${esc(dayOf(r.created_at))}) <button type="button" data-unask="${r.id}" class="text-accent-light hover:text-danger">cancel</button>`).join(" · ") : "";
     $("asked").querySelectorAll("[data-unask]").forEach((b) => b.addEventListener("click", async () => {
       await supabase.from("share_requests").update({ status: "cancelled", answered_at: new Date().toISOString() }).eq("id", (b as HTMLElement).dataset.unask);
-      await loadAsked();
+      invalidateDocument(); await loadAsked();
     }));
   }
 
   /** Requests to see your page, answered through answer_share_request: nothing is shared until you tick and allow. */
   async function loadRequests() {
     if (!people.some((p) => !!p.id)) return;
-    const { data, error } = await supabase.from("share_requests").select("id, requester_name, requester_email, created_at")
-      .eq("status", "requested").eq("target_email", userEmail.toLowerCase());
-    const rows = error ? [] : (data ?? []);
+    const rows = (await ensureDocument()).requests as any[];
     show("requests", rows.length > 0); $("requests").classList.toggle("flex", rows.length > 0);
     $("requests").innerHTML = rows.map((r: any) => `
       <form data-request="${r.id}" class="flex flex-col gap-2.5 rounded-2xl border border-accent/40 bg-accent/[0.06] px-4 py-3.5">
@@ -1613,13 +1629,13 @@ import SiteHeader from "../components/SiteHeader.astro";
         if (e2) { note.textContent = `Could not answer: ${e2.message}`; note.classList.remove("hidden"); return; }
         clearNames();
         msg("upmsg", "Allowed. They see what you ticked, and it is listed under \"Who can see this page\" on your own page.");
-        await Promise.all([loadRequests(), loadSharing()]);
+        invalidateDocument(); await Promise.all([loadRequests(), loadSharing()]);
       });
       f.querySelector("[data-rdecline]")!.addEventListener("click", async () => {
         const { error: e2 } = await supabase.rpc("answer_share_request", { request_id: id, allow: false, wanted: [] });
         if (e2) { msg("upmsg", `Could not answer: ${e2.message}`, true); return; }
         clearNames();
-        await loadRequests();
+        invalidateDocument(); await loadRequests();
       });
     });
   }
@@ -1627,10 +1643,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   /** Invitations to your address, answered through respond_to_grant. */
   async function loadInvites() {
     if (!people.some((p) => !!p.id)) return;   // no tables yet
-    const { data, error } = await supabase.from("grants")
-      .select("id, person_id, person_name, inviter_name, scopes, invited_at")
-      .eq("status", "invited").eq("viewer_email", userEmail.toLowerCase());
-    const rows = error ? [] : (data ?? []);
+    const rows = (await ensureDocument()).invites as any[];
     show("invites", rows.length > 0); $("invites").classList.toggle("flex", rows.length > 0);
     // "their own page" when the inviter shares themselves, else whose page it is
     const whose = (g: any) => g.person_name && g.person_name !== g.inviter_name ? `${g.person_name}'s page` : "their own page";
@@ -1649,7 +1662,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       if (e) { msg("upmsg", `Could not answer: ${e.message}`, true); return; }
       // the invitation's names were put on the account for the email; done with them
       supabase.auth.updateUser({ data: { pending_share_from: null, pending_share_person: null, pending_share_scopes: null, pending_share_request: null } }).then(() => {}, () => {});
-      await loadPeople(); renderPeople();
+      invalidateDocument(); await loadPeople(); renderPeople();
       await loadInvites();
       if (accept && el.dataset.open) await switchPerson(el.dataset.open);
     }));
@@ -1982,32 +1995,6 @@ import SiteHeader from "../components/SiteHeader.astro";
 
   /** The app's daily read: resting heart rate, steps, the night, the day's recovery. One row a day, pushed on every sync. */
   let syncSignals: any[] = [];
-  async function loadSynced(accountId: string) {
-    // as far back as the rows go: a coach wants 2025 month by month, and
-    // an import can reach years further than the app's own sync
-    const since = new Date(2000, 0, 1);
-    const [a, c, w, pr, sg, wt] = await Promise.all([
-      pageAll(() => supabase.from("activities").select("timestamp, duration_minutes, met_hours, intensity_category, activity_name, activity_type, source, zone2_minutes, effort, effort_source")
-        .eq("user_id", accountId).is("deleted_at", null).neq("source", "passive-nakanishi").gte("timestamp", since.toISOString()).order("timestamp", { ascending: true })),
-      supabase.from("crf_entries").select("timestamp, met_capacity, performance_category, estimation_method, vo2_max_estimate")
-        .eq("user_id", accountId).is("deleted_at", null).order("timestamp", { ascending: true }).limit(300),
-      supabase.from("waist_readings").select("measured_at, waist_cm")
-        .eq("user_id", accountId).is("deleted_at", null).order("measured_at", { ascending: true }).limit(600),
-      // your own profile came with the sign-in read; everyone else's is asked for
-      accountId === userId && ownProfile ? Promise.resolve({ data: (() => { const r = ownProfile; ownProfile = null; return r; })() }) : supabase.from("profiles").select("weekly_met_hours_goal, height_cm, sex, age").eq("user_id", accountId).maybeSingle(),
-      // every column: the app adds activity level, standing, sitting and cadence as it learns to send them
-      pageAll(() => supabase.from("daily_signals").select("*")
-        .eq("user_id", accountId).gte("day", since.toLocaleDateString("en-CA")).order("day", { ascending: true })),
-      // weight, one row a day a source
-      pageAll(() => supabase.from("weight_readings").select("measured_on, weight_kg, source").eq("user_id", accountId)
-        .gte("measured_on", since.toLocaleDateString("en-CA")).order("measured_on", { ascending: true })),
-    ]);
-    // Workouts only. The app also syncs its background-movement rows
-    // (source "passive-nakanishi", one per day), which are not sessions:
-    // counted here they inflated every week's MET-hours and workout count
-    // against the app's own Trends, which keeps background out of training.
-    return { activities: (a.data ?? []).filter(isWorkout), crf: c.data ?? [], waist: w.data ?? [], profile: pr.data ?? null, signals: sg.data ?? [], weights: wt.data ?? [] };
-  }
   /** A synced activity row that is a session someone did, not the day's background movement. */
   const isWorkout = (a: any) => a && a.source !== "passive-nakanishi";
   /** The app's weeks from its workouts, bucketed the way the app does: by the Monday, in local time. */
@@ -2039,21 +2026,21 @@ import SiteHeader from "../components/SiteHeader.astro";
     return [...out.values()].sort((x, y) => String(x[key]).localeCompare(String(y[key])));
   }
 
-  async function loadActivity() {
+  /** The person's activity, tests and body rows, imported and synced, from the document. */
+  function applyActivity(d: MyHealthDocument) {
     const p = person;
     if (!p?.id) { show("appimports", false); return; }
-    const [w, c, b, synced] = await Promise.all([
-      // every row an import left, however far back it reaches
-      pageAll(() => supabase.from("web_weeks").select("week_start, met_hours, minutes, moderate_min, vigorous_min, workouts, source, import_tag").eq("person_id", p.id).order("week_start", { ascending: true })),
-      pageAll(() => supabase.from("web_crf").select("measured_on, vo2max, met_capacity, method, import_tag").eq("person_id", p.id).order("measured_on", { ascending: true })),
-      pageAll(() => supabase.from("web_body").select("measured_on, waist_cm, weight_kg, import_tag").eq("person_id", p.id).order("measured_on", { ascending: true })),
-      p.account_id ? loadSynced(p.account_id) : Promise.resolve(null),
-    ]);
-    if (person?.id !== p.id) return;   // switched away meanwhile
-    exportRows = { weeks: w.data ?? [], crf: c.data ?? [], body: b.data ?? [] };
-    allWeeks = mergeBy("week_start", synced ? weeksFrom(synced.activities) : [], w.data ?? []);
-    allCrf = mergeBy("measured_on", synced ? crfFromSync(synced.crf) : [], c.data ?? []);
-    allBody = mergeBy("measured_on", synced ? bodyFromSync(synced.waist) : [], b.data ?? []);
+    exportRows = { weeks: d.weeks, crf: d.web_crf, body: d.web_body };
+    // the app's rows exist only for a person with an account of their own.
+    // Workouts only: the app also syncs its background-movement rows (source
+    // "passive-nakanishi", one per day), which are not sessions; counted here
+    // they inflated every week against the app's own Trends.
+    const synced = p.account_id
+      ? { activities: d.activities.filter(isWorkout), crf: d.app_crf, waist: d.waist, profile: d.profile, signals: d.signals, weights: d.weights }
+      : null;
+    allWeeks = mergeBy("week_start", synced ? weeksFrom(synced.activities) : [], d.weeks);
+    allCrf = mergeBy("measured_on", synced ? crfFromSync(synced.crf) : [], d.web_crf);
+    allBody = mergeBy("measured_on", synced ? bodyFromSync(synced.waist) : [], d.web_body);
     syncActs = synced?.activities ?? [];
     syncProfile = synced?.profile ?? null;
     syncSignals = synced?.signals ?? [];
@@ -2682,7 +2669,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       for (const q of pts) out += `<circle cx="${xf(q.day).toFixed(1)}" cy="${yf(q.v).toFixed(1)}" r="${q.off ? 3.2 : 1.8}" fill="${q.off ? "#FBBF24" : "#818cf8"}" stroke="${q.off ? "#FBBF24" : "#818cf8"}" stroke-width="1.5"><title>${q.title}</title></circle>`;
       return out;
     };
-    const nothingYet = !p.account_id ? "Only for a person with a Verve account: the app sends it on every sync." : !canSeeHeart ? `${esc(p.name)} has not shared sleep and heart.` : (p.self ? "Nothing here yet. In the app, turn on Back up watch readings (Settings → Your data → Backup); the night's sleep, resting heart rate and recovery arrive on the next sync. Off, they stay on the phone." : "Nothing read yet: their app's Back up watch readings switch is off, or the watch has not written a night yet.");
+    const nothingYet = !p.account_id ? "Only for a person with a Verve account: the app sends it on every sync." : !canSeeHeart ? `${esc(p.name)} has not shared sleep and heart.` : "Nothing read yet. Open the app once with Apple Health and Cloud Sync on.";
     const heartCard = (label: string, figure: string | null, over: string, tone: string, trend: string, empty: string, caption: string, alt: string) => `
       <div class="flex min-h-[236px] flex-col gap-2.5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
         ${kicker(label)}
@@ -2845,10 +2832,8 @@ import SiteHeader from "../components/SiteHeader.astro";
   async function loadAiSummary() {
     aiSummary = null; aiState = "idle"; aiError = "";
     if (!aiOpen || !aiPersonId()) return;
-    const [{ data: kept }, { data: consent }] = await Promise.all([
-      supabase.from("depth_summaries").select("summary, created_at, model").eq("person_id", aiPersonId()).eq("viewer_id", userId).maybeSingle(),
-      supabase.from("ai_consent").select("summary_at").eq("user_id", userId).maybeSingle(),
-    ]);
+    const d = await ensureDocument();
+    const kept = d.ai.summary, consent = { summary_at: d.ai.consent };
     aiConsented = !!consent?.summary_at;
     if (kept?.summary) aiSummary = { summary: kept.summary, created_at: kept.created_at, model: kept.model };
     renderAiCard();
@@ -3127,6 +3112,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   const appLink = document.querySelector('[data-nav="app"]') as HTMLElement | null;
   const signinLink = document.querySelector('[data-nav="signin"]') as HTMLElement | null;
 
+  let bootedFor: string | null = null;   // the account the page is booted for; "" = signed out
   async function boot() {
     // an invitation's button: the link carries a token the site verifies
     // here, so it signs in the device it is opened on, from any device
@@ -3149,6 +3135,14 @@ import SiteHeader from "../components/SiteHeader.astro";
     if (url.searchParams.has("code") || oauthError || door || start) history.replaceState(null, "", location.pathname + location.hash);
     const { data: { session } } = await supabase.auth.getSession();
     mark("session");
+    // Once per signed-in account. boot() is called on load and again from
+    // every auth event (INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED), and
+    // each run read every table again: three documents at once on a
+    // reload. The same account, already booted, is a no-op; a sign-in or
+    // a sign-out is a change and boots.
+    const who = session?.user?.id ?? "";
+    if (who === bootedFor) return;
+    bootedFor = who;
     // signed in, the line stays until the numbers are drawn, so nothing is drawn twice
     if (session?.user) $("loading").textContent = "Reading your numbers…"; else show("loading", false);
     if (session?.user) {
@@ -3167,11 +3161,16 @@ import SiteHeader from "../components/SiteHeader.astro";
       // can say whose page this is: the name, the people, the plan, the
       // role, and the one-time merge of other accounts under this email.
       // These used to be three hops in a row (name, then people, then merge).
+      // One request for everything: the document for the remembered person
+      // (or the account's own) starts here, and every loader reads from it.
+      // The account merge is a write and runs alongside, once.
+      let remembered = ""; try { remembered = sessionStorage.getItem(PERSON_KEY) ?? ""; } catch { /* fine */ }
+      docFor = remembered; docPromise = fetchDocument(remembered || null).then((d) => { if (docFor === remembered) doc = d; return d; });
       const [, , , role, mergedFrom] = await Promise.all([resolveFirstName(session.user), loadPeople(), loadPlan(), loadMyRole(), mergeOtherAccounts()]);
       myRole = role;
       mark("people");
       if (mergedFrom.length) {
-        try { await loadPeople(); for (const other of mergedFrom) await moveReportFiles(other); }   // people that were the other account's are now here
+        try { invalidateDocument(); await loadPeople(); for (const other of mergedFrom) await moveReportFiles(other); }   // people that were the other account's are now here
         catch { /* the merge is a courtesy; the page works without it */ }
       }
       fillOwnName();
@@ -3187,7 +3186,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       // The second round trip, and the last: every table of the person's
       // own at once. refresh() itself fetches labs, the app's rows and the
       // report folder together, then draws every tab once.
-      await Promise.all([refresh().finally(() => show("loading", false)), loadPersonNote(), loadSharing(), loadInvites(), loadAsked(), loadRequests(), loadGlance(), loadAiSummary()]);
+      await Promise.all([refresh(false).finally(() => show("loading", false)), loadPersonNote(), loadSharing(), loadInvites(), loadAsked(), loadRequests(), loadGlance(), loadAiSummary()]);
     } else {
       firstName = "";
       people = []; person = null;
@@ -3229,10 +3228,10 @@ import SiteHeader from "../components/SiteHeader.astro";
   async function resolveFirstName(user: { id: string; user_metadata?: Record<string, unknown> }): Promise<string> {
     let full = "";
     try {
-      const { data } = await supabase.from("profiles").select("name, weekly_met_hours_goal, height_cm, sex, age").eq("user_id", user.id).maybeSingle();
-      ownProfile = data ?? null;
-      full = String(data?.name ?? "").trim();
-    } catch { /* no profile row, or none we may read: fall through */ }
+      const d = await ensureDocument();
+      ownProfile = d.me.profile ?? null;
+      full = String(d.me.profile?.name ?? "").trim();
+    } catch { /* no document yet: fall through to the account's own name */ }
     if (!full) full = String(user.user_metadata?.full_name ?? "").trim();
     fullName = full;
     return full.split(/\s+/)[0] ?? "";
@@ -3435,40 +3434,25 @@ import SiteHeader from "../components/SiteHeader.astro";
    * trip rather than three in a row; then every surface is drawn once from
    * them, with everything in.
    */
-  async function refresh() {
+  /**
+   * Everything of the person's, from the one document, then every tab drawn
+   * once. `fresh` fetches the document again first: a write happened. Boot
+   * and a person switch pass false, since the document in flight is theirs.
+   */
+  async function refresh(fresh = true) {
     const p = person;
-    let labsIn = false, actIn = false;
-    const labs = Promise.all([
-      pageAll(() => scopeRows(supabase.from("web_labs")
-        .select("analyte, value, unit, ref_low, ref_high, ref_text, section, measured_on, report_path"))
-        .order("measured_on", { ascending: true })),
-      scopeRows(supabase.from("imaging_reports")
-        .select("modality, report_date, report_path, impression, findings"))
-        .order("report_date", { ascending: true }).limit(200),
-      // the app's rows exist only for a person with an account of their own
-      p?.account_id
-        ? pageAll(() => supabase.from("lab_readings").select("*").eq("user_id", p.account_id).is("deleted_at", null).order("measured_at", { ascending: true }))
-        : Promise.resolve({ data: [] as any[] }),
-    ]).then(([{ data: rows }, { data: imaging }, { data: app }]) => {
-      if (person?.id !== p?.id) return;   // switched away meanwhile
-      allLabs = rows ?? []; allImaging = imaging ?? []; allApp = app ?? [];
-      groupLabs();
-      labsIn = true;
-      // the Body card can be drawn from the labs; the other three wait for the app's rows
-      if (!actIn) renderGlance(new Set<SecKey>(["fitness", "movement", "heart"]));
-    });
-    const activity = loadActivity().then(() => {
-      if (person?.id !== p?.id) return;
-      actIn = true;
-      if (!labsIn) renderGlance(new Set<SecKey>(["body"]));
-    });
-    const [, , files] = await Promise.all([labs, activity, listReportFolder()]);
-    if (person?.id !== p?.id) return;
+    if (fresh) invalidateDocument();
+    const d = await ensureDocument();
+    if (person?.id !== p?.id) return;   // switched away meanwhile
+    allLabs = d.labs; allImaging = d.imaging; allApp = d.app_labs;
+    groupLabs();
+    applyActivity(d);
     mark("document");
+    renderGlance();
     renderOverview();
     renderLabsRail(); renderLabsPanel();
     renderDepth();
-    await renderReports(files);
+    await renderReports(d.files);
     mark("painted");
   }
 
@@ -3599,8 +3583,8 @@ import SiteHeader from "../components/SiteHeader.astro";
   }
   async function loadMyRole(): Promise<"coach" | "clinician" | null> {
     try {
-      const { data } = await supabase.from("professionals").select("role").eq("email", userEmail.toLowerCase()).maybeSingle();
-      return data?.role === "clinician" ? "clinician" : data?.role === "coach" ? "coach" : null;
+      const d = await ensureDocument();
+      return d.me.role === "clinician" ? "clinician" : d.me.role === "coach" ? "coach" : null;
     } catch { return null; }
   }
   function rememberDoor(d: Door) {
@@ -4830,9 +4814,8 @@ import SiteHeader from "../components/SiteHeader.astro";
   }
 
   /** The person's report folder, newest first: one listing, which refresh() fetches beside the rows and hands in. */
-  const listReportFolder = () => supabase.storage.from("reports").list(folder(), {
-    sortBy: { column: "created_at", order: "desc" }, limit: 200,
-  }).then((r) => r.data ?? []);
+  /** The person's report folder, newest first, as the document lists it (the Storage API's own shape). */
+  const listReportFolder = () => ensureDocument().then((d) => d.files as any[]);
   async function renderReports(listed?: any[]) {
     const data = listed ?? await listReportFolder();
     const files = data.filter((f) => REPORT_EXT.test(f.name));
@@ -4979,10 +4962,10 @@ import SiteHeader from "../components/SiteHeader.astro";
         // values stay on Labs either way — only the PDF goes.
         if (el.dataset.quiet == null && !confirm(`Delete "${pretty(el.dataset.del!)}"? The PDF is removed; its values stay on your Labs tab.`)) return;
         await supabase.storage.from("reports").remove([`${folder()}/${el.dataset.del}`]);
-        renderReports();
+        invalidateDocument(); renderReports();
       }));
     $("repcards").querySelectorAll("[data-keep]").forEach((b) =>
-      b.addEventListener("click", () => { keepBoth((b as HTMLElement).dataset.keep!); renderReports(); }));
+      b.addEventListener("click", () => { keepBoth((b as HTMLElement).dataset.keep!); invalidateDocument(); renderReports(); }));
     $("repcards").querySelectorAll("[data-sendrep]").forEach((b) =>
       b.addEventListener("click", () => { reviewQueue = []; reviewPos = { n: 0, of: 0 }; reviewFromArchive(`${folder()}/${(b as HTMLElement).dataset.sendrep}`); }));
     $("repcards").querySelectorAll("[data-ren]").forEach((b) =>

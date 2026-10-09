@@ -247,3 +247,35 @@ costs no network and no redraw.
 Steps 1, 2, 4 and 5 are independent of 3 and ship on their own. The page
 is faster after step 2 even with the old renderers; step 3 is what makes
 it smooth.
+
+## Record
+
+**Step 0, the ruler** (2026-10-09): six `performance.mark`s, printed with
+`?timing=1`. The baseline is the recording of the same morning on the live
+page: ten seconds to the last number, a redraw on every click. The ruler was
+born with step 1, so the old code was never measured by it.
+
+**Step 1, the document** (2026-10-09, website commit after 07b072f, app
+migration a7fad0e run in prod): `my_health_document(person)` is live and the
+page reads nothing else for a person. Measured on the reviewer account on the
+dev server, Mumbai from Dubai, a reload:
+
+| mark | before | after |
+|---|---|---|
+| requests to Supabase on a reload | about 28, in three waves (plus the whole set three times over: boot ran on load and again on every auth event) | 3: the document, the account merge, the role chip |
+| painted | about 10 s on the live recording | 600 to 800 ms, the document itself 200 to 800 ms |
+
+Found on the way and fixed: `boot()` ran three times per load, once from the
+script and once per auth event, so every table was read three times; it now
+runs once per signed-in account. The `my_plan` function was asked for on every
+load and does not exist; the plan is "free" until the plans open.
+
+Document sizes, uncompressed JSON, from the function as the admin role: a new
+account 22 KB; the founder's own person 1.4 MB (896 workouts, 1,838 signal
+days with every column, 295 lab values, 5 reports). Step 2 caches it, so it
+is paid once per change; narrowing `signals` to the columns the page reads
+is the first thing to do if the fresh fetch is felt.
+
+Still read outside the document: the group glance for people besides you
+(`loadGlance`), the viewer's note on a shared page, the role chip's grants,
+and every write.
