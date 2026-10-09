@@ -2202,6 +2202,24 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   const signinLink = document.querySelector('[data-nav="signin"]') as HTMLElement | null;
 
   let bootedFor: string | null = null;   // the account the page is booted for; "" = signed out
+  /**
+   * The session the Supabase client keeps in local storage, read without
+   * waiting for the client. Its getSession() refreshes an expired token over
+   * the network first, a round trip to Mumbai before anything could paint,
+   * and the token is expired on most returns to the page after an hour
+   * away. The user id and email in the stored session are enough to paint
+   * from the store; the live session is awaited where the network is
+   * needed, and if it turns out to disagree, the page boots again from it.
+   */
+  function storedSession(): { user: any } | null {
+    try {
+      const ref = SUPABASE_URL.replace("https://", "").split(".")[0];
+      const raw = localStorage.getItem(`sb-${ref}-auth-token`);
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      return s?.user?.id && s?.refresh_token ? { user: s.user } : null;
+    } catch { return null; }
+  }
   async function boot() {
     // an invitation's button: the link carries a token the site verifies
     // here, so it signs in the device it is opened on, from any device
@@ -2222,7 +2240,9 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     // the coach's and the clinician's doors both land on the group
     if (door === "coach" || door === "clinician") { try { localStorage.setItem(COACH_DOOR, door); } catch { /* private mode */ } }
     if (url.searchParams.has("code") || oauthError || door || start) history.replaceState(null, "", location.pathname + location.hash);
-    const { data: { session } } = await supabase.auth.getSession();
+    const stored = storedSession();
+    const live = supabase.auth.getSession().then((r) => r.data.session ?? null);
+    const session = stored ?? (await live);
     mark("session");
     // Once per signed-in account. boot() is called on load and again from
     // every auth event (INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED), and
@@ -2235,6 +2255,9 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     // signed in, the line stays until the numbers are drawn, so nothing is drawn twice
     if (!session?.user) show("loading", false);
     if (session?.user) {
+      // the live session, once the client has it: another account, or none
+      // left after a failed refresh, and the page boots again from that
+      void live.then((s) => { if ((s?.user?.id ?? "") !== who) { bootedFor = null; void boot(); } });
       promotePendingDoor();
       let coachDoor = false;
       try { const d = localStorage.getItem(COACH_DOOR); coachDoor = d === "1" || d === "coach" || d === "clinician"; localStorage.removeItem(COACH_DOOR); } catch { /* private mode */ }

@@ -439,3 +439,20 @@ On the production build the second visit reads both bundles from the
 worker (0 bytes transferred) and is ready at 33 ms. This replaces the two
 deferrals the plan had left: the download they would have moved out of
 the way no longer happens.
+
+**The stored session** (2026-10-09, after the second live check): the
+shell now arrived at once, but the founder's recording still showed half
+a second of empty frames before the greeting and the numbers came
+together, which meant the page was not painting from the store. The
+cause: boot waited on the Supabase client's `getSession()`, and that
+call refreshes an expired access token over the network first, a round
+trip to Mumbai, on most returns to the page after an hour away; the
+head start skips an expired token as well, so nothing was in flight.
+Boot now reads the session the client keeps in local storage itself,
+paints from the store with its user id, and awaits the live session
+only where the network is needed; if the live session disagrees (none
+left after a failed refresh, or another account), the page boots again
+from it. Measured on the production build with the token expired by
+hand: painted from the store at 37 ms while the refresh took until 487
+ms and the fresh document arrived at 1.9 s on a slow minute; before the
+change the page would have shown nothing until both had answered.
