@@ -63,6 +63,10 @@ const imageAbs  = new URL(image, SITE).href;
     {router && <ClientRouter />}
   </head>
   <body class="vrv-canvas min-h-screen antialiased">
+    <!-- the service worker: the hashed bundles read from the device on every visit after the first (public/sw.js) -->
+    <script is:inline>
+      if ("serviceWorker" in navigator) addEventListener("load", () => { navigator.serviceWorker.register("/sw.js").catch(() => {}); });
+    </script>
     <slot />
   </body>
 </html>

@@ -424,3 +424,18 @@ reaching the client through an await. That is a day's refactor of the
 write paths for a first-visit gain of a few hundred milliseconds on a
 slow connection. Recommended: leave it unless first-visit time becomes a
 complaint; the views and the document have already done the work.
+
+**The service worker** (2026-10-09, after the live check): the founder
+found the live page "a touch slow". Measured on the live host: the HTML
+answers at 223 ms, the page script arrives at 455 ms, and the Supabase
+chunk, discovered only once the page script has been parsed, at 697 ms;
+the page paints at about 0.7 s. GitHub Pages caps every file at a
+ten-minute cache, so later visits revalidate both files and the
+waterfall stays. `public/sw.js`, registered from the layout, keeps the
+hashed files under `/_astro/` cache-first, pages network-first with the
+cached copy only when the network fails, and My health itself
+stale-while-revalidate, since its words come from the person's document.
+On the production build the second visit reads both bundles from the
+worker (0 bytes transferred) and is ready at 33 ms. This replaces the two
+deferrals the plan had left: the download they would have moved out of
+the way no longer happens.
