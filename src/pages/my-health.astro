@@ -600,14 +600,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
 
       <div id="tab-labs" class="mt-6 hidden">
         <p class="mb-5 max-w-3xl text-[13.5px] leading-relaxed text-text-secondary"><span class="font-semibold text-text-primary">This page:</span> the values. Every marker, its band, its history and when it is next due; the Body card's number comes from here.</p>
-        <div id="labsempty" class="mt-6 hidden rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-text-tertiary">
-          Nothing here yet — drop a report on the <button data-goto="reports" class="font-semibold text-accent-light hover:underline">Reports</button> tab and every value in it lands here.
-        </div>
-        <p id="labsnomatch" class="mt-6 hidden rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-text-tertiary"></p>
-        <div class="mt-4 flex flex-col gap-4 md:flex-row">
-          <nav id="labsrail" class="flex flex-col gap-1.5 md:w-56 md:shrink-0"></nav>
-          <div id="labspanel" class="hidden min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/[0.03] p-5 md:block"></div>
-        </div>
+        <!-- a view (src/my-health/views/Labs): the rail, the section, the charts -->
+        <div id="labsroot"></div>
         <!-- the next step in the chain: picture, what moved, values, paper -->
         <button type="button" data-goto="reports" class="mt-8 flex w-full max-w-3xl items-center justify-between gap-4 rounded-2xl border border-white/12 bg-white/[0.03] px-5 py-4 text-left transition-colors hover:border-white/25 hover:bg-white/[0.05]">
           <span class="min-w-0"><span class="block font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary">NEXT · 4 OF 4</span><span class="mt-1 block text-[14.5px] font-bold text-text-primary">Reports: the paper every value came from</span></span>
@@ -874,10 +868,11 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   import { HRV_MIN_NIGHTS, sleepHeartSummary, sleepHeartSummaryRaw } from "../my-health/derive/heart";
   import { type SecKey, type Rng, type Pt2, type Marker, type Drawn, SEC_META, SEC_ORDER, RANGE_LABEL, SHELVES, ownBand, weightSeries, sppbSeries, drawnFor, chartSvg, alongsideHtml, workoutsListHtml } from "../my-health/derive/lenses";
   import { derivePerson, type PersonData } from "../my-health/derive/person";
-  import { labsJudged } from "../my-health/derive/labs";
+  import { labsJudged, SECTIONS, SECTION_ORDER, searchTermsOf, landsAll, dateHay } from "../my-health/derive/labs";
   import { effect } from "@preact/signals";
-  import { doc as docSignal, person as personSignal, ovSection as ovSectionSignal, setSection as setSectionState } from "../my-health/state";
+  import { doc as docSignal, person as personSignal, ovSection as ovSectionSignal, setSection as setSectionState, activeTab as activeTabSignal, searchQuery as searchQuerySignal, actions, openLabs } from "../my-health/state";
   import { mountOverview } from "../my-health/views/Overview";
+  import { mountLabs } from "../my-health/views/Labs";
   import { readDocument, writeDocument, pruneDocuments, clearDocuments, sameDocument } from "../my-health/store";
 
   // ── the ruler ─────────────────────────────────────────────────────────
@@ -987,13 +982,6 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     el.classList.toggle("text-text-secondary", !bad);
   };
 
-  const SECTIONS: Record<string, string> = {
-    metabolic: "Metabolic", heart: "Heart", muscle: "Muscle",
-    haematology: "Haematology", lipids: "Lipids", liver: "Liver", kidney: "Kidney",
-    thyroid: "Thyroid", vitamins_iron: "Vitamins & iron", hormones: "Hormones",
-    inflammation: "Inflammation", urine: "Urine", imaging: "Imaging", other: "Other",
-  };
-  const SECTION_ORDER = Object.keys(SECTIONS);
 
   let userId = "";
   let userEmail = "";
@@ -2680,42 +2668,21 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   let allLabs: any[] = [];
   let allImaging: any[] = [];   // imaging_reports — the narrative half of a study
   let allApp: any[] = [];       // lab_readings — what the app holds, to say what was sent
-  let labSecs: Map<string, Map<string, any[]>> = new Map();
-  let labSection = "";
-  let expandedAnalyte = "";          // one chart open at a time
-  let mobileSectionOpen = false;     // phone: section list ⇄ section page
-
-  // ── search: every word typed must land ──────────────────────────────────
-  let searchQuery = "";
-  const searchTerms = () => searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
-  const landsAll = (hay: string, terms: string[]) => terms.every((t) => hay.includes(t));
-  /** A date, every way someone might type it: 2026-09-12, Sep 12, September, 2026. */
-  function dateHay(d: string): string {
-    if (!d) return "undated";
-    const dt = new Date(d.slice(0, 10) + "T00:00:00");
-    return `${d.slice(0, 10)} ${fmtDay(d.slice(0, 10))} ${dt.toLocaleDateString(undefined, { month: "long" })} ${dt.toLocaleDateString(undefined, { month: "short" })} ${dt.getFullYear()}`.toLowerCase();
-  }
-  /** The Labs sections with only the markers the search lands on; all of them when nothing is typed. */
-  function filteredSecs(): Map<string, Map<string, any[]>> {
-    const terms = searchTerms();
-    if (!terms.length) return labSecs;
-    const out = new Map<string, Map<string, any[]>>();
-    for (const [sec, analytes] of labSecs) {
-      for (const [name, rows] of analytes) {
-        if (landsAll(`${name} ${SECTIONS[sec] ?? ""} ${sec}`.toLowerCase(), terms)) (out.get(sec) ?? out.set(sec, new Map()).get(sec)!).set(name, rows);
-      }
-    }
-    return out;
-  }
+  // ── search: every word typed must land. The query is a signal: Labs is a
+  // view of it; Reports still redraws on it from here ──────────────────────
+  const searchTerms = () => searchTermsOf(searchQuerySignal.value);
+  /** Jump from Overview into one section of Labs, or straight to one marker's chart. */
+  const openSection = (sec: string) => openLabs(sec);
+  const openMarker = (sec: string, name: string) => openLabs(sec, name);
   const searchNote = (text: string) => { const el = $("mhsearchnote"); el.textContent = text; el.classList.toggle("hidden", !text); };
   let searchTimer = 0;
   $("mhsearch").addEventListener("input", () => {
     window.clearTimeout(searchTimer);
     searchTimer = window.setTimeout(() => {
-      searchQuery = ($("mhsearch") as HTMLInputElement).value.trim();
-      show("mhsearchclear", !!searchQuery);
-      if (!searchQuery) searchNote("");
-      renderLabsRail(); renderLabsPanel(); renderReports();
+      searchQuerySignal.value = ($("mhsearch") as HTMLInputElement).value.trim();
+      show("mhsearchclear", !!searchQuerySignal.value);
+      if (!searchQuerySignal.value) searchNote("");
+      renderReports();
     }, 120);
   });
   $("mhsearchclear").addEventListener("click", () => { ($("mhsearch") as HTMLInputElement).value = ""; $("mhsearch").dispatchEvent(new Event("input")); $("mhsearch").focus(); });
@@ -2729,7 +2696,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     // a group with no one in it is still a page: the coach's door lands there with the ask
     const switching = activeTab !== t;
     const wasGroup = activeTab === "group", group = t === "group";
-    activeTab = t;
+    activeTab = t; activeTabSignal.value = t;
     ["group", "overview", "labs", "reports", "depth"].forEach((x) => show("tab-" + x, x === t));
     show("pagehead", !group); show("personwrap", !group && people.some((x) => !!x.id));
     show("mhsearchwrap", t === "labs" || t === "reports");
@@ -3122,13 +3089,11 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     const d = await ensureDocument();
     if (person?.id !== p?.id) return;   // switched away meanwhile
     allLabs = d.labs; allImaging = d.imaging; allApp = d.app_labs;
-    groupLabs();
     applyActivity(d);
     docSignal.value = d; personSignal.value = person;
     mark("document");
     renderGlance();
     renderOverview();
-    renderLabsRail(); renderLabsPanel();
     renderDepth();
     await renderReports(d.files);
     mark("painted");
@@ -3508,17 +3473,6 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   });
 
 
-  // ── grouping: section → canonical analyte → readings by date ──────────
-  function groupLabs() {
-    labSecs = new Map();
-    for (const r of allLabs) {
-      const s = SECTIONS[r.section] ? r.section : "other";
-      const sec = labSecs.get(s) ?? labSecs.set(s, new Map()).get(s)!;
-      const key = canonName(String(r.analyte));
-      (sec.get(key) ?? sec.set(key, []).get(key)!).push(r);
-    }
-    if (!labSecs.has(labSection)) labSection = SECTION_ORDER.find((s) => labSecs.has(s)) ?? "";
-  }
 
   // ═══ OVERVIEW ═══════════════════════════════════════════════════════════
   /** A section's ring: latest readings in range, out of those with a printed range. */
@@ -3630,216 +3584,11 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     });
   }
 
-  /** Jump from Overview into one section of Labs. */
-  function openSection(sec: string) {
-    labSection = sec;
-    expandedAnalyte = "";
-    mobileSectionOpen = true;
-    setTab("labs");
-    renderLabsRail(); renderLabsPanel();
-  }
 
-  /** Jump from Overview straight to one marker's chart. */
-  function openMarker(sec: string, name: string) {
-    labSection = sec;
-    expandedAnalyte = name;
-    mobileSectionOpen = true;
-    setTab("labs");
-    renderLabsRail(); renderLabsPanel();
-  }
 
-  // ═══ LABS ═══════════════════════════════════════════════════════════════
-  function renderLabsRail() {
-    const empty = allLabs.length === 0;
-    show("labsempty", empty);
-    if (empty) { $("labsrail").innerHTML = ""; $("labspanel").innerHTML = ""; show("labsnomatch", false); wireGoto(); return; }
-    const view = filteredSecs();
-    const terms = searchTerms();
-    if (terms.length) {
-      const n = [...view.values()].reduce((t, m) => t + m.size, 0);
-      if (activeTab === "labs") searchNote(n ? `${n} marker${n === 1 ? " matches" : "s match"}` : "");
-      $("labsnomatch").textContent = `No marker matches "${searchQuery}". Try a section, like liver, or part of a name.`;
-      show("labsnomatch", n === 0);
-      if (n === 0) { $("labsrail").innerHTML = ""; $("labspanel").innerHTML = ""; return; }
-    } else show("labsnomatch", false);
-    if (!view.has(labSection)) labSection = SECTION_ORDER.find((x) => view.has(x)) ?? "";
 
-    // phone: the section list IS the page until a section opens
-    $("labsrail").className = `${mobileSectionOpen ? "hidden md:flex" : "flex"} flex-col gap-1.5 md:w-56 md:shrink-0`;
-    $("labspanel").className = `${mobileSectionOpen ? "" : "hidden md:block"} min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/[0.03] p-5`;
 
-    $("labsrail").innerHTML = SECTION_ORDER.filter((s) => view.has(s)).map((s) => {
-      const analytes = [...view.get(s)!.values()];
-      const flagged = analytes.filter((rs) => inRange(rs[rs.length - 1]) === false).length;
-      const on = s === labSection;
-      return `
-        <button data-sec="${s}" class="flex items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[13px] transition-colors ${on ? "bg-accent/15 font-bold text-text-primary" : "text-text-secondary hover:bg-white/[0.05]"}">
-          <span class="flex-1">${SECTIONS[s]}</span>
-          <span class="rounded-md ${flagged ? "bg-warning/15 text-warning" : "bg-white/[0.06] text-text-tertiary"} px-1.5 py-0.5 font-mono text-[9px] font-semibold tracking-wider">${analytes.length}${flagged ? ` · ${flagged}!` : ""}</span>
-          <span class="text-text-muted md:hidden">›</span>
-        </button>`;
-    }).join("");
-    $("labsrail").querySelectorAll("[data-sec]").forEach((b) =>
-      b.addEventListener("click", () => {
-        labSection = (b as HTMLElement).dataset.sec!;
-        expandedAnalyte = "";
-        mobileSectionOpen = true;
-        renderLabsRail(); renderLabsPanel();
-      }));
-  }
 
-  function renderLabsPanel() {
-    const sec = filteredSecs().get(labSection);
-    if (!sec) { $("labspanel").innerHTML = ""; return; }
-    const analytes = [...sec.entries()];
-    const flagged = analytes.filter(([, rs]) => inRange(rs[rs.length - 1]) === false).length;
-    $("labspanel").innerHTML = `
-      <button id="labsback" class="mb-2 flex items-center gap-1 text-sm font-semibold text-accent-light md:hidden">‹ All sections</button>
-      <div class="flex flex-wrap items-baseline gap-3">
-        <h3 class="text-base font-extrabold">${SECTIONS[labSection]}</h3>
-        <span class="font-mono text-[10px] text-text-tertiary">${analytes.length} MARKER${analytes.length === 1 ? "" : "S"}</span>
-        ${flagged ? `<span class="rounded-md bg-warning/15 px-2 py-0.5 font-mono text-[9px] tracking-wider text-warning">${flagged} OUT OF RANGE</span>` : ""}
-      </div>
-      <div class="mt-2 divide-y divide-white/[0.05]">
-        ${analytes.map(([name, rs]) => labRow(name, rs)).join("")}
-      </div>
-      ${labSection === "imaging" && allImaging.length ? `
-        <div class="mt-5 font-mono text-[10px] font-semibold uppercase tracking-widest text-text-tertiary">The reports' own conclusions</div>
-        ${[...allImaging].reverse().map((im) => `
-          <div class="mt-2 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
-            <div class="flex items-center gap-2">
-              <span class="rounded-md bg-accent/15 px-1.5 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-accent-light">${esc(String(im.modality).toUpperCase())}</span>
-              <span class="font-mono text-[10px] text-text-tertiary">${fmtDay(im.report_date)}</span>
-            </div>
-            ${im.impression ? `<p class="mt-1.5 text-[13px] leading-5 text-text-secondary">${esc(im.impression)}</p>` : ""}
-          </div>`).join("")}` : ""}`;
-    $("labsback")?.addEventListener("click", () => {
-      mobileSectionOpen = false;
-      renderLabsRail(); renderLabsPanel();
-    });
-    $("labspanel").querySelectorAll("[data-an]").forEach((b) =>
-      b.addEventListener("click", () => {
-        const n = (b as HTMLElement).dataset.an!;
-        expandedAnalyte = expandedAnalyte === n ? "" : n;
-        renderLabsPanel();
-        if (expandedAnalyte) $("labspanel").querySelector(`[data-an="${CSS.escape(n)}"]`)?.scrollIntoView({ block: "nearest" });
-      }));
-  }
-
-  /** One analyte row; tapping it opens the full chart underneath. */
-  function labRow(name: string, rs: any[]): string {
-    const latest = rs[rs.length - 1];
-    const ok = inRange(latest);
-    const vals = rs.map((r) => Number(r.value));
-    const lo = Math.min(...vals), hi = Math.max(...vals);
-    const y = (v: number) => hi === lo ? 14 : 24 - ((v - lo) / (hi - lo)) * 20;
-    const x = (i: number) => rs.length === 1 ? 60 : 6 + (i / (rs.length - 1)) * 108;
-    const pts = vals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
-    const dots = vals.map((v, i) => {
-      const own = inRange(rs[i]);
-      return `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${i === vals.length - 1 ? 3.5 : 2.5}" fill="${own === false ? "#FBBF24" : "#818cf8"}"><title>${rs[i].measured_on}: ${v}</title></circle>`;
-    }).join("");
-    const valColor = ok === false ? "text-warning" : ok === true ? "text-success" : "text-text-primary";
-    const open = expandedAnalyte === name;
-    return `
-      <div>
-        <button data-an="${esc(name)}" class="flex w-full items-center gap-3 py-2 text-left">
-          <span class="min-w-0 flex-1 truncate text-[13px] font-semibold text-text-primary" title="${esc(name)}">${esc(name)}</span>
-          <svg class="hidden shrink-0 sm:block" width="120" height="28" viewBox="0 0 120 28">${rs.length > 1 ? `<polyline points="${pts}" fill="none" stroke="#818cf8" stroke-width="1.5" opacity="0.6"/>` : ""}${dots}</svg>
-          <span class="shrink-0 whitespace-nowrap text-right font-mono text-xs ${valColor}">${latest.value}${latest.unit ? ` ${esc(latest.unit)}` : ""}</span>
-          <span class="hidden w-24 shrink-0 truncate text-right font-mono text-[10px] text-text-muted sm:inline" title="${esc(rangeLabel(latest))}">${esc(rangeLabel(latest))}</span>
-          <span class="text-text-muted">${open ? "▾" : "▸"}</span>
-        </button>
-        ${open ? bigChart(name, rs) : ""}
-      </div>`;
-  }
-
-  /**
-   * The app-grade chart: every reading judged against ITS OWN printed range
-   * (the green band re-shades per report), a ◆ where a different lab's range
-   * enters the series, and the unit guard — readings in a different unit
-   * are listed, never mixed onto the line.
-   */
-  function bigChart(name: string, rsAll: any[]): string {
-    const latestUnit = unitKey(rsAll[rsAll.length - 1].unit);
-    const rs = rsAll.filter((r) => unitKey(r.unit) === latestUnit);
-    const offLine = rsAll.filter((r) => unitKey(r.unit) !== latestUnit);
-
-    const W = 640, H = 200, L = 46, R = 16, T = 20, B = 30;
-    const vals = rs.map((r) => Number(r.value));
-    const bounds = [...vals];
-    for (const r of rs) {
-      if (r.ref_low != null) bounds.push(Number(r.ref_low));
-      if (r.ref_high != null) bounds.push(Number(r.ref_high));
-    }
-    let lo = Math.min(...bounds), hi = Math.max(...bounds);
-    const pad = (hi - lo || Math.abs(hi) || 1) * 0.15;
-    lo -= pad; hi += pad;
-    const X = (i: number) => rs.length === 1 ? L + (W - L - R) / 2 : L + (i / (rs.length - 1)) * (W - L - R);
-    const Y = (v: number) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
-    const midX = (i: number) => i < 0 ? L : i >= rs.length - 1 ? W - R : (X(i) + X(i + 1)) / 2;
-
-    // ① band segments — each reading's own range shades its neighbourhood
-    const bands = rs.map((r, i) => {
-      if (r.ref_low == null && r.ref_high == null) return "";
-      const yTop = Y(r.ref_high != null ? Number(r.ref_high) : hi);
-      const yBot = Y(r.ref_low != null ? Number(r.ref_low) : lo);
-      return `<rect x="${midX(i - 1).toFixed(1)}" y="${yTop.toFixed(1)}" width="${(midX(i) - midX(i - 1)).toFixed(1)}" height="${Math.max(0, yBot - yTop).toFixed(1)}" fill="#10B981" opacity="0.09"/>`;
-    }).join("");
-
-    // ② range-change diamonds
-    const rk = (r: any) => `${r.ref_low ?? ""}|${r.ref_high ?? ""}`;
-    let diamonds = "";
-    const changes: string[] = [];
-    for (let i = 1; i < rs.length; i++) {
-      if (rk(rs[i]) !== rk(rs[i - 1])) {
-        diamonds += `<g transform="translate(${X(i).toFixed(1)},${T - 8})"><rect x="-4.5" y="-4.5" width="9" height="9" transform="rotate(45)" fill="#818cf8"><title>Different lab range from ${fmtDay(rs[i].measured_on)}: ${rangeLabel(rs[i - 1]) || "none"} → ${rangeLabel(rs[i]) || "none"}</title></rect></g>`;
-        changes.push(`${rangeLabel(rs[i - 1]) || "no range"} → ${rangeLabel(rs[i]) || "no range"} from ${fmtDay(rs[i].measured_on)}`);
-      }
-    }
-
-    // ③ line, dots (own-range verdicts), axis
-    const line = rs.length > 1
-      ? `<polyline points="${vals.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ")}" fill="none" stroke="#818cf8" stroke-width="2"/>` : "";
-    const dots = rs.map((r, i) => {
-      const own = inRange(r);
-      const c = own === false ? "#FBBF24" : own === true ? "#34D399" : "#94A3B8";
-      return `<circle cx="${X(i).toFixed(1)}" cy="${Y(Number(r.value)).toFixed(1)}" r="4" fill="${c}" stroke="#0B0F1A" stroke-width="1.5"><title>${fmtDay(r.measured_on)}: ${r.value}${r.unit ? " " + r.unit : ""} (range ${rangeLabel(r) || "—"})</title></circle>`;
-    }).join("");
-    const step = Math.max(1, Math.ceil(rs.length / 6));
-    const xlabels = rs.map((r, i) => (i % step === 0 || i === rs.length - 1)
-      ? `<text x="${X(i).toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="9" fill="#64748B" font-family="ui-monospace,monospace">${new Date(r.measured_on + "T00:00:00").toLocaleDateString(undefined, { month: "short", year: "2-digit" })}</text>` : "").join("");
-    const ticks = [0.15, 0.5, 0.85].map((f) => {
-      const v = lo + (hi - lo) * (1 - f);
-      const yy = T + f * (H - T - B);
-      return `<line x1="${L}" y1="${yy}" x2="${W - R}" y2="${yy}" stroke="#FFFFFF" opacity="0.05"/><text x="${L - 6}" y="${yy + 3}" text-anchor="end" font-size="9" fill="#64748B" font-family="ui-monospace,monospace">${Number(v.toPrecision(3))}</text>`;
-    }).join("");
-
-    const unitLabel = rs[rs.length - 1].unit ? esc(String(rs[rs.length - 1].unit)) : "";
-    return `
-      <div class="mh-open mb-3 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
-        <svg viewBox="0 0 ${W} ${H}" class="w-full">${ticks}${bands}${line}${dots}${diamonds}${xlabels}</svg>
-        <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-text-tertiary">
-          <span><span class="text-success">●</span> in its lab's range</span>
-          <span><span class="text-warning">●</span> outside</span>
-          <span class="opacity-80">▩ the printed range, per report${unitLabel ? ` · ${unitLabel}` : ""}</span>
-        </div>
-        ${changes.map((c) => `<div class="mt-1.5 text-[10px] font-semibold text-accent-light">◆ DIFFERENT LAB RANGE · ${esc(c)}</div>`).join("")}
-        ${offLine.length ? `
-          <div class="mt-1.5 text-[10px] font-semibold text-warning">⚠ UNIT CHANGED — ${offLine.length} earlier reading${offLine.length === 1 ? "" : "s"} in a different unit, listed below, not on this line</div>
-          ${offLine.map((r) => `<div class="mt-0.5 font-mono text-[10px] text-text-tertiary">${fmtDay(r.measured_on)} · ${r.value}${r.unit ? " " + esc(r.unit) : ""} (range ${esc(rangeLabel(r) || "—")})</div>`).join("")}` : ""}
-        <div class="mt-2 divide-y divide-white/[0.04]">
-          ${[...rs].reverse().map((r) => {
-            const own = inRange(r);
-            return `<div class="flex items-baseline gap-3 py-1">
-              <span class="w-24 font-mono text-[10px] text-text-tertiary">${fmtDay(r.measured_on)}</span>
-              <span class="flex-1 font-mono text-xs ${own === false ? "text-warning" : own === true ? "text-success" : "text-text-primary"}">${r.value}${r.unit ? ` ${esc(r.unit)}` : ""}</span>
-              <span class="font-mono text-[10px] text-text-muted">${esc(rangeLabel(r) || "no printed range")}</span>
-            </div>`;
-          }).join("")}
-        </div>
-      </div>`;
-  }
 
   // ═══ REPORTS ═════════════════════════════════════════════════════════════
   /** The kinds of file the archive holds: a PDF, or a photo of a report. */
@@ -4003,7 +3752,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         </div>`;
     };
 
-    $("repcards").innerHTML = (terms.length && !shown.length ? `<p class="rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm text-text-tertiary">No report matches "${esc(searchQuery)}". A report matches by its name, its date, a value read from it, or its study.</p>` : "") + [...years.entries()].map(([y, list]) => `
+    $("repcards").innerHTML = (terms.length && !shown.length ? `<p class="rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm text-text-tertiary">No report matches "${esc(searchQuerySignal.value)}". A report matches by its name, its date, a value read from it, or its study.</p>` : "") + [...years.entries()].map(([y, list]) => `
       <details class="group">
         <summary class="flex cursor-pointer list-none items-center gap-2.5 py-1 text-text-primary [&::-webkit-details-marker]:hidden">
           <span class="font-mono text-[13px] font-bold">${esc(y)}</span>
@@ -4738,6 +4487,9 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
 
   // the Overview's four frames, before the session is even checked: the page has its shape from the first paint
   mountOverview({ line: $("ovline"), glance: $("ovglance"), section: $("ovsection") });
+  mountLabs($("labsroot"));
+  actions.goTab = (t) => { if (t === "overview") setSectionState("all"); setTab(t); };
+  actions.searchNote = searchNote;
   boot();
   supabase.auth.onAuthStateChange((event) => {
     // A reset link lands with a recovery session, and a recovery code signs

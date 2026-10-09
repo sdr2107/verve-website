@@ -343,6 +343,17 @@ patch.
   back to the Overview tab, with no console errors and the same words and
   figures as before.
 
-Still to come in step 3: Labs, In depth, Reports, People as views, one
-tab per commit; then the dynamic imports per tab and the Supabase client
-loaded after the first paint.
+- *Labs as a view* (`views/Labs.tsx`, `derive/labs.ts` grown by the search
+  and the two drawings): the rail, one section, each marker a row opening
+  into its chart with every dot judged by its own report's range, the
+  imaging conclusions, the phone's list-then-page layout, and the search box
+  shared with Reports as a signal. `renderLabsRail`, `renderLabsPanel`,
+  `labRow` and `bigChart` are gone from the page. Verified on the production
+  build with four test values on the reviewer account (removed after): the
+  rail's counts and flags, a chart with its history, a section with one out
+  of range, the search narrowing to one marker and its note, the no-match
+  message, the clear button; no console errors.
+
+Still to come in step 3: In depth, Reports, People as views, one tab per
+commit; then the dynamic imports per tab and the Supabase client loaded
+after the first paint.

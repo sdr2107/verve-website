@@ -25,6 +25,26 @@ export const openYear = signal<number | null>(null);
 /** A tile tapped: the others step aside and the marker opens right under it. */
 export const focusTile = signal(false);
 
+// ── Labs ──
+export const labSection = signal("");
+/** One chart open at a time. */
+export const expandedAnalyte = signal("");
+/** Phone: the section list is the page until a section opens. */
+export const mobileSectionOpen = signal(false);
+/** The search box over Labs and Reports; every word typed must land. */
+export const searchQuery = signal("");
+
+/** What the views ask the page to do: the page fills these in. */
+export const actions = {
+  goTab: (_t: string) => {},
+  searchNote: (_text: string) => {},
+};
+/** Jump into one section of Labs, or straight to one marker's chart. */
+export function openLabs(sec: string, analyte = "") {
+  labSection.value = sec; expandedAnalyte.value = analyte; mobileSectionOpen.value = true;
+  actions.goTab("labs");
+}
+
 /** Open a section, as the sidebar and the glance cards do. */
 export function setSection(k: "all" | SecKey) {
   ovSection.value = k;
