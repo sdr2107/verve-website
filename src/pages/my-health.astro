@@ -879,6 +879,12 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   import { AUTO_SEND_TO_APP } from "../data/site";
   import { PLANS_ENFORCED, PLANS_OPEN, AI_SUMMARY_OPEN, entitlements, planOf, type PlanKey } from "../data/plans";
   import type { MyHealthDocument } from "../my-health/document";
+  import { esc, fmtDay, dayOf, dayWord, monthOf, monthYearOf, addDays, daysBack, daysBetween, localDay, mondayOf, todayStr, fmt1, round0, signed, fmtHM, fmtSleepMin, ordinal, medianOf, quartilesOf, byDate, kicker, plural } from "../my-health/derive/format";
+  import { LABELS, CHART_MARKERS, type ChartMarker, APP_KEY_BY_NAME, squash, appKeyFor, chartKeyFor, type Pt, markerPointsFrom, hasPoints, inRange, rangeLabel, rangeText, RETEST, CRF_RETEST, BODY_RETEST, METHOD_LABEL, MAXIMAL, methodLabel, type Due, dueFor, dueWord, dueTone, type LabRow, labRowsFrom, bodyDueFrom, eventsFrom } from "../my-health/derive/markers";
+  import { weeksFrom, crfFromSync, bodyFromSync, mergeBy, isWorkout, actsByDay, activitySummary, fitnessSummary } from "../my-health/derive/activity";
+  import { HRV_MIN_NIGHTS, sleepHeartSummary, sleepHeartSummaryRaw } from "../my-health/derive/heart";
+  import { type SecKey, type Rng, type Pt2, type Marker, type Drawn, SEC_META, SEC_ORDER, RANGE_LABEL, SHELVES, ownBand, weightSeries, sppbSeries, drawnFor, chartSvg, alongsideHtml, workoutsListHtml } from "../my-health/derive/lenses";
+  import { derivePerson, type PersonData } from "../my-health/derive/person";
   import { readDocument, writeDocument, pruneDocuments, clearDocuments, sameDocument } from "../my-health/store";
 
   // ── the ruler ─────────────────────────────────────────────────────────
@@ -986,34 +992,6 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     el.classList.toggle("hidden", !text);
     el.classList.toggle("text-danger", bad);
     el.classList.toggle("text-text-secondary", !bad);
-  };
-  const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
-  const fmtDay = (d: string) =>
-    new Date(d + "T00:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
-
-  // ── the app markers, keyed by lab_readings COLUMNS ─────────────────────
-  const LABELS: Record<string, { label: string; unit: string; section: "metabolic" | "heart" | "sarcopenia" }> = {
-    glucose_mgdl:           { label: "Fasting glucose",   unit: "mg/dL",  section: "metabolic" },
-    hba1c_pct:              { label: "HbA1c",             unit: "%",      section: "metabolic" },
-    post_meal_glucose_mgdl: { label: "Post-meal glucose", unit: "mg/dL",  section: "metabolic" },
-    fasting_insulin_uiuml:  { label: "Fasting insulin",   unit: "uIU/mL", section: "metabolic" },
-    triglycerides_mgdl:     { label: "Triglycerides",     unit: "mg/dL",  section: "metabolic" },
-    hdl_mgdl:               { label: "HDL",               unit: "mg/dL",  section: "metabolic" },
-    waist_cm:               { label: "Waist",             unit: "cm",     section: "metabolic" },
-    sbp:                    { label: "Systolic BP",       unit: "mmHg",   section: "metabolic" },
-    dbp:                    { label: "Diastolic BP",      unit: "mmHg",   section: "metabolic" },
-    apo_b_mgdl:             { label: "ApoB",              unit: "mg/dL",  section: "heart" },
-    ldl_mgdl:               { label: "LDL",               unit: "mg/dL",  section: "heart" },
-    lpa_value:              { label: "Lp(a)",             unit: "",       section: "heart" },
-    hs_crp_mgl:             { label: "hs-CRP",            unit: "mg/L",   section: "heart" },
-    body_fat_pct:           { label: "Body fat",          unit: "%",      section: "sarcopenia" },
-    skel_musc_pct:          { label: "Skeletal muscle",   unit: "%",      section: "sarcopenia" },
-    alm_kg:                     { label: "Lean mass, arms and legs", unit: "kg",  section: "sarcopenia" },
-    ffm_kg:                     { label: "Whole-body lean mass",     unit: "kg",  section: "sarcopenia" },
-    handgrip_kg:                { label: "Grip strength",            unit: "kg",  section: "sarcopenia" },
-    single_leg_balance_seconds: { label: "Single-leg balance",       unit: "s",   section: "sarcopenia" },
-    chair_stand_seconds:        { label: "Chair stand",              unit: "s",   section: "sarcopenia" },
-    gait_speed_ms:              { label: "Walk speed",               unit: "m/s", section: "sarcopenia" },
   };
 
   const SECTIONS: Record<string, string> = {
@@ -1528,7 +1506,6 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   // ── sharing: who can see this person, and invitations waiting for you ──
   const SCOPE_LABEL: Record<string, string> = { labs: "Labs", imaging: "Imaging", activity: "Activity and fitness", body: "Body measurements", heart: "Sleep and heart", notes: "Notes" };
   const scopeList = (xs: string[]) => xs.map((x) => SCOPE_LABEL[x] ?? x).join(" · ");
-  const dayOf = (iso: string) => fmtDay(String(iso).slice(0, 10));
 
   /** The grants on the open person: theirs to see, stop or cancel. */
   async function loadSharing() {
@@ -2075,130 +2052,28 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
 
   /** The app's daily read: resting heart rate, steps, the night, the day's recovery. One row a day, pushed on every sync. */
   let syncSignals: any[] = [];
-  /** A synced activity row that is a session someone did, not the day's background movement. */
-  const isWorkout = (a: any) => a && a.source !== "passive-nakanishi";
-  /** The app's weeks from its workouts, bucketed the way the app does: by the Monday, in local time. */
-  function weeksFrom(activities: any[]): any[] {
-    const by = new Map<string, any>();
-    for (const a of activities) {
-      if (!a?.timestamp) continue;
-      const start = mondayOf(new Date(a.timestamp));
-      const w = by.get(start) ?? { week_start: start, met_hours: 0, minutes: 0, light_min: 0, moderate_min: 0, vigorous_min: 0, workouts: 0, source: "sync" };
-      const mins = Number(a.duration_minutes) || 0;
-      w.met_hours += Number(a.met_hours) || 0; w.minutes += mins; w.workouts += 1;
-      const cat = String(a.intensity_category ?? "");
-      if (cat === "vigorous") w.vigorous_min += mins; else if (cat === "moderate") w.moderate_min += mins; else w.light_min += mins;
-      by.set(start, w);
-    }
-    return [...by.values()].map((w) => ({ ...w, met_hours: Math.round(w.met_hours * 100) / 100 })).sort((x, y) => x.week_start.localeCompare(y.week_start));
-  }
-  const crfFromSync = (rows: any[]) => rows.filter((c) => c?.timestamp).map((c) => ({
-    measured_on: localDay(c.timestamp),
-    vo2max: c.vo2_max_estimate ?? (c.met_capacity != null ? Math.round(Number(c.met_capacity) * 3.5 * 10) / 10 : null),
-    met_capacity: c.met_capacity ?? null, method: c.estimation_method ?? null, category: c.performance_category ?? null, source: "sync",
-  }));
-  const bodyFromSync = (rows: any[]) => rows.filter((w) => w?.measured_at && w.waist_cm != null).map((w) => ({ measured_on: localDay(w.measured_at), waist_cm: w.waist_cm, source: "sync" }));
-  /** Sync rows first; a fallback row only for a key sync does not have. Within sync, the last row for a key wins. */
-  function mergeBy(key: string, primary: any[], fallback: any[]): any[] {
-    const out = new Map<string, any>();
-    for (const r of fallback) out.set(String(r[key]), r);
-    for (const r of primary) out.set(String(r[key]), r);
-    return [...out.values()].sort((x, y) => String(x[key]).localeCompare(String(y[key])));
-  }
 
   /** The person's activity, tests and body rows, imported and synced, from the document. */
   function applyActivity(d: MyHealthDocument) {
     const p = person;
     if (!p?.id) { show("appimports", false); return; }
-    exportRows = { weeks: d.weeks, crf: d.web_crf, body: d.web_body };
-    // the app's rows exist only for a person with an account of their own.
-    // Workouts only: the app also syncs its background-movement rows (source
-    // "passive-nakanishi", one per day), which are not sessions; counted here
-    // they inflated every week against the app's own Trends.
-    const synced = p.account_id
-      ? { activities: d.activities.filter(isWorkout), crf: d.app_crf, waist: d.waist, profile: d.profile, signals: d.signals, weights: d.weights }
-      : null;
-    allWeeks = mergeBy("week_start", synced ? weeksFrom(synced.activities) : [], d.weeks);
-    allCrf = mergeBy("measured_on", synced ? crfFromSync(synced.crf) : [], d.web_crf);
-    allBody = mergeBy("measured_on", synced ? bodyFromSync(synced.waist) : [], d.web_body);
-    syncActs = synced?.activities ?? [];
-    syncProfile = synced?.profile ?? null;
-    syncSignals = synced?.signals ?? [];
-    syncWeights = synced?.weights ?? [];
+    derived = derivePerson(d);
+    exportRows = derived.exportRows;
+    allWeeks = derived.weeks; allCrf = derived.crf; allBody = derived.body;
+    syncActs = derived.acts; syncProfile = derived.profile; syncSignals = derived.signals; syncWeights = derived.weights;
+    markers = derived.markers;
     renderAppImports();
   }
 
-  // ── the 21 markers, in the three sections the landing page counts ──────
-  // A chart key is a lab_readings column, except "bp", which pairs sbp and
-  // dbp, and "sppb_score", which the app computes and no table stores. A
-  // marker with no reading anywhere shows as a dashed chip, never hidden:
-  // the page says 21 markers, and 21 it is.
-  type ChartMarker = { key: string; label: string; section: "metabolic" | "heart" | "muscle"; pair?: [string, string]; lines?: [number, number] };
-  const CHART_MARKERS: ChartMarker[] = [
-    { key: "glucose_mgdl", label: "Fasting glucose", section: "metabolic" },
-    { key: "hba1c_pct", label: "HbA1c", section: "metabolic" },
-    { key: "bp", label: "Blood pressure", section: "metabolic", pair: ["sbp", "dbp"], lines: [120, 80] },
-    { key: "triglycerides_mgdl", label: "Triglycerides", section: "metabolic" },
-    { key: "hdl_mgdl", label: "HDL", section: "metabolic" },
-    { key: "waist_cm", label: "Waist", section: "metabolic" },
-    { key: "post_meal_glucose_mgdl", label: "Post-meal glucose", section: "metabolic" },
-    { key: "fasting_insulin_uiuml", label: "Fasting insulin", section: "metabolic" },
-    { key: "apo_b_mgdl", label: "ApoB", section: "heart" },
-    { key: "ldl_mgdl", label: "LDL", section: "heart" },
-    { key: "lpa_value", label: "Lp(a)", section: "heart" },
-    { key: "hs_crp_mgl", label: "hs-CRP", section: "heart" },
-    { key: "body_fat_pct", label: "Body fat", section: "muscle" },
-    { key: "skel_musc_pct", label: "Muscle mass", section: "muscle" },
-    { key: "alm_kg", label: "Lean mass, arms and legs", section: "muscle" },
-    { key: "ffm_kg", label: "Whole-body lean mass", section: "muscle" },
-    { key: "handgrip_kg", label: "Grip strength", section: "muscle" },
-    { key: "single_leg_balance_seconds", label: "Single-leg balance", section: "muscle" },
-    { key: "chair_stand_seconds", label: "Chair stand", section: "muscle" },
-    { key: "sppb_score", label: "SPPB", section: "muscle" },
-    { key: "gait_speed_ms", label: "Walk speed", section: "muscle" },
-  ];
-  /** The chart's key for an analyte name: the app's column, or SPPB. */
-  const chartKeyFor = (analyte: string) => appKeyFor(analyte) ?? (squash(canonName(analyte)) === "sppb" || squash(canonName(analyte)) === "sppbscore" ? "sppb_score" : null);
 
-  type Pt = { d: string; v: number; lo: number | null; hi: number | null; unit: string | null };
-  /**
-   * Every reading of every marker this person has, by chart key, from the
-   * three places one can come from: the values read from reports and
-   * imports (web_labs), the app's own rows (lab_readings), and waist days
-   * (web_body). The same value on the same day is one reading.
-   */
-  function markerPointsFrom(labs: any[], app: any[], body: any[]): Map<string, Pt[]> {
-    const by = new Map<string, Pt[]>();
-    const seen = new Set<string>();
-    const add = (key: string, pt: Pt) => {
-      const id = `${key}|${pt.d}|${pt.v}`;
-      if (seen.has(id)) return;
-      seen.add(id);
-      (by.get(key) ?? by.set(key, []).get(key)!).push(pt);
-    };
-    for (const r of labs) {
-      const k = chartKeyFor(String(r.analyte));
-      if (!k || !Number.isFinite(Number(r.value))) continue;
-      add(k, { d: String(r.measured_on).slice(0, 10), v: Number(r.value), lo: Number.isFinite(Number(r.ref_low)) && r.ref_low != null ? Number(r.ref_low) : null, hi: Number.isFinite(Number(r.ref_high)) && r.ref_high != null ? Number(r.ref_high) : null, unit: r.unit ?? null });
-    }
-    for (const r of app) {
-      const d = localDay(r.measured_at);
-      for (const m of CHART_MARKERS) {
-        const cols = m.pair ?? [m.key];
-        for (const col of cols) {
-          const v = Number(r[col]);
-          if (r[col] == null || !Number.isFinite(v)) continue;
-          add(col, { d, v, lo: null, hi: null, unit: col === "lpa_value" ? (r.lpa_unit ?? null) : (LABELS[col]?.unit || null) });
-        }
-      }
-    }
-    for (const b of body) if (b.waist_cm != null && Number.isFinite(Number(b.waist_cm)))
-      add("waist_cm", { d: String(b.measured_on).slice(0, 10), v: Number(b.waist_cm), lo: null, hi: null, unit: "cm" });
-    for (const pts of by.values()) pts.sort((a, b) => a.d.localeCompare(b.d));
-    return by;
-  }
-  const markerPoints = () => markerPointsFrom(allLabs, allApp, allBody);
-  const hasPoints = (m: ChartMarker, by: Map<string, Pt[]>) => m.pair ? m.pair.some((k) => by.has(k)) : by.has(m.key);
+  // The person's page, derived from the document once (src/my-health/derive):
+  // the rows merged, the readings by chart key, the markers. The globals
+  // below are what the renderers still read; step 3 retires them tab by tab.
+  let derived: PersonData | null = null;
+  let markers: Marker[] = [];
+  const markerByKey = (k: string) => markers.find((m) => m.key === k)!;
+  const markerPoints = () => derived?.by ?? markerPointsFrom(allLabs, allApp, allBody);
+  const weeklyGoal = () => Number(syncProfile?.weekly_met_hours_goal) || 7.5;
 
   // ═══ IN DEPTH ════════════════════════════════════════════════════════════
   // The four questions a coach asks of one person, answered from rows the
@@ -2207,285 +2082,10 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   let syncProfile: any = null;
   let syncWeights: any[] = [];   // weight_readings: one row a day a source
 
-  /**
-   * The cited retest cadences, in days, from the app's own threshold table:
-   * one figure while the latest reading is in range, a shorter one once it
-   * is outside. The lipid panel shares one draw and one interval.
-   */
-  const RETEST: Record<string, { ok: number; out: number; text: string; source: string }> = {
-    glucose_mgdl:       { ok: 1095, out: 365,  text: "every 3 years · yearly from 100 mg/dL",            source: "ADA Standards of Care 2026" },
-    hba1c_pct:          { ok: 1095, out: 365,  text: "every 3 years · yearly from 5.7%",                 source: "ADA Standards of Care 2026" },
-    bp:                 { ok: 365,  out: 91,   text: "yearly under 120/80 · 3 to 6 months once above",   source: "AHA/ACC 2017" },
-    triglycerides_mgdl: { ok: 1461, out: 1461, text: "every 4 to 6 years · one draw for the panel",       source: "AHA · USPSTF" },
-    hdl_mgdl:           { ok: 1461, out: 1461, text: "every 4 to 6 years · one draw for the panel",       source: "AHA · USPSTF" },
-    apo_b_mgdl:         { ok: 1461, out: 1461, text: "every 4 to 6 years · one draw for the panel",       source: "AHA · USPSTF" },
-    ldl_mgdl:           { ok: 1461, out: 1461, text: "every 4 to 6 years · one draw for the panel",       source: "AHA · USPSTF" },
-    alm_kg:             { ok: 182,  out: 182,  text: "every 6 months",                                   source: "Verve's own cadence, anchored to EWGSOP2" },
-  };
-  const CRF_RETEST = { due: 56, overdue: 112 };          // the app's own reminder: eight weeks, overdue at sixteen
-  const BODY_RETEST = 182;                               // a body assessment every six months, the app's cadence
-  const METHOD_LABEL: Record<string, string> = { cpet: "CPET", "treadmill-test": "treadmill test", "bruce-protocol": "Bruce protocol", "cooper-run": "Cooper run", "1.5-mile-run": "1.5-mile run", "six-minute-walk": "six-minute walk", "one-mile-walk": "one-mile walk" };
-  const MAXIMAL = new Set(["cpet", "treadmill-test", "bruce-protocol", "cooper-run", "1.5-mile-run"]);
-  const methodLabel = (m: unknown) => METHOD_LABEL[String(m ?? "")] ?? String(m ?? "").replace(/-/g, " ");
-  const ORD = ["", "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth"];
-  const ordinal = (n: number) => ORD[n] ?? `${n}th`;
-  const monthOf = (d: string) => new Date(d + "T00:00:00").toLocaleDateString(undefined, { month: "short" });
-  const monthYearOf = (d: string) => new Date(d + "T00:00:00").toLocaleDateString(undefined, { month: "short", year: "numeric" });
-  const addDays = (d: string, n: number) => { const x = new Date(d + "T00:00:00"); x.setDate(x.getDate() + n); return x.toLocaleDateString("en-CA"); };
-  const fmt1 = (v: number) => (Math.round(v * 10) / 10).toString();
-  const signed = (v: number, digits = 1) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(Math.round(v * 10 ** digits) / 10 ** digits)}`;
-  const kicker = (t: string, tone = "text-text-tertiary") => `<div class="font-mono text-[10px] font-semibold tracking-[0.12em] ${tone}">${t}</div>`;
-  const rangeText = (pt: Pt | null) => !pt ? "" : pt.lo != null && pt.hi != null ? `${pt.lo} to ${pt.hi}` : pt.hi != null ? `below ${pt.hi}` : pt.lo != null ? `above ${pt.lo}` : "";
 
-  type Due = { what: string; on: string; days: number; why: string };
-  /** When a marker is next due, from its latest reading and whether that reading sits in the lab's range. */
-  function dueFor(key: string, pts: Pt[]): Due | null {
-    const r = RETEST[key]; if (!r || !pts.length) return null;
-    const last = pts[pts.length - 1];
-    const ranged = [...pts].reverse().find((p) => p.lo != null || p.hi != null) ?? null;
-    const out = ranged ? inRange({ value: last.v, ref_low: ranged.lo, ref_high: ranged.hi }) === false : false;
-    const on = addDays(last.d, out ? r.out : r.ok);
-    return { what: CHART_MARKERS.find((m) => m.key === key)?.label ?? key, on, days: daysBetween(new Date().toLocaleDateString("en-CA"), on), why: r.text };
-  }
-  const dueWord = (d: Due) => d.days < 0 ? `overdue ${Math.abs(d.days) < 14 ? `${Math.abs(d.days)} days` : `${Math.round(Math.abs(d.days) / 7)} weeks`}` : d.days === 0 ? "due today" : d.days < 45 ? `due ${fmtDay(d.on)}` : `due ${monthYearOf(d.on)}`;
-  const dueTone = (d: Due) => d.days < 0 ? "text-danger" : d.days <= 30 ? "text-warning" : "text-text-secondary";
 
-  type LabRow = { key: string; label: string; latest: string; tone: string; range: string; since: string; sinceTone: string; retest: string; retestTone: string; out: boolean; d: string; due: Due | null; noFollow: number | null };
-  const byDate = (k: string) => (x: any, y: any) => String(x[k]).localeCompare(String(y[k]));
 
-  /** Activity, from a person's weeks and (where synced) their workouts, against their own goal. */
-  function activitySummary(weeksIn: any[], actsIn: any[], goal: number, today: string, thisMonday: string) {
-    // a week with nothing logged has no row anywhere, so the calendar is filled: an empty week is a zero week, not a missing one
-    const have = new Map<string, any>([...weeksIn].map((w) => [String(w.week_start), w]));
-    const weeks: any[] = [];
-    if (have.size) {
-      for (let d = [...have.keys()].sort()[0]; d <= thisMonday; d = addDays(d, 7)) weeks.push(have.get(d) ?? { week_start: d, met_hours: 0, minutes: 0, light_min: 0, moderate_min: 0, vigorous_min: 0, workouts: 0, source: "gap" });
-      for (const [d, w] of have) if (d > thisMonday) weeks.push(w);
-    }
-    const acts = [...actsIn].sort(byDate("timestamp"));
-    const complete = weeks.filter((w) => w.week_start < thisMonday);
-    const recent = (complete.length ? complete : weeks).slice(-4), prior = complete.slice(-8, -4);
-    const sum = (xs: any[], k: string) => xs.reduce((t, w) => t + (Number(w[k]) || 0), 0);
-    const recentAvg = recent.length ? sum(recent, "met_hours") / recent.length : 0;
-    const priorAvg = prior.length ? sum(prior, "met_hours") / prior.length : null;
-    const change = priorAvg && priorAvg > 0 ? (recentAvg - priorAvg) / priorAvg : null;
-    let streak = 0; for (let i = complete.length - 1; i >= 0 && Number(complete[i].met_hours) >= goal; i--) streak++;
-    const last12 = complete.slice(-12);
-    const atGoal = last12.filter((w) => Number(w.met_hours) >= goal).length;
-    const thisWeek = weeks.find((w) => w.week_start === thisMonday) ?? null;
-    const lastWorkoutDay = acts.length ? localDay(acts[acts.length - 1].timestamp) : ([...weeks].reverse().find((w) => Number(w.workouts) > 0)?.week_start ?? "");
-    const quietDays = lastWorkoutDay ? daysBetween(lastWorkoutDay, today) : null;
-    const recentActs = acts.filter((x) => recent.length && localDay(x.timestamp) >= recent[0].week_start && localDay(x.timestamp) < addDays(recent[recent.length - 1].week_start, 7));
-    const kinds = new Map<string, number>();
-    for (const x of recentActs) { const k = String(x.activity_name ?? "workout").split(/[,(]/)[0].trim().toLowerCase(); kinds.set(k, (kinds.get(k) ?? 0) + 1); }
-    const perWeek = recent.length ? sum(recent, "workouts") / recent.length : 0;
-    const minutes = sum(recent, "minutes"), vig = sum(recent, "vigorous_min");
-    const zone2 = recentActs.length ? recentActs.reduce((t, x) => t + (Number(x.zone2_minutes) || 0), 0) / recent.length : null;
-    return { weeks, complete, recent, prior, recentAvg, priorAvg, change, streak, atGoal, of: last12.length, thisWeek, lastWorkoutDay, quietDays, recentActs, kinds, perWeek, minutes, vig, zone2 };
-  }
-  /** Fitness: every test, the latest judged only against the previous test of the same method, and the app's retest reminder. */
-  function fitnessSummary(crfIn: any[], today: string) {
-    const tests = [...crfIn].filter((c) => c.vo2max != null).sort(byDate("measured_on")).map((c) => ({ ...c, v: Number(c.vo2max), max: MAXIMAL.has(String(c.method)) }));
-    const latest = tests[tests.length - 1] ?? null;
-    const prevSame = latest ? [...tests.slice(0, -1)].reverse().find((t) => t.method === latest.method) ?? null : null;
-    const within = latest && prevSame ? latest.v - prevSame.v : null;
-    const trendWord = within == null ? "" : within >= 1 ? "rising" : within <= -1 ? "falling" : "flat";
-    const due: Due | null = latest ? { what: "Fitness test", on: addDays(latest.measured_on, CRF_RETEST.due), days: daysBetween(today, addDays(latest.measured_on, CRF_RETEST.due)), why: "the app's own reminder, eight weeks" } : null;
-    return { tests, latest, prevSame, within, trendWord, due };
-  }
-  /** Labs: one row per marker on file, against the lab's own range, with the change since last and the cited cadence. */
-  function labRowsFrom(by: Map<string, Pt[]>, today: string): LabRow[] {
-    const rows: LabRow[] = [];
-    for (const m of CHART_MARKERS) {
-      if (m.section === "muscle" || m.key === "waist_cm") continue;
-      if (m.pair) {
-        const S = by.get("sbp") ?? [], D = by.get("dbp") ?? [];
-        if (!S.length) continue;
-        const s1 = S[S.length - 1], d1 = D.find((x) => x.d === s1.d) ?? D[D.length - 1] ?? null;
-        const s0 = S[S.length - 2] ?? null, d0 = s0 ? (D.find((x) => x.d === s0.d) ?? null) : null;
-        const out = s1.v >= 120 || (d1 ? d1.v >= 80 : false);
-        const due: Due = { what: "Blood pressure", on: addDays(s1.d, out ? RETEST.bp.out : RETEST.bp.ok), days: 0, why: RETEST.bp.text };
-        due.days = daysBetween(today, due.on);
-        rows.push({ key: "bp", label: "Blood pressure", latest: `${s1.v}/${d1 ? d1.v : "?"} mmHg`, tone: out ? "text-warning" : "text-text-primary", range: "under 120/80", since: s0 ? `${signed(s1.v - s0.v, 0)}/${d0 && d1 ? signed(d1.v - d0.v, 0) : "?"} since ${monthOf(s0.d)}` : "measured once", sinceTone: out ? "text-warning" : "text-text-secondary", retest: `${dueWord(due)} · ${due.why}`, retestTone: dueTone(due), out, d: s1.d, due, noFollow: null });
-        continue;
-      }
-      const pts = by.get(m.key) ?? [];
-      if (!pts.length) continue;
-      const last = pts[pts.length - 1], prev = pts[pts.length - 2] ?? null;
-      const ranged = [...pts].reverse().find((x) => x.lo != null || x.hi != null) ?? null;
-      const out = ranged ? inRange({ value: last.v, ref_low: ranged.lo, ref_high: ranged.hi }) === false : false;
-      const due = dueFor(m.key, pts);
-      const months = Math.floor(daysBetween(last.d, today) / 30);
-      const noFollow = out && months >= 3 ? months : null;
-      rows.push({ key: m.key, label: m.label, latest: `${last.v}${last.unit ? ` ${last.unit}` : ""}`, tone: out ? "text-warning" : "text-text-primary", range: ranged ? rangeText(ranged) : "no range on file", since: prev ? `${signed(last.v - prev.v, Number.isInteger(last.v) && Number.isInteger(prev.v) ? 0 : 1)} since ${monthOf(prev.d)}` : "measured once", sinceTone: out ? "text-warning" : prev && ranged && inRange({ value: prev.v, ref_low: ranged.lo, ref_high: ranged.hi }) === false ? "text-success-light" : "text-text-secondary", retest: noFollow ? `outside range, no follow-up in ${noFollow} months` : due ? `${dueWord(due)} · ${due.why}` : "—", retestTone: noFollow ? "text-warning" : due ? dueTone(due) : "text-text-muted", out, d: last.d, due, noFollow });
-    }
-    rows.sort((x, y) => Number(y.out) - Number(x.out) || y.d.localeCompare(x.d));
-    return rows;
-  }
-  /** The next body assessment, six months after the latest muscle reading of any kind. */
-  function bodyDueFrom(by: Map<string, Pt[]>, today: string): Due | null {
-    const days = ["alm_kg", "body_fat_pct", "skel_musc_pct", "handgrip_kg", "chair_stand_seconds", "gait_speed_ms", "single_leg_balance_seconds"].flatMap((k) => (by.get(k) ?? []).map((x) => x.d)).sort();
-    if (!days.length) return null;
-    const on = addDays(days[days.length - 1], BODY_RETEST);
-    return { what: "Body assessment", on, days: daysBetween(today, on), why: "every 6 months, Verve's own cadence anchored to EWGSOP2" };
-  }
-  /** What changed in the last seven days: values read, tests taken, a streak reached, a quiet spell. */
-  function eventsFrom(labs: any[], labRows: LabRow[], fit: ReturnType<typeof fitnessSummary>, act: ReturnType<typeof activitySummary>, today: string): Array<{ d: string; text: string }> {
-    const weekAgo = addDays(today, -7);
-    const events: Array<{ d: string; text: string }> = [];
-    const byDayFiled = new Map<string, any[]>();
-    for (const r of labs) { const d = String(r.created_at ?? "").slice(0, 10); if (d >= weekAgo) (byDayFiled.get(d) ?? byDayFiled.set(d, []).get(d)!).push(r); }
-    for (const [d, rows] of byDayFiled) {
-      const named = rows.map((r) => ({ r, key: chartKeyFor(String(r.analyte)) })).filter((x) => x.key && labRows.some((l) => l.key === x.key || (l.key === "bp" && (x.key === "sbp" || x.key === "dbp"))));
-      const pick = named.find((x) => labRows.find((l) => l.key === x.key)?.out) ?? named[0];
-      if (pick) { const l = labRows.find((x) => x.key === pick.key); events.push({ d, text: `${esc(String(pick.r.analyte))} ${pick.r.value} read from a report${l && l.since !== "measured once" ? `, ${esc(l.since)}` : ""}${l?.out ? ", above the lab's range" : ""}` }); }
-      else events.push({ d, text: `${rows.length} value${rows.length === 1 ? "" : "s"} read from a report` });
-    }
-    for (const t of fit.tests.filter((t) => t.measured_on >= weekAgo)) events.push({ d: t.measured_on, text: `${esc(methodLabel(t.method))} ${fmt1(t.v)}${t === fit.latest && fit.within != null ? `, ${fit.within >= 0 ? "up" : "down"} ${fmt1(Math.abs(fit.within))} within the method` : ""}` });
-    if (act.streak >= 2 && act.complete.length) events.push({ d: addDays(act.complete[act.complete.length - 1].week_start, 6), text: `${ordinal(act.streak)} week at goal in a row` });
-    if (act.quietDays != null && act.quietDays >= 14) events.push({ d: today, text: `${act.quietDays} days without a workout` });
-    return events.sort((x, y) => y.d.localeCompare(x.d));
-  }
-  const dayWord = (d: string) => new Date(d + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", day: "numeric" });
 
-  const fmtSleepMin = (m: number) => `${Math.floor(m / 60)} h ${String(Math.round(m % 60)).padStart(2, "0")} m`;
-  const medianOf = (xs: number[]) => { if (!xs.length) return null; const s = [...xs].sort((a, b) => a - b); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
-  /** The middle half: the median of the lower half and of the upper half (Tukey's hinges). */
-  const quartilesOf = (xs: number[]) => { const sorted = [...xs].sort((a, b) => a - b); const h = sorted.length >> 1; return { q1: medianOf(sorted.slice(0, h))!, q3: medianOf(sorted.slice(sorted.length % 2 ? h + 1 : h))! }; };
-  const daysBack = (day: string, n: number) => { const d = new Date(day + "T00:00:00"); d.setDate(d.getDate() - n); return d.toLocaleDateString("en-CA"); };
-  /**
-   * The app's daily rows, read the way its Today tile reads them. Null when
-   * there are no rows at all; every part inside can be empty on its own.
-   */
-  // Read by the Overview's heart tiles (three of them, each with a band and
-  // a reading) and by In depth: one computation a render, not seven.
-  let heartMemo: { rows: any[]; today: string; out: ReturnType<typeof sleepHeartSummaryRaw> } | null = null;
-  function sleepHeartSummary(rows: any[], today: string) {
-    if (heartMemo && heartMemo.rows === rows && heartMemo.today === today) return heartMemo.out;
-    const out = sleepHeartSummaryRaw(rows, today);
-    heartMemo = { rows, today, out };
-    return out;
-  }
-  // The app's rule (data/met-thresholds.json nightHrv.minNights): the night
-  // HRV band appears after 7 nights from one writer, not 14. The two surfaces
-  // read one night against one band; they must agree on when it exists.
-  const HRV_MIN_NIGHTS = 7;
-  function sleepHeartSummaryRaw(rows: any[], today: string) {
-    if (!rows.length) return null;
-    const byDay = new Map<string, any>(rows.map((r) => [String(r.day), r]));
-
-    // resting heart rate: the latest morning against the median of the 30 before it, latest excluded
-    const rhrRows = rows.filter((r) => r.resting_hr != null).map((r) => ({ day: String(r.day), bpm: Number(r.resting_hr) }));
-    const latestR = rhrRows[rhrRows.length - 1] ?? null;
-    let baseline: number | null = null, priors = 0, delta: number | null = null, status = "", level = "", run = 0, inBand = 0, read = 0, svg = "";
-    let rhrSeries: Array<{ day: string; bpm: number; b: number | null; above: boolean }> = [];
-    if (latestR) {
-      const from = daysBack(latestR.day, 30);
-      const pri = rhrRows.filter((r) => r.day >= from && r.day < latestR.day).map((r) => r.bpm);
-      priors = pri.length;
-      if (pri.length >= 14) {
-        baseline = Math.round(medianOf(pri)!);
-        delta = Math.round(latestR.bpm - baseline);
-        status = delta >= 10 ? "stronglyElevated" : delta >= 5 ? "elevated" : delta <= -5 ? "below" : "typical";
-      }
-      level = latestR.bpm < 50 ? "low" : latestR.bpm <= 60 ? "optimal" : latestR.bpm <= 75 ? "typical" : latestR.bpm <= 80 ? "elevated" : "high";
-      // the last 28 mornings, drawn; each judged against the median of its own prior 30
-      const win = rhrRows.filter((r) => r.day > daysBack(today, 28));
-      const judged = win.map((r) => { const f = daysBack(r.day, 30); const pr = rhrRows.filter((x) => x.day >= f && x.day < r.day).map((x) => x.bpm); const b = pr.length >= 14 ? medianOf(pr)! : null; return { ...r, b, above: b != null && r.bpm - b >= 5 }; });
-      rhrSeries = judged;
-      read = judged.length; inBand = judged.filter((j) => j.b != null && !j.above && j.bpm - j.b! > -5).length;
-      for (let i = judged.length - 1; i >= 0 && judged[i].above; i--) run++;
-      if (judged.length) {
-        const vs = judged.map((j) => j.bpm); const lo = Math.min(...vs, baseline != null ? baseline - 5 : Infinity) - 2, hi = Math.max(...vs, baseline != null ? baseline + 5 : -Infinity) + 2;
-        const t0 = new Date(daysBack(today, 27) + "T00:00:00").getTime(), t1 = new Date(today + "T00:00:00").getTime();
-        const xf = (d: string) => 30 + ((new Date(d + "T00:00:00").getTime() - t0) / Math.max(1, t1 - t0)) * 490;
-        const yf = (v: number) => 122 - ((v - lo) / Math.max(1, hi - lo)) * 100;
-        if (baseline != null) svg += `<rect x="30" y="${yf(baseline + 5).toFixed(1)}" width="490" height="${(yf(baseline - 5) - yf(baseline + 5)).toFixed(1)}" fill="rgba(52,211,153,0.12)"/><text x="524" y="${(yf(baseline + 5) + 4).toFixed(1)}" fill="#64748b" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${baseline + 5}</text><text x="524" y="${(yf(baseline - 5) + 4).toFixed(1)}" fill="#64748b" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${baseline - 5}</text>`;
-        svg += `<line x1="30" y1="122" x2="520" y2="122" stroke="rgba(255,255,255,0.14)"/>`;
-        if (judged.length > 1) svg += `<polyline points="${judged.map((j) => `${xf(j.day).toFixed(1)},${yf(j.bpm).toFixed(1)}`).join(" ")}" fill="none" stroke="#a5b4fc" stroke-width="1.8"/>`;
-        for (const j of judged) svg += `<circle cx="${xf(j.day).toFixed(1)}" cy="${yf(j.bpm).toFixed(1)}" r="4" fill="${j.above ? "#FBBF24" : "#818cf8"}" stroke="#0D0D1C" stroke-width="1.5"><title>${esc(fmtDay(j.day))}: ${j.bpm} bpm${j.b != null ? ` · median before ${Math.round(j.b)}` : ""}</title></circle>`;
-        svg += `<text x="${xf(judged[0].day).toFixed(1)}" y="140" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${esc(fmtDay(judged[0].day)).toUpperCase()}</text><text x="520" y="140" text-anchor="end" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${esc(fmtDay(judged[judged.length - 1].day)).toUpperCase()}</text>`;
-      }
-    }
-
-    // the night that ended this morning, against the median of 30 nights
-    const nightRows = rows.filter((r) => r.sleep_minutes != null && r.day > daysBack(today, 30));
-    const lastN = nightRows[nightRows.length - 1] ?? null;
-    const usual = nightRows.length >= 7 ? Math.round(medianOf(nightRows.map((r) => Number(r.sleep_minutes)))!) : null;
-    const bedOf = (iso: string | null) => iso ? new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) : "";
-    const sleep = { nights: nightRows.length, shortNights: nightRows.filter((r) => Number(r.sleep_minutes) < 420).length, usual,
-      last: lastN ? { day: String(lastN.day), min: Number(lastN.sleep_minutes), band: Number(lastN.sleep_minutes) < 420 ? "short" : Number(lastN.sleep_minutes) > 540 ? "long" : "inRange", bed: bedOf(lastN.sleep_start) } : null };
-
-    // recovery: the latest day's median, against the median of the 30 days before
-    const hrrRows = rows.filter((r) => r.hrr_bpm != null);
-    const lastH = hrrRows[hrrRows.length - 1] ?? null;
-    const hrrPri = lastH ? hrrRows.filter((r) => r.day >= daysBack(String(lastH.day), 30) && r.day < String(lastH.day)).map((r) => Number(r.hrr_bpm)) : [];
-    // each recovery against the middle half of the 30 days before it: "low" is under the lower quartile
-    const hrrJudged = hrrRows.map((r) => { const pr = hrrRows.filter((x) => x.day >= daysBack(String(r.day), 30) && x.day < String(r.day)).map((x) => Number(x.hrr_bpm)); const q = pr.length >= 5 ? quartilesOf(pr) : null; return { day: String(r.day), bpm: Number(r.hrr_bpm), low: q != null && Number(r.hrr_bpm) < q.q1 }; });
-    const hrr = { latest: lastH ? Number(lastH.hrr_bpm) : null, latestDay: lastH ? String(lastH.day) : null, median: hrrPri.length >= 5 ? Math.round(medianOf(hrrPri)!) : null, source: lastH?.hrr_source ?? null,
-      band: hrrPri.length >= 5 ? (() => { const q = quartilesOf(hrrPri); return { lo: Math.round(q.q1), hi: Math.round(q.q3) }; })() : null, judged: hrrJudged };
-
-    // night HRV: one writer, read against that writer's own last 30 nights with
-    // a reading (the median, and the middle half of them). The app writes the
-    // night's median SDNN-field value, the sample count, the writer's name and
-    // the method it declares; a new writer starts a new band, and two writers
-    // never share a line. If more than one writer appears in the last 30 nights
-    // with data, the most recent writer's nights are the ones read, and the
-    // card says so.
-    const hrvAll = rows.filter((r) => r.hrv_night_ms != null).map((r) => ({ day: String(r.day), ms: Number(r.hrv_night_ms), n: r.hrv_n != null ? Number(r.hrv_n) : null, writer: String(r.hrv_source ?? "unknown writer"), method: String(r.hrv_method ?? "undeclared") }));
-    const lastV = hrvAll[hrvAll.length - 1] ?? null;
-    const hrvWriter = lastV?.writer ?? null, hrvMethod = lastV?.method ?? null;
-    const otherWriters = lastV ? [...new Set(hrvAll.slice(-30).map((r) => r.writer))].filter((w) => w !== lastV.writer) : [];
-    const own = lastV ? hrvAll.filter((r) => r.writer === lastV.writer) : [];
-    /** The writer's last 30 nights before a day, judged against which a night is read. */
-    const hrvPriorOf = (day: string) => own.filter((r) => r.day < day).slice(-30).map((r) => r.ms);
-    const hrvPri = lastV ? hrvPriorOf(lastV.day) : [];
-    const hrvUsual = hrvPri.length >= HRV_MIN_NIGHTS ? Math.round(medianOf(hrvPri)!) : null;
-    const hrvBand = hrvPri.length >= HRV_MIN_NIGHTS ? (() => { const q = quartilesOf(hrvPri); return { lo: Math.round(q.q1), hi: Math.round(q.q3) }; })() : null;
-    // the last 28 nights, drawn; each judged against the writer's own 30 nights before it
-    const hrvWin = own.filter((r) => r.day > daysBack(today, 28));
-    const hrvJudged = hrvWin.map((r) => { const pr = hrvPriorOf(r.day); const q = pr.length >= HRV_MIN_NIGHTS ? quartilesOf(pr) : null; return { ...r, q1: q?.q1 ?? null, q3: q?.q3 ?? null, below: q != null && r.ms < q.q1, above: q != null && r.ms > q.q3 }; });
-    let hrvRun = 0; for (let i = hrvJudged.length - 1; i >= 0 && hrvJudged[i].below; i--) hrvRun++;
-    const hrvRead = hrvJudged.filter((j) => j.q1 != null).length, hrvBelow = hrvJudged.filter((j) => j.below).length;
-    let hrvSvg = "";
-    if (hrvJudged.length) {
-      const vs = hrvJudged.map((j) => j.ms); const lo = Math.min(...vs, hrvBand ? hrvBand.lo : Infinity) - 3, hi = Math.max(...vs, hrvBand ? hrvBand.hi : -Infinity) + 3;
-      const t0 = new Date(daysBack(today, 27) + "T00:00:00").getTime(), t1 = new Date(today + "T00:00:00").getTime();
-      const xf = (d: string) => 30 + ((new Date(d + "T00:00:00").getTime() - t0) / Math.max(1, t1 - t0)) * 490;
-      const yf = (v: number) => 122 - ((v - lo) / Math.max(1, hi - lo)) * 100;
-      if (hrvBand) hrvSvg += `<rect x="30" y="${yf(hrvBand.hi).toFixed(1)}" width="490" height="${(yf(hrvBand.lo) - yf(hrvBand.hi)).toFixed(1)}" fill="rgba(52,211,153,0.12)"/><text x="524" y="${(yf(hrvBand.hi) + 4).toFixed(1)}" fill="#64748b" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${hrvBand.hi}</text><text x="524" y="${(yf(hrvBand.lo) + 4).toFixed(1)}" fill="#64748b" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${hrvBand.lo}</text>`;
-      hrvSvg += `<line x1="30" y1="122" x2="520" y2="122" stroke="rgba(255,255,255,0.14)"/>`;
-      if (hrvJudged.length > 1) hrvSvg += `<polyline points="${hrvJudged.map((j) => `${xf(j.day).toFixed(1)},${yf(j.ms).toFixed(1)}`).join(" ")}" fill="none" stroke="#a5b4fc" stroke-width="1.8"/>`;
-      for (const j of hrvJudged) hrvSvg += `<circle cx="${xf(j.day).toFixed(1)}" cy="${yf(j.ms).toFixed(1)}" r="4" fill="${j.below ? "#FBBF24" : "#818cf8"}" stroke="#0D0D1C" stroke-width="1.5"><title>${esc(fmtDay(j.day))}: ${j.ms} ms${j.n != null ? ` from ${j.n} sample${j.n === 1 ? "" : "s"}` : ""}${j.q1 != null ? ` · own band before ${Math.round(j.q1)}–${Math.round(j.q3!)}` : ""}</title></circle>`;
-      hrvSvg += `<text x="${xf(hrvJudged[0].day).toFixed(1)}" y="140" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${esc(fmtDay(hrvJudged[0].day)).toUpperCase()}</text><text x="520" y="140" text-anchor="end" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${esc(fmtDay(hrvJudged[hrvJudged.length - 1].day)).toUpperCase()}</text>`;
-    }
-    // sleep rows in the window but no HRV: the wearable is not writing it
-    const hrvAbsent = !hrvAll.some((r) => r.day > daysBack(today, 30)) && rows.some((r) => r.sleep_minutes != null && r.day > daysBack(today, 30));
-    const hrv = { latest: lastV?.ms ?? null, latestDay: lastV?.day ?? null, samples: lastV?.n ?? null, writer: hrvWriter, method: hrvMethod, otherWriters, usual: hrvUsual, band: hrvBand, priors: hrvPri.length,
-      below: lastV != null && hrvBand != null && lastV.ms < hrvBand.lo, run: hrvRun, read: hrvRead, nightsBelow: hrvBelow, absent: hrvAbsent, svg: hrvSvg, series: hrvJudged };
-
-    // The one pattern the Guide names: night HRV low, resting rate high and
-    // recovery small, each against its own band, for the last 3 readings of
-    // each, and all 9 readings within the last 10 days so the three agree
-    // about the same stretch rather than three different weeks.
-    const rhrJudgedAll = rhrRows.map((r) => { const pr = rhrRows.filter((x) => x.day >= daysBack(r.day, 30) && x.day < r.day).map((x) => x.bpm); const b = pr.length >= 14 ? medianOf(pr)! : null; return { day: r.day, high: b != null && r.bpm - b >= 5 }; });
-    const lastThree = <T extends { day: string }>(xs: T[]) => xs.slice(-3);
-    const trio = [lastThree(hrvJudged), lastThree(rhrJudgedAll), lastThree(hrrJudged)];
-    const threeTogether = trio.every((t) => t.length === 3)
-      && lastThree(hrvJudged).every((j) => j.below) && lastThree(rhrJudgedAll).every((j) => j.high) && lastThree(hrrJudged).every((j) => j.low)
-      && trio.flat().every((j) => j.day > daysBack(today, 10));
-
-    // steps: the last seven days, and the seven before
-    const stepAvg = (from: string, to: string) => { const xs = rows.filter((r) => r.steps != null && r.day > from && r.day <= to).map((r) => Number(r.steps)); return xs.length ? { avg: Math.round(xs.reduce((a, b) => a + b, 0) / xs.length), n: xs.length } : null; };
-    const s7 = stepAvg(daysBack(today, 7), today), s14 = stepAvg(daysBack(today, 14), daysBack(today, 7));
-    const lastS = [...rows].reverse().find((r) => r.steps != null) ?? null;
-    const steps = { avg: s7?.avg ?? null, days: s7?.n ?? 0, prior: s14?.avg ?? null, latest: lastS ? { day: String(lastS.day), steps: Number(lastS.steps) } : null };
-
-    const first = rows[0]?.day ? String(rows[0].day) : today;
-    const days = Math.round((new Date(today + "T00:00:00").getTime() - new Date(first + "T00:00:00").getTime()) / 86400000) + 1;
-    void byDay;
-    return { days, rhr: { latest: latestR?.bpm ?? null, latestDay: latestR?.day ?? null, baseline, priors, delta, status, level, run, inBand, read, svg, series: rhrSeries }, sleep, hrr, hrv, threeTogether, steps };
-  }
 
   /** The sleep-and-heart rows the chapter drew, as a CSV: one row a night, the app's own columns. */
   function exportHeartRows(rows: any[], today: string) {
@@ -2978,13 +2578,6 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     } catch { aiState = "error"; aiError = "Could not reach the writer. Try again in a moment."; renderAiCard(); }
   }
 
-  // ── people at a glance: every person you can see, one line each ────────
-  // The same table serves a family and a coach. Activity and fitness come
-  // from web_weeks and web_crf (an app export, or later the app's sync);
-  // labs from web_labs; unchecked from the app's rows a labs scope lets
-  // you read. Anything a scope does not cover shows as a dash.
-  const mondayOf = (d: Date) => { const x = new Date(d); const day = x.getDay() === 0 ? 7 : x.getDay(); x.setDate(x.getDate() - day + 1); return x.toLocaleDateString("en-CA"); };
-  const daysBetween = (a: string, b: string) => Math.round((new Date(b + "T00:00:00").getTime() - new Date(a + "T00:00:00").getTime()) / 86400000);
 
   async function loadGlance() {
     const others = people.filter((p) => p.id && !p.self);
@@ -3555,31 +3148,6 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   // markers, in the app's unit; one is "sent" when a lab_readings row on the
   // same day carries that value.
 
-  /** Canonical analyte name (letters and digits only) → the app's column. */
-  const APP_KEY_BY_NAME: Record<string, string> = {
-    fastingglucose: "glucose_mgdl", glucosefasting: "glucose_mgdl", fastingbloodsugar: "glucose_mgdl", fbs: "glucose_mgdl", glucosef: "glucose_mgdl",
-    hba1c: "hba1c_pct", hemoglobina1c: "hba1c_pct", glycatedhemoglobin: "hba1c_pct", glycosylatedhemoglobin: "hba1c_pct",
-    postmealglucose: "post_meal_glucose_mgdl", postprandialglucose: "post_meal_glucose_mgdl", ppglucose: "post_meal_glucose_mgdl", glucosepp: "post_meal_glucose_mgdl", glucosepostprandial: "post_meal_glucose_mgdl",
-    fastinginsulin: "fasting_insulin_uiuml", insulinfasting: "fasting_insulin_uiuml", insulin: "fasting_insulin_uiuml",
-    triglycerides: "triglycerides_mgdl", hdl: "hdl_mgdl", hdlcholesterol: "hdl_mgdl",
-    waist: "waist_cm", waistcircumference: "waist_cm",
-    systolicbp: "sbp", systolicbloodpressure: "sbp", diastolicbp: "dbp", diastolicbloodpressure: "dbp",
-    apob: "apo_b_mgdl", apolipoproteinb: "apo_b_mgdl", ldl: "ldl_mgdl", ldlcholesterol: "ldl_mgdl",
-    lpa: "lpa_value", lipoproteina: "lpa_value",
-    hscrp: "hs_crp_mgl", highsensitivitycrp: "hs_crp_mgl", crphs: "hs_crp_mgl", hscreactiveprotein: "hs_crp_mgl",
-    bodyfat: "body_fat_pct", bodyfatpercentage: "body_fat_pct", skeletalmuscle: "skel_musc_pct", skeletalmusclepercentage: "skel_musc_pct",
-    musclemass: "skel_musc_pct", musclemasspercentage: "skel_musc_pct",
-    leanmassarmsandlegs: "alm_kg", appendicularleanmass: "alm_kg", alm: "alm_kg",
-    wholebodyleanmass: "ffm_kg", fatfreemass: "ffm_kg", leanmass: "ffm_kg", leanbodymass: "ffm_kg",
-    gripstrength: "handgrip_kg", handgrip: "handgrip_kg", handgripstrength: "handgrip_kg",
-    singlelegbalance: "single_leg_balance_seconds", singlelegstand: "single_leg_balance_seconds", onelegstand: "single_leg_balance_seconds",
-    chairstand: "chair_stand_seconds", chairstand5: "chair_stand_seconds", sittostand: "chair_stand_seconds", fivetimessittostand: "chair_stand_seconds",
-    walkspeed: "gait_speed_ms", gaitspeed: "gait_speed_ms", usualgaitspeed: "gait_speed_ms",
-  };
-  const squash = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "");
-  function appKeyFor(analyte: string): string | null {
-    return APP_KEY_BY_NAME[squash(canonName(String(analyte)))] ?? null;
-  }
   /** The app stores one unit per marker; a value in another unit is not sent from the archive. */
   function unitFits(key: string, unit: string | null): boolean {
     if (key === "lpa_value") return true;
@@ -3587,7 +3155,6 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     if (!want) return true;
     return unitKey(unit ?? "") === unitKey(want);
   }
-  const localDay = (iso: string) => new Date(iso).toLocaleDateString("en-CA");
 
   type AppBound = { key: string; value: number; unit: string | null; name: string };
   /** A report's app-bound values, one per marker, from its archived rows. */
@@ -3946,21 +3513,6 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     setTimeout(() => { show("pwreset", false); boot(); }, 1400);
   });
 
-  // ── range helpers — every value against ITS OWN printed range ─────────
-  function inRange(v: { value: number; ref_low?: number | null; ref_high?: number | null }): boolean | null {
-    const lo = v.ref_low, hi = v.ref_high;
-    if (lo == null && hi == null) return null;
-    if (lo != null && v.value < lo) return false;
-    if (hi != null && v.value > hi) return false;
-    return true;
-  }
-  function rangeLabel(v: { ref_low?: number | null; ref_high?: number | null; ref_text?: string | null }): string {
-    if (v.ref_text) return v.ref_text;
-    if (v.ref_low != null && v.ref_high != null) return `${v.ref_low}–${v.ref_high}`;
-    if (v.ref_high != null) return `<${v.ref_high}`;
-    if (v.ref_low != null) return `>${v.ref_low}`;
-    return "";
-  }
 
   // ── grouping: section → canonical analyte → readings by date ──────────
   function groupLabs() {
@@ -4049,7 +3601,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         line: l ? `Tested ${ago === 0 ? "today" : `${plural(ago, "day")} ago`}.${dueLine}` : "The app offers a test in six to twelve minutes." }); }
     // movement: the week against the goal, Zone 2, the sessions, the steps
     { const tw = act?.thisWeek ? Number(act.thisWeek.met_hours) : 0, n = act?.thisWeek ? Number(act.thisWeek.workouts) : 0;
-      const z2 = [...actsByDay()].filter(([d]) => d >= thisMonday).reduce((t, [, r]) => t + r.z2, 0);
+      const z2 = [...actsByDay(syncActs)].filter(([d]) => d >= thisMonday).reduce((t, [, r]) => t + r.z2, 0);
       const lastRow = allWeeks.find((w) => String(w.week_start) === addDays(thisMonday, -7));
       const steps = heart?.steps.avg;
       cards.push({ sec: "movement", value: act ? fmt1(tw) : "—",
@@ -4096,44 +3648,6 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     renderSection();
   }
 
-  // ═══ THE FOUR SECTIONS UNDER OVERVIEW ═══════════════════════════════════
-  // Fitness, Movement, Sleep & heart, Body: the same four subjects the
-  // science section is written in. Each shows the markers the app captures
-  // for it as tiles, and one marker opened: a week, four weeks, months or
-  // years of it, the lenses Over Time uses in the app, drawn against the
-  // person's own normal or the goal, then what
-  // Verve reads from it and what else moved on the same days. Every rule
-  // here is the app's own, so the two never disagree; the science link on
-  // each section is the page the rule is cited on.
-  //
-  // Two kinds of marker. A DAILY one has a value most days (resting heart
-  // rate, sleep, steps, the day's MET-hours) and gets the week by day, four
-  // weeks by week, months and years. A SPARSE one has a reading now and
-  // then (a fitness test, a waist, a grip) and gets six months, a year, or
-  // everything: a week of a waist is nothing to look at.
-  type SecKey = "fitness" | "movement" | "heart" | "body";
-  type Rng = "week" | "4w" | "months" | "years" | "6m" | "1y" | "all";
-  type Pt2 = { d: string; v: number; note?: string };
-  type Marker = {
-    key: string; section: SecKey; label: string; unit: string; sub: string;
-    daily: boolean; sum?: boolean;              // a daily marker that adds up (steps, MET-hours) rather than averages
-    avgDay?: boolean;                           // adds up within a day, but a year of it reads as a daily average (steps)
-    color: string; science: string; source: string;
-    fmt: (v: number) => string;
-    series: () => Pt2[];                        // every point, oldest first
-    goal?: () => number | null;                 // a weekly goal, drawn as a line on the week
-    band?: () => { lo: number; hi: number; why: string } | null;   // the person's own normal, shaded
-    reads: (pts: Pt2[]) => string[];            // what Verve reads, in sentences
-    group?: "metabolic" | "heart" | "muscle";   // Body only: the app's three shelves
-    pointLabel?: (p: Pt2) => string;            // the tile's figure when one number is not the whole reading (118/76)
-  };
-  const SEC_META: Record<SecKey, { label: string; dot: string; blurb: string; science: string }> = {
-    fitness:  { label: "Fitness",       dot: "#f97316", blurb: "What a MET is, how yours is measured, and how much to trust the answer.", science: "/science/fitness" },
-    movement: { label: "Movement",      dot: "#34d399", blurb: "How much, how hard, how often, and how much of the rest of the day is sitting.", science: "/science/movement" },
-    heart:    { label: "Sleep & heart", dot: "#818cf8", blurb: "What the watch reads while you are asleep and in the minute after you stop.", science: "/science/sleep-heart" },
-    body:     { label: "Body",          dot: "#FBBF24", blurb: "Metabolic, heart and muscle: the same three shelves as the app's Body page, from the app and the reports.", science: "/science/body" },
-  };
-  const SEC_ORDER: SecKey[] = ["fitness", "movement", "heart", "body"];
   let ovSection: "all" | SecKey = "all";
   let openMarkerKey = "";
   let openRange: Rng | "" = "";
@@ -4146,330 +3660,11 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   const risen = new Set<string>();
   const riseOnce = (key: string) => risen.has(key) ? "" : (risen.add(key), "mh-rise");
 
-  const todayStr = () => new Date().toLocaleDateString("en-CA");
-  const round0 = (v: number) => String(Math.round(v));
-  const fmtHM = (m: number) => `${Math.floor(m / 60)}h ${String(Math.round(m % 60)).padStart(2, "0")}m`;
-  /** The app's rows by day: MET-hours, minutes by effort, Zone 2, the count. Only when the sessions themselves are here. */
-  function actsByDay(): Map<string, { met: number; z2: number; n: number; vig: number; mod: number; min: number }> {
-    const by = new Map<string, { met: number; z2: number; n: number; vig: number; mod: number; min: number }>();
-    for (const a of syncActs) {
-      if (!a?.timestamp) continue;
-      const d = localDay(a.timestamp);
-      const r = by.get(d) ?? { met: 0, z2: 0, n: 0, vig: 0, mod: 0, min: 0 };
-      const mins = Number(a.duration_minutes) || 0;
-      r.met += Number(a.met_hours) || 0; r.z2 += Number(a.zone2_minutes) || 0; r.n += 1; r.min += mins;
-      if (a.intensity_category === "vigorous") r.vig += mins; else if (a.intensity_category === "moderate") r.mod += mins;
-      by.set(d, r);
-    }
-    return by;
-  }
-  const signalSeries = (col: string): Pt2[] => syncSignals.filter((r) => r[col] != null).map((r) => ({ d: String(r.day), v: Number(r[col]) }));
-  const sparseFrom = (key: string): Pt2[] => (markerPoints().get(key) ?? []).map((p) => ({ d: p.d, v: p.v }));
-  const weeklyGoal = () => Number(syncProfile?.weekly_met_hours_goal) || 7.5;
-  /** The person's own normal for a daily marker: the median of the prior 30 days, five either side. */
-  function ownBand(pts: Pt2[], spread: number, why: string) {
-    const last = pts[pts.length - 1]; if (!last) return null;
-    const from = addDays(last.d, -30);
-    const pri = pts.filter((p) => p.d >= from && p.d < last.d).map((p) => p.v);
-    if (pri.length < 14) return null;
-    const m = medianOf(pri)!;
-    return { lo: Math.round(m) - spread, hi: Math.round(m) + spread, why };
-  }
 
-  /** What Verve reads of a lab marker: the latest value, the change since the first, and the lab's own range when it printed one. */
-  function labReads(key: string, label: string, unit: string, pts: Pt2[]): string[] {
-    if (!pts.length) return [`No ${label.toLowerCase()} on file. A report dropped on Reports fills this in.`];
-    const l = pts[pts.length - 1], lp = (markerPoints().get(key) ?? []).find((p) => p.d === l.d && p.v === l.v) ?? null;
-    const u = lp?.unit || unit;
-    const out = [`<strong class="text-text-primary">${fmt1(l.v)}${u ? ` ${esc(u)}` : ""}</strong> on ${esc(fmtDay(l.d))}${pts.length > 1 ? `, ${l.v === pts[0].v ? "the same as" : `${l.v > pts[0].v ? "up" : "down"} ${fmt1(Math.abs(l.v - pts[0].v))} from`} the first on ${esc(fmtDay(pts[0].d))}` : ""}.`];
-    if (lp && (lp.lo != null || lp.hi != null)) {
-      const below = lp.lo != null && l.v < lp.lo, above = lp.hi != null && l.v > lp.hi;
-      out.push(`${below || above ? `<span class="text-warning">${below ? "Below" : "Above"} the lab's own range</span>` : `<span class="text-success-light">Within the lab's own range</span>`} of ${lp.lo != null ? fmt1(lp.lo) : "…"} to ${lp.hi != null ? fmt1(lp.hi) : "…"}. The app's bands are on Labs.`);
-    }
-    return out;
-  }
-  /** A tile for a marker read from reports or the app's rows: Body, on one of its three shelves. */
-  const labMarker = (key: string, group: "metabolic" | "heart" | "muscle", label: string, unit: string, sub: string, science: string, extra: Partial<Marker> = {}): Marker => ({
-    key, section: "body", group, label, unit, sub, daily: false, color: "#FBBF24", science,
-    source: "Read from a report, or the app's own row; the same value on the same day is one reading.",
-    fmt: (v) => fmt1(v), series: () => sparseFrom(key), reads: (pts) => labReads(key, label, unit, pts), ...extra,
-  });
-  // The SPPB, scored the way the app scores it (lib/body.ts, Guralnik 1994):
-  // balance from the tandem progression, each stand held up to ten seconds;
-  // walk from the four-metre time; chair from five rises. Kept in step by hand.
-  const sppbBalance = (a: any, b: any, c: any) => { const cap = (v: any) => v == null ? null : Math.min(Number(v), 10); const s1 = cap(a), s2 = cap(b), s3 = cap(c); if (s1 == null) return null; if (s1 < 10) return 0; if (s2 == null) return null; if (s2 < 10) return 1; if (s3 == null) return null; return s3 >= 10 ? 4 : s3 >= 3 ? 3 : 2; };
-  const sppbGait = (v: any) => { const g = Number(v); if (!(g > 0)) return null; const t = 4 / g; return t > 8.7 ? 1 : t > 6.2 ? 2 : t > 4.82 ? 3 : 4; };
-  const sppbChair = (v: any) => { const c = Number(v); if (!(c > 0)) return null; return c > 60 ? 0 : c >= 16.7 ? 1 : c >= 13.7 ? 2 : c >= 11.2 ? 3 : 4; };
-  function sppbSeries(): Pt2[] {
-    const out: Pt2[] = [];
-    for (const r of allApp) {
-      const b = sppbBalance(r.sppb_side_by_side_seconds, r.sppb_semi_tandem_seconds, r.sppb_tandem_seconds), g = sppbGait(r.gait_speed_ms), c = sppbChair(r.chair_stand_seconds);
-      if (b == null || g == null || c == null) continue;
-      out.push({ d: localDay(r.measured_at), v: b + g + c, note: `balance ${b}, walk ${g}, chair ${c}` });
-    }
-    return out.sort((x, y) => x.d.localeCompare(y.d));
-  }
-  /** The weighings, one a day, Health's over Settings' on the same day. */
-  function weightSeries(): Pt2[] {
-    const by = new Map<string, { v: number; health: boolean }>();
-    for (const r of syncWeights) { const d = String(r.measured_on).slice(0, 10), v = Number(r.weight_kg); if (!Number.isFinite(v)) continue; const cur = by.get(d); if (cur && cur.health && r.source !== "health") continue; by.set(d, { v, health: r.source === "health" }); }
-    return [...by].map(([d, x]) => ({ d, v: x.v })).sort((a, b) => a.d.localeCompare(b.d));
-  }
-  const dbpOn = (d: string) => (markerPoints().get("dbp") ?? []).find((q) => q.d === d) ?? null;
 
-  const MARKERS: Marker[] = [
-    // ── fitness ──
-    { key: "mets", section: "fitness", label: "Fitness", unit: "METs", sub: "The number Verve leads with, from each test", daily: false, color: "#f97316",
-      science: "/science/fitness/crf", source: "Every fitness test the app holds, compared only within its method.", fmt: (v) => fmt1(v),
-      series: () => allCrf.filter((c) => c.met_capacity != null || c.vo2max != null).map((c) => ({ d: String(c.measured_on), v: c.met_capacity != null ? Number(c.met_capacity) : Number(c.vo2max) / 3.5, note: methodLabel(c.method) })),
-      reads: () => { const f = fitnessSummary(allCrf, todayStr()); if (!f.latest) return ["No fitness test on file. The app offers one in six to twelve minutes."]; const out = [`<strong class="text-text-primary">${fmt1(f.latest.v / 3.5)} METs</strong> by ${esc(methodLabel(f.latest.method))} on ${esc(fmtDay(f.latest.measured_on))}${f.within != null ? `, ${f.within >= 0 ? "up" : "down"} ${fmt1(Math.abs(f.within) / 3.5)} on the same method before` : ", the first of its method"}.`]; if (f.latest.category) out.push(`Tier <strong class="text-text-primary">${esc(String(f.latest.category).replace(/-/g, " "))}</strong> for this age and sex. Each MET more is worth about 13% lower all-cause mortality in Kodama's pooled 33 studies.`); if (f.due) out.push(`Retest <strong class="${dueTone(f.due)}">${dueWord(f.due)}</strong>: the app's own reminder, eight weeks from the last.`); return out; } },
-    { key: "vo2", section: "fitness", label: "VO₂max", unit: "mL/kg/min", sub: "The same tests, in the unit the studies use", daily: false, color: "#f97316",
-      science: "/science/fitness/mets-vs-met-h", source: "Estimated from each test; a wearable's own figure is shown in grey in the app and never graded.", fmt: (v) => fmt1(v),
-      series: () => allCrf.filter((c) => c.vo2max != null).map((c) => ({ d: String(c.measured_on), v: Number(c.vo2max), note: methodLabel(c.method) })),
-      reads: (pts) => pts.length ? [`<strong class="text-text-primary">${fmt1(pts[pts.length - 1].v)} mL/kg/min</strong> on ${esc(fmtDay(pts[pts.length - 1].d))}. One MET is 3.5 of these; the tiers are drawn in METs.`] : ["No test on file."] },
-    // ── movement ──
-    { key: "met", section: "movement", label: "MET-hours", unit: "MET-h", sub: "The week's dose of movement", daily: true, sum: true, color: "#f97316",
-      science: "/science/movement/weekly-volume", source: "Workouts the app synced, each as Verve read it; background movement is not counted here.", fmt: (v) => fmt1(v),
-      series: () => [...actsByDay()].map(([d, r]) => ({ d, v: r.met })).sort((a, b) => a.d.localeCompare(b.d)), goal: weeklyGoal,
-      reads: () => { const t = todayStr(), m = mondayOf(new Date()); const a = activitySummary(allWeeks, syncActs, weeklyGoal(), t, m); const tw = a.thisWeek ? Number(a.thisWeek.met_hours) : 0; const out = [`<strong class="text-text-primary">${fmt1(tw)} of ${weeklyGoal()}</strong> this week${tw >= weeklyGoal() ? ", at goal" : `, ${fmt1(weeklyGoal() - tw)} to go`}${a.streak ? ` · ${a.streak} week${a.streak === 1 ? "" : "s"} at goal in a row` : ""}.`]; if (a.change != null) out.push(`The last four weeks averaged <strong class="text-text-primary">${fmt1(a.recentAvg)}</strong> a week, ${a.change >= 0 ? "up" : "down"} ${Math.round(Math.abs(a.change) * 100)}% on the four before.`); out.push("One MET-hour is an hour at rest; a run earns more than a walk of the same length. The third flag sits well above 150 minutes, and the climb has no top."); return out; } },
-    { key: "z2", section: "movement", label: "Zone 2", unit: "min", sub: "Minutes in the personal heart-rate band", daily: true, sum: true, color: "#34d399",
-      science: "/science/movement/zone-2", source: "Scored against each day's own band, set from the resting rate and the highest rate the app has seen.", fmt: (v) => round0(v),
-      series: () => [...actsByDay()].map(([d, r]) => ({ d, v: r.z2 })).sort((a, b) => a.d.localeCompare(b.d)), goal: () => 150,
-      reads: (pts) => { const m = mondayOf(new Date()); const wk = pts.filter((p) => p.d >= m).reduce((t, p) => t + p.v, 0); return [`<strong class="text-text-primary">${round0(wk)} of 150 minutes</strong> this week in the band. The target is a weekly dose, not a daily one.`, "The band moves as you do: a morning above your normal resting rate narrows it."]; } },
-    { key: "sessions", section: "movement", label: "Workouts", unit: "", sub: "Sessions the app read, by day", daily: true, sum: true, color: "#a5b4fc",
-      science: "/science/movement/a-workout", source: "One session is one row; the app keeps what the watch recorded and only reads the rest.", fmt: (v) => round0(v),
-      series: () => [...actsByDay()].map(([d, r]) => ({ d, v: r.n })).sort((a, b) => a.d.localeCompare(b.d)),
-      reads: () => { const a = activitySummary(allWeeks, syncActs, weeklyGoal(), todayStr(), mondayOf(new Date())); const kinds = [...a.kinds].sort((x, y) => y[1] - x[1]).slice(0, 3).map(([k, n]) => `${k} ${Math.round(n / Math.max(1, a.recent.length))}`).join(", "); return [`<strong class="text-text-primary">${Math.round(a.perWeek)} a week</strong> over the last ${a.recent.length} weeks${kinds ? `: ${esc(kinds)}` : ""}.`, `Last workout <strong class="text-text-primary">${a.quietDays == null ? "none on file" : a.quietDays === 0 ? "today" : a.quietDays === 1 ? "yesterday" : `${a.quietDays} days ago`}</strong>.`]; } },
-    { key: "vig", section: "movement", label: "Vigorous", unit: "min", sub: "Minutes graded vigorous, by day", daily: true, sum: true, color: "#f87171",
-      science: "/science/movement/weekly-volume", source: "Each session graded against the person's own heart-rate reserve, not a population band.", fmt: (v) => round0(v),
-      series: () => [...actsByDay()].map(([d, r]) => ({ d, v: r.vig })).sort((a, b) => a.d.localeCompare(b.d)),
-      reads: () => { const a = activitySummary(allWeeks, syncActs, weeklyGoal(), todayStr(), mondayOf(new Date())); return a.minutes ? [`Vigorous share <strong class="text-text-primary">${Math.round((a.vig / a.minutes) * 100)}%</strong> of the last four weeks' minutes.`, "Most of a week easy, one hard day: the shape the endurance literature keeps finding."] : ["No minutes on file yet."]; } },
-    { key: "steps", section: "movement", label: "Steps", unit: "", sub: "Every source, one total a day", daily: true, sum: true, avgDay: true, color: "#34d399",
-      science: "/science/movement/steps", source: "Apple Health's daily total, watch and phone together, pushed by the app on every sync.", fmt: (v) => Math.round(v).toLocaleString(),
-      series: () => signalSeries("steps"),
-      reads: (pts) => { const h = sleepHeartSummary(syncSignals, todayStr()); if (!h?.steps.avg) return ["No steps on file yet."]; return [`<strong class="text-text-primary">${h.steps.avg.toLocaleString()} a day</strong> over the last seven${h.steps.prior != null ? `, ${h.steps.avg >= h.steps.prior ? "up" : "down"} from ${h.steps.prior.toLocaleString()} the week before` : ""}.`, "Paluch's 2023 pooled cohorts found the mortality curve flattening around 7,000 to 8,000 a day for adults over 60, higher for younger adults, with the fall steepest from the lowest counts."]; } },
-    // ── sleep & heart ──
-    { key: "strength", section: "movement", label: "Strength", unit: "min", sub: "Minutes of strength work, by day", daily: true, sum: true, color: "#a78bfa",
-      science: "/science/movement/strength-training", source: "Sessions the app graded as strength, each as the watch or the person recorded it.", fmt: (v) => round0(v),
-      series: () => { const by = new Map<string, number>(); for (const a of syncActs) { if (!a?.timestamp || a.activity_type !== "strength") continue; const d = localDay(a.timestamp); by.set(d, (by.get(d) ?? 0) + (Number(a.duration_minutes) || 0)); } return [...by].map(([d, v]) => ({ d, v })).sort((a, b) => a.d.localeCompare(b.d)); },
-      goal: () => 60,
-      reads: (pts) => { const m = mondayOf(new Date()); const wk = pts.filter((p) => p.d >= m).reduce((t, p) => t + p.v, 0); return [`<strong class="text-text-primary">${round0(wk)} min</strong> this week, Monday to today, against the cited 60 a week.`]; } },
-    { key: "pal", section: "movement", label: "Activity level", unit: "", sub: "The day's energy over the energy at rest, in the app's four bands", daily: true, color: "#34d399",
-      science: "/science/movement/activity-level", source: "Worked out on the phone from Apple Health's energy, one figure a day, sent on each sync.", fmt: (v) => v.toFixed(2),
-      series: () => signalSeries("pal"),
-      reads: (pts) => { if (!pts.length) return ["No activity level yet: it needs a week of energy data in Apple Health, and an app that sends it."]; const l = pts[pts.length - 1]; const band = l.v < 1.4 ? "sedentary, 1.0 to 1.39" : l.v < 1.6 ? "low active, 1.4 to 1.59" : l.v < 1.9 ? "active, 1.6 to 1.89" : "very active, 1.9 and up"; return [`<strong class="text-text-primary">${l.v.toFixed(2)}</strong> ${l.d === todayStr() ? "today" : `on ${esc(fmtDay(l.d))}`}: ${band}, the same four bands the app's Physical activity level row uses.`]; } },
-    { key: "standing", section: "movement", label: "Standing", unit: "min", sub: "Movement balance: minutes on your feet, with a watch", daily: true, color: "#34d399",
-      science: "/science/movement/movement-balance", source: "Apple Health's stand minutes, one total a day, sent by the app on each sync.", fmt: (v) => round0(v),
-      series: () => signalSeries("standing_minutes"),
-      reads: (pts) => pts.length ? [`<strong class="text-text-primary">${round0(pts[pts.length - 1].v)} min</strong> standing ${pts[pts.length - 1].d === todayStr() ? "today" : `on ${esc(fmtDay(pts[pts.length - 1].d))}`}; the other side of the day is Sitting, beside this.`] : ["No standing minutes yet: a watch writes them, and the app sends them."] },
-    { key: "sitting", section: "movement", label: "Sitting", unit: "h", sub: "Movement balance: hours seated, from the day's energy", daily: true, color: "#f87171",
-      science: "/science/movement/movement-balance", source: "The app's own reading of the day's sedentary hours, sent on each sync.", fmt: (v) => fmt1(v),
-      series: () => signalSeries("sedentary_minutes").map((p) => ({ d: p.d, v: p.v / 60 })),
-      reads: (pts) => pts.length ? [`<strong class="text-text-primary">${fmt1(pts[pts.length - 1].v)} h</strong> seated ${pts[pts.length - 1].d === todayStr() ? "today" : `on ${esc(fmtDay(pts[pts.length - 1].d))}`}. The app marks more than eight as a long day and more than ten as a very long one.`] : ["No sitting hours yet: the app reads them from the day's energy and sends them."] },
-    { key: "cadence", section: "movement", label: "Cadence", unit: "spm", sub: "The day's best thirty minutes, steps a minute", daily: true, color: "#34d399",
-      science: "/science/movement/steps", source: "Apple Health's walking cadence, the day's best half hour, sent by the app on each sync.", fmt: (v) => round0(v),
-      series: () => signalSeries("cadence_spm"),
-      reads: (pts) => pts.length ? [`<strong class="text-text-primary">${round0(pts[pts.length - 1].v)} steps a minute</strong> for the best thirty minutes ${pts[pts.length - 1].d === todayStr() ? "today" : `on ${esc(fmtDay(pts[pts.length - 1].d))}`}; a hundred is the brisk line the app cites.`] : ["No cadence yet: a watch or phone in the pocket writes it, and the app sends it."] },
-    { key: "rhr", section: "heart", label: "Resting heart rate", unit: "bpm", sub: "Every morning, against your own normal", daily: true, color: "#818cf8",
-      science: "/science/sleep-heart/resting-heart-rate", source: "Apple's one figure per day, from heart rate during stillness, weighted to sleep and the early morning.", fmt: (v) => round0(v),
-      series: () => signalSeries("resting_hr"), band: () => ownBand(signalSeries("resting_hr"), 5, "the median of the prior 30 mornings, five either side"),
-      reads: () => { const h = sleepHeartSummary(syncSignals, todayStr()); if (!h?.rhr.latest) return ["No resting heart rate on file yet."]; const r = h.rhr; const out = [`<strong class="text-text-primary">${r.latest} bpm</strong> ${esc(dayWord(r.latestDay!))}${r.baseline != null ? `, ${r.delta === 0 ? "at" : `${Math.abs(r.delta!)} ${r.delta! > 0 ? "above" : "below"}`} the median of the ${r.priors} mornings before${r.status === "elevated" ? `: <span class="text-warning">elevated</span>` : r.status === "stronglyElevated" ? `: <span class="text-danger">strongly elevated</span>` : ""}` : `; a normal needs 14 mornings, ${r.priors} so far`}.`]; out.push(r.run > 1 ? `<strong class="text-text-primary">${r.run} mornings running</strong> above the band. One is noise; three is a pattern. It says nothing about why: a late meal, heat, hard training and a cold all do this.` : `Inside the band ${r.inBand} of the last ${r.read} mornings read.`); if (r.level) out.push(`Absolute level <strong class="text-text-primary">${r.level}</strong> on the ARIC bands: a reading aid for a graded association, not a diagnosis.`); return out; } },
-    { key: "sleep", section: "heart", label: "Sleep", unit: "", sub: "Time asleep, the night that ended each morning", daily: true, color: "#a5b4fc",
-      science: "/science/sleep-heart/sleep-rhythm", source: "Every writer's asleep intervals; the stages from one elected writer per night.", fmt: (v) => fmtHM(v),
-      series: () => signalSeries("sleep_minutes"), band: () => ({ lo: 420, hi: 540, why: "7 to 9 hours, the adult band" }),
-      reads: () => { const h = sleepHeartSummary(syncSignals, todayStr()); if (!h?.sleep.last) return ["No night on file yet."]; const s = { ...h.sleep, last: h.sleep.last }; return [`<strong class="text-text-primary">${fmtSleepMin(s.last.min)}</strong> ${esc(dayWord(s.last.day))}${s.usual != null ? `, ${Math.abs(s.last.min - s.usual) < 20 ? "about the usual" : `${fmtSleepMin(Math.abs(s.last.min - s.usual))} ${s.last.min < s.usual ? "under" : "over"} the usual ${fmtSleepMin(s.usual)}`}` : ""}${s.last.bed ? ` · in bed ${esc(s.last.bed)}` : ""}.`, `${s.shortNights} of the last ${s.nights} nights under 7 h. A move toward the band is the improvement, not more sleep without limit.`]; } },
-    { key: "hrr", section: "heart", label: "Heart rate recovery", unit: "bpm", sub: "The drop in the minute after a workout", daily: true, color: "#818cf8",
-      science: "/science/sleep-heart/heart-rate-recovery", source: "Apple's stored one-minute recovery after each workout; for a workout without one, the rate at the end minus the rate a minute later, marked derived.", fmt: (v) => round0(v),
-      series: () => signalSeries("hrr_bpm"),
-      reads: () => { const h = sleepHeartSummary(syncSignals, todayStr()); if (!h || h.hrr.latest == null) return ["No recovery on file: the watch records one after a workout that ends above the Zone 2 floor."]; return [`<strong class="${h.hrr.latest <= 12 ? "text-danger" : "text-text-primary"}">${h.hrr.latest} bpm</strong> ${esc(dayWord(h.hrr.latestDay!))}${h.hrr.median != null ? `, own 30-day median ${h.hrr.median}` : ""}.`, h.hrr.latest <= 12 ? `<span class="text-danger">At or under the one cited line, 12 bpm</span> (Cole 1999). Worth a conversation if it stays there; one reading is not.` : "Above the one cited line, 12 bpm. There is no validated \"good\" threshold, so no verdict word above it."]; } },
-    { key: "hrv", section: "heart", label: "Night HRV", unit: "ms", sub: "One writer's nights, against your own middle half", daily: true, color: "#818cf8",
-      science: "/science/sleep-heart/night-hrv", source: "The median of the HRV samples inside each night's sleep window, from the most recent writer only; the writer and its method are on the card.", fmt: (v) => round0(v),
-      series: () => { const rows = syncSignals.filter((r) => r.hrv_night_ms != null); const w = rows[rows.length - 1]?.hrv_source ?? null; return rows.filter((r) => (r.hrv_source ?? null) === w).map((r) => ({ d: String(r.day), v: Number(r.hrv_night_ms), note: `${String(r.hrv_source ?? "unknown writer")} · ${r.hrv_method === "sdnn" ? "SDNN" : r.hrv_method === "rmssd" ? "rMSSD" : "method undeclared"}` })); },
-      band: () => { const h = sleepHeartSummary(syncSignals, todayStr()); return h?.hrv.band ? { lo: h.hrv.band.lo, hi: h.hrv.band.hi, why: `the middle half of the last ${h.hrv.priors} nights from ${h.hrv.writer}` } : null; },
-      reads: () => { const h = sleepHeartSummary(syncSignals, todayStr()); if (!h || h.hrv.latest == null) return [h?.hrv.absent ? "No HRV reaches Apple Health from this wearable." : "No night HRV on file yet: Apple Watch writes it, and the app sends the night's median on each sync."]; const v = h.hrv; const out = [`<strong class="${v.below ? "text-warning" : "text-text-primary"}">${v.latest} ms</strong> ${esc(dayWord(v.latestDay!))}, ${esc(v.writer ?? "")} · ${v.method === "sdnn" ? "SDNN" : v.method === "rmssd" ? "rMSSD" : "method undeclared"}${v.band ? `, against ${v.band.lo}–${v.band.hi}, the middle half of the last ${v.priors} nights${v.below ? ": <span class=\"text-warning\">under the band</span>" : ""}` : `; a band needs 14 nights from this writer, ${v.priors} so far`}.`]; if (v.otherWriters.length) out.push(`${esc(v.otherWriters.join(", "))} also wrote HRV in the last 30 nights with data. Only ${esc(v.writer ?? "the latest writer")}'s nights are read, never mixed: two methods are two different numbers.`); out.push(v.run > 1 ? `<strong class="text-text-primary">${v.run} nights running</strong> below the band. One is a night; a pattern needs resting rate and recovery to agree${h.threeTogether ? ", <span class=\"text-warning\">and for the last 3 readings of each, they do</span>" : ", and they do not yet"}.` : "HRV spans a fivefold range between healthy people and falls with age, so there is no population figure here: only your own nights."); return out; } },
-    // ── body ──
-    { key: "waist_cm", section: "body", group: "metabolic", label: "Waist", unit: "cm", sub: "The measure that stands in for the fat that matters", daily: false, color: "#FBBF24",
-      science: "/science/body/body-phenotyping", source: "Measured in the app or read from a report; the app's row wins on the same day.", fmt: (v) => fmt1(v),
-      series: () => sparseFrom("waist_cm"),
-      reads: (pts) => { if (!pts.length) return ["No waist on file."]; const l = pts[pts.length - 1], h = Number(syncProfile?.height_cm) || null; const out = [`<strong class="text-text-primary">${fmt1(l.v)} cm</strong> on ${esc(fmtDay(l.d))}${pts.length > 1 ? `, ${l.v === pts[0].v ? "the same as" : `${fmt1(Math.abs(l.v - pts[0].v))} cm ${l.v < pts[0].v ? "less than" : "more than"}`} the first on ${esc(fmtDay(pts[0].d))}` : ""}.`]; if (h) out.push(`Waist-to-height <strong class="text-text-primary">${(l.v / h).toFixed(2)}</strong> at ${h} cm; the screening line is 0.5.`); return out; } },
-    { key: "weight", section: "body", group: "metabolic", label: "Weight", unit: "kg", sub: "Every weighing, from Apple Health or Settings", daily: true, color: "#FBBF24",
-      science: "/science/body/body-phenotyping", source: "Apple Health's weighings and the weight typed in Settings, one row a day a source; a day with both keeps Health's.", fmt: (v) => fmt1(v),
-      series: () => weightSeries(),
-      band: () => { const pts = weightSeries(); return ownBand(pts, 1, "within a kilo of your own 30-day median"); },
-      reads: (pts) => { if (!pts.length) return ["No weighing yet. The app sends Apple Health's weighings, and the weight in Settings, once it learns to."]; const l = pts[pts.length - 1]; const ago = pts.filter((p) => p.d >= addDays(l.d, -28) && p.d < l.d); const first = ago[0] ?? null; return [`<strong class="text-text-primary">${fmt1(l.v)} kg</strong> ${l.d === todayStr() ? "today" : `on ${esc(fmtDay(l.d))}`}${first ? `, ${Math.abs(l.v - first.v) < 0.05 ? "the same as" : `${l.v < first.v ? "down" : "up"} ${fmt1(Math.abs(l.v - first.v))} kg from`} four weeks ago` : ""}. ${pts.length} weighing${pts.length === 1 ? "" : "s"} on file.`]; } },
-    { key: "bmi", section: "body", group: "metabolic", label: "BMI", unit: "", sub: "Weight against height, the number every report asks for", daily: true, color: "#FBBF24",
-      science: "/science/body/body-phenotyping", source: "Worked out here from each weighing and the height on the profile, never stored, so it cannot disagree with the weight.", fmt: (v) => fmt1(v),
-      series: () => { const h = Number(syncProfile?.height_cm) || 0; if (!(h > 0)) return []; const m = h / 100; return weightSeries().map((p) => ({ d: p.d, v: p.v / (m * m) })); },
-      reads: (pts) => { const h = Number(syncProfile?.height_cm) || 0; if (!(h > 0)) return ["BMI needs a height on the profile; the app's Settings takes it."]; if (!pts.length) return ["No weighing yet, so no BMI."]; const l = pts[pts.length - 1]; const band = l.v < 18.5 ? "under the 18.5 line" : l.v < 25 ? "in the 18.5 to 24.9 band" : l.v < 30 ? "in the 25 to 29.9 band, overweight by the WHO's general cut-offs" : "at or over 30, obese by the WHO's general cut-offs"; return [`<strong class="text-text-primary">${fmt1(l.v)}</strong> from ${fmt1(weightSeries()[weightSeries().length - 1].v)} kg at ${h} cm: ${band}. For South Asian adults the WHO's action points sit lower, at 23 and 27.5. Waist to height is Verve's first ratio for the fat that matters; BMI moves with muscle as much as fat.`]; } },
-    { key: "body_fat_pct", section: "body", group: "muscle", label: "Body fat", unit: "%", sub: "Composition, by whichever method the report used", daily: false, color: "#FBBF24", science: "/science/body/body-phenotyping", source: "From a body-composition report or the app.", fmt: (v) => fmt1(v), series: () => sparseFrom("body_fat_pct"), reads: (pts) => pts.length ? [`<strong class="text-text-primary">${fmt1(pts[pts.length - 1].v)}%</strong> on ${esc(fmtDay(pts[pts.length - 1].d))}. Methods differ; compare only within one.`] : ["No body fat on file."] },
-    { key: "skel_musc_pct", section: "body", group: "muscle", label: "Skeletal muscle", unit: "%", sub: "Muscle as a share of weight", daily: false, color: "#FBBF24", science: "/science/body/muscle-health", source: "From a body-composition report or the app.", fmt: (v) => fmt1(v), series: () => sparseFrom("skel_musc_pct"), reads: (pts) => pts.length ? [`<strong class="text-text-primary">${fmt1(pts[pts.length - 1].v)}%</strong> on ${esc(fmtDay(pts[pts.length - 1].d))}.`] : ["No muscle mass on file."] },
-    { key: "handgrip_kg", section: "body", group: "muscle", label: "Grip strength", unit: "kg", sub: "Why grip is in a fitness app at all", daily: false, color: "#FBBF24", science: "/science/body/muscle-health", source: "The app's grip test, or a report.", fmt: (v) => fmt1(v), series: () => sparseFrom("handgrip_kg"), reads: (pts) => { if (!pts.length) return ["No grip test on file."]; const cut = String(syncProfile?.sex ?? "") === "female" ? 16 : 27; const l = pts[pts.length - 1]; return [`<strong class="text-text-primary">${fmt1(l.v)} kg</strong> on ${esc(fmtDay(l.d))}, <span class="${l.v >= cut ? "text-success-light" : "text-warning"}">${l.v >= cut ? "above" : "below"} the EWGSOP2 cut-off of ${cut}</span>.`]; } },
-    { key: "chair_stand_seconds", section: "body", group: "muscle", label: "Chair stand", unit: "s", sub: "Five rises, timed", daily: false, color: "#FBBF24", science: "/science/body/intrinsic-capacity", source: "The app's chair-stand test.", fmt: (v) => fmt1(v), series: () => sparseFrom("chair_stand_seconds"), reads: (pts) => pts.length ? [`<strong class="text-text-primary">${fmt1(pts[pts.length - 1].v)} s</strong>, <span class="${pts[pts.length - 1].v <= 15 ? "text-success-light" : "text-warning"}">${pts[pts.length - 1].v <= 15 ? "under" : "over"} the 15-second line</span>.`] : ["No chair stand on file."] },
-    { key: "gait_speed_ms", section: "body", group: "muscle", label: "Walk speed", unit: "m/s", sub: "Usual pace over a short course", daily: false, color: "#FBBF24", science: "/science/body/intrinsic-capacity", source: "The app's walk test.", fmt: (v) => v.toFixed(2), series: () => sparseFrom("gait_speed_ms"), reads: (pts) => pts.length ? [`<strong class="text-text-primary">${pts[pts.length - 1].v.toFixed(2)} m/s</strong>, <span class="${pts[pts.length - 1].v >= 0.8 ? "text-success-light" : "text-warning"}">${pts[pts.length - 1].v >= 0.8 ? "above" : "below"} 0.8</span>.`] : ["No walk speed on file."] },
-    { key: "single_leg_balance_seconds", section: "body", group: "muscle", label: "Single-leg balance", unit: "s", sub: "How long one leg holds", daily: false, color: "#FBBF24", science: "/science/body/intrinsic-capacity", source: "The app's balance test.", fmt: (v) => round0(v), series: () => sparseFrom("single_leg_balance_seconds"), reads: (pts) => pts.length ? [`<strong class="text-text-primary">${round0(pts[pts.length - 1].v)} s</strong>, <span class="${pts[pts.length - 1].v >= 10 ? "text-success-light" : "text-warning"}">${pts[pts.length - 1].v >= 10 ? "held past" : "under"} 10 seconds</span>.`] : ["No balance test on file."] },
-    // ── the rest of the app's 21, on the same three shelves ──
-    labMarker("glucose_mgdl", "metabolic", "Fasting glucose", "mg/dL", "The morning figure the metabolic criteria start with", "/science/body/body-phenotyping"),
-    labMarker("hba1c_pct", "metabolic", "HbA1c", "%", "Three months of glucose in one number", "/science/body/body-phenotyping"),
-    labMarker("bp", "metabolic", "Blood pressure", "mmHg", "Systolic over diastolic, the 120 and 80 lines", "/science/body/heart-health", {
-      series: () => sparseFrom("sbp"),
-      pointLabel: (p) => { const d = dbpOn(p.d); return d ? `${round0(p.v)}/${round0(d.v)}` : round0(p.v); },
-      fmt: (v) => round0(v),
-      reads: (pts) => { if (!pts.length) return ["No blood pressure on file."]; const l = pts[pts.length - 1], d = dbpOn(l.d); return [`<strong class="text-text-primary">${round0(l.v)}${d ? `/${round0(d.v)}` : ""} mmHg</strong> on ${esc(fmtDay(l.d))}. The chart follows the systolic figure; <span class="${l.v < 120 && (!d || d.v < 80) ? "text-success-light" : "text-warning"}">${l.v < 120 && (!d || d.v < 80) ? "under" : "at or over"} the 120 and 80 lines</span>. The app's bands, AHA or ESC, are on Labs.`]; } }),
-    labMarker("triglycerides_mgdl", "metabolic", "Triglycerides", "mg/dL", "The fat in the blood after fasting", "/science/body/body-phenotyping"),
-    labMarker("hdl_mgdl", "metabolic", "HDL", "mg/dL", "The one lipid where higher is the better side", "/science/body/body-phenotyping"),
-    labMarker("post_meal_glucose_mgdl", "metabolic", "Post-meal glucose", "mg/dL", "Two hours after eating", "/science/body/body-phenotyping"),
-    labMarker("fasting_insulin_uiuml", "metabolic", "Fasting insulin", "uIU/mL", "How hard the pancreas works at rest", "/science/body/body-phenotyping"),
-    labMarker("apo_b_mgdl", "heart", "ApoB", "mg/dL", "A count of the particles that carry cholesterol into artery walls", "/science/body/heart-health"),
-    labMarker("ldl_mgdl", "heart", "LDL", "mg/dL", "The cholesterol most guidelines treat to a target", "/science/body/heart-health"),
-    labMarker("lpa_value", "heart", "Lp(a)", "", "Set by your genes, measured once", "/science/body/heart-health"),
-    labMarker("hs_crp_mgl", "heart", "hs-CRP", "mg/L", "Low-grade inflammation, the heart's quiet risk", "/science/body/heart-health"),
-    labMarker("alm_kg", "muscle", "Lean mass, arms and legs", "kg", "The muscle that moves you, from a DXA or bioimpedance", "/science/body/muscle-health"),
-    labMarker("ffm_kg", "muscle", "Whole-body lean mass", "kg", "Everything that is not fat", "/science/body/muscle-health"),
-    labMarker("sppb_score", "muscle", "SPPB", "of 12", "Balance, walk and chair stand, scored the way the app scores them", "/science/body/intrinsic-capacity", {
-      source: "Computed from the app's three tests on the same day, never stored; balance held up to ten seconds, the walk timed over four metres, five rises from a chair.",
-      series: () => sppbSeries(), fmt: (v) => round0(v),
-      reads: (pts) => { if (!pts.length) return ["No full battery on file: the three tests on one day score it."]; const l = pts[pts.length - 1]; const cat = l.v <= 6 ? "poor" : l.v <= 9 ? "intermediate" : "good"; return [`<strong class="text-text-primary">${round0(l.v)} of 12</strong> on ${esc(fmtDay(l.d))}${l.note ? ` (${esc(l.note)})` : ""}: <span class="${cat === "good" ? "text-success-light" : "text-warning"}">${cat}</span>, where 10 to 12 is good, 7 to 9 intermediate and 6 or under poor.`]; } }),
-  ];
-  const markerByKey = (k: string) => MARKERS.find((m) => m.key === k)!;
 
-  // ── one range of one marker: the points to draw, the headline, the caption ──
-  type Drawn = { pts: { x: string; v: number | null; tone?: string; note?: string }[]; headline: string; caption: string; labelEvery: number; goalLine?: number | null; monthLabels?: boolean };
-  function drawnFor(m: Marker, range: Rng, year: number | null = null): Drawn | null {
-    const all = m.series();
-    if (!all.length) return null;
-    const t = todayStr();
-    const by = new Map(all.map((p) => [p.d, p.v]));
-    const summing = !!m.sum && !((range === "months" || range === "years") && m.avgDay);
-    const agg = (from: string, to: string) => { const xs = all.filter((p) => p.d >= from && p.d <= to).map((p) => p.v); return xs.length ? (summing ? xs.reduce((a, b) => a + b, 0) : xs.reduce((a, b) => a + b, 0) / xs.length) : null; };
-    const band = m.band?.() ?? null;
-    const toneOf = (v: number | null) => v == null ? "" : band ? (v > band.hi ? "warn" : v < band.lo ? "low" : "") : "";
-    if (year != null && m.daily) {
-      // one year, month by month: the Years lens with a year chosen
-      const nowY = new Date().getFullYear(), nowM = new Date().getMonth();
-      const pts = []; for (let mo = 0; mo < 12; mo++) { const from = `${year}-${String(mo + 1).padStart(2, "0")}-01`, to = new Date(year, mo + 1, 0).toLocaleDateString("en-CA"); const future = year > nowY || (year === nowY && mo > nowM); pts.push({ x: from, v: future ? null : agg(from, to), tone: year === nowY && mo === nowM ? "today" : "" }); }
-      const have = pts.filter((p) => p.v != null).map((p) => p.v!);
-      const val = have.length ? (summing ? have.reduce((a, b) => a + b, 0) : have.reduce((a, b) => a + b, 0) / have.length) : null;
-      return { pts, headline: val != null ? m.fmt(val) : "—", caption: `${m.unit ? `${m.unit} ` : ""}${summing ? `over ${year}, month by month` : `a day, averaged over ${year}, month by month`}`, labelEvery: 1, goalLine: null, monthLabels: true };
-    }
-    if (year != null) {
-      // a sparse marker: the readings of one year
-      const sel = all.filter((p) => p.d.startsWith(`${year}-`));
-      const pts = sel.map((p) => ({ x: p.d, v: p.v, note: p.note, tone: toneOf(p.v) }));
-      const l = sel[sel.length - 1] ?? null;
-      return { pts, headline: l ? (m.pointLabel ? m.pointLabel(l) : m.fmt(l.v)) : "—", caption: l ? `${m.unit ? `${m.unit}, ` : ""}${sel.length} reading${sel.length === 1 ? "" : "s"} in ${year}, latest ${esc(fmtDay(l.d))}` : `nothing read in ${year}`, labelEvery: 1, goalLine: null };
-    }
-    if (range === "week") {
-      const start = mondayOf(new Date());
-      const pts = []; for (let d = start, i = 0; i < 7; d = addDays(d, 1), i++) { const v = by.has(d) ? by.get(d)! : null; pts.push({ x: d, v, tone: d === t ? "today" : toneOf(v) }); }
-      const latest = [...all].reverse().find((p) => p.d <= t) ?? null;
-      const inRangePts = pts.filter((p) => p.v != null).map((p) => p.v!);
-      const total = inRangePts.reduce((a, b) => a + b, 0);
-      const goal = m.goal?.() ?? null;
-      const headline = m.sum ? m.fmt(total) : latest ? m.fmt(latest.v) : "—";
-      const caption = m.sum ? (goal != null ? `of ${m.fmt(goal)}${m.unit ? ` ${m.unit}` : ""} this week, Monday to today` : `${m.unit ? `${m.unit} ` : ""}this week so far`) : `${inRangePts.length ? `${m.fmt(inRangePts.reduce((a, b) => a + b, 0) / inRangePts.length)} ${m.unit} average this week, ` : ""}${latest ? `latest ${esc(dayWord(latest.d))}` : ""}`;
-      return { pts, headline, caption, labelEvery: 1, goalLine: null };
-    }
-    if (range === "4w") {
-      // four bars, one a week, Monday to Sunday, this week unfinished: a week's
-      // total for a marker that adds up, a day's average for one that is read
-      const thisMon = mondayOf(new Date());
-      const pts = []; for (let i = 3; i >= 0; i--) { const from = addDays(thisMon, -7 * i); const v = agg(from, addDays(from, 6)); pts.push({ x: from, v, tone: i === 0 ? "today" : toneOf(v) }); }
-      const have = pts.filter((p) => p.v != null).map((p) => p.v!);
-      const val = have.length ? have.reduce((a, b) => a + b, 0) / have.length : null;
-      return { pts, headline: val != null ? m.fmt(val) : "—", caption: `${m.unit ? `${m.unit} ` : ""}${summing ? "a week, averaged over the last four, this week so far included" : "a day, averaged over the last four weeks"}`, labelEvery: 1, goalLine: null };
-    }
-    if (range === "months") {
-      const pts = []; const now = new Date();
-      for (let i = 11; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); const from = d.toLocaleDateString("en-CA"), to = new Date(d.getFullYear(), d.getMonth() + 1, 0).toLocaleDateString("en-CA"); const v = agg(from, to); pts.push({ x: from, v, tone: i === 0 ? "today" : toneOf(v) }); }
-      const have = pts.filter((p) => p.v != null).map((p) => p.v!);
-      const yearVal = summing ? have.reduce((a, b) => a + b, 0) : have.length ? have.reduce((a, b) => a + b, 0) / have.length : null;
-      return { pts, headline: yearVal != null ? m.fmt(yearVal) : "—", caption: `${m.unit ? `${m.unit} ` : ""}${summing ? "over the last twelve months, month by month" : "a day, averaged over the last twelve months"}`, labelEvery: 1, goalLine: null };
-    }
-    if (range === "years") {
-      // one bar a year, from the first year on file to this one, this year unfinished
-      const y1 = new Date().getFullYear(), y0 = Math.min(y1, Number(all[0].d.slice(0, 4)) || y1);
-      const pts = []; for (let y = y0; y <= y1; y++) { const v = agg(`${y}-01-01`, `${y}-12-31`); pts.push({ x: `${y}-01-01`, v, tone: y === y1 ? "today" : toneOf(v) }); }
-      const have = pts.filter((p) => p.v != null).map((p) => p.v!);
-      const val = have.length ? (summing ? have.reduce((a, b) => a + b, 0) : have.reduce((a, b) => a + b, 0) / have.length) : null;
-      return { pts, headline: val != null ? m.fmt(val) : "—", caption: `${m.unit ? `${m.unit} ` : ""}${summing ? "over every year on file, this year so far included" : "a day, averaged over every year on file"}`, labelEvery: 1, goalLine: null };
-    }
-    // sparse: six months, a year, everything
-    const from = range === "6m" ? addDays(t, -182) : range === "1y" ? addDays(t, -365) : "0000";
-    const sel = all.filter((p) => p.d >= from);
-    const pts = sel.map((p) => ({ x: p.d, v: p.v, note: p.note, tone: toneOf(p.v) }));
-    const l = sel[sel.length - 1] ?? null;
-    return { pts, headline: l ? (m.pointLabel ? m.pointLabel(l) : m.fmt(l.v)) : "—", caption: l ? `${m.unit ? `${m.unit}, ` : ""}latest ${esc(fmtDay(l.d))}${sel.length > 1 ? ` · ${sel.length} readings${sel[0].v !== l.v ? `, ${l.v > sel[0].v ? "up" : "down"} ${m.fmt(Math.abs(l.v - sel[0].v))} since ${esc(fmtDay(sel[0].d))}` : ""}` : ""}` : "nothing in this range", labelEvery: Math.max(1, Math.ceil(sel.length / 8)), goalLine: null };
-  }
 
-  /** The chart: bars for a marker that adds up, a line for one that is read; the band or the goal behind it. */
-  function chartSvg(m: Marker, range: Rng, dr: Drawn): string {
-    const W = 820, H = 200, L = 34, R = 20, T = 18, B = 34;
-    const band = m.daily && range === "week" ? (m.band?.() ?? null) : null;
-    const weekGoal = range === "week" && m.goal?.() ? m.goal()! : null;
-    const vals = dr.pts.map((p) => p.v).filter((v): v is number => v != null);
-    if (!vals.length) return `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" fill="#64748b" font-size="13">Nothing read in this range.</text>`;
-    let lo = Math.min(...vals), hi = Math.max(...vals);
-    if (band) { lo = Math.min(lo, band.lo); hi = Math.max(hi, band.hi); }
-    const bars = !!m.sum;
-    if (bars) lo = 0; else { const pad = Math.max((hi - lo) * 0.15, 1); lo -= pad; hi += pad; }
-    if (hi === lo) hi = lo + 1;
-    const n = dr.pts.length, slot = (W - L - R) / Math.max(1, n);
-    const xf = (i: number) => L + slot * (i + 0.5);
-    const yf = (v: number) => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
-    let s = "";
-    if (band) s += `<rect x="${L}" y="${yf(band.hi).toFixed(1)}" width="${W - L - R}" height="${(yf(band.lo) - yf(band.hi)).toFixed(1)}" fill="rgba(52,211,153,0.12)"/><text x="${W - R + 3}" y="${(yf(band.hi) + 4).toFixed(1)}" fill="#64748b" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${m.fmt(band.hi)}</text><text x="${W - R + 3}" y="${(yf(band.lo) + 4).toFixed(1)}" fill="#64748b" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${m.fmt(band.lo)}</text>`;
-    s += `<line x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}" stroke="rgba(255,255,255,0.12)"/>`;
-    if (!bars) s += `<text x="4" y="${(yf(hi) + 4).toFixed(1)}" fill="#64748b" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${m.fmt(hi)}</text><text x="4" y="${(yf(lo) + 4).toFixed(1)}" fill="#64748b" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${m.fmt(lo)}</text>`;
-    if (weekGoal != null && m.sum) {
-      // the week's running total against the goal, dashed; the goal line above
-      const gy = yf(Math.min(weekGoal, hi)); if (weekGoal <= hi) s += `<line x1="${L}" y1="${gy.toFixed(1)}" x2="${W - R}" y2="${gy.toFixed(1)}" stroke="#a5b4fc" stroke-opacity="0.6" stroke-dasharray="4 4"/><text x="${W - R}" y="${(gy - 5).toFixed(1)}" text-anchor="end" fill="#a5b4fc" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">GOAL ${m.fmt(weekGoal)}</text>`;
-      let run = 0; const rp: string[] = [];
-      dr.pts.forEach((p, i) => { if (p.v == null && p.x > todayStr()) return; run += p.v ?? 0; rp.push(`${xf(i).toFixed(1)},${yf(Math.min(run, hi)).toFixed(1)}`); });
-      if (rp.length > 1) s += `<polyline points="${rp.join(" ")}" fill="none" stroke="#a5b4fc" stroke-width="1.5" stroke-dasharray="3 4" stroke-opacity="0.8"/>`;
-    }
-    const color = m.color;
-    if (bars) {
-      const bw = Math.min(46, slot * 0.62);
-      dr.pts.forEach((p, i) => {
-        if (p.v == null) { if (p.x <= todayStr()) s += `<rect x="${(xf(i) - bw / 2).toFixed(1)}" y="${H - B - 3}" width="${bw.toFixed(1)}" height="3" rx="1.5" fill="rgba(255,255,255,0.08)"/>`; return; }
-        const y = yf(p.v), hgt = Math.max(2, H - B - y);
-        s += `<rect x="${(xf(i) - bw / 2).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${hgt.toFixed(1)}" rx="3" fill="${color}" fill-opacity="${p.tone === "today" ? 1 : 0.6}"><title>${esc(fmtDay(p.x))}: ${m.fmt(p.v)} ${m.unit}</title></rect>`;
-        if (n <= 14 && p.v > 0) s += `<text x="${xf(i).toFixed(1)}" y="${(y - 6).toFixed(1)}" text-anchor="middle" fill="#f1f5f9" font-size="11" font-weight="700">${m.fmt(p.v)}</text>`;
-      });
-    } else {
-      const have = dr.pts.map((p, i) => ({ p, i })).filter(({ p }) => p.v != null);
-      if (have.length > 1) s += `<polyline points="${have.map(({ p, i }) => `${xf(i).toFixed(1)},${yf(p.v!).toFixed(1)}`).join(" ")}" fill="none" stroke="${color}" stroke-opacity="0.8" stroke-width="1.8"/>`;
-      for (const { p, i } of have) {
-        const fill = p.tone === "warn" ? "#FBBF24" : p.tone === "low" ? "#94a3b8" : color;
-        s += `<circle cx="${xf(i).toFixed(1)}" cy="${yf(p.v!).toFixed(1)}" r="${n <= 14 ? 5.5 : 3.5}" fill="${fill}" stroke="#0D0D1C" stroke-width="1.5"><title>${esc(fmtDay(p.x))}: ${m.fmt(p.v!)} ${m.unit}${p.note ? ` · ${esc(p.note)}` : ""}</title></circle>`;
-        if (n <= 14) s += `<text x="${xf(i).toFixed(1)}" y="${(yf(p.v!) - 11).toFixed(1)}" text-anchor="middle" fill="${p.tone === "warn" ? "#FBBF24" : "#c7d2fe"}" font-size="11" font-weight="700">${m.fmt(p.v!)}</text>`;
-      }
-    }
-    const label = (x: string) => (range === "months" || dr.monthLabels) ? new Date(x + "T00:00:00").toLocaleDateString(undefined, { month: "short" }).toUpperCase() : range === "week" ? new Date(x + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" }).toUpperCase() : range === "4w" ? new Date(x + "T00:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short" }).toUpperCase() : range === "years" ? x.slice(0, 4) : new Date(x + "T00:00:00").toLocaleDateString(undefined, { month: "short", year: "2-digit" }).toUpperCase();
-    dr.pts.forEach((p, i) => { if (i % dr.labelEvery === 0 || i === n - 1) s += `<text x="${xf(i).toFixed(1)}" y="${H - B + 16}" text-anchor="middle" fill="${p.tone === "today" ? "#f1f5f9" : "#94a3b8"}" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${label(p.x)}</text>`; });
-    return s;
-  }
 
-  /** Alongside: two or three other daily markers on the same days, as small strips. */
-  function alongsideHtml(m: Marker, range: Rng, dr: Drawn): string {
-    if (!m.daily || range !== "week") return "";
-    const others = MARKERS.filter((o) => o.daily && o.key !== m.key && o.series().length).slice(0, 3);
-    if (!others.length) return "";
-    const days = dr.pts.map((p) => p.x);
-    const rows = others.map((o) => {
-      const by = new Map(o.series().map((p) => [p.d, p.v]));
-      const vs = days.map((d) => by.has(d) ? by.get(d)! : null);
-      const have = vs.filter((v): v is number => v != null);
-      if (!have.length) return "";
-      const lo = Math.min(...have), hi = Math.max(...have) || 1;
-      const W = 300, Hh = 26, slot = W / days.length;
-      const svg = o.sum
-        ? vs.map((v, i) => v == null ? "" : `<rect x="${(i * slot + slot * 0.2).toFixed(1)}" y="${(Hh - (v / hi) * (Hh - 2)).toFixed(1)}" width="${(slot * 0.6).toFixed(1)}" height="${((v / hi) * (Hh - 2)).toFixed(1)}" fill="${o.color}" opacity="0.6"/>`).join("")
-        : `<polyline points="${vs.map((v, i) => v == null ? null : `${(i * slot + slot / 2).toFixed(1)},${(Hh - 3 - ((v - lo) / (hi - lo || 1)) * (Hh - 6)).toFixed(1)}`).filter(Boolean).join(" ")}" fill="none" stroke="${o.color}" stroke-width="1.6" stroke-opacity="0.9"/>`;
-      return `<div class="flex items-center gap-3"><span class="w-24 shrink-0 text-[12.5px] text-text-secondary">${esc(o.label)}</span><svg viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none" class="h-[26px] w-full" aria-hidden="true">${svg}</svg></div>`;
-    }).filter(Boolean).join("");
-    return rows ? `<div class="flex flex-col gap-2">${rows}</div><p class="mt-2 text-[12px] leading-relaxed text-text-muted">The same days. Two things on one timeline, with no claim about which moved the other.</p>` : "";
-  }
 
   function renderSection() {
     const sec = ovSection;
@@ -4483,7 +3678,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     });
     if (sec === "all") return;
     const meta = SEC_META[sec];
-    const ms = MARKERS.filter((m) => m.section === sec);
+    const ms = markers.filter((m) => m.section === sec);
     const have = ms.filter((m) => m.series().length);
     $("seckick").textContent = `OVERVIEW · ${meta.label.toUpperCase()} · ${sec === "body" ? "FROM THE APP AND THE REPORTS" : "FROM THE APP"}`;
     $("secname").textContent = meta.label; ($("secdot") as HTMLElement).style.background = meta.dot;
@@ -4577,7 +3772,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
             <a href="${open.science}" class="mt-2.5 inline-block text-[12.5px] font-semibold text-accent-light hover:text-text-primary">The science behind this &rarr;</a>
           </div>
           <div>
-            ${dr && open.daily && openRange === "week" ? kicker("ALONGSIDE · THE SAME DAYS") + `<div class="mt-2">${alongsideHtml(open, openRange as Rng, dr) || `<p class="text-[12.5px] text-text-tertiary">Nothing else read on these days yet.</p>`}</div>` : kicker("SOURCE") + `<p class="mt-2 text-[13px] leading-relaxed text-text-secondary">${esc(open.source)}</p>`}
+            ${dr && open.daily && openRange === "week" ? kicker("ALONGSIDE · THE SAME DAYS") + `<div class="mt-2">${alongsideHtml(markers, open, openRange as Rng, dr) || `<p class="text-[12.5px] text-text-tertiary">Nothing else read on these days yet.</p>`}</div>` : kicker("SOURCE") + `<p class="mt-2 text-[13px] leading-relaxed text-text-secondary">${esc(open.source)}</p>`}
           </div>
         </div>
       </div>
@@ -4588,27 +3783,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       </div>`;
     $("secopen").querySelectorAll<HTMLElement>("[data-range]").forEach((b) => b.addEventListener("click", () => { openRange = b.dataset.range as Rng; openYear = null; renderSection(); }));
     $("secopen").querySelector<HTMLSelectElement>("[data-year]")?.addEventListener("change", (e) => { openYear = Number((e.target as HTMLSelectElement).value) || null; renderSection(); });
-    if (open.key === "sessions") $("secopen").insertAdjacentHTML("beforeend", workoutsListHtml(openRange as Rng));
-  }
-  /** The sessions themselves, newest first, for the lens in view: the receipts under the Workouts tile. */
-  function workoutsListHtml(range: Rng): string {
-    const t = todayStr();
-    const from = range === "week" ? mondayOf(new Date()) : range === "4w" ? addDays(mondayOf(new Date()), -21) : range === "months" ? addDays(t, -365) : "0000";
-    const rows = syncActs.filter((a) => a?.timestamp && localDay(a.timestamp) >= from).sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)));
-    if (!rows.length) return `<div class="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-[13px] text-text-tertiary">No session in this range.</div>`;
-    const dot: Record<string, string> = { light: "#38bdf8", moderate: "#fbbf24", vigorous: "#f87171" };
-    const srcWord = (a: any) => a.source === "healthkit" ? "Apple Health" : a.source === "hr-estimated" ? "heart rate" : "logged by hand";
-    const shown = rows.slice(0, 40);
-    return `<div class="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-      ${kicker(`THE SESSIONS · ${rows.length}`)}
-      <div class="mt-2 flex flex-col">${shown.map((a) => `
-        <div class="flex items-center gap-3 border-t border-white/[0.06] py-2.5 first:border-t-0">
-          <span class="h-2 w-2 shrink-0 rounded-full" style="background: ${dot[String(a.intensity_category)] ?? "#64748b"}"></span>
-          <span class="min-w-0 flex-1"><span class="block truncate text-[13.5px] font-semibold text-text-primary">${esc(String(a.activity_name || "Workout"))}</span><span class="block text-[11.5px] text-text-tertiary">${esc(fmtDay(localDay(a.timestamp)))} · ${round0(Number(a.duration_minutes) || 0)} min · ${esc(srcWord(a))}${a.activity_type === "strength" ? " · strength" : ""}</span></span>
-          <span class="font-mono text-[13px] font-bold text-text-primary">${fmt1(Number(a.met_hours) || 0)} <span class="text-[10px] font-medium text-text-tertiary">MET-h</span></span>
-        </div>`).join("")}</div>
-      ${rows.length > shown.length ? `<p class="mt-2 text-[12px] text-text-muted">and ${rows.length - shown.length} more in this range</p>` : ""}
-    </div>`;
+    if (open.key === "sessions") $("secopen").insertAdjacentHTML("beforeend", workoutsListHtml(syncActs, openRange as Rng));
   }
   function setSection(k: "all" | SecKey) {
     if (marked.has("painted")) mark("interaction");
