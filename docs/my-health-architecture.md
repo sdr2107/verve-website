@@ -354,6 +354,19 @@ patch.
   of range, the search narrowing to one marker and its note, the no-match
   message, the clear button; no console errors.
 
-Still to come in step 3: In depth, Reports, People as views, one tab per
-commit; then the dynamic imports per tab and the Supabase client loaded
-after the first paint.
+- *In depth as a view* (`derive/depth.ts`, `derive/scopes.ts`,
+  `views/Depth.tsx`): the 400-line renderer became a pure function of the
+  derived person, `depthOf(d, person, today)`, returning the head, the four
+  answers, the six chapters, what changed and the working for "In Verve's
+  words"; the view sets those once per document and handles the goto
+  buttons and the heart export by delegation. The plan gate and the
+  working are signals; the page keeps the AI card, which writes. The
+  markup stayed HTML strings on purpose: In depth redraws only when the
+  document changes, so there is nothing for a diff to save, and 400 lines
+  of markup transliterated by hand would have been the risk. Verified on
+  the production build with the reviewer account: the head, the four
+  answers, the six chapter headings, what changed, the tab switches; no
+  console errors.
+
+Still to come in step 3: Reports and People as views; then the dynamic
+imports per tab and the Supabase client loaded after the first paint.

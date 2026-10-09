@@ -34,6 +34,12 @@ export const mobileSectionOpen = signal(false);
 /** The search box over Labs and Reports; every word typed must land. */
 export const searchQuery = signal("");
 
+// ── In depth ──
+/** The plan gate: in depth is on Pro for yourself, on Max for everyone you see. The page sets it from the plan. */
+export const depthLocked = signal(false);
+/** The page's working, for "In Verve's words"; the Depth view publishes it, the page's AI card reads it. */
+export const depthWorking = signal<Record<string, unknown> | null>(null);
+
 /** What the views ask the page to do: the page fills these in. */
 export const actions = {
   goTab: (_t: string) => {},
