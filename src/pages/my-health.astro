@@ -402,9 +402,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <button type="button" id="personcancel" class="min-h-10 px-2 text-xs font-medium text-text-tertiary hover:text-text-primary">Cancel</button>
           <p id="personformnote" class="basis-full text-[12px] leading-relaxed text-text-tertiary"></p>
         </form>
+        <!-- a view (src/my-health/views/People): whose page this is, and what you may do here -->
         <div id="personhead" class="mt-3 hidden flex-wrap items-center gap-x-4 gap-y-1">
-          <span id="personkicker" class="font-mono text-[10px] font-semibold tracking-[0.14em] text-accent-light"></span>
-          <span id="personactions" class="flex items-center gap-3 text-[13px] font-medium"></span>
         </div>
         <div id="personnotewrap" class="mt-3 hidden max-w-3xl">
           <label for="personnote" class="font-mono text-[10px] font-semibold tracking-wider text-text-tertiary">NOTE &middot; ONLY YOU SEE THIS</label>
@@ -856,11 +855,12 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   import { derivePerson, type PersonData } from "../my-health/derive/person";
   import { labsJudged, SECTIONS, SECTION_ORDER, searchTermsOf, landsAll, dateHay } from "../my-health/derive/labs";
   import { effect } from "@preact/signals";
-  import { doc as docSignal, person as personSignal, ovSection as ovSectionSignal, setSection as setSectionState, activeTab as activeTabSignal, searchQuery as searchQuerySignal, depthLocked as depthLockedSignal, depthWorking as depthWorkingSignal, actions, openLabs } from "../my-health/state";
+  import { doc as docSignal, person as personSignal, people as peopleSignal, firstName as firstNameSignal, ovSection as ovSectionSignal, setSection as setSectionState, activeTab as activeTabSignal, searchQuery as searchQuerySignal, depthLocked as depthLockedSignal, depthWorking as depthWorkingSignal, actions, openLabs } from "../my-health/state";
   import { mountOverview } from "../my-health/views/Overview";
   import { mountLabs } from "../my-health/views/Labs";
   import { mountDepth } from "../my-health/views/Depth";
   import { mountReports } from "../my-health/views/Reports";
+  import { mountPeople } from "../my-health/views/People";
   import { REPORT_EXT, pretty, stampOf, isPhotoName, unitFits, APP_KEYS, appBoundFor, isSent, reportAppState, pendingReports, uncheckedInApp, type AppBound } from "../my-health/derive/reports";
   import { SCOPE_LABEL, ALL_SCOPES, scopeList } from "../my-health/derive/scopes";
   import { readDocument, writeDocument, pruneDocuments, clearDocuments, sameDocument } from "../my-health/store";
@@ -1085,66 +1085,13 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     renderPeople();
   }
 
+  /** The People control is a view (src/my-health/views/People); this keeps the page's chrome and feeds the signals. */
   function renderPeople() {
     const has = people.some((p) => !!p.id);   // the people table exists
     show("peoplewrap", has); show("personwrap", has && activeTab !== "group");
-    if (!has) return;
-    const others = people.filter((x) => x.id && !x.self);
-    // one control: the name of whose page this is, and under it the menu of
-    // everyone, the group, and the ways to add someone or give access
-    const onGroup = activeTab === "group";
-    const w = canWrite();
-    const initialOf = (p: Person) => esc((p.self ? (firstName || "You") : (p.name || "?")).trim().charAt(0).toUpperCase());
-    const nameOf = (p: Person) => p.self ? esc(firstName || "You") : esc(p.name || "Unnamed");
-    const hintOf = (p: Person) => p.self ? "your own page" : `${p.mine ? "in your care" : `shares ${scopeList(p.scopes).toLowerCase() || "nothing yet"} with you`}${p.born_year ? ` · ${p.born_year}` : ""}`;
-    const cur = person!;
-    const item = (inner: string, attrs: string, on = false) => `<button type="button" role="menuitem" ${attrs} aria-current="${on ? "true" : "false"}" class="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[13.5px] transition-colors ${on ? "bg-accent/15 text-text-primary" : "text-text-primary hover:bg-white/[0.06]"}">${inner}</button>`;
-    const peopleIcon = `<span class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-white/8 text-text-secondary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.5a5 5 0 0 1 6 5"/></svg></span>`;
-    const plain = (text: string, attrs: string) => item(`<span class="w-[26px] shrink-0"></span><span class="min-w-0 flex-1 truncate font-semibold text-text-secondary">${text}</span>`, attrs);
-    $("people").innerHTML = `
-      <div class="relative" data-personmenu>
-        <button type="button" id="personmenubtn" aria-expanded="false" aria-haspopup="menu" aria-controls="personmenu"
-          class="flex min-h-10 max-w-full items-center gap-2.5 rounded-full border border-white/14 bg-white/[0.04] py-1.5 pl-2 pr-3.5 text-[13px] font-semibold text-text-primary transition-colors hover:border-white/30 lg:w-full lg:rounded-[12px]">
-          ${onGroup ? peopleIcon : `<span class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-accent/25 text-[11px] font-bold text-accent-light">${initialOf(cur)}</span>`}
-          <span class="min-w-0 flex-1 truncate text-left">${onGroup ? "Everyone" : nameOf(cur)}</span>
-          <svg class="shrink-0 text-text-tertiary" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
-        </button>
-        <div id="personmenu" role="menu" class="absolute left-0 top-full z-30 mt-2 hidden w-72 max-w-[calc(100vw-3rem)] flex-col gap-0.5 rounded-2xl border border-white/12 bg-[#12122a] p-1.5 shadow-2xl shadow-black/50">
-          ${people.map((p) => item(`
-            <span class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${p.self ? "bg-accent/25 text-accent-light" : "bg-white/8 text-text-secondary"}">${initialOf(p)}</span>
-            <span class="min-w-0 flex-1"><span class="block truncate font-semibold">${nameOf(p)}</span><span class="block truncate text-[11.5px] text-text-tertiary">${esc(hintOf(p))}</span></span>
-            ${p.id === cur.id && !onGroup ? `<svg class="shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>` : ""}`,
-            `data-person="${p.id}"`, p.id === cur.id && !onGroup)).join("")}
-          <span class="mx-2 my-1 h-px bg-white/[0.08]" aria-hidden="true"></span>
-          ${others.length ? item(`${peopleIcon}<span class="min-w-0 flex-1 truncate font-semibold">Everyone, ranked by movement</span><span class="font-mono text-[10.5px] text-text-tertiary">${others.length}</span>`, `id="everyone"`, onGroup) : ""}
-          ${plain("Add a person", `id="personadd"`)}
-          ${plain("Ask someone to share with you", `id="personask"`)}
-          ${w && cur.id ? plain("Who can see this page", `id="personaccess"`) : ""}
-        </div>
-      </div>`;
-    const menu = $("personmenu"), btn = $("personmenubtn");
-    const setMenu = (open: boolean) => { menu.classList.toggle("hidden", !open); menu.classList.toggle("flex", open); btn.setAttribute("aria-expanded", String(open)); };
-    btn.addEventListener("click", () => setMenu(menu.classList.contains("hidden")));
-    menu.querySelectorAll<HTMLElement>("[data-person]").forEach((b) => b.addEventListener("click", () => { setMenu(false); switchPerson(b.dataset.person!); }));
-    $("personadd").addEventListener("click", () => { setMenu(false); if (activeTab === "group") setTab("overview"); openPersonForm(null); });
-    $("personask").addEventListener("click", () => { setMenu(false); if (activeTab === "group") setTab("overview"); openPersonForm(null); setPersonMode("ask"); });
-    document.getElementById("personaccess")?.addEventListener("click", () => { setMenu(false); openAccess(); });
-    document.getElementById("everyone")?.addEventListener("click", () => { setMenu(false); setTab("group"); });
-
-    // the line under the chips: whose page, and what you may do here
-    const p = person!;
-    $("tabhead").textContent = p.self ? "Your page" : `${p.name || "Their"}’s page`;
-    show("personhead", !p.self); $("personhead").classList.toggle("flex", !p.self);
-    if (p.self) { $("personkicker").textContent = ""; $("personactions").innerHTML = ""; return; }
-    $("personkicker").textContent = p.mine
-      ? `YOU LOOK AFTER${p.born_year ? ` · BORN ${p.born_year}` : ""}`
-      : `SHARES WITH YOU · ${p.scopes.map((x) => x.toUpperCase()).join(" · ") || "NOTHING YET"} · YOU CAN LOOK, NOT CHANGE`;
-    $("personactions").innerHTML = p.mine
-      ? `<button type="button" data-pedit class="text-accent-light hover:text-text-primary">Edit details</button>
-         <button type="button" data-premove class="text-text-tertiary hover:text-danger">Remove person</button>`
-      : "";
-    $("personactions").querySelector("[data-pedit]")?.addEventListener("click", () => openPersonForm(p));
-    $("personactions").querySelector("[data-premove]")?.addEventListener("click", () => removePerson(p));
+    peopleSignal.value = people; firstNameSignal.value = firstName; personSignal.value = person;
+    const p = person;
+    show("personhead", !!p && !p.self); $("personhead").classList.toggle("flex", !!p && !p.self);
   }
 
   async function switchPerson(id: string) {
@@ -2238,13 +2185,9 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   $("accessgo").addEventListener("click", openAccess);
   $("accessgophone").addEventListener("click", openAccess);
   document.addEventListener("click", (e) => {
-    const menu = document.getElementById("personmenu");
-    if (menu && !menu.classList.contains("hidden") && !(e.target as Element).closest("[data-personmenu]")) { menu.classList.add("hidden"); menu.classList.remove("flex"); document.getElementById("personmenubtn")?.setAttribute("aria-expanded", "false"); }
   });
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
-    const menu = document.getElementById("personmenu");
-    if (menu) { menu.classList.add("hidden"); menu.classList.remove("flex"); document.getElementById("personmenubtn")?.setAttribute("aria-expanded", "false"); }
   });
   $("tabbar").querySelectorAll("[data-tab]").forEach((b) =>
     b.addEventListener("click", () => {
@@ -3746,6 +3689,16 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   mountLabs($("labsroot"));
   mountDepth($("depthroot"));
   mountReports({ cards: $("repcards"), imports: $("appimportsroot"), years: $("yearsonfileroot") });
+  mountPeople({ menu: $("people"), head: $("personhead"), tabhead: $("tabhead") });
+  actions.person = (kind, id) => {
+    if (kind === "switch" && id) { void switchPerson(id); return; }
+    if (kind === "everyone") { setTab("group"); return; }
+    if (kind === "add") { if (activeTab === "group") setTab("overview"); openPersonForm(null); return; }
+    if (kind === "ask") { if (activeTab === "group") setTab("overview"); openPersonForm(null); setPersonMode("ask"); return; }
+    if (kind === "access") { openAccess(); return; }
+    if (kind === "edit" && person) { openPersonForm(person); return; }
+    if (kind === "remove" && person) { void removePerson(person); }
+  };
   actions.tabCount = setTabCount;
   // The Reports view asks; the page, which owns the upload and review flows, does.
   actions.report = async (kind, name, extra) => {

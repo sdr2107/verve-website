@@ -381,8 +381,18 @@ patch.
   with its date, the rename editor, the search note, the no-match line, the
   clear; no console errors.
 
-Still to come in step 3: People as a view; then the dynamic imports per
-tab and the Supabase client loaded after the first paint. The group
+- *People as a view* (`views/People.tsx`): the person control with its
+  menu, the line under the greeting on someone else's page, and the
+  sidebar's "Your page" heading, from the people, person, tab and
+  first-name signals; the menu's open state and its outside-click closing
+  are component state, and every action (switch, the group, add, ask,
+  access, edit, remove) is asked of the page, which owns the forms.
+  Verified on the production build: the control, the menu's four items,
+  Add a person opening the form, closing on an outside click; no console
+  errors.
+
+Every tab is a view now. Still to come from the plan: the dynamic imports
+per tab and the Supabase client loaded after the first paint. The group
 table for people besides you (`loadGlance`) still reads its tables
 itself; it is outside the one document by design for now, since it
 spans every person the account can see.
