@@ -10,6 +10,11 @@ export default defineConfig({
   // the full origin has to be baked in at build time.
   site: 'https://verve-app.health',
 
+  // The next page's HTML is fetched while the pointer rests on its link,
+  // so the click shows the shell at once; My health asks for its data in
+  // an inline script at the top of that HTML, which this brings forward too.
+  prefetch: { prefetchAll: false, defaultStrategy: 'hover' },
+
   vite: {
     plugins: [tailwindcss()]
   }

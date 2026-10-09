@@ -297,3 +297,23 @@ Measured on the reviewer account on the dev server:
 
 Not yet: a fresh document that differs redraws every tab the old way, by
 rebuilding the HTML. Drawing only what changed is step 3's diffing.
+
+**Steps 4 and 5, the head start and the prefetch** (2026-10-09): an inline
+script at the top of the page's body reads the session the Supabase
+client keeps in local storage and, when it is still valid, starts the
+document request before the bundle has arrived; the bundle finds it under
+`window.__mh` and takes it, for the account's own person under either
+name. The address and the key come from `src/lib/supabase.ts` through
+`define:vars`, one source. Astro prefetch is on with the hover strategy
+and the header's nav links carry it. Measured on the dev server:
+
+| | before | after |
+|---|---|---|
+| document request starts | after the bundle ran, about 550 ms | 17 ms, before the bundle finished |
+| My health HTML on the landing page | at the click | on hover, 14 ms |
+
+Not done in this step, and moved to step 3 where the tabs become modules:
+the Reports, Labs and In depth code loaded on first opening, and the
+Supabase client loaded after the first paint. Both need the page split
+into modules first; splitting one 5,700-line script by hand would be a
+patch.

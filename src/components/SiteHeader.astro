@@ -91,6 +91,7 @@ const link = (key: NavKey) =>
               href={l.href}
               target={l.external ? "_blank" : undefined}
               rel={l.external ? "noopener noreferrer" : undefined}
+              data-astro-prefetch={l.external ? undefined : "hover"}
               aria-current={l.key === current ? "page" : undefined}
               class:list={["text-sm font-medium transition-colors hover:text-text-primary", link(l.key)]}
             >
@@ -156,6 +157,7 @@ const link = (key: NavKey) =>
               href={l.href}
               target={l.external ? "_blank" : undefined}
               rel={l.external ? "noopener noreferrer" : undefined}
+              data-astro-prefetch={l.external ? undefined : "hover"}
               aria-current={l.key === current ? "page" : undefined}
               class:list={["text-[13px] font-medium transition-colors hover:text-text-primary", link(l.key)]}
             >

@@ -2,6 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import Footer from "../components/Footer.astro";
 import SiteHeader from "../components/SiteHeader.astro";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
 ---
 
 <!--
@@ -31,6 +32,37 @@ import SiteHeader from "../components/SiteHeader.astro";
   description="Sign in with your Verve account, drop old lab reports, and their values file themselves into your app and your own lab dashboard."
   cardType="summary"
 >
+  <!-- The head start (docs/my-health-architecture.md, step 4). Inline, so
+       it runs as the HTML is parsed, before the page's bundle has arrived:
+       it reads the session the Supabase client keeps in local storage and,
+       if it is still valid, asks for the person's document now. The bundle
+       finds the request in flight under window.__mh and uses it instead of
+       making its own. A session it does not recognise is "no session" and
+       costs nothing: the client does its work as before. The address and
+       the key come from src/lib/supabase.ts through define:vars, one
+       source; the person is the one the page remembered in session
+       storage, as boot reads it. -->
+  <script is:inline data-astro-rerun define:vars={{ url: SUPABASE_URL, key: SUPABASE_ANON_KEY }}>
+    (function () {
+      try {
+        var ref = url.replace("https://", "").split(".")[0];
+        var raw = localStorage.getItem("sb-" + ref + "-auth-token");
+        if (!raw) return;
+        var session = JSON.parse(raw);
+        var token = session && session.access_token;
+        var expires = session && session.expires_at;
+        if (!token || !expires || expires * 1000 < Date.now() + 30000) return;
+        var person = "";
+        try { person = sessionStorage.getItem("mh-person") || ""; } catch (e) { /* fine */ }
+        var started = performance.now();
+        window.__mh = { person: person, started: started, document: fetch(url + "/rest/v1/rpc/my_health_document", {
+          method: "POST",
+          headers: { apikey: key, Authorization: "Bearer " + token, "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify(person ? { person: person } : {}),
+        }).then(function (r) { if (!r.ok) throw new Error("rpc " + r.status); return r.json(); }) };
+      } catch (e) { /* no head start; the bundle fetches as before */ }
+    })();
+  </script>
   <SiteHeader current="my-health">
     <!-- Signed in, Sign out takes the app button's place; the greeting is
          the page's heading, not a header ornament. Hidden until a session
@@ -861,7 +893,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   function report() {
     if (!TIMING) return;
     const t0 = performance.getEntriesByName("mh:script")[0]?.startTime ?? 0;
-    const rows = ["session", "cached", "people", "document", "painted", "fresh", "interaction"].map((n) => {
+    const rows = ["session", "cached", "headstart", "people", "document", "painted", "fresh", "interaction"].map((n) => {
       const e = performance.getEntriesByName(`mh:${n}`)[0];
       return { mark: n, ms: e ? Math.round(e.startTime - t0) : null };
     }).filter((r) => r.ms != null);
@@ -884,9 +916,24 @@ import SiteHeader from "../components/SiteHeader.astro";
   let docFor = "";   // the person id the document in hand (or in flight) is for; "" = the account's own
   function invalidateDocument() { doc = null; docPromise = null; }
   async function fetchDocument(personId: string | null): Promise<MyHealthDocument> {
-    const { data, error } = await supabase.rpc("my_health_document", personId ? { person: personId } : {});
-    if (error) throw error;
-    const d = data as MyHealthDocument;
+    // the head start's request, when it was for this person and is unused
+    const head = (window as any).__mh as { person: string; document: Promise<MyHealthDocument>; taken?: boolean } | undefined;
+    let d: MyHealthDocument;
+    // a head start for "" is the account's own person, by whichever name it is asked for
+    const selfId = people.find((p) => p.self)?.id ?? "";
+    if (head && !head.taken && (head.person === (personId ?? "") || (head.person === "" && personId === selfId))) {
+      head.taken = true;
+      try { d = await head.document; mark("headstart"); }
+      catch {
+        const { data, error } = await supabase.rpc("my_health_document", personId ? { person: personId } : {});
+        if (error) throw error;
+        d = data as MyHealthDocument;
+      }
+    } else {
+      const { data, error } = await supabase.rpc("my_health_document", personId ? { person: personId } : {});
+      if (error) throw error;
+      d = data as MyHealthDocument;
+    }
     // kept for the next visit: under the person asked for, and under the
     // person the function answered with (the account's own, when none was)
     if (userId) { void writeDocument(userId, personId ?? "", d); if (d.person?.id && d.person.id !== personId) void writeDocument(userId, d.person.id, d); }
