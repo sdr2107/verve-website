@@ -368,5 +368,21 @@ patch.
   answers, the six chapter headings, what changed, the tab switches; no
   console errors.
 
-Still to come in step 3: Reports and People as views; then the dynamic
-imports per tab and the Supabase client loaded after the first paint.
+- *Reports as a view* (`derive/reports.ts`, `views/Reports.tsx`): the
+  archive a year at a time with one card per file and what came out of
+  it, the duplicates, what each report still has for the app, the app's
+  imports and the years with movement on file, all from the document; the
+  rename editor is component state. Every write (read the values, view,
+  delete, send, rename, remove an import) goes through `actions.report`,
+  which the page answers with its upload and review flows, unchanged.
+  `renderReports`, `renderAppImports`, `renderYearsOnFile`, `renameUI` and
+  the archive helpers are gone from the page. Verified on the production
+  build with a test PDF in the reviewer's folder (removed after): the card
+  with its date, the rename editor, the search note, the no-match line, the
+  clear; no console errors.
+
+Still to come in step 3: People as a view; then the dynamic imports per
+tab and the Supabase client loaded after the first paint. The group
+table for people besides you (`loadGlance`) still reads its tables
+itself; it is outside the one document by design for now, since it
+spans every person the account can see.

@@ -610,18 +610,10 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         <div id="repcards" class="flex max-w-3xl flex-col gap-3"></div>
 
         <!-- the app's exports dropped here: one line each, rebuilt from the rows they left, with the way back -->
-        <section id="appimports" class="mt-6 hidden max-w-3xl rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-          <div class="font-mono text-[10px] font-semibold tracking-widest text-text-tertiary">FROM THE VERVE APP</div>
-          <div id="appimportrows" class="mt-2 flex flex-col gap-2"></div>
-          <p class="mt-2 text-[12px] text-text-muted">The weeks, fitness tests and waist readings are on the Overview; the lab values are on Labs with everything else. Where a week came from both sync and a file, sync wins.</p>
-        </section>
+        <div id="appimportsroot"></div>
 
         <!-- every year with movement on file, a column each: what the history you brought in reaches back to -->
-        <section id="yearsonfile" class="mt-6 hidden max-w-3xl rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-          <div class="flex items-baseline justify-between"><div class="font-mono text-[10px] font-semibold tracking-widest text-text-tertiary">YEARS ON FILE</div><span id="yearsonfilecount" class="font-mono text-[10.5px] text-text-tertiary"></span></div>
-          <div id="yearsonfilebars" class="mt-3 flex items-end gap-2" style="height:110px" aria-hidden="true"></div>
-          <p id="yearsonfilenote" class="mt-3 text-[12px] leading-relaxed text-text-secondary"></p>
-        </section>
+        <div id="yearsonfileroot"></div>
 
         <!-- ── then the one place to add a report; dragging anywhere on the page lands here too ── -->
         <label id="drop" for="file"
@@ -868,6 +860,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   import { mountOverview } from "../my-health/views/Overview";
   import { mountLabs } from "../my-health/views/Labs";
   import { mountDepth } from "../my-health/views/Depth";
+  import { mountReports } from "../my-health/views/Reports";
+  import { REPORT_EXT, pretty, stampOf, isPhotoName, unitFits, APP_KEYS, appBoundFor, isSent, reportAppState, pendingReports, uncheckedInApp, type AppBound } from "../my-health/derive/reports";
   import { SCOPE_LABEL, ALL_SCOPES, scopeList } from "../my-health/derive/scopes";
   import { readDocument, writeDocument, pruneDocuments, clearDocuments, sameDocument } from "../my-health/store";
 
@@ -1913,76 +1907,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     ]);
   }
 
-  /** Every year with movement on file, a column each; dim where the year came from a CSV alone. */
-  function renderYearsOnFile() {
-    const by = new Map<string, { weeks: number; csvOnly: boolean }>();
-    for (const w of allWeeks) {
-      if (!(Number(w.minutes) > 0 || Number(w.workouts) > 0 || Number(w.met_hours) > 0)) continue;
-      const y = String(w.week_start).slice(0, 4);
-      const e = by.get(y) ?? { weeks: 0, csvOnly: true };
-      e.weeks++; if (w.source !== "csv") e.csvOnly = false;
-      by.set(y, e);
-    }
-    const years = [...by.keys()].sort();
-    show("yearsonfile", years.length > 1);
-    if (years.length <= 1) return;
-    const total = years.reduce((t, y) => t + by.get(y)!.weeks, 0);
-    const max = Math.max(...years.map((y) => by.get(y)!.weeks));
-    const thisY = String(new Date().getFullYear());
-    $("yearsonfilecount").textContent = `${years.length} years · ${total} weeks`;
-    $("yearsonfilebars").innerHTML = years.map((y) => {
-      const e = by.get(y)!; const h = Math.max(4, Math.round((e.weeks / max) * 72));
-      return `<div class="flex flex-1 flex-col items-center gap-1.5"><span class="font-mono text-[10.5px] font-semibold text-text-primary">${e.weeks}</span><span class="w-full rounded-t-[3px] ${y === thisY ? "bg-success" : "bg-accent"}" style="height:${h}px;opacity:${e.csvOnly ? 0.45 : y === thisY ? 1 : 0.8}"></span><span class="font-mono text-[10px] ${y === thisY ? "text-text-primary" : "text-text-tertiary"}">${y}</span></div>`;
-    }).join("");
-    const csvYears = years.filter((y) => by.get(y)!.csvOnly);
-    $("yearsonfilenote").textContent = `Weeks with movement on file, a column a year.${csvYears.length ? " Dim columns came from a CSV: minutes and heart rate, with MET-hours estimated from the heart rate rather than measured in your bands." : ""} The Overview's Years lens lists every year here; pick one and it draws month by month.`;
-  }
 
-  /** The exports and CSVs dropped on this person, rebuilt from the rows they left: one line each, with Remove. */
-  function renderAppImports() {
-    renderYearsOnFile();
-    type Imp = { tag: string; kind: "export" | "csv"; exported: string; imported: string; weeks: number; crf: number; body: number; labs: number; sessions: number; from: string; to: string };
-    const by = new Map<string, Imp>();
-    const isTag = (t: unknown): t is string => typeof t === "string" && (t.startsWith("export:") || t.startsWith("csv:"));
-    const get = (tag: string) => {
-      if (by.has(tag)) return by.get(tag)!;
-      const [kind, exported = "", stamp = ""] = tag.split(":");
-      const imp: Imp = {
-        tag, kind: kind === "csv" ? "csv" : "export", exported: /^\d{4}-\d{2}-\d{2}$/.test(exported) ? exported : "",
-        imported: /^\d{10,}$/.test(stamp) ? new Date(Number(stamp)).toLocaleDateString("en-CA") : "",
-        weeks: 0, crf: 0, body: 0, labs: 0, sessions: 0, from: "", to: "",
-      };
-      by.set(tag, imp);
-      return imp;
-    };
-    for (const w of exportRows.weeks) if (isTag(w.import_tag)) {
-      const im = get(w.import_tag); im.weeks++; im.sessions += Number(w.workouts) || 0;
-      const ws = String(w.week_start); if (!im.from || ws < im.from) im.from = ws; if (!im.to || ws > im.to) im.to = ws;
-    }
-    for (const c of exportRows.crf) if (isTag(c.import_tag)) get(c.import_tag).crf++;
-    for (const b of exportRows.body) if (isTag(b.import_tag)) get(b.import_tag).body++;
-    for (const r of allLabs) if (isTag(r.report_path)) get(r.report_path).labs++;
-    const imps = [...by.values()].sort((a, b) => b.tag.localeCompare(a.tag));
-    show("appimports", imps.length > 0);
-    if (!imps.length) return;
-    const n = (k: number, one: string, many: string) => k ? `${k} ${k === 1 ? one : many}` : "";
-    $("appimportrows").innerHTML = imps.map((im) => `
-      <div class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-white/[0.08] px-3 py-2 text-[13px]">
-        <span class="font-semibold text-text-primary">${im.kind === "csv" ? "Workouts CSV" : `Export of ${esc(im.exported ? fmtDay(im.exported) : "an unknown date")}`}</span>
-        ${im.imported ? `<span class="text-text-muted">dropped here ${esc(fmtDay(im.imported))}</span>` : ""}
-        <span class="text-text-tertiary">${esc(im.kind === "csv"
-          ? [n(im.weeks, "week", "weeks"), n(im.sessions, "session", "sessions"), im.from && im.to ? (im.from.slice(0, 4) === im.to.slice(0, 4) ? im.from.slice(0, 4) : `${im.from.slice(0, 4)} to ${im.to.slice(0, 4)}`) : "", "MET-hours estimated from heart rate"].filter(Boolean).join(" · ")
-          : [n(im.weeks, "week", "weeks"), n(im.crf, "fitness test", "fitness tests"), n(im.body, "waist day", "waist days"), n(im.labs, "lab value", "lab values")].filter(Boolean).join(" · "))}</span>
-        ${canWrite() ? `<button type="button" data-rmimport="${esc(im.tag)}" class="ml-auto min-h-9 text-[12px] font-semibold text-text-tertiary hover:text-danger">Remove</button>` : ""}
-      </div>`).join("");
-    $("appimportrows").querySelectorAll("[data-rmimport]").forEach((b) => b.addEventListener("click", async () => {
-      if (!confirm("Remove everything this file brought? Its weeks, fitness tests, waist readings and lab values are deleted from this page. The app itself is untouched.")) return;
-      await removeImport((b as HTMLElement).dataset.rmimport!, person!);
-      show("importcard", false); $("importcard").classList.remove("flex");
-      msg("upmsg", "Removed; nothing from that export remains here.");
-      await refresh();
-    }));
-  }
 
   // ── activity and fitness on the Overview: the app's weeks, a marker on top ─
   let allWeeks: any[] = [], allCrf: any[] = [], allBody: any[] = [];
@@ -2037,7 +1962,6 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     allWeeks = derived.weeks; allCrf = derived.crf; allBody = derived.body;
     syncActs = derived.acts; syncProfile = derived.profile; syncSignals = derived.signals; syncWeights = derived.weights;
     markers = derived.markers;
-    renderAppImports();
   }
 
 
@@ -2272,7 +2196,6 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       searchQuerySignal.value = ($("mhsearch") as HTMLInputElement).value.trim();
       show("mhsearchclear", !!searchQuerySignal.value);
       if (!searchQuerySignal.value) searchNote("");
-      renderReports();
     }, 120);
   });
   $("mhsearchclear").addEventListener("click", () => { ($("mhsearch") as HTMLInputElement).value = ""; $("mhsearch").dispatchEvent(new Event("input")); $("mhsearch").focus(); });
@@ -2546,7 +2469,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   }
   $("addreport").addEventListener("click", pickReport);
   $("tosendgo").addEventListener("click", () => {
-    const paths = pendingReports();
+    const paths = pendingReports(allLabs, allApp, isSelf());
     if (!paths.length) return;
     setTab("reports");
     reviewPos = { n: 1, of: paths.length };
@@ -2685,7 +2608,6 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     renderGlance();
     renderOverview();
     renderDepth();
-    await renderReports(d.files);
     mark("painted");
   }
 
@@ -2697,56 +2619,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   // markers, in the app's unit; one is "sent" when a lab_readings row on the
   // same day carries that value.
 
-  /** The app stores one unit per marker; a value in another unit is not sent from the archive. */
-  function unitFits(key: string, unit: string | null): boolean {
-    if (key === "lpa_value") return true;
-    const want = LABELS[key].unit;
-    if (!want) return true;
-    return unitKey(unit ?? "") === unitKey(want);
-  }
 
-  type AppBound = { key: string; value: number; unit: string | null; name: string };
-  /** A report's app-bound values, one per marker, from its archived rows. */
-  function appBoundFor(path: string): { date: string; values: AppBound[] } {
-    if (!isSelf()) return { date: "", values: [] };   // the app tier is yours alone
-    if (path.startsWith("export:")) return { date: "", values: [] };   // came from the app: nothing to send back
-    const rows = allLabs.filter((r) => r.report_path === path);
-    const values: AppBound[] = [];
-    for (const r of rows) {
-      const key = appKeyFor(r.analyte);
-      if (!key || values.some((v) => v.key === key) || !unitFits(key, r.unit) || !Number.isFinite(Number(r.value))) continue;
-      values.push({ key, value: Number(r.value), unit: r.unit ?? null, name: String(r.analyte) });
-    }
-    return { date: rows[0]?.measured_on ?? "", values };
-  }
-  function isSent(date: string, key: string, value: number): boolean {
-    return allApp.some((a) => localDay(a.measured_at) === date && Number(a[key]) === value);
-  }
   /** The app's columns a row carries, for counting what a report sent. */
-  const APP_KEYS = Object.keys(LABELS);
-  /** What a report's card says: how many of its app values the app holds, and how many await a look there. */
-  function reportAppState(path: string) {
-    const { date, values } = appBoundFor(path);
-    const pending = values.filter((v) => !isSent(date, v.key, v.value));
-    const unchecked = allApp
-      .filter((a) => a.report_path === path && a.review_status === "unchecked")
-      .reduce((n, a) => n + APP_KEYS.filter((k) => a[k] != null).length, 0);
-    return { date, total: values.length, sent: values.length - pending.length, pending, unchecked };
-  }
-  /** Values the app holds from reports that nobody has looked at yet, across the archive. */
-  function uncheckedInApp(): number {
-    if (!isSelf()) return 0;
-    return allApp
-      .filter((a) => a.review_status === "unchecked")
-      .reduce((n, a) => n + APP_KEYS.filter((k) => a[k] != null).length, 0);
-  }
-  /** Reports with app values the app does not have yet, newest first. */
-  function pendingReports(): string[] {
-    const paths = [...new Set(allLabs.map((r) => r.report_path).filter(Boolean))] as string[];
-    return paths
-      .filter((p) => reportAppState(p).pending.length > 0)
-      .sort((a, b) => (appBoundFor(b).date || "").localeCompare(appBoundFor(a).date || ""));
-  }
 
   // ── the door used last on this browser ───────────────────────────────
   // Set the moment a sign-in succeeds; Apple and Google leave the page, so
@@ -3143,13 +3017,13 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   function renderOverview() {
     $("greet").textContent = greeting();
     renderGlance();
-    const waiting = pendingReports();
-    const unchecked = uncheckedInApp();
+    const waiting = pendingReports(allLabs, allApp, isSelf());
+    const unchecked = uncheckedInApp(allApp, isSelf());
     show("tosend", waiting.length > 0 || unchecked > 0);
     $("tosend").classList.toggle("flex", waiting.length > 0 || unchecked > 0);
     show("tosendgo", waiting.length > 0);
     if (waiting.length) {
-      const n = waiting.reduce((sum, p) => sum + reportAppState(p).pending.length, 0);
+      const n = waiting.reduce((sum, p) => sum + reportAppState(allLabs, allApp, p, isSelf()).pending.length, 0);
       $("tosendtext").textContent = waiting.length === 1
         ? `${n} value${n === 1 ? "" : "s"} for your app from ${pretty(waiting[0].split("/").pop()!)} ${n === 1 ? "has" : "have"} not been sent.`
         : `${waiting.length} reports have values for your app that have not been sent: ${n} in all.`;
@@ -3182,201 +3056,12 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
 
   // ═══ REPORTS ═════════════════════════════════════════════════════════════
   /** The kinds of file the archive holds: a PDF, or a photo of a report. */
-  const REPORT_EXT = /\.(pdf|jpe?g|png|webp)$/i;
-  const isPhotoName = (name: string) => /\.(jpe?g|png|webp)$/i.test(name);
-  /** The stored name, as a title: the upload stamp off, underscores as spaces, no extension. */
-  const pretty = (name: string | undefined) => (name ?? "").replace(/^\d+-/, "").replace(REPORT_EXT, "").replace(/_/g, " ");
-  /** The upload time, from the stamp the upload put in front of the name. */
-  const stampOf = (name: string) => Number((name.match(/^(\d+)-/) ?? [])[1] ?? 0);
 
-  /** "Keep both" decisions, per file, kept in this browser. */
-  const keptKey = "mh-keep-both";
-  function keptSet(): Set<string> {
-    try { return new Set(JSON.parse(localStorage.getItem(keptKey) ?? "[]")); } catch { return new Set(); }
-  }
-  function keepBoth(name: string) {
-    try { localStorage.setItem(keptKey, JSON.stringify([...keptSet(), name])); } catch { /* private mode: the flag returns next visit */ }
-  }
 
-  /**
-   * Which files are second copies of another. Storage gives each object an
-   * eTag — a checksum of its bytes — so two uploads of the same PDF share
-   * one; failing that, the same size and the same name is the same file.
-   * The earliest upload is the original; the rest are its copies.
-   */
-  function findDuplicates(files: any[]): Map<string, string> {
-    const dupOf = new Map<string, string>();
-    const groups = new Map<string, any[]>();
-    for (const f of files) {
-      const tag = f.metadata?.eTag ? `etag:${f.metadata.eTag}` : `size:${f.metadata?.size ?? "?"}|${pretty(f.name).toLowerCase()}`;
-      (groups.get(tag) ?? groups.set(tag, []).get(tag)!).push(f);
-    }
-    for (const g of groups.values()) {
-      if (g.length < 2) continue;
-      g.sort((x, y) => stampOf(x.name) - stampOf(y.name));
-      for (const f of g.slice(1)) dupOf.set(f.name, g[0].name);
-    }
-    return dupOf;
-  }
 
   /** The person's report folder, newest first: one listing, which refresh() fetches beside the rows and hands in. */
   /** The person's report folder, newest first, as the document lists it (the Storage API's own shape). */
   const listReportFolder = () => ensureDocument().then((d) => d.files as any[]);
-  async function renderReports(listed?: any[]) {
-    const data = listed ?? await listReportFolder();
-    const files = data.filter((f) => REPORT_EXT.test(f.name));
-    setTabCount("reports", files.length ? String(files.length) : "");
-
-    // what each report yielded, from the one web_labs fetch
-    const outcomes = new Map<string, { date: string; n: number; flagged: number }>();
-    for (const r of allLabs) {
-      if (!r.report_path) continue;
-      const o = outcomes.get(r.report_path) ?? { date: r.measured_on, n: 0, flagged: 0 };
-      o.n++; if (inRange(r) === false) o.flagged++;
-      o.date = r.measured_on;
-      outcomes.set(r.report_path, o);
-    }
-    const imagingByPath = new Map(allImaging.map((im) => [im.report_path, im]));
-    const dupOf = findDuplicates(files);
-    const kept = keptSet();
-
-    // each file's date: the report's own, else the imaging report's, else the
-    // upload's. A copy has no filed values of its own, so it takes its
-    // original's date and sits beside it.
-    const dated = files.map((f) => {
-      const path = `${folder()}/${f.name}`;
-      const o = outcomes.get(path);
-      const im = imagingByPath.get(path);
-      const uploaded = stampOf(f.name) ? new Date(stampOf(f.name)).toISOString().slice(0, 10) : "";
-      return { f, path, o, im, date: o?.date ?? im?.report_date ?? uploaded, uploaded };
-    });
-    const byName = new Map(dated.map((d) => [d.f.name, d]));
-    for (const d of dated) {
-      const orig = dupOf.get(d.f.name);
-      if (orig && !d.o && !d.im && byName.get(orig)?.date) d.date = byName.get(orig)!.date;
-    }
-    dated.sort((x, y) => (y.date || "").localeCompare(x.date || "") || stampOf(y.f.name) - stampOf(x.f.name));
-
-    // the search: a report matches when every word lands in its name, its date, a value read from it, or its study
-    const terms = searchTerms();
-    const hayByPath = new Map<string, string>();
-    if (terms.length) {
-      for (const r of allLabs) if (r.report_path) hayByPath.set(r.report_path, `${hayByPath.get(r.report_path) ?? ""} ${canonName(String(r.analyte))} ${r.value}${r.unit ? ` ${r.unit}` : ""}`.toLowerCase());
-      for (const im of allImaging) if (im.report_path) hayByPath.set(im.report_path, `${hayByPath.get(im.report_path) ?? ""} ${im.modality} imaging ${im.modality === "echo" ? "2d echo echocardiogram" : ""} ${im.impression ?? ""}`.toLowerCase());
-    }
-    const shown = terms.length
-      ? dated.filter((d) => landsAll(`${pretty(d.f.name)} ${dateHay(d.date)} ${hayByPath.get(d.path) ?? ""}${d.im ? "" : ""}`.toLowerCase(), terms))
-      : dated;
-    if (terms.length && activeTab === "reports") searchNote(`${shown.length} of ${dated.length} report${dated.length === 1 ? "" : "s"} ${shown.length === 1 ? "matches" : "match"}`);
-
-    // a year at a time, newest first, every year closed until tapped; inside it, a month at a time
-    const years = new Map<string, typeof dated>();
-    for (const d of shown) {
-      const y = d.date ? d.date.slice(0, 4) : "Undated";
-      (years.get(y) ?? years.set(y, []).get(y)!).push(d);
-    }
-    const monthName = (d: string) => new Date(d.slice(0, 7) + "-01T00:00:00").toLocaleDateString(undefined, { month: "long" });
-    const byMonth = (list: typeof dated) => {
-      const months = new Map<string, typeof dated>();
-      for (const d of list) {
-        const m = d.date ? d.date.slice(0, 7) : "";
-        (months.get(m) ?? months.set(m, []).get(m)!).push(d);
-      }
-      return [...months.entries()];
-    };
-
-    const card = (d: (typeof dated)[number]) => {
-      const { f, o, im } = d;
-      const original = dupOf.get(f.name);
-      const flagged = original != null && !kept.has(f.name);
-      const modChip = im ? `<span class="rounded-md bg-accent/15 px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-accent-light">${esc(String(im.modality).toUpperCase())}</span>` : "";
-      const dateChip = d.date ? `<span class="rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-text-secondary">${fmtDay(d.date).toUpperCase()}</span>` : "";
-      const outcome = o
-        ? `${o.n} values · ${o.flagged ? `<span class="text-warning">${o.flagged} outside range</span>` : `<span class="text-success">all in range</span>`}`
-        : im ? "the report's own words, on Labs · Imaging"
-        : flagged ? "" : `<span class="text-accent-light">not read yet</span>`;
-      const app = o ? reportAppState(d.path) : null;
-      const appLine = !app || app.total === 0 ? ""
-        : app.pending.length === 0
-          ? app.unchecked
-            ? `<span class="text-warning">${app.total} in your app, ${app.unchecked} awaiting your check there</span>`
-            : `<span class="text-success">${app.total} in your app</span>`
-          : `<span class="text-warning">${app.pending.length} of ${app.total} for your app not sent</span> <button data-sendrep="${esc(f.name)}" class="ml-1 rounded-md border border-accent/40 bg-accent/10 px-2 py-0.5 text-[11px] font-bold text-accent-light hover:bg-accent/20">Send</button>`;
-      return `
-        <div class="rounded-2xl border ${flagged ? "border-warning/45" : "border-white/10"} bg-white/[0.03] p-4">
-          <div class="flex items-center gap-3">
-            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-accent/[0.12]">
-              ${isPhotoName(f.name)
-                ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>`
-                : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>`}
-            </span>
-            <div class="min-w-0 flex-1">
-              <div class="flex items-center gap-2" data-namewrap>
-                <div class="truncate text-sm font-semibold text-text-primary">${esc(pretty(f.name))}</div>
-                <button data-ren="${esc(f.name)}" title="Rename" aria-label="Rename report" class="shrink-0 text-text-muted transition-colors hover:text-text-primary">
-                  <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
-                </button>
-              </div>
-              <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-tertiary">${dateChip}${modChip}${outcome ? `<span>${outcome}</span>` : ""}${appLine ? `<span>· ${appLine}</span>` : ""}</div>
-            </div>
-            <div class="hidden shrink-0 items-center gap-2 sm:flex">
-              <button data-view="${esc(f.name)}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-white/25 hover:text-text-primary">View</button>
-              <button data-parse="${esc(f.name)}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-white/25 hover:text-text-primary">${o || im ? "Read again" : "Read values"}</button>
-              <button data-del="${esc(f.name)}" title="Delete" aria-label="Delete report" class="rounded-lg border border-white/12 px-2 py-1.5 text-text-tertiary transition-colors hover:border-danger/50 hover:text-danger">
-                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
-              </button>
-            </div>
-          </div>
-          <div class="mt-3 flex flex-wrap gap-2 sm:hidden">
-            <button data-view="${esc(f.name)}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary">View</button>
-            <button data-parse="${esc(f.name)}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary">${o || im ? "Read again" : "Read values"}</button>
-            <button data-del="${esc(f.name)}" class="ml-auto rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-tertiary">Delete</button>
-          </div>
-          ${flagged ? `
-          <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-white/[0.06] pt-3">
-            <span class="rounded-md bg-warning/15 px-2 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-warning">Duplicate</span>
-            <span class="min-w-0 flex-1 text-xs leading-relaxed text-text-tertiary">The same file as <strong class="font-semibold text-text-secondary">${esc(pretty(original!))}</strong>. Its values were filed once; this PDF is a second copy.</span>
-            <button data-del="${esc(f.name)}" data-quiet class="rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-xs font-bold text-accent-light hover:bg-accent/20">Remove this copy</button>
-            <button data-keep="${esc(f.name)}" class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary hover:border-white/25">Keep both</button>
-          </div>` : ""}
-        </div>`;
-    };
-
-    $("repcards").innerHTML = (terms.length && !shown.length ? `<p class="rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm text-text-tertiary">No report matches "${esc(searchQuerySignal.value)}". A report matches by its name, its date, a value read from it, or its study.</p>` : "") + [...years.entries()].map(([y, list]) => `
-      <details class="group">
-        <summary class="flex cursor-pointer list-none items-center gap-2.5 py-1 text-text-primary [&::-webkit-details-marker]:hidden">
-          <span class="font-mono text-[13px] font-bold">${esc(y)}</span>
-          <span class="text-xs text-text-tertiary">${list.length} report${list.length === 1 ? "" : "s"}</span>
-          <svg class="h-3.5 w-3.5 text-text-tertiary transition-transform group-open:rotate-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
-        </summary>
-        <div class="mt-2 flex flex-col gap-2.5">
-          ${byMonth(list).map(([m, cards]) => `
-            ${m ? `<div class="mt-2 font-mono text-[10px] font-semibold uppercase tracking-widest text-text-tertiary first:mt-0">${esc(monthName(m))}</div>` : ""}
-            ${cards.map(card).join("")}`).join("")}
-        </div>
-      </details>`).join("");
-
-    if (!canWrite()) $("repcards").querySelectorAll("[data-parse],[data-del],[data-ren],[data-sendrep],[data-keep]").forEach((b) => b.remove());
-    $("repcards").querySelectorAll("[data-parse]").forEach((b) =>
-      b.addEventListener("click", () => parseReport((b as HTMLElement).dataset.parse!)));
-    $("repcards").querySelectorAll("[data-view]").forEach((b) =>
-      b.addEventListener("click", () => viewPdf(`${folder()}/${(b as HTMLElement).dataset.view}`)));
-    $("repcards").querySelectorAll("[data-del]").forEach((b) =>
-      b.addEventListener("click", async () => {
-        const el = b as HTMLElement;
-        // Removing a copy needs no question; deleting a report does. Its
-        // values stay on Labs either way — only the PDF goes.
-        if (el.dataset.quiet == null && !confirm(`Delete "${pretty(el.dataset.del!)}"? The PDF is removed; its values stay on your Labs tab.`)) return;
-        await supabase.storage.from("reports").remove([`${folder()}/${el.dataset.del}`]);
-        invalidateDocument(); renderReports();
-      }));
-    $("repcards").querySelectorAll("[data-keep]").forEach((b) =>
-      b.addEventListener("click", () => { keepBoth((b as HTMLElement).dataset.keep!); invalidateDocument(); renderReports(); }));
-    $("repcards").querySelectorAll("[data-sendrep]").forEach((b) =>
-      b.addEventListener("click", () => { reviewQueue = []; reviewPos = { n: 0, of: 0 }; reviewFromArchive(`${folder()}/${(b as HTMLElement).dataset.sendrep}`); }));
-    $("repcards").querySelectorAll("[data-ren]").forEach((b) =>
-      b.addEventListener("click", () => renameUI(b as HTMLElement)));
-  }
 
   async function viewPdf(path: string) {
     const { data: signed } = await supabase.storage.from("reports").createSignedUrl(path, 300);
@@ -3395,7 +3080,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     const safe = label.trim().replace(REPORT_EXT, "").replace(/[^\w.\- ]+/g, "").replace(/\s+/g, "_").slice(0, 80);
     if (!safe) { msg("upmsg", "Give the report a name first.", true); return; }
     const newName = `${stamp}-${safe}${ext}`;
-    if (newName === oldName) { await renderReports(); return; }
+    if (newName === oldName) return;
     const oldPath = `${folder()}/${oldName}`, newPath = `${folder()}/${newName}`;
     const { error } = await supabase.storage.from("reports").move(oldPath, newPath);
     if (error) { msg("upmsg", `Could not rename: ${error.message}`, true); return; }
@@ -3408,25 +3093,6 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     await refresh();
   }
 
-  function renameUI(btn: HTMLElement) {
-    const name = btn.dataset.ren!;
-    const wrap = btn.closest("[data-namewrap]") as HTMLElement;
-    const current = pretty(name);
-    wrap.innerHTML = `
-      <input data-reninput value="${esc(current)}" maxlength="80"
-        class="w-full min-w-0 flex-1 rounded-lg border border-accent/50 bg-white/[0.04] px-2.5 py-1 text-sm font-bold text-text-primary focus:outline-none" />
-      <button data-rensave class="shrink-0 rounded-lg bg-accent px-2.5 py-1 text-xs font-bold text-canvas">Save</button>
-      <button data-rencancel class="shrink-0 rounded-lg border border-white/12 px-2.5 py-1 text-xs font-semibold text-text-secondary">Cancel</button>`;
-    const input = wrap.querySelector("[data-reninput]") as HTMLInputElement;
-    input.focus(); input.select();
-    const save = () => renameReport(name, input.value);
-    wrap.querySelector("[data-rensave]")!.addEventListener("click", save);
-    wrap.querySelector("[data-rencancel]")!.addEventListener("click", () => renderReports());
-    input.addEventListener("keydown", (e) => {
-      if ((e as KeyboardEvent).key === "Enter") save();
-      if ((e as KeyboardEvent).key === "Escape") renderReports();
-    });
-  }
 
   // ── upload — drop several at once; one visible queue, files read one
   // after another so a failure in one never takes the others down ────────
@@ -3761,7 +3427,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
    */
   async function reviewFromArchive(path: string) {
     setTab("reports");
-    const { date, values } = appBoundFor(path);
+    const { date, values } = appBoundFor(allLabs, path, isSelf());
     const rows = allLabs.filter((r) => r.report_path === path);
     if (!date || rows.length === 0) { msg("upmsg", "Nothing filed from this report yet — Read again reads it.", true); return; }
     const appValues = values.map((v) => ({ key: v.key, value: v.value, unit: v.unit, label: v.name }));
@@ -4079,6 +3745,31 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   mountOverview({ line: $("ovline"), glance: $("ovglance"), section: $("ovsection") });
   mountLabs($("labsroot"));
   mountDepth($("depthroot"));
+  mountReports({ cards: $("repcards"), imports: $("appimportsroot"), years: $("yearsonfileroot") });
+  actions.tabCount = setTabCount;
+  // The Reports view asks; the page, which owns the upload and review flows, does.
+  actions.report = async (kind, name, extra) => {
+    const path = `${folder()}/${name}`;
+    if (kind === "parse") { await parseReport(name); return; }
+    if (kind === "view") { await viewPdf(path); return; }
+    if (kind === "send") { reviewQueue = []; reviewPos = { n: 0, of: 0 }; await reviewFromArchive(path); return; }
+    if (kind === "rename") { await renameReport(name, extra ?? ""); return; }
+    if (kind === "del") {
+      // Removing a copy needs no question; deleting a report does. Its
+      // values stay on Labs either way — only the PDF goes.
+      if (extra !== "quiet" && !confirm(`Delete "${pretty(name)}"? The PDF is removed; its values stay on your Labs tab.`)) return;
+      await supabase.storage.from("reports").remove([path]);
+      await refresh();
+      return;
+    }
+    if (kind === "rmimport") {
+      if (!confirm("Remove everything this file brought? Its weeks, fitness tests, waist readings and lab values are deleted from this page. The app itself is untouched.")) return;
+      await removeImport(name, person!);
+      show("importcard", false); $("importcard").classList.remove("flex");
+      msg("upmsg", "Removed; nothing from that export remains here.");
+      await refresh();
+    }
+  };
   actions.goTab = (t) => { if (t === "overview") setSectionState("all"); setTab(t); };
   actions.searchNote = searchNote;
   boot();

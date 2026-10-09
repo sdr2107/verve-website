@@ -44,6 +44,9 @@ export const depthWorking = signal<Record<string, unknown> | null>(null);
 export const actions = {
   goTab: (_t: string) => {},
   searchNote: (_text: string) => {},
+  tabCount: (_tab: string, _text: string, _tone?: string) => {},
+  /** The Reports tab's writes: parse, view, del, send, rename, rmimport. */
+  report: (_kind: string, _name: string, _extra?: string) => {},
 };
 /** Jump into one section of Labs, or straight to one marker's chart. */
 export function openLabs(sec: string, analyte = "") {
