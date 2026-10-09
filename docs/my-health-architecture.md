@@ -279,3 +279,21 @@ is the first thing to do if the fresh fetch is felt.
 Still read outside the document: the group glance for people besides you
 (`loadGlance`), the viewer's note on a shared page, the role chip's grants,
 and every write.
+
+**Step 2, the store** (2026-10-09): `src/my-health/store.ts`, IndexedDB,
+one row per account and person. Boot and a person switch read the store
+first and paint from it; the fresh document is fetched alongside and the
+page is drawn again only when its content differs (`sameDocument`,
+generated_at aside). The account merge no longer holds up the first paint:
+it runs beside it and redraws if it moved anyone. Sign-out clears the
+account's documents; people no longer on the list are pruned at boot.
+Measured on the reviewer account on the dev server:
+
+| mark | first visit | return visit |
+|---|---|---|
+| cached | — | 21 ms |
+| painted | 600 ms to 4.5 s, as the network allowed that minute | 24 ms |
+| fresh document in | — | 275 ms, no redraw when unchanged |
+
+Not yet: a fresh document that differs redraws every tab the old way, by
+rebuilding the HTML. Drawing only what changed is step 3's diffing.

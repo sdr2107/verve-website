@@ -847,6 +847,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   import { AUTO_SEND_TO_APP } from "../data/site";
   import { PLANS_ENFORCED, PLANS_OPEN, AI_SUMMARY_OPEN, entitlements, planOf, type PlanKey } from "../data/plans";
   import type { MyHealthDocument } from "../my-health/document";
+  import { readDocument, writeDocument, pruneDocuments, clearDocuments, sameDocument } from "../my-health/store";
 
   // ── the ruler ─────────────────────────────────────────────────────────
   // Six marks on the way to a drawn page, measured from the script's first
@@ -856,11 +857,11 @@ import SiteHeader from "../components/SiteHeader.astro";
   // load path is judged by these, never by feel. docs/my-health-architecture.md.
   const TIMING = (() => { try { return new URLSearchParams(location.search).has("timing") || localStorage.getItem("mh-timing") === "1"; } catch { return false; } })();
   const marked = new Set<string>();
-  const mark = (name: string) => { if (marked.has(name)) return; marked.add(name); performance.mark(`mh:${name}`); if (name === "painted" || name === "interaction") report(); };
+  const mark = (name: string) => { if (marked.has(name)) return; marked.add(name); performance.mark(`mh:${name}`); if (name === "painted" || name === "fresh" || name === "interaction") report(); };
   function report() {
     if (!TIMING) return;
     const t0 = performance.getEntriesByName("mh:script")[0]?.startTime ?? 0;
-    const rows = ["session", "people", "document", "painted", "interaction"].map((n) => {
+    const rows = ["session", "cached", "people", "document", "painted", "fresh", "interaction"].map((n) => {
       const e = performance.getEntriesByName(`mh:${n}`)[0];
       return { mark: n, ms: e ? Math.round(e.startTime - t0) : null };
     }).filter((r) => r.ms != null);
@@ -885,7 +886,37 @@ import SiteHeader from "../components/SiteHeader.astro";
   async function fetchDocument(personId: string | null): Promise<MyHealthDocument> {
     const { data, error } = await supabase.rpc("my_health_document", personId ? { person: personId } : {});
     if (error) throw error;
-    return data as MyHealthDocument;
+    const d = data as MyHealthDocument;
+    // kept for the next visit: under the person asked for, and under the
+    // person the function answered with (the account's own, when none was)
+    if (userId) { void writeDocument(userId, personId ?? "", d); if (d.person?.id && d.person.id !== personId) void writeDocument(userId, d.person.id, d); }
+    return d;
+  }
+  /**
+   * Paint from the last visit first (step 2). The document kept for this
+   * person is put in hand, so every loader draws at once; the fresh one is
+   * fetched alongside and, when it differs, everything is drawn again.
+   * Returns true when something was in hand.
+   */
+  async function openDocument(personId: string): Promise<boolean> {
+    docFor = personId;
+    const kept = userId ? await readDocument(userId, personId) : null;
+    if (kept) { doc = kept; docPromise = Promise.resolve(kept); mark("cached"); return true; }
+    doc = null;
+    docPromise = fetchDocument(personId || null).then((d) => { if (docFor === personId) doc = d; return d; });
+    return false;
+  }
+  /** After a paint from the store: the fresh document, and a redraw only when it says something new. */
+  async function revalidate(personId: string): Promise<void> {
+    let fresh: MyHealthDocument;
+    try { fresh = await fetchDocument(personId || null); } catch { return; }
+    if ((person?.id ?? "") !== (fresh.person?.id ?? "")) return;   // moved on to someone else meanwhile
+    mark("fresh");
+    if (doc && sameDocument(fresh, doc)) return;
+    doc = fresh; docFor = person?.id ?? "";
+    docPromise = Promise.resolve(fresh);
+    await loadPeople(); renderPeople();
+    await Promise.all([refresh(false), loadPersonNote(), loadSharing(), loadInvites(), loadAsked(), loadRequests(), loadGlance(), loadAiSummary()]);
   }
   /** The person's document: in hand, in flight, or fetched now. */
   function ensureDocument(): Promise<MyHealthDocument> {
@@ -1133,7 +1164,9 @@ import SiteHeader from "../components/SiteHeader.astro";
     $("upqueue").innerHTML = ""; show("upqueue", false);
     applyPersonMode();
     if (!p.mine && p.id) supabase.rpc("note_grant_view", { person: p.id }).then(() => {}, () => {});   // they can see when you last looked
+    const fromStore = await openDocument(id);
     await Promise.all([refresh(false), loadPersonNote(), loadSharing(), loadGlance(), loadAiSummary()]);
+    if (fromStore) void revalidate(id);
   }
 
   // ── add, edit, remove someone you look after ──────────────────────────
@@ -3144,7 +3177,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     if (who === bootedFor) return;
     bootedFor = who;
     // signed in, the line stays until the numbers are drawn, so nothing is drawn twice
-    if (session?.user) $("loading").textContent = "Reading your numbers…"; else show("loading", false);
+    if (!session?.user) show("loading", false);
     if (session?.user) {
       promotePendingDoor();
       let coachDoor = false;
@@ -3165,14 +3198,23 @@ import SiteHeader from "../components/SiteHeader.astro";
       // (or the account's own) starts here, and every loader reads from it.
       // The account merge is a write and runs alongside, once.
       let remembered = ""; try { remembered = sessionStorage.getItem(PERSON_KEY) ?? ""; } catch { /* fine */ }
-      docFor = remembered; docPromise = fetchDocument(remembered || null).then((d) => { if (docFor === remembered) doc = d; return d; });
-      const [, , , role, mergedFrom] = await Promise.all([resolveFirstName(session.user), loadPeople(), loadPlan(), loadMyRole(), mergeOtherAccounts()]);
+      const fromStore = await openDocument(remembered);
+      // the line and the frames show only when nothing is in hand: a first visit
+      if (fromStore) show("loading", false); else $("loading").textContent = "Reading your numbers…";
+      // The merge is a write, once, and is not waited for: with a document in
+      // hand the page paints now, and a merge that moved people redraws it.
+      const merging = mergeOtherAccounts();
+      const [, , , role] = await Promise.all([resolveFirstName(session.user), loadPeople(), loadPlan(), loadMyRole()]);
       myRole = role;
       mark("people");
-      if (mergedFrom.length) {
-        try { invalidateDocument(); await loadPeople(); for (const other of mergedFrom) await moveReportFiles(other); }   // people that were the other account's are now here
-        catch { /* the merge is a courtesy; the page works without it */ }
-      }
+      void merging.then(async (mergedFrom) => {
+        if (!mergedFrom.length) return;
+        try {
+          invalidateDocument(); await loadPeople(); renderPeople();
+          for (const other of mergedFrom) await moveReportFiles(other);   // people that were the other account's are now here
+          await Promise.all([refresh(false), loadPersonNote(), loadSharing(), loadInvites(), loadAsked(), loadRequests(), loadGlance(), loadAiSummary()]);
+        } catch { /* the merge is a courtesy; the page works without it */ }
+      });
       fillOwnName();
       firstName = fullName.split(/\s+/)[0] ?? "";
       $("greet").textContent = greeting();
@@ -3187,6 +3229,8 @@ import SiteHeader from "../components/SiteHeader.astro";
       // own at once. refresh() itself fetches labs, the app's rows and the
       // report folder together, then draws every tab once.
       await Promise.all([refresh(false).finally(() => show("loading", false)), loadPersonNote(), loadSharing(), loadInvites(), loadAsked(), loadRequests(), loadGlance(), loadAiSummary()]);
+      void pruneDocuments(userId, people.map((p) => p.id).filter(Boolean));
+      if (fromStore) void revalidate(person?.id ?? "");
     } else {
       firstName = "";
       people = []; person = null;
@@ -3809,6 +3853,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   }
 
   $("signout").addEventListener("click", async () => {
+    if (userId) await clearDocuments(userId);
     await supabase.auth.signOut();
     boot();
   });
