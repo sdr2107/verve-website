@@ -2331,6 +2331,10 @@ import SiteHeader from "../components/SiteHeader.astro";
     const hrr = { latest: lastH ? Number(lastH.hrr_bpm) : null, latestDay: lastH ? String(lastH.day) : null, median: hrrPri.length >= 5 ? Math.round(medianOf(hrrPri)!) : null, source: lastH?.hrr_source ?? null,
       band: hrrPri.length >= 5 ? (() => { const q = quartilesOf(hrrPri); return { lo: Math.round(q.q1), hi: Math.round(q.q3) }; })() : null, judged: hrrJudged };
 
+    // The app's rule (data/met-thresholds.json nightHrv.minNights): the band
+    // appears after 7 nights from one writer, not 14. The two surfaces read
+    // one night against one band; they must agree on when it exists.
+    const HRV_MIN_NIGHTS = 7;
     // night HRV: one writer, read against that writer's own last 30 nights with
     // a reading (the median, and the middle half of them). The app writes the
     // night's median SDNN-field value, the sample count, the writer's name and
@@ -2346,11 +2350,11 @@ import SiteHeader from "../components/SiteHeader.astro";
     /** The writer's last 30 nights before a day, judged against which a night is read. */
     const hrvPriorOf = (day: string) => own.filter((r) => r.day < day).slice(-30).map((r) => r.ms);
     const hrvPri = lastV ? hrvPriorOf(lastV.day) : [];
-    const hrvUsual = hrvPri.length >= 14 ? Math.round(medianOf(hrvPri)!) : null;
-    const hrvBand = hrvPri.length >= 14 ? (() => { const q = quartilesOf(hrvPri); return { lo: Math.round(q.q1), hi: Math.round(q.q3) }; })() : null;
+    const hrvUsual = hrvPri.length >= HRV_MIN_NIGHTS ? Math.round(medianOf(hrvPri)!) : null;
+    const hrvBand = hrvPri.length >= HRV_MIN_NIGHTS ? (() => { const q = quartilesOf(hrvPri); return { lo: Math.round(q.q1), hi: Math.round(q.q3) }; })() : null;
     // the last 28 nights, drawn; each judged against the writer's own 30 nights before it
     const hrvWin = own.filter((r) => r.day > daysBack(today, 28));
-    const hrvJudged = hrvWin.map((r) => { const pr = hrvPriorOf(r.day); const q = pr.length >= 14 ? quartilesOf(pr) : null; return { ...r, q1: q?.q1 ?? null, q3: q?.q3 ?? null, below: q != null && r.ms < q.q1, above: q != null && r.ms > q.q3 }; });
+    const hrvJudged = hrvWin.map((r) => { const pr = hrvPriorOf(r.day); const q = pr.length >= HRV_MIN_NIGHTS ? quartilesOf(pr) : null; return { ...r, q1: q?.q1 ?? null, q3: q?.q3 ?? null, below: q != null && r.ms < q.q1, above: q != null && r.ms > q.q3 }; });
     let hrvRun = 0; for (let i = hrvJudged.length - 1; i >= 0 && hrvJudged[i].below; i--) hrvRun++;
     const hrvRead = hrvJudged.filter((j) => j.q1 != null).length, hrvBelow = hrvJudged.filter((j) => j.below).length;
     let hrvSvg = "";
@@ -2625,7 +2629,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     }
     const fitWords = !latest ? "No test yet" : trendWord === "rising" ? "Rising" : trendWord === "falling" ? "Slipping, within the method" : "Holding, not yet rising";
     const rhrLine = heart?.rhr.latest != null ? (heart.rhr.read ? `Resting rate <strong class="text-text-primary">in band ${heart.rhr.inBand} of the last ${heart.rhr.read}</strong> mornings${heart.rhr.run > 1 ? `, <span class="text-warning">${heart.rhr.run} running above it</span>` : ""}` : "") : "";
-    const hrvLine = heart?.hrv.latest != null ? (heart.hrv.read ? `Night HRV <strong class="text-text-primary">in or above band ${heart.hrv.read - heart.hrv.nightsBelow} of the last ${heart.hrv.read}</strong> nights${heart.hrv.run > 1 ? `, <span class="text-warning">${heart.hrv.run} running below it</span>` : ""}` : `Night HRV <strong class="text-text-primary">${heart.hrv.latest} ms</strong>; a usual needs 14 nights from ${esc(heart.hrv.writer ?? "one writer")}, ${heart.hrv.priors} so far`) : "";
+    const hrvLine = heart?.hrv.latest != null ? (heart.hrv.read ? `Night HRV <strong class="text-text-primary">in or above band ${heart.hrv.read - heart.hrv.nightsBelow} of the last ${heart.hrv.read}</strong> nights${heart.hrv.run > 1 ? `, <span class="text-warning">${heart.hrv.run} running below it</span>` : ""}` : `Night HRV <strong class="text-text-primary">${heart.hrv.latest} ms</strong>; a usual needs ${HRV_MIN_NIGHTS} nights from ${esc(heart.hrv.writer ?? "one writer")}, ${heart.hrv.priors} so far`) : "";
     const trioLine = heart?.threeTogether ? `<span class="text-warning">Night HRV low, resting rate high and recovery small, each outside its own band, for the last 3 readings of each</span>: the one pattern the Guide names` : "";
     const ch4 = chapter(4, "FITNESS", esc(fitWords),
       `Every test compared only within its method: a maximal test against the last maximal, a submaximal against its own kind, never one against the other.`,
@@ -2678,7 +2682,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       hvFig != null ? `ms · ${hv7.length}-night avg` : "ms · latest night", hvOff ? "text-warning" : "text-text-primary",
       hv ? miniTrend(hv.series.map((j) => ({ day: j.day, v: j.ms, off: j.below, title: `${esc(fmtDay(j.day))}: ${j.ms} ms${j.n != null ? ` from ${count(j.n, "sample")}` : ""}${j.q1 != null ? ` · own band before ${Math.round(j.q1)}–${Math.round(j.q3!)}` : ""}` })), hv.band, hv.usual, daysBack(today, 27), today) : "",
       hv?.absent ? "No HRV reaches Apple Health from this wearable." : hv?.latest != null ? `Nothing from ${esc(hv.writer ?? "this writer")} in the last 28 nights; the latest night is ${esc(fmtDay(hv.latestDay!))}.` : nothingYet,
-      hv?.latest == null ? (hv?.absent ? "no writer in the last 30 nights" : "—") : hv.band ? `usual ${hv.usual} · band ${hv.band.lo}–${hv.band.hi} · ${count(hv.nightsBelow, "night")} below` : `a usual needs 14 nights from ${esc(hv.writer ?? "one writer")} · ${hv.priors} so far`,
+      hv?.latest == null ? (hv?.absent ? "no writer in the last 30 nights" : "—") : hv.band ? `usual ${hv.usual} · band ${hv.band.lo}–${hv.band.hi} · ${count(hv.nightsBelow, "night")} below` : `a usual needs ${HRV_MIN_NIGHTS} nights from ${esc(hv.writer ?? "one writer")} · ${hv.priors} so far`,
       "Twenty-eight nights of HRV from one writer, the person's own middle-half band shaded, the usual dashed, nights below it marked");
 
     // resting heart rate: the last 7 mornings, against the 30-morning median, five either side
