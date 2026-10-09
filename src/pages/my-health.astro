@@ -847,6 +847,29 @@ import SiteHeader from "../components/SiteHeader.astro";
   import { AUTO_SEND_TO_APP } from "../data/site";
   import { PLANS_ENFORCED, PLANS_OPEN, AI_SUMMARY_OPEN, entitlements, planOf, type PlanKey } from "../data/plans";
 
+  // ── the ruler ─────────────────────────────────────────────────────────
+  // Six marks on the way to a drawn page, measured from the script's first
+  // line: the session known, the people known, the person's document in,
+  // the page painted, the first tap. ?timing=1 (or localStorage mh-timing)
+  // prints them in the console and under the page. Every change to the
+  // load path is judged by these, never by feel. docs/my-health-architecture.md.
+  const TIMING = (() => { try { return new URLSearchParams(location.search).has("timing") || localStorage.getItem("mh-timing") === "1"; } catch { return false; } })();
+  const marked = new Set<string>();
+  const mark = (name: string) => { if (marked.has(name)) return; marked.add(name); performance.mark(`mh:${name}`); if (name === "painted" || name === "interaction") report(); };
+  function report() {
+    if (!TIMING) return;
+    const t0 = performance.getEntriesByName("mh:script")[0]?.startTime ?? 0;
+    const rows = ["session", "people", "document", "painted", "interaction"].map((n) => {
+      const e = performance.getEntriesByName(`mh:${n}`)[0];
+      return { mark: n, ms: e ? Math.round(e.startTime - t0) : null };
+    }).filter((r) => r.ms != null);
+    console.table(rows);
+    let el = document.getElementById("mh-timing");
+    if (!el) { el = document.createElement("div"); el.id = "mh-timing"; el.className = "mx-auto mt-6 max-w-6xl px-4 font-mono text-[11px] text-text-tertiary"; document.querySelector("main")?.appendChild(el); }
+    el.textContent = "ruler · " + rows.map((r) => `${r.mark} ${r.ms} ms`).join(" · ") + ` · ${Math.round(performance.now() - t0)} ms since script`;
+  }
+  mark("script");
+
   // ── tiny DOM helpers ───────────────────────────────────────────────────
   const $ = (id: string) => document.getElementById(id)!;
   const show = (id: string, on: boolean) => $(id).classList.toggle("hidden", !on);
@@ -2659,7 +2682,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       for (const q of pts) out += `<circle cx="${xf(q.day).toFixed(1)}" cy="${yf(q.v).toFixed(1)}" r="${q.off ? 3.2 : 1.8}" fill="${q.off ? "#FBBF24" : "#818cf8"}" stroke="${q.off ? "#FBBF24" : "#818cf8"}" stroke-width="1.5"><title>${q.title}</title></circle>`;
       return out;
     };
-    const nothingYet = !p.account_id ? "Only for a person with a Verve account: the app sends it on every sync." : !canSeeHeart ? `${esc(p.name)} has not shared sleep and heart.` : "Nothing read yet. Open the app once with Apple Health and Cloud Sync on.";
+    const nothingYet = !p.account_id ? "Only for a person with a Verve account: the app sends it on every sync." : !canSeeHeart ? `${esc(p.name)} has not shared sleep and heart.` : (p.self ? "Nothing here yet. In the app, turn on Back up watch readings (Settings → Your data → Backup); the night's sleep, resting heart rate and recovery arrive on the next sync. Off, they stay on the phone." : "Nothing read yet: their app's Back up watch readings switch is off, or the watch has not written a night yet.");
     const heartCard = (label: string, figure: string | null, over: string, tone: string, trend: string, empty: string, caption: string, alt: string) => `
       <div class="flex min-h-[236px] flex-col gap-2.5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
         ${kicker(label)}
@@ -3048,6 +3071,7 @@ import SiteHeader from "../components/SiteHeader.astro";
   // ── tabs ───────────────────────────────────────────────────────────────
   let activeTab = "overview";
   function setTab(t: string) {
+    if (marked.has("painted")) mark("interaction");
     // Everyone is a view of the account, not of a person: the greeting and
     // the person's own rows step aside, and no person is lit in the sidebar
     // a group with no one in it is still a page: the coach's door lands there with the ask
@@ -3124,6 +3148,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     if (door === "coach" || door === "clinician") { try { localStorage.setItem(COACH_DOOR, door); } catch { /* private mode */ } }
     if (url.searchParams.has("code") || oauthError || door || start) history.replaceState(null, "", location.pathname + location.hash);
     const { data: { session } } = await supabase.auth.getSession();
+    mark("session");
     // signed in, the line stays until the numbers are drawn, so nothing is drawn twice
     if (session?.user) $("loading").textContent = "Reading your numbers…"; else show("loading", false);
     if (session?.user) {
@@ -3144,6 +3169,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       // These used to be three hops in a row (name, then people, then merge).
       const [, , , role, mergedFrom] = await Promise.all([resolveFirstName(session.user), loadPeople(), loadPlan(), loadMyRole(), mergeOtherAccounts()]);
       myRole = role;
+      mark("people");
       if (mergedFrom.length) {
         try { await loadPeople(); for (const other of mergedFrom) await moveReportFiles(other); }   // people that were the other account's are now here
         catch { /* the merge is a courtesy; the page works without it */ }
@@ -3438,10 +3464,12 @@ import SiteHeader from "../components/SiteHeader.astro";
     });
     const [, , files] = await Promise.all([labs, activity, listReportFolder()]);
     if (person?.id !== p?.id) return;
+    mark("document");
     renderOverview();
     renderLabsRail(); renderLabsPanel();
     renderDepth();
     await renderReports(files);
+    mark("painted");
   }
 
   // ═══ THE APP'S SHARE OF A REPORT ═════════════════════════════════════════
@@ -4507,6 +4535,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     </div>`;
   }
   function setSection(k: "all" | SecKey) {
+    if (marked.has("painted")) mark("interaction");
     ovSection = k;
     focusTile = false; openYear = null; openMarkerKey = "";
     if (activeTab !== "overview") setTab("overview");
