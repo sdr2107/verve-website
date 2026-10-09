@@ -396,3 +396,31 @@ per tab and the Supabase client loaded after the first paint. The group
 table for people besides you (`loadGlance`) still reads its tables
 itself; it is outside the one document by design for now, since it
 spans every person the account can see.
+
+**Where step 3 stands** (2026-10-09, evening): every tab is a view of the
+document. The page script is 3,739 lines, down from 5,673: what remains
+is the shell, boot, the store plumbing, and the write flows (sign-in,
+upload and parsing, the review, sharing, the forms, the AI card). The
+views and the derive layer are bundled into the same script, so the
+bundle is still 257 KB plus 209 KB for the Supabase client.
+
+Measured on the production build, a return visit, from navigation start
+rather than from the script's first line:
+
+| mark | ms since navigation |
+|---|---|
+| script runs | 22 |
+| painted from the store | 32 |
+| fresh document in | 246 |
+
+The browser serves both bundles from its cache on a return visit (300
+bytes transferred each), so the two remaining deferrals, the tab code
+loaded on first opening and the Supabase client loaded after the first
+paint, would buy time only on a cold cache, the first visit on a device.
+Doing them properly means splitting the page script into an entry (the
+session from local storage, the store, the views, the head start) and a
+flows module loaded after, with the hundred Supabase calls in the flows
+reaching the client through an await. That is a day's refactor of the
+write paths for a first-visit gain of a few hundred milliseconds on a
+slow connection. Recommended: leave it unless first-visit time becomes a
+complaint; the views and the document have already done the work.
