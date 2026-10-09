@@ -42,7 +42,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     >Sign out</button>
   </SiteHeader>
 
-  <main class="vrv-glow relative mx-auto max-w-7xl px-6 pb-24 sm:px-10">
+  <main class="vrv-glow relative mx-auto min-h-[80vh] max-w-7xl px-6 pb-24 sm:px-10">
 
     <!-- ── signed out: what My health is for, then the way in ────────────
          The page says why you would sign in before it asks you to: three
@@ -322,10 +322,16 @@ import SiteHeader from "../components/SiteHeader.astro";
           <!-- the newsletter, asked once of an account that never saw the box on
                the sign-up form (Apple and Google sign-ins). Either answer is
                written to the account, so the question is asked exactly once. -->
-          <div id="newsask" class="mt-3 hidden flex-wrap items-center gap-2">
-            <span class="text-[13px] text-text-secondary">The Verve newsletter: an email now and then on the science, and what changed in the app. Send it to you?</span>
-            <button type="button" id="newsyes" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Yes, send it</button>
+          <div id="newsask" class="mt-3 hidden max-w-3xl flex-wrap items-center gap-2">
+            <span id="newstext" class="text-[13px] text-text-secondary">The Verve newsletter: an email now and then on the science, and what changed in the app. Send it to you?</span>
+            <!-- signed in with Apple and "Hide my email": the account's address is a relay that
+                 forwards only senders Apple has on file, so the letter needs one it can reach -->
+            <span id="newsrelay" class="hidden basis-full text-[13px] text-text-secondary">Apple hides your address from Verve, so the letter needs one it can reach: where should it go?</span>
+            <input id="newsemail" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" aria-label="The address to send the newsletter to"
+              class="hidden w-60 max-w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none sm:text-sm" />
+            <button type="button" id="newsyes" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas transition-opacity hover:opacity-90 disabled:opacity-60">Yes, send it</button>
             <button type="button" id="newsno" class="text-xs font-medium text-text-tertiary hover:text-text-primary">No thanks</button>
+            <span id="newsmsg" class="hidden basis-full text-[12.5px] leading-snug text-text-primary" role="status" aria-live="polite"></span>
           </div>
         </div>
         <button
@@ -512,8 +518,10 @@ import SiteHeader from "../components/SiteHeader.astro";
              under the greeting that says the week in a breath. The lab values
              stay on Labs; the Body card carries the count and what is due.
              A card opens its section. -->
-        <p id="ovline" class="mb-5 hidden text-[14px] leading-relaxed text-text-secondary"></p>
-        <div id="ovglance" class="grid gap-4 sm:grid-cols-2"></div>
+        <p id="ovline" class="mb-5 min-h-[22px] text-[14px] leading-relaxed text-text-secondary"></p>
+        <!-- the four cards' frames are painted by the script before any request leaves (glanceFrame),
+             so the page has its height from the first paint and nothing below them jumps -->
+        <div id="ovglance" class="grid min-h-[150px] gap-4 sm:grid-cols-2"></div>
 
         <p class="mt-7 font-mono text-[10.5px] text-text-muted lg:hidden">Drag a PDF anywhere on this page to add it.</p>
        </div>
@@ -543,9 +551,9 @@ import SiteHeader from "../components/SiteHeader.astro";
 
       <!-- ═══ LABS ═══════════════════════════════════════════════════════ -->
       <!-- ═══ IN DEPTH: one person, at the depth a coach wants ═══════════════
-           Four answers to "how is this person doing" as one strip, then five
-           chapters with the working: rhythm, load, sessions, fitness and
-           recovery, labs and body and what is due. Every number
+           Four answers to "how is this person doing" as one strip, then six
+           chapters with the working: rhythm, load, sessions, fitness, sleep
+           and heart, labs and body and what is due. Every number
            here is computed from rows the page already reads, so a person
            you look after gets the same page from their exports, and a
            client's page shows only what their scopes let you read. -->
@@ -556,7 +564,7 @@ import SiteHeader from "../components/SiteHeader.astro";
         <!-- "In Verve's words": a short reading of this page, written by Claude from the page's own working -->
         <section id="dp-ai" class="mb-5 hidden flex-col gap-3 rounded-2xl border border-accent/50 bg-accent/[0.07] p-5"></section>
         <p id="dp-empty" class="hidden max-w-3xl text-[13.5px] leading-relaxed text-text-tertiary"></p>
-        <!-- whose page, in one line; the four answers as one strip; then five chapters, each a sentence, the working beside it -->
+        <!-- whose page, in one line; the four answers as one strip; then six chapters, each a sentence, the working beside it -->
         <div id="dp-head" class="hidden"></div>
         <div id="dp-cards" class="mt-5 hidden border-y border-white/[0.08] sm:grid-cols-2 lg:grid-cols-4"></div>
         <div id="dp-chapters" class="mt-8 hidden flex-col gap-10"></div>
@@ -1303,18 +1311,14 @@ import SiteHeader from "../components/SiteHeader.astro";
   // lands. Every step is safe to repeat, so a failure part-way heals on the
   // next visit. Never allowed to break the page.
   let mergedThisLoad = false;
-  async function mergeOtherAccounts() {
-    if (mergedThisLoad) return;
+  /** The merge itself, one call, run beside the first reads; boot() reloads the people and moves the files once the people are known. */
+  async function mergeOtherAccounts(): Promise<string[]> {
+    if (mergedThisLoad) return [];
     mergedThisLoad = true;
     try {
       const { data } = await supabase.rpc("merge_accounts_by_email", { calling_user_id: userId });
-      const others: string[] = Array.isArray(data?.merged_from) ? data.merged_from : [];
-      if (!others.length) return;
-      await loadPeople();   // people that were the other account's are now here
-      let moved = 0;
-      for (const other of others) moved += await moveReportFiles(other);
-      if (moved) await renderReports();
-    } catch { /* the merge is a courtesy; the page works without it */ }
+      return Array.isArray(data?.merged_from) ? data.merged_from : [];
+    } catch { return []; }   // the merge is a courtesy; the page works without it
   }
 
   /**
@@ -1931,13 +1935,24 @@ import SiteHeader from "../components/SiteHeader.astro";
    * rows: the site then said 141 days without a workout. The builder is a
    * function because a query is spent once it runs.
    */
+  // The API hands back 1,000 rows a call. A full first page means more:
+  // the next pages are asked for three at a time, together, so a table of
+  // 1,300 or 3,000 rows costs two round trips, not two or four in a row.
   async function pageAll(build: () => any, maxPages = 10): Promise<{ data: any[]; error: any }> {
-    const out: any[] = [];
-    for (let i = 0; i < maxPages; i++) {
-      const { data, error } = await build().range(i * 1000, i * 1000 + 999);
-      if (error) return { data: out, error };
-      out.push(...(data ?? []));
-      if (!data || data.length < 1000) break;
+    const first = await build().range(0, 999);
+    if (first.error) return { data: [], error: first.error };
+    const out: any[] = [...(first.data ?? [])];
+    if (out.length < 1000) return { data: out, error: null };
+    for (let page = 1; page < maxPages; page += 3) {
+      const pages = [page, page + 1, page + 2].filter((i) => i < maxPages);
+      const got = await Promise.all(pages.map((i) => build().range(i * 1000, i * 1000 + 999)));
+      let short = false;
+      for (const { data, error } of got) {
+        if (error) return { data: out, error };
+        out.push(...(data ?? []));
+        if (!data || data.length < 1000) { short = true; break; }
+      }
+      if (short) break;
     }
     return { data: out, error: null };
   }
@@ -1955,7 +1970,8 @@ import SiteHeader from "../components/SiteHeader.astro";
         .eq("user_id", accountId).is("deleted_at", null).order("timestamp", { ascending: true }).limit(300),
       supabase.from("waist_readings").select("measured_at, waist_cm")
         .eq("user_id", accountId).is("deleted_at", null).order("measured_at", { ascending: true }).limit(600),
-      supabase.from("profiles").select("weekly_met_hours_goal, height_cm, sex, age").eq("user_id", accountId).maybeSingle(),
+      // your own profile came with the sign-in read; everyone else's is asked for
+      accountId === userId && ownProfile ? Promise.resolve({ data: (() => { const r = ownProfile; ownProfile = null; return r; })() }) : supabase.from("profiles").select("weekly_met_hours_goal, height_cm, sex, age").eq("user_id", accountId).maybeSingle(),
       // every column: the app adds activity level, standing, sitting and cadence as it learns to send them
       pageAll(() => supabase.from("daily_signals").select("*")
         .eq("user_id", accountId).gte("day", since.toLocaleDateString("en-CA")).order("day", { ascending: true })),
@@ -2020,7 +2036,6 @@ import SiteHeader from "../components/SiteHeader.astro";
     syncSignals = synced?.signals ?? [];
     syncWeights = synced?.weights ?? [];
     renderAppImports();
-    renderDepth();
   }
 
   // ── the 21 markers, in the three sections the landing page counts ──────
@@ -2252,7 +2267,16 @@ import SiteHeader from "../components/SiteHeader.astro";
    * The app's daily rows, read the way its Today tile reads them. Null when
    * there are no rows at all; every part inside can be empty on its own.
    */
+  // Read by the Overview's heart tiles (three of them, each with a band and
+  // a reading) and by In depth: one computation a render, not seven.
+  let heartMemo: { rows: any[]; today: string; out: ReturnType<typeof sleepHeartSummaryRaw> } | null = null;
   function sleepHeartSummary(rows: any[], today: string) {
+    if (heartMemo && heartMemo.rows === rows && heartMemo.today === today) return heartMemo.out;
+    const out = sleepHeartSummaryRaw(rows, today);
+    heartMemo = { rows, today, out };
+    return out;
+  }
+  function sleepHeartSummaryRaw(rows: any[], today: string) {
     if (!rows.length) return null;
     const byDay = new Map<string, any>(rows.map((r) => [String(r.day), r]));
 
@@ -2260,6 +2284,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     const rhrRows = rows.filter((r) => r.resting_hr != null).map((r) => ({ day: String(r.day), bpm: Number(r.resting_hr) }));
     const latestR = rhrRows[rhrRows.length - 1] ?? null;
     let baseline: number | null = null, priors = 0, delta: number | null = null, status = "", level = "", run = 0, inBand = 0, read = 0, svg = "";
+    let rhrSeries: Array<{ day: string; bpm: number; b: number | null; above: boolean }> = [];
     if (latestR) {
       const from = daysBack(latestR.day, 30);
       const pri = rhrRows.filter((r) => r.day >= from && r.day < latestR.day).map((r) => r.bpm);
@@ -2273,6 +2298,7 @@ import SiteHeader from "../components/SiteHeader.astro";
       // the last 28 mornings, drawn; each judged against the median of its own prior 30
       const win = rhrRows.filter((r) => r.day > daysBack(today, 28));
       const judged = win.map((r) => { const f = daysBack(r.day, 30); const pr = rhrRows.filter((x) => x.day >= f && x.day < r.day).map((x) => x.bpm); const b = pr.length >= 14 ? medianOf(pr)! : null; return { ...r, b, above: b != null && r.bpm - b >= 5 }; });
+      rhrSeries = judged;
       read = judged.length; inBand = judged.filter((j) => j.b != null && !j.above && j.bpm - j.b! > -5).length;
       for (let i = judged.length - 1; i >= 0 && judged[i].above; i--) run++;
       if (judged.length) {
@@ -2342,7 +2368,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     // sleep rows in the window but no HRV: the wearable is not writing it
     const hrvAbsent = !hrvAll.some((r) => r.day > daysBack(today, 30)) && rows.some((r) => r.sleep_minutes != null && r.day > daysBack(today, 30));
     const hrv = { latest: lastV?.ms ?? null, latestDay: lastV?.day ?? null, samples: lastV?.n ?? null, writer: hrvWriter, method: hrvMethod, otherWriters, usual: hrvUsual, band: hrvBand, priors: hrvPri.length,
-      below: lastV != null && hrvBand != null && lastV.ms < hrvBand.lo, run: hrvRun, read: hrvRead, nightsBelow: hrvBelow, absent: hrvAbsent, svg: hrvSvg };
+      below: lastV != null && hrvBand != null && lastV.ms < hrvBand.lo, run: hrvRun, read: hrvRead, nightsBelow: hrvBelow, absent: hrvAbsent, svg: hrvSvg, series: hrvJudged };
 
     // The one pattern the Guide names: night HRV low, resting rate high and
     // recovery small, each against its own band, for the last 3 readings of
@@ -2364,7 +2390,19 @@ import SiteHeader from "../components/SiteHeader.astro";
     const first = rows[0]?.day ? String(rows[0].day) : today;
     const days = Math.round((new Date(today + "T00:00:00").getTime() - new Date(first + "T00:00:00").getTime()) / 86400000) + 1;
     void byDay;
-    return { days, rhr: { latest: latestR?.bpm ?? null, latestDay: latestR?.day ?? null, baseline, priors, delta, status, level, run, inBand, read, svg }, sleep, hrr, hrv, threeTogether, steps };
+    return { days, rhr: { latest: latestR?.bpm ?? null, latestDay: latestR?.day ?? null, baseline, priors, delta, status, level, run, inBand, read, svg, series: rhrSeries }, sleep, hrr, hrv, threeTogether, steps };
+  }
+
+  /** The sleep-and-heart rows the chapter drew, as a CSV: one row a night, the app's own columns. */
+  function exportHeartRows(rows: any[], today: string) {
+    const cols = ["day", "sleep_minutes", "sleep_start", "resting_hr", "hrr_bpm", "hrr_source", "hrv_night_ms", "hrv_n", "hrv_source", "hrv_method"];
+    const cell = (v: unknown) => { const t = v == null ? "" : String(v); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+    const csv = [cols.join(","), ...rows.map((r) => cols.map((c) => cell(r[c])).join(","))].join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = `verve-sleep-heart-${(person?.name || "me").toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${today}.csv`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
   function renderDepth() {
@@ -2589,32 +2627,136 @@ import SiteHeader from "../components/SiteHeader.astro";
     const rhrLine = heart?.rhr.latest != null ? (heart.rhr.read ? `Resting rate <strong class="text-text-primary">in band ${heart.rhr.inBand} of the last ${heart.rhr.read}</strong> mornings${heart.rhr.run > 1 ? `, <span class="text-warning">${heart.rhr.run} running above it</span>` : ""}` : "") : "";
     const hrvLine = heart?.hrv.latest != null ? (heart.hrv.read ? `Night HRV <strong class="text-text-primary">in or above band ${heart.hrv.read - heart.hrv.nightsBelow} of the last ${heart.hrv.read}</strong> nights${heart.hrv.run > 1 ? `, <span class="text-warning">${heart.hrv.run} running below it</span>` : ""}` : `Night HRV <strong class="text-text-primary">${heart.hrv.latest} ms</strong>; a usual needs 14 nights from ${esc(heart.hrv.writer ?? "one writer")}, ${heart.hrv.priors} so far`) : "";
     const trioLine = heart?.threeTogether ? `<span class="text-warning">Night HRV low, resting rate high and recovery small, each outside its own band, for the last 3 readings of each</span>: the one pattern the Guide names` : "";
-    const hrvKicker = heart?.hrv.latest != null ? `NIGHT HRV · ${esc(String(heart.hrv.writer ?? "").toUpperCase())} · ${heart.hrv.method === "sdnn" ? "SDNN" : heart.hrv.method === "rmssd" ? "RMSSD" : "METHOD UNDECLARED"}${heart.hrv.band ? ` · BAND ${heart.hrv.band.lo}–${heart.hrv.band.hi}` : ""}` : "NIGHT HRV";
-    const hrvPanel = panel(`${kicker(hrvKicker)}${heart?.hrv.svg ? `<svg viewBox="0 0 540 150" class="mt-2 block h-auto w-full" role="img" aria-label="Twenty-eight nights of HRV from one writer, the person's own middle-half band shaded, nights below it marked">${heart.hrv.svg}</svg>` : heart?.hrv.latest != null ? `<p class="mt-2 text-[13px] text-text-tertiary">Nothing from ${esc(heart.hrv.writer ?? "this writer")} in the last 28 nights; the latest night is ${esc(fmtDay(heart.hrv.latestDay!))}.</p>` : heart?.hrv.absent ? `<div class="mt-2 text-[24px] font-extrabold leading-tight text-text-muted">—</div><p class="mt-1 text-[13px] leading-relaxed text-text-tertiary">No HRV reaches Apple Health from this wearable.</p>` : `<p class="mt-2 text-[13px] text-text-tertiary">${!p.account_id ? "Only for a person with a Verve account: the app sends it on every sync." : !canSeeHeart ? `${esc(p.name)} has not shared sleep and heart.` : "Nothing read yet. Open the app once with Apple Health and Cloud Sync on."}</p>`}
-          ${heart?.hrv.latest != null ? `<div class="mt-2 flex flex-col gap-1 text-[12.5px] leading-relaxed text-text-secondary">
-            <div>Last night <strong class="${heart.hrv.below ? "text-warning" : "text-text-primary"}">${heart.hrv.latest} ms</strong> ${esc(dayWord(heart.hrv.latestDay!))}${heart.hrv.samples != null ? ` · ${heart.hrv.samples} sample${heart.hrv.samples === 1 ? "" : "s"}` : ""}${heart.hrv.usual != null ? ` · usual ${heart.hrv.usual}` : ""}${heart.hrv.below ? " · under the band" : ""}</div>
-            <div class="text-text-tertiary">${esc(heart.hrv.writer ?? "")} · ${heart.hrv.method === "sdnn" ? "SDNN" : heart.hrv.method === "rmssd" ? "rMSSD" : "method undeclared"}; the band is the middle half of ${their} last ${heart.hrv.priors} nights from this writer${heart.hrv.otherWriters.length ? `. ${esc(heart.hrv.otherWriters.join(", "))} also wrote HRV in the last 30 nights with data; only ${esc(heart.hrv.writer ?? "the latest writer")}'s nights are read here, never mixed` : ""}.</div>
-          </div>` : ""}`);
-    const ch4 = chapter(4, "FITNESS AND RECOVERY", esc(fitWords),
-      `Every test compared only within its method. Resting heart rate is read against ${their} own 28-day band, and night HRV against ${their} own 30 nights from one writer, so a rise or a fall here is a change for ${who}, not for a population.`,
+    const ch4 = chapter(4, "FITNESS", esc(fitWords),
+      `Every test compared only within its method: a maximal test against the last maximal, a submaximal against its own kind, never one against the other.`,
       [latest ? `<strong class="text-text-primary">${fmt1(latest.v)} mL/kg/min</strong> by ${esc(methodLabel(latest.method))} on ${esc(fmtDay(latest.measured_on))}${within != null ? `, ${within >= 0 ? "up" : "down"} ${fmt1(Math.abs(within))} on the ${esc(methodLabel(latest.method))} of ${esc(monthYearOf(prevSame!.measured_on))}` : ", the first of its method"}` : "",
        latest?.category ? `Category <strong class="text-text-primary">${esc(String(latest.category).replace(/-/g, " "))}</strong>` : "",
-       crfDue ? `Retest <strong class="${dueTone(crfDue)}">${dueWord(crfDue)}</strong>, the app's own reminder` : "",
-       rhrLine, hrvLine, trioLine].filter(Boolean),
-      `<div class="grid gap-3.5 lg:grid-cols-2">
-        ${panel(`${kicker("FITNESS TESTS")}${tests.length ? `<svg viewBox="0 0 540 140" class="mt-2 block h-auto w-full" role="img" aria-label="Fitness tests over time, maximal tests in colour and submaximal in grey">${fsvg}</svg><p class="mt-1.5 text-[12px] leading-relaxed text-text-muted">${tests.some((t) => !t.max) ? "Submaximal tests in grey, never compared with a maximal one." : "All tests on file are maximal."}</p>` : `<p class="mt-2 text-[13px] text-text-tertiary">No fitness test on file.</p>`}`)}
-        ${panel(`${kicker(`RESTING HEART RATE · LAST 28 MORNINGS${heart?.rhr.baseline != null ? ` · NORMAL ${heart.rhr.baseline - 5}–${heart.rhr.baseline + 5}` : ""}`)}${heart?.rhr.svg ? `<svg viewBox="0 0 540 150" class="mt-2 block h-auto w-full" role="img" aria-label="Twenty-eight mornings of resting heart rate, the person's own band shaded, mornings above it marked">${heart.rhr.svg}</svg>` : `<p class="mt-2 text-[13px] text-text-tertiary">${!p.account_id ? "Only for a person with a Verve account: the app sends it on every sync." : !canSeeHeart ? `${esc(p.name)} has not shared sleep and heart.` : "Nothing read yet. Open the app once with Apple Health and Cloud Sync on."}</p>`}
-          ${heart ? `<div class="mt-2 flex flex-col gap-1 text-[12.5px] leading-relaxed text-text-secondary">
-            ${heart.sleep.last ? `<div>Sleep <strong class="text-text-primary">${fmtSleepMin(heart.sleep.last.min)}</strong> ${esc(dayWord(heart.sleep.last.day))}${heart.sleep.usual != null ? ` · usual ${fmtSleepMin(heart.sleep.usual)}` : ""} · <span class="${heart.sleep.last.band === "inRange" ? "text-success-light" : "text-warning"}">${heart.sleep.last.band === "short" ? "under 7 h" : heart.sleep.last.band === "long" ? "over 9 h" : "in the 7 to 9 h band"}</span></div>` : ""}
-            ${heart.hrr.latest != null ? `<div>Recovery <strong class="${heart.hrr.latest <= 12 ? "text-danger" : "text-text-primary"}">${heart.hrr.latest} bpm</strong> ${esc(dayWord(heart.hrr.latestDay!))}${heart.hrr.median != null ? ` · own median ${heart.hrr.median}` : ""}${heart.hrr.latest <= 12 ? " · at or under the cited 12" : ""}</div>` : ""}
-            ${heart.steps.avg != null ? `<div>Steps <strong class="text-text-primary">${heart.steps.avg.toLocaleString()}</strong> a day over the last 7${heart.steps.prior != null ? ` · ${heart.steps.prior.toLocaleString()} the week before` : ""}</div>` : ""}
-          </div>` : ""}`)}
-        ${hrvPanel}
-      </div>`);
+       crfDue ? `Retest <strong class="${dueTone(crfDue)}">${dueWord(crfDue)}</strong>, the app's own reminder` : ""].filter(Boolean),
+      panel(`${kicker("FITNESS TESTS")}${tests.length ? `<svg viewBox="0 0 540 140" class="mt-2 block h-auto w-full" role="img" aria-label="Fitness tests over time, maximal tests in colour and submaximal in grey">${fsvg}</svg><p class="mt-1.5 text-[12px] leading-relaxed text-text-muted">${tests.some((t) => !t.max) ? "Submaximal tests in grey, never compared with a maximal one." : "All tests on file are maximal."}</p>` : `<p class="mt-2 text-[13px] text-text-tertiary">No fitness test on file.</p>`}`));
 
-    // ── 5 · labs, body, and what is due ──────────────────────────────────
+    // ── 5 · sleep and heart: three readings, each against its own band ───
+    // Figures first: three equal cards, the person's own band shaded under
+    // a small trend with the usual dashed, and a mono caption with the
+    // usual, the band and the count outside it. Then the three read
+    // together, the way a coach or clinician would. No score anywhere.
+    const win7 = daysBack(today, 7), win28 = daysBack(today, 28);
+    /** The small trend: 28 days across, the band shaded, the usual dashed, the readings outside the band marked. */
+    const miniTrend = (pts: Array<{ day: string; v: number; off: boolean; title: string }>, band: { lo: number; hi: number } | null, usual: number | null, from: string, to: string) => {
+      if (!pts.length) return "";
+      const vs = pts.map((q) => q.v);
+      const lo = Math.min(...vs, band ? band.lo : Infinity) - 2, hi = Math.max(...vs, band ? band.hi : -Infinity) + 2;
+      const t0 = new Date(from + "T00:00:00").getTime(), t1 = Math.max(new Date(to + "T00:00:00").getTime(), t0 + 86400000);
+      const xf = (d: string) => 4 + ((new Date(d + "T00:00:00").getTime() - t0) / (t1 - t0)) * 282;
+      const yf = (v: number) => 100 - ((v - lo) / Math.max(1, hi - lo)) * 90;
+      let out = "";
+      if (band) out += `<rect x="4" y="${yf(band.hi).toFixed(1)}" width="282" height="${Math.max(1, yf(band.lo) - yf(band.hi)).toFixed(1)}" fill="#818cf8" fill-opacity="0.12"/>`;
+      if (usual != null) out += `<line x1="4" y1="${yf(usual).toFixed(1)}" x2="286" y2="${yf(usual).toFixed(1)}" stroke="#818cf8" stroke-opacity="0.6" stroke-dasharray="3 3"/><text x="290" y="${(yf(usual) + 3).toFixed(1)}" fill="#818cf8" font-size="9" font-family="${MONO}">usual</text>`;
+      if (pts.length > 1) out += `<polyline points="${pts.map((q) => `${xf(q.day).toFixed(1)},${yf(q.v).toFixed(1)}`).join(" ")}" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linejoin="round"/>`;
+      for (const q of pts) out += `<circle cx="${xf(q.day).toFixed(1)}" cy="${yf(q.v).toFixed(1)}" r="${q.off ? 3.2 : 1.8}" fill="${q.off ? "#FBBF24" : "#818cf8"}" stroke="${q.off ? "#FBBF24" : "#818cf8"}" stroke-width="1.5"><title>${q.title}</title></circle>`;
+      return out;
+    };
+    const nothingYet = !p.account_id ? "Only for a person with a Verve account: the app sends it on every sync." : !canSeeHeart ? `${esc(p.name)} has not shared sleep and heart.` : "Nothing read yet. Open the app once with Apple Health and Cloud Sync on.";
+    const heartCard = (label: string, figure: string | null, over: string, tone: string, trend: string, empty: string, caption: string, alt: string) => `
+      <div class="flex min-h-[236px] flex-col gap-2.5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+        ${kicker(label)}
+        <div class="text-[28px] font-extrabold leading-none ${figure != null ? tone : "text-text-muted"}">${figure ?? "—"}${figure != null ? ` <span class="text-[12px] font-medium text-text-secondary">${over}</span>` : ""}</div>
+        ${trend ? `<svg viewBox="0 0 330 110" class="block h-auto w-full" role="img" aria-label="${alt}">${trend}</svg>` : `<p class="text-[12.5px] leading-relaxed text-text-tertiary">${empty}</p>`}
+        <div class="mt-auto font-mono text-[10px] leading-relaxed text-text-tertiary">${caption}</div>
+      </div>`;
+    const avgOf = (xs: number[]) => xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null;
+    const count = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
+
+    // night HRV: the latest writer's last 7 nights, against that writer's own band; never another writer's
+    const hv = heart?.hrv ?? null;
+    const hv7 = hv ? hv.series.filter((j) => j.day > win7).map((j) => j.ms) : [];
+    const hvFig = avgOf(hv7);
+    const hvOff = hv?.band != null && hvFig != null && hvFig < hv.band.lo;
+    const hvMethod = hv?.method === "sdnn" ? "SDNN" : hv?.method === "rmssd" ? "RMSSD" : "METHOD UNDECLARED";
+    const hvCard = heartCard(
+      hv?.latest != null ? `NIGHT HRV · ${esc(String(hv.writer ?? "").toUpperCase())} · ${hvMethod}` : "NIGHT HRV",
+      hvFig != null ? String(hvFig) : hv?.latest != null ? String(hv.latest) : null,
+      hvFig != null ? `ms · ${hv7.length}-night avg` : "ms · latest night", hvOff ? "text-warning" : "text-text-primary",
+      hv ? miniTrend(hv.series.map((j) => ({ day: j.day, v: j.ms, off: j.below, title: `${esc(fmtDay(j.day))}: ${j.ms} ms${j.n != null ? ` from ${count(j.n, "sample")}` : ""}${j.q1 != null ? ` · own band before ${Math.round(j.q1)}–${Math.round(j.q3!)}` : ""}` })), hv.band, hv.usual, daysBack(today, 27), today) : "",
+      hv?.absent ? "No HRV reaches Apple Health from this wearable." : hv?.latest != null ? `Nothing from ${esc(hv.writer ?? "this writer")} in the last 28 nights; the latest night is ${esc(fmtDay(hv.latestDay!))}.` : nothingYet,
+      hv?.latest == null ? (hv?.absent ? "no writer in the last 30 nights" : "—") : hv.band ? `usual ${hv.usual} · band ${hv.band.lo}–${hv.band.hi} · ${count(hv.nightsBelow, "night")} below` : `a usual needs 14 nights from ${esc(hv.writer ?? "one writer")} · ${hv.priors} so far`,
+      "Twenty-eight nights of HRV from one writer, the person's own middle-half band shaded, the usual dashed, nights below it marked");
+
+    // resting heart rate: the last 7 mornings, against the 30-morning median, five either side
+    const rh = heart?.rhr ?? null;
+    const rh7 = rh ? rh.series.filter((j) => j.day > win7).map((j) => j.bpm) : [];
+    const rhFig = avgOf(rh7);
+    const rhBand = rh?.baseline != null ? { lo: rh.baseline - 5, hi: rh.baseline + 5 } : null;
+    const rhOff = rhBand != null && rhFig != null && rhFig > rhBand.hi;
+    const rhAbove = rh ? rh.series.filter((j) => j.above).length : 0;
+    const rhCard = heartCard("RESTING HEART RATE",
+      rhFig != null ? String(rhFig) : rh?.latest != null ? String(rh.latest) : null,
+      rhFig != null ? `bpm · ${rh7.length}-morning avg` : "bpm · latest morning", rhOff ? "text-warning" : "text-text-primary",
+      rh ? miniTrend(rh.series.map((j) => ({ day: j.day, v: j.bpm, off: j.above, title: `${esc(fmtDay(j.day))}: ${j.bpm} bpm${j.b != null ? ` · median before ${Math.round(j.b)}` : ""}` })), rhBand, rh.baseline, daysBack(today, 27), today) : "",
+      rh?.latest != null ? `Nothing in the last 28 mornings; the latest is ${esc(fmtDay(rh.latestDay!))}.` : nothingYet,
+      rh?.latest == null ? "—" : rhBand ? `usual ${rh.baseline} · band ${rhBand.lo}–${rhBand.hi} · ${count(rhAbove, "morning")} above` : `a usual needs 14 mornings · ${rh.priors} so far`,
+      "Twenty-eight mornings of resting heart rate, the person's own band shaded, the usual dashed, mornings above it marked");
+
+    // heart rate recovery: one reading a workout, so the last 28 days, or the last 8 readings when the month is empty
+    const hr = heart?.hrr ?? null;
+    const hrWin = hr ? hr.judged.filter((j) => j.day > win28) : [];
+    const hrPts = hrWin.length ? hrWin : (hr?.judged ?? []).slice(-8);
+    const hr7 = hr ? hr.judged.filter((j) => j.day > win7).map((j) => j.bpm) : [];
+    const hrFig = hr7.length ? Math.round(medianOf(hr7)!) : null;
+    const hrOff = hrFig != null && (hrFig <= 12 || (hr?.band != null && hrFig < hr.band.lo));
+    const hrCard = heartCard("HEART RATE RECOVERY",
+      hrFig != null ? String(hrFig) : hr?.latest != null ? String(hr.latest) : null,
+      hrFig != null ? `bpm · ${hr7.length === 1 ? "1 reading this week" : `7-day median of ${hr7.length}`}` : "bpm · latest workout", hrOff ? (hrFig != null && hrFig <= 12 ? "text-danger" : "text-warning") : "text-text-primary",
+      hr && hrPts.length ? miniTrend(hrPts.map((j) => ({ day: j.day, v: j.bpm, off: j.low, title: `${esc(fmtDay(j.day))}: ${j.bpm} bpm in the first minute` })), hr.band, hr.median, hrWin.length ? daysBack(today, 27) : hrPts[0].day, today) : "",
+      !p.account_id || !canSeeHeart ? nothingYet : "No recovery on file: the watch records one after a workout that ends above the Zone 2 floor.",
+      hr?.latest == null ? "—" : hr.band ? `usual ${hr.median} · band ${hr.band.lo}–${hr.band.hi} · cited line 12` : `a usual needs 5 readings · ${hr.judged.length} so far · cited line 12`,
+      "Heart rate recovery after each workout, the person's own middle-half band shaded, the usual dashed, readings under it marked");
+
+    // the three read together: the one pattern the Guide names, and what sat around it
+    const lastDays = (xs: Array<{ day: string }>) => xs.slice(-3).map((x) => x.day);
+    const trioDays = heart ? [...lastDays(heart.hrv.series), ...lastDays(heart.rhr.series), ...lastDays(heart.hrr.judged)].sort() : [];
+    const runOf = (xs: boolean[]) => { let n = 0; for (let i = xs.length - 1; i >= 0 && xs[i]; i--) n++; return n; };
+    const hrRun = hr ? runOf(hr.judged.map((j) => j.low)) : 0;
+    const offBits = heart ? [
+      heart.hrv.run ? `night HRV ${count(heart.hrv.run, "night")} running below its band` : "",
+      heart.rhr.run ? `resting rate ${count(heart.rhr.run, "morning")} running above its band` : "",
+      hrRun ? `recovery ${count(hrRun, "reading")} running under its band` : ""].filter(Boolean) : [];
+    const patternText = !heart ? "Nothing read yet."
+      : heart.threeTogether ? `All three outside the usual band in the same direction, the last 3 readings of each (${esc(fmtDay(trioDays[0]))}–${esc(fmtDay(trioDays[trioDays.length - 1]))}).`
+      : offBits.length ? `Not all three together: ${offBits.join("; ")}. The rest inside their bands.`
+      : "Each reading inside its own band, or without a band yet. Nothing to name.";
+    const vig7 = syncActs.filter((a) => a?.timestamp && localDay(a.timestamp) > win7 && String(a.intensity_category) === "vigorous" && !isStrength(a));
+    const aroundBits = [
+      heart?.sleep.last ? `Sleep ${fmtSleepMin(heart.sleep.last.min)} ${esc(dayWord(heart.sleep.last.day))}${heart.sleep.usual != null ? ` (usual ${fmtSleepMin(heart.sleep.usual)})` : ""}.` : "",
+      heart?.steps.avg != null ? `${heart.steps.avg.toLocaleString()} steps a day over the last 7${heart.steps.prior != null ? ` (${heart.steps.prior.toLocaleString()} the week before)` : ""}.` : "",
+      syncActs.length ? (vig7.length ? `${count(vig7.length, "vigorous session")} in the last 7 days, ${vig7.map((a) => Math.round(Number(a.duration_minutes) || 0)).join(" and ")} min.` : "No vigorous session in the last 7 days.") : ""].filter(Boolean);
+    const col = (h: string, b: string) => `<div><b class="font-bold text-text-primary">${h}</b><br>${b}</div>`;
+    const readTogether = `<div class="mt-3.5 flex flex-col gap-2.5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+      ${kicker("READ TOGETHER, FOR A COACH OR CLINICIAN")}
+      <div class="grid gap-3.5 text-[12.5px] leading-[18px] text-text-secondary sm:grid-cols-2 lg:grid-cols-4">
+        ${col("Pattern", patternText)}
+        ${col("Around it", aroundBits.length ? aroundBits.join(" ") : "Sleep, steps and sessions arrive with the sync.")}
+        ${col("What it is not", `No score, no readiness number. Each reading against ${their} own 30-night median; nothing against a population.`)}
+        ${col("In Verve’s words", heart?.threeTogether ? "“Three readings agree for three nights. The readings say rest before they say train.”" : "“One reading on one night is a night. The Guide stays quiet until all three agree.”")}
+      </div>
+    </div>`;
+    const heartRows = syncSignals.filter((r) => r.day > daysBack(today, 90) && (r.resting_hr != null || r.sleep_minutes != null || r.hrr_bpm != null || r.hrv_night_ms != null));
+    const heartLinks = `<div class="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 font-mono text-[11px] text-accent-light">
+      <a href="/science/sleep-heart/night-hrv" class="hover:text-text-primary">→ Night HRV</a>
+      <a href="/science/sleep-heart/resting-heart-rate" class="hover:text-text-primary">→ Resting heart rate</a>
+      <a href="/science/sleep-heart/heart-rate-recovery" class="hover:text-text-primary">→ Heart rate recovery</a>
+      ${heartRows.length ? `<button type="button" id="dp-heart-export" class="hover:text-text-primary">→ Export these ${heartRows.length} rows</button>` : ""}
+    </div>`;
+    const offNow = heart ? [heart.hrv.below, heart.rhr.status === "elevated" || heart.rhr.status === "stronglyElevated", heart.hrr.latest != null && heart.hrr.band != null && heart.hrr.latest < heart.hrr.band.lo].filter(Boolean).length : 0;
+    const heartWords = !heart ? "Nothing read yet" : heart.threeTogether ? "All three outside their bands, 3 running" : offNow === 0 ? "Each inside its own band" : offNow === 1 ? "One reading outside its band" : `${offNow === 2 ? "Two" : "Three"} readings outside their bands`;
+    const ch5 = chapter(5, "SLEEP AND HEART", esc(heartWords),
+      `Three readings the app sends each morning, each against ${their} own band: the middle half of the last 30 nights for HRV and recovery, 5 either side of the 30-morning median for resting rate. Nothing against a population, and no score.`,
+      [rhrLine, hrvLine, trioLine,
+       heart?.hrv.otherWriters.length ? `${esc(heart.hrv.otherWriters.join(", "))} also wrote HRV in the last 30 nights; only ${esc(heart.hrv.writer ?? "the latest writer")}'s nights are read, never mixed` : ""].filter(Boolean),
+      `<div class="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">${hvCard}${rhCard}${hrCard}</div>${readTogether}${heartLinks}`);
+
+    // ── 6 · labs, body, and what is due ──────────────────────────────────
     const labWords = !labRows.length ? "No lab values yet" : outRows.length === 0 ? "Everything in its range" : outRows.length === 1 ? "One number to chase" : `${outRows.length} numbers to chase`;
-    const ch5 = chapter(5, "LABS, BODY, AND WHAT IS DUE", esc(labWords),
+    const ch6 = chapter(6, "LABS, BODY, AND WHAT IS DUE", esc(labWords),
       `Only the markers outside their lab's range and the dates that are due. Everything else is on Labs, with its own chart.`,
       [],
       `<div class="grid gap-3.5 sm:grid-cols-3">
@@ -2633,8 +2775,9 @@ import SiteHeader from "../components/SiteHeader.astro";
           ${dues.length ? `<div class="mt-2 flex flex-col gap-1.5 text-[13px]">${dues.slice(0, 4).map((d) => `<div><strong class="${dueTone(d)}">${esc(d.what)}</strong> <span class="text-text-secondary">${dueWord(d)}</span><div class="text-[11.5px] text-text-tertiary">${esc(d.why)}</div></div>`).join("")}</div>` : `<div class="mt-2 text-[13px] text-text-tertiary">Nothing due in the cited cadences.</div>`}
         </div>
       </div>`);
-    $("dp-chapters").innerHTML = ch1 + ch2 + ch3 + ch4 + ch5;
+    $("dp-chapters").innerHTML = ch1 + ch2 + ch3 + ch4 + ch5 + ch6;
     wireGoto();
+    $("dp-chapters").querySelector("#dp-heart-export")?.addEventListener("click", () => exportHeartRows(heartRows, today));
 
     // ── the working, for "In Verve's words" ─────────────────────────────
     depthWorking = {
@@ -2985,23 +3128,35 @@ import SiteHeader from "../components/SiteHeader.astro";
       try { const d = localStorage.getItem(COACH_DOOR); coachDoor = d === "1" || d === "coach" || d === "clinician"; localStorage.removeItem(COACH_DOOR); } catch { /* private mode */ }
       userId = session.user.id;
       userEmail = session.user.email ?? "";
-      firstName = await resolveFirstName(session.user);
-      $("greet").textContent = greeting();
-      $("greet").closest(".flex.flex-wrap")!.classList.add("mh-rise");
-      show("namechange", !!firstName);
-      if (!firstName) askForName(guessNameFromEmail(userEmail));
-      else hideNameForm();
       askForNewsletter(session.user);
       appLink?.classList.add("hidden"); signinLink?.classList.add("hidden");
       show("signout", true); show("home", true); show("auth", false);
       const wanted = window.location.hash.replace("#", "") || (coachDoor ? "group" : "");
       if (wanted.startsWith("overview-") && SEC_ORDER.includes(wanted.slice(9) as SecKey)) ovSection = wanted.slice(9) as SecKey;
       setTab(["overview", "labs", "reports", "depth"].includes(wanted) || wanted.startsWith("overview-") ? wanted.split("-")[0] : "overview");
-      await Promise.all([loadPeople(), loadPlan(), loadMyRole().then((r) => { myRole = r; })]);
+      // The first round trip, one for everything the page needs before it
+      // can say whose page this is: the name, the people, the plan, the
+      // role, and the one-time merge of other accounts under this email.
+      // These used to be three hops in a row (name, then people, then merge).
+      const [, , , role, mergedFrom] = await Promise.all([resolveFirstName(session.user), loadPeople(), loadPlan(), loadMyRole(), mergeOtherAccounts()]);
+      myRole = role;
+      if (mergedFrom.length) {
+        try { await loadPeople(); for (const other of mergedFrom) await moveReportFiles(other); }   // people that were the other account's are now here
+        catch { /* the merge is a courtesy; the page works without it */ }
+      }
+      fillOwnName();
+      firstName = fullName.split(/\s+/)[0] ?? "";
+      $("greet").textContent = greeting();
+      $("greet").closest(".flex.flex-wrap")!.classList.add("mh-rise");
+      show("namechange", !!firstName);
+      if (!firstName) askForName(guessNameFromEmail(userEmail));
+      else hideNameForm();
       void showRoleChip();
-      await mergeOtherAccounts();
       applyPersonMode();
       if (wanted === "group") setTab("group");   // only once the people are known
+      // The second round trip, and the last: every table of the person's
+      // own at once. refresh() itself fetches labs, the app's rows and the
+      // report folder together, then draws every tab once.
       await Promise.all([refresh().finally(() => show("loading", false)), loadPersonNote(), loadSharing(), loadInvites(), loadAsked(), loadRequests(), loadGlance(), loadAiSummary()]);
     } else {
       firstName = "";
@@ -3039,10 +3194,13 @@ import SiteHeader from "../components/SiteHeader.astro";
    * it: the profile name set in Settings, then the full name Apple gave,
    * then nothing. Never the email — "roplekarsudeep" is not a name.
    */
+  /** The account's own profile row, read once at sign-in with the name; the first sync read takes it rather than asking again. */
+  let ownProfile: any = null;
   async function resolveFirstName(user: { id: string; user_metadata?: Record<string, unknown> }): Promise<string> {
     let full = "";
     try {
-      const { data } = await supabase.from("profiles").select("name").eq("user_id", user.id).maybeSingle();
+      const { data } = await supabase.from("profiles").select("name, weekly_met_hours_goal, height_cm, sex, age").eq("user_id", user.id).maybeSingle();
+      ownProfile = data ?? null;
       full = String(data?.name ?? "").trim();
     } catch { /* no profile row, or none we may read: fall through */ }
     if (!full) full = String(user.user_metadata?.full_name ?? "").trim();
@@ -3056,6 +3214,13 @@ import SiteHeader from "../components/SiteHeader.astro";
    * wrong guess in a greeting is worse than a question. The guess is only
    * ever a prefilled field the person confirms with a tap.
    */
+  /** The account's own person carries the profile's name: set once both are known, which with the reads side by side is after them. */
+  function fillOwnName() {
+    const mine = people.find((p) => p.self);
+    if (!mine || mine.name || !fullName) return;
+    mine.name = fullName;
+    if (mine.id) supabase.from("people").update({ name: fullName }).eq("id", mine.id).then(() => {});
+  }
   function guessNameFromEmail(email: string): string {
     const local = email.split("@")[0] ?? "";
     const parts = local.split(/[._-]/).filter(Boolean);
@@ -3169,21 +3334,64 @@ import SiteHeader from "../components/SiteHeader.astro";
   // ── the newsletter, asked once. The sign-up form carries the box; an
   // account made through Apple or Google never saw it, so the greeting asks.
   // Either answer is saved with the account (where the sign-up box saves
-  // its own), so nobody is asked twice and the list can be exported from
-  // one place: user_metadata.newsletter_opt_in. ───────────────────────────
+  // its own), so nobody is asked twice: user_metadata.newsletter_opt_in. A
+  // yes also writes the address to newsletter_signups, the one list the
+  // welcome is sent from and the letters are exported from, and asks
+  // newsletter-welcome to send the first letter, as the box on /start does.
+  //
+  // An account made with Apple's "Hide my email" signs in by a relay address
+  // (…@privaterelay.appleid.com). Apple forwards mail to it only from senders
+  // registered under the developer account, and drops the rest without a
+  // word, so the question asks for an address Apple does not hide and the
+  // letter goes there. user_metadata.newsletter_email keeps which one. ────
+  const isRelay = (email: string) => /@privaterelay\.appleid\.com$/i.test(email);
+  const newsSay = (text: string, bad = false) => {
+    const el = $("newsmsg");
+    el.textContent = text; el.classList.toggle("hidden", !text);
+    el.classList.toggle("text-danger", bad); el.classList.toggle("text-text-primary", !bad);
+  };
   function askForNewsletter(user: { user_metadata?: Record<string, unknown> }) {
     const answered = user.user_metadata?.newsletter_opt_in;
     if (answered !== undefined && answered !== null) return;
+    const relay = isRelay(userEmail);
+    show("newsrelay", relay); show("newsemail", relay);
     $("newsask").classList.remove("hidden"); $("newsask").classList.add("flex");
   }
   async function answerNewsletter(optIn: boolean) {
     const now = new Date().toISOString();
+    let to = userEmail.trim().toLowerCase();
+    if (optIn && isRelay(userEmail)) {
+      to = ($("newsemail") as HTMLInputElement).value.trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to) || to.length > 254) { newsSay("That does not look like an email address.", true); $("newsemail").focus(); return; }
+      if (isRelay(to)) { newsSay("That is a relay address too; Apple would not pass the letter on. One Apple does not hide, please.", true); $("newsemail").focus(); return; }
+    }
+    const yes = $("newsyes") as HTMLButtonElement;
+    yes.disabled = true; newsSay(optIn ? "Saving…" : "");
     const { error } = await supabase.auth.updateUser({
-      data: { newsletter_opt_in: optIn, newsletter_opt_in_at: optIn ? now : null, newsletter_asked_at: now },
+      data: { newsletter_opt_in: optIn, newsletter_opt_in_at: optIn ? now : null, newsletter_asked_at: now, newsletter_email: optIn ? to : null },
     });
-    if (error) { msg("upmsg", `Could not save that: ${error.message}`, true); return; }
+    yes.disabled = false;
+    if (error) { newsSay(`Could not save that: ${error.message}`, true); return; }
+    if (!optIn) { $("newsask").classList.add("hidden"); $("newsask").classList.remove("flex"); return; }
+    // the row: the address, the sentence that was on screen when they said yes, and the account
+    const consent = `${$("newstext").textContent?.trim() ?? ""}${isRelay(userEmail) ? ` ${$("newsrelay").textContent?.trim() ?? ""}` : ""} — Yes, send it.`;
+    const { error: rowErr } = await supabase.from("newsletter_signups").insert({ email: to, consent_text: consent.slice(0, 600), source: "my-health", user_id: userId });
+    if (rowErr && rowErr.code !== "23505") {     // 23505: already on the list, which is fine
+      newsSay(`Saved with your account, but the list could not take ${to} just now: ${rowErr.message}. It is added by hand on the next export.`, true);
+      return;
+    }
     $("newsask").classList.add("hidden"); $("newsask").classList.remove("flex");
+    // the first letter, after the answer is saved; never the gate
+    let said = `Done. The first letter is on its way to ${to}, from hello@verve-app.health.`;
+    try {
+      const { data, error: fnErr } = await supabase.functions.invoke("newsletter-welcome", { body: { email: to } });
+      if (fnErr || !data?.sent) said = data?.reason === "already sent"
+        ? `${to} already had the first letter; the next ones follow.`
+        : `Saved. The first letter to ${to} could not go out just now; it goes within a day.`;
+    } catch { said = `Saved. The first letter to ${to} could not go out just now; it goes within a day.`; }
+    msg("upmsg", said);
   }
+  $("newsemail").addEventListener("keydown", (e) => { if ((e as KeyboardEvent).key === "Enter") { e.preventDefault(); answerNewsletter(true); } });
   $("newsyes").addEventListener("click", () => answerNewsletter(true));
   $("newsno").addEventListener("click", () => answerNewsletter(false));
   $("emptyadd").addEventListener("click", pickReport);
@@ -3191,9 +3399,16 @@ import SiteHeader from "../components/SiteHeader.astro";
   $("glanceask").addEventListener("click", () => { setTab("overview"); openPersonForm(null); setPersonMode("ask"); });
   $("glanceself").addEventListener("click", () => setTab("overview"));
 
-  /** Refetch web_labs + imaging_reports once; every surface renders from them. */
+  /**
+   * Refetch everything of the person's at once: web_labs + imaging_reports,
+   * the app's rows (weeks, tests, days) and the report folder, one round
+   * trip rather than three in a row; then every surface is drawn once from
+   * them, with everything in.
+   */
   async function refresh() {
-    const [{ data: rows }, { data: imaging }, { data: app }] = await Promise.all([
+    const p = person;
+    let labsIn = false, actIn = false;
+    const labs = Promise.all([
       pageAll(() => scopeRows(supabase.from("web_labs")
         .select("analyte, value, unit, ref_low, ref_high, ref_text, section, measured_on, report_path"))
         .order("measured_on", { ascending: true })),
@@ -3201,19 +3416,28 @@ import SiteHeader from "../components/SiteHeader.astro";
         .select("modality, report_date, report_path, impression, findings"))
         .order("report_date", { ascending: true }).limit(200),
       // the app's rows exist only for a person with an account of their own
-      person?.account_id
-        ? pageAll(() => supabase.from("lab_readings").select("*").eq("user_id", person.account_id).is("deleted_at", null).order("measured_at", { ascending: true }))
+      p?.account_id
+        ? pageAll(() => supabase.from("lab_readings").select("*").eq("user_id", p.account_id).is("deleted_at", null).order("measured_at", { ascending: true }))
         : Promise.resolve({ data: [] as any[] }),
-    ]);
-    allLabs = rows ?? [];
-    allImaging = imaging ?? [];
-    allApp = app ?? [];
-    groupLabs();
-    // the app's weeks, tests and days first, so the Overview is drawn once with everything in
-    await loadActivity();
+    ]).then(([{ data: rows }, { data: imaging }, { data: app }]) => {
+      if (person?.id !== p?.id) return;   // switched away meanwhile
+      allLabs = rows ?? []; allImaging = imaging ?? []; allApp = app ?? [];
+      groupLabs();
+      labsIn = true;
+      // the Body card can be drawn from the labs; the other three wait for the app's rows
+      if (!actIn) renderGlance(new Set<SecKey>(["fitness", "movement", "heart"]));
+    });
+    const activity = loadActivity().then(() => {
+      if (person?.id !== p?.id) return;
+      actIn = true;
+      if (!labsIn) renderGlance(new Set<SecKey>(["body"]));
+    });
+    const [, , files] = await Promise.all([labs, activity, listReportFolder()]);
+    if (person?.id !== p?.id) return;
     renderOverview();
     renderLabsRail(); renderLabsPanel();
-    await renderReports();
+    renderDepth();
+    await renderReports(files);
   }
 
   // ═══ THE APP'S SHARE OF A REPORT ═════════════════════════════════════════
@@ -3680,7 +3904,15 @@ import SiteHeader from "../components/SiteHeader.astro";
    * depth uses, so the two never disagree. No lab values here: those stay
    * on Labs, and the Body card carries the count and what is due.
    */
-  function renderGlance() {
+  /** A card's frame before its rows land: the label and the height, so nothing moves when the numbers arrive. */
+  const glanceFrame = (sec: SecKey) => `
+      <div class="flex min-h-[150px] flex-col gap-2.5 rounded-[20px] border border-white/10 bg-white/[0.03] p-5" aria-hidden="true">
+        <span class="flex items-center gap-2"><span class="h-2 w-2 shrink-0 rounded-full" style="background: ${SEC_META[sec].dot}"></span><span class="text-[12px] font-bold tracking-[0.08em] text-text-secondary">${SEC_META[sec].label.toUpperCase()}</span></span>
+        <span class="mt-1 h-8 w-28 animate-pulse rounded-md bg-white/[0.05]"></span>
+        <span class="h-3.5 w-3/4 animate-pulse rounded bg-white/[0.04]"></span>
+      </div>`;
+  /** The four cards; `pending` names the sections whose rows have not landed yet, drawn as frames. */
+  function renderGlance(pending: Set<SecKey> = new Set()) {
     const today = todayStr(), thisMonday = mondayOf(new Date());
     const rise = riseOnce("glance");
     const you = person?.self ? "your" : "their";
@@ -3741,15 +3973,16 @@ import SiteHeader from "../components/SiteHeader.astro";
     if (outside) bits.push(`${plural(outside, "lab value")} outside range`);
     if (dues[0] && dues[0].days <= 31) bits.push(dues[0].days < 0 ? `${dues[0].what.toLowerCase()} overdue` : "one retest due this month");
     const line = bits.length ? `${bits[0].charAt(0).toUpperCase()}${bits[0].slice(1)}${bits.slice(1).map((x) => `, ${x}`).join("")}. The four cards say the rest.` : "";
-    $("ovline").textContent = line; show("ovline", !!line);
+    if (!pending.size || line) $("ovline").textContent = line;   // the line keeps its height either way
 
-    $("ovglance").innerHTML = cards.map((c, i) => `
+    $("ovglance").innerHTML = cards.map((c, i) => pending.has(c.sec) ? glanceFrame(c.sec) : `
       <button type="button" data-glance="${c.sec}" style="--i: ${i}" class="${rise} flex min-h-[150px] flex-col gap-2.5 rounded-[20px] border border-white/10 bg-white/[0.03] p-5 text-left transition-colors hover:border-white/20 hover:bg-white/[0.05]">
         <span class="flex items-center gap-2"><span class="h-2 w-2 shrink-0 rounded-full" style="background: ${SEC_META[c.sec].dot}"></span><span class="text-[12px] font-bold tracking-[0.08em] text-text-secondary">${SEC_META[c.sec].label.toUpperCase()}</span><svg class="ml-auto shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span>
         <span class="flex flex-wrap items-baseline gap-x-2 gap-y-1"><span class="font-mono text-[34px] font-bold leading-none" style="color: ${SEC_META[c.sec].dot}">${c.value}</span><span class="text-[13px] text-text-secondary">${c.beside}</span></span>
         <span class="text-[13px] leading-relaxed text-text-secondary">${c.line}</span>
       </button>`).join("");
     $("ovglance").querySelectorAll<HTMLElement>("[data-glance]").forEach((b) => b.addEventListener("click", () => setSection(b.dataset.glance as SecKey)));
+    if (pending.size) return;   // the rest waits for every row: it decides what the page says, not how tall it is
     show("emptycard", !allLabs.length && !allWeeks.length && !syncSignals.length);
     wireGoto();
     renderSection();
@@ -4552,11 +4785,13 @@ import SiteHeader from "../components/SiteHeader.astro";
     return dupOf;
   }
 
-  async function renderReports() {
-    const { data } = await supabase.storage.from("reports").list(folder(), {
-      sortBy: { column: "created_at", order: "desc" }, limit: 200,
-    });
-    const files = (data ?? []).filter((f) => REPORT_EXT.test(f.name));
+  /** The person's report folder, newest first: one listing, which refresh() fetches beside the rows and hands in. */
+  const listReportFolder = () => supabase.storage.from("reports").list(folder(), {
+    sortBy: { column: "created_at", order: "desc" }, limit: 200,
+  }).then((r) => r.data ?? []);
+  async function renderReports(listed?: any[]) {
+    const data = listed ?? await listReportFolder();
+    const files = data.filter((f) => REPORT_EXT.test(f.name));
     setTabCount("reports", files.length ? String(files.length) : "");
 
     // what each report yielded, from the one web_labs fetch
@@ -5407,6 +5642,8 @@ import SiteHeader from "../components/SiteHeader.astro";
     refresh();
   });
 
+  // the Overview's four frames, before the session is even checked: the page has its shape from the first paint
+  $("ovglance").innerHTML = SEC_ORDER.map(glanceFrame).join("");
   boot();
   supabase.auth.onAuthStateChange((event) => {
     // A reset link lands with a recovery session, and a recovery code signs
