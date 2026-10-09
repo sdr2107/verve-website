@@ -34,7 +34,7 @@ const CURRENCIES = ["inr", "usd"] as const;
       <div class="flex flex-wrap items-center gap-3">
         <div class="flex items-center gap-1 rounded-full border border-white/12 p-1" role="group" aria-label="Billing period">
           <button type="button" data-set-period="monthly" class="min-h-9 rounded-full px-4 text-[13px] font-semibold text-text-secondary transition-colors">Monthly</button>
-          <button type="button" data-set-period="yearly" class="min-h-9 rounded-full px-4 text-[13px] font-semibold text-text-secondary transition-colors">Yearly · {YEARLY_MONTHS_FREE === 1 ? "one month" : `${YEARLY_MONTHS_FREE} months`} free</button>
+          <button type="button" data-set-period="yearly" class="min-h-9 rounded-full px-4 text-[13px] font-semibold text-text-secondary transition-colors">Yearly · {(YEARLY_MONTHS_FREE as number) === 1 ? "one month" : `${YEARLY_MONTHS_FREE} months`} free</button>
         </div>
         <button type="button" data-toggle-currency class="min-h-9 rounded-full border border-white/12 px-3 text-[12px] font-semibold text-text-tertiary transition-colors hover:text-text-primary">Prices in $</button>
       </div>
@@ -76,7 +76,7 @@ const CURRENCIES = ["inr", "usd"] as const;
         <tbody>
           {FEATURE_ROWS.map((g) => (
             <>
-              <tr><td colSpan={5} class="pb-1 pt-5 font-mono text-[10px] font-semibold tracking-[0.12em] text-accent-light">{g.section.toUpperCase()}</td></tr>
+              <tr><td colspan={5} class="pb-1 pt-5 font-mono text-[10px] font-semibold tracking-[0.12em] text-accent-light">{g.section.toUpperCase()}</td></tr>
               {g.rows.map((r) => (
                 <tr class="border-t border-white/[0.06]">
                   <td class="py-2.5 pr-3 text-text-secondary">{r.label}</td>

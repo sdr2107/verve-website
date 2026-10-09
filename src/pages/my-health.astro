@@ -2286,6 +2286,10 @@ import SiteHeader from "../components/SiteHeader.astro";
     heartMemo = { rows, today, out };
     return out;
   }
+  // The app's rule (data/met-thresholds.json nightHrv.minNights): the night
+  // HRV band appears after 7 nights from one writer, not 14. The two surfaces
+  // read one night against one band; they must agree on when it exists.
+  const HRV_MIN_NIGHTS = 7;
   function sleepHeartSummaryRaw(rows: any[], today: string) {
     if (!rows.length) return null;
     const byDay = new Map<string, any>(rows.map((r) => [String(r.day), r]));
@@ -2341,10 +2345,6 @@ import SiteHeader from "../components/SiteHeader.astro";
     const hrr = { latest: lastH ? Number(lastH.hrr_bpm) : null, latestDay: lastH ? String(lastH.day) : null, median: hrrPri.length >= 5 ? Math.round(medianOf(hrrPri)!) : null, source: lastH?.hrr_source ?? null,
       band: hrrPri.length >= 5 ? (() => { const q = quartilesOf(hrrPri); return { lo: Math.round(q.q1), hi: Math.round(q.q3) }; })() : null, judged: hrrJudged };
 
-    // The app's rule (data/met-thresholds.json nightHrv.minNights): the band
-    // appears after 7 nights from one writer, not 14. The two surfaces read
-    // one night against one band; they must agree on when it exists.
-    const HRV_MIN_NIGHTS = 7;
     // night HRV: one writer, read against that writer's own last 30 nights with
     // a reading (the median, and the middle half of them). The app writes the
     // night's median SDNN-field value, the sample count, the writer's name and
@@ -2835,7 +2835,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     const d = await ensureDocument();
     const kept = d.ai.summary, consent = { summary_at: d.ai.consent };
     aiConsented = !!consent?.summary_at;
-    if (kept?.summary) aiSummary = { summary: kept.summary, created_at: kept.created_at, model: kept.model };
+    if (kept?.summary) aiSummary = { summary: kept.summary, created_at: kept.created_at, model: kept.model ?? "" };
     renderAiCard();
   }
   const modelName = (m: string) => m.includes("fable") ? "Claude Fable 5.1" : m.includes("opus") ? "Claude Opus 5" : m.includes("sonnet") ? "Claude Sonnet 5" : m;
@@ -4185,7 +4185,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     { key: "sleep", section: "heart", label: "Sleep", unit: "", sub: "Time asleep, the night that ended each morning", daily: true, color: "#a5b4fc",
       science: "/science/sleep-heart/sleep-rhythm", source: "Every writer's asleep intervals; the stages from one elected writer per night.", fmt: (v) => fmtHM(v),
       series: () => signalSeries("sleep_minutes"), band: () => ({ lo: 420, hi: 540, why: "7 to 9 hours, the adult band" }),
-      reads: () => { const h = sleepHeartSummary(syncSignals, todayStr()); if (!h?.sleep.last) return ["No night on file yet."]; const s = h.sleep; return [`<strong class="text-text-primary">${fmtSleepMin(s.last.min)}</strong> ${esc(dayWord(s.last.day))}${s.usual != null ? `, ${Math.abs(s.last.min - s.usual) < 20 ? "about the usual" : `${fmtSleepMin(Math.abs(s.last.min - s.usual))} ${s.last.min < s.usual ? "under" : "over"} the usual ${fmtSleepMin(s.usual)}`}` : ""}${s.last.bed ? ` · in bed ${esc(s.last.bed)}` : ""}.`, `${s.shortNights} of the last ${s.nights} nights under 7 h. A move toward the band is the improvement, not more sleep without limit.`]; } },
+      reads: () => { const h = sleepHeartSummary(syncSignals, todayStr()); if (!h?.sleep.last) return ["No night on file yet."]; const s = { ...h.sleep, last: h.sleep.last }; return [`<strong class="text-text-primary">${fmtSleepMin(s.last.min)}</strong> ${esc(dayWord(s.last.day))}${s.usual != null ? `, ${Math.abs(s.last.min - s.usual) < 20 ? "about the usual" : `${fmtSleepMin(Math.abs(s.last.min - s.usual))} ${s.last.min < s.usual ? "under" : "over"} the usual ${fmtSleepMin(s.usual)}`}` : ""}${s.last.bed ? ` · in bed ${esc(s.last.bed)}` : ""}.`, `${s.shortNights} of the last ${s.nights} nights under 7 h. A move toward the band is the improvement, not more sleep without limit.`]; } },
     { key: "hrr", section: "heart", label: "Heart rate recovery", unit: "bpm", sub: "The drop in the minute after a workout", daily: true, color: "#818cf8",
       science: "/science/sleep-heart/heart-rate-recovery", source: "Apple's stored one-minute recovery after each workout; for a workout without one, the rate at the end minus the rate a minute later, marked derived.", fmt: (v) => round0(v),
       series: () => signalSeries("hrr_bpm"),
@@ -5415,7 +5415,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     // index in the database is the backstop.
     const { data: existing } = await scopeRows(supabase.from("web_labs")
       .select("analyte, value"), who).eq("measured_on", date);
-    const have = new Set((existing ?? []).map((r) => `${canonName(String(r.analyte)).toLowerCase()}|${r.value}`));
+    const have = new Set((existing ?? []).map((r: any) => `${canonName(String(r.analyte)).toLowerCase()}|${r.value}`));
     const fresh = allValues.filter((v: any) => !have.has(`${v.name.toLowerCase()}|${v.value}`));
     if (fresh.length > 0) {
       await supabase.from("web_labs").insert(fresh.map((v: any) => ({
@@ -5535,7 +5535,7 @@ import SiteHeader from "../components/SiteHeader.astro";
     // dedup + archive, same contract as lab analytes
     const { data: existing } = await scopeRows(supabase.from("web_labs")
       .select("analyte, value"), who).eq("measured_on", date);
-    const have = new Set((existing ?? []).map((r) => `${canonName(String(r.analyte)).toLowerCase()}|${r.value}`));
+    const have = new Set((existing ?? []).map((r: any) => `${canonName(String(r.analyte)).toLowerCase()}|${r.value}`));
     const fresh = values.filter((v: any) => !have.has(`${v.name.toLowerCase()}|${v.value}`));
     if (fresh.length > 0) {
       await supabase.from("web_labs").insert(fresh.map((v: any) => ({
