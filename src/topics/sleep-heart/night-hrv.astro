@@ -126,6 +126,16 @@ const reasons: Array<{ head: string; body: string }> = [
     field, which is why Verve reads the writer&rsquo;s name as well as the
     number.
   </p>
+  <p class="mt-3 text-xs leading-relaxed text-text-tertiary">
+    <strong class="text-text-secondary">So is there anything to choose?</strong>
+    Usually not. With an Apple Watch and any of Oura, WHOOP or Garmin, the
+    Watch is the only writer of HRV, and Verve&rsquo;s Preferred device row
+    for night HRV simply says so. The one exception is a chest-strap or
+    camera app such as HRV4Training or Elite HRV, which writes its own
+    rMSSD-based number into the same field. Then two writers exist, and
+    Settings &rarr; Apple Health &rarr; Preferred device lets you name
+    which leads. Each writer keeps its own baseline either way.
+  </p>
   <p class="mt-2 font-mono text-[10.5px] leading-relaxed text-text-tertiary">
     Vendor behaviour changes; this table is checked against the vendors&rsquo;
     Apple Health pages before each release.
@@ -152,6 +162,8 @@ const reasons: Array<{ head: string; body: string }> = [
       ["The reading", "the median of the samples inside the night's sleep window, ms"],
       ["The usual", "the median of your last 30 nights, from the same writer"],
       ["The band", "the middle 50% of those 30 nights"],
+      ["The mean", "the average of your last 7 nights, drawn through them; shown from 3 nights, settled at 7"],
+      ["The scatter", "a week's standard deviation as a share of its mean; read against your own prior weeks"],
       ["The card", "the writer and its method: Apple Watch · SDNN"],
       ["What it is not", "a population figure, a readiness score, a verdict"],
     ].map(([k, v]) => (
@@ -181,6 +193,73 @@ const reasons: Array<{ head: string; body: string }> = [
     same direction, HRV low, resting rate high, recovery small, for 3 nights.
     Three readings agreeing for three nights is a pattern worth a sentence.
     One reading on one night is not, and the Guide stays quiet.
+  </p>
+</div>
+
+<!-- the two readings beside the night: the 7-night mean, and the week's scatter -->
+<div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-5 sm:px-[22px]">
+  <p class="font-mono text-[10px] uppercase tracking-[0.14em] text-text-tertiary">
+    Two readings beside the night
+  </p>
+  <p class="mt-3 text-sm leading-relaxed text-text-secondary">
+    A single night is noise. The athlete-monitoring literature acts on two
+    numbers instead, and from October 2026 Verve shows both. The first is the
+    <strong class="text-text-primary">7-night mean</strong>: every night, the
+    last seven nights averaged, drawn as a line through the nights on the Day
+    view and read against the same band as the night itself. It is shown from
+    3 nights, the minimum Plews found could stand in for a week, and marked
+    settled at 7. The second is the
+    <strong class="text-text-primary">week&rsquo;s scatter</strong>: the
+    standard deviation of a fixed week&rsquo;s nights as a share of their
+    mean, the coefficient of variation, printed on the Week and Month views
+    beside the period before.
+  </p>
+  <figure class="mt-5 space-y-4">
+    <div class="overflow-hidden rounded-xl border border-white/10 bg-black/30">
+      <img
+        src="/science/night-hrv-seven-night-mean.png"
+        alt="Sixty nights of HRV as dots, the 7-night mean as a line through them, and a shaded band for the middle half of the 30 nights before. One low night barely moves the line. Four low nights in a row pull it below the band, where it turns red."
+        width="1456"
+        height="740"
+        class="block w-full"
+        loading="lazy"
+      />
+    </div>
+    <figcaption class="text-xs leading-relaxed text-text-tertiary">
+      <strong class="font-semibold text-text-secondary">One night is noise; seven are a signal.</strong>
+      Each dot is a night. The shaded strip is this person&rsquo;s own usual
+      range, the middle half of the 30 nights before. The line is the 7-night
+      mean. The single dot that falls to 29 barely moves it. Four low nights in
+      a row pull it below the band, and that is the pattern worth noticing.
+      Illustrative data; the method is the one the app runs on your nights.
+    </figcaption>
+
+    <div class="overflow-hidden rounded-xl border border-white/10 bg-black/30">
+      <img
+        src="/science/night-hrv-mean-and-scatter.png"
+        alt="Four weeks of seven nights each. A baseline week with a mean of 45 and scatter of 3 percent; a hard week with the same mean and scatter of 9 percent; an overreached week with the mean fallen to 38 and scatter of 10 percent; an adapted week with the mean risen to 50 and scatter back to 3 percent."
+        width="1456"
+        height="680"
+        class="block w-full"
+        loading="lazy"
+      />
+    </div>
+    <figcaption class="text-xs leading-relaxed text-text-tertiary">
+      <strong class="font-semibold text-text-secondary">The mean and the scatter are two signals.</strong>
+      Scatter is how much the nights bounce around their own average; it looks
+      inside one week and never compares weeks. In a hard week the mean holds
+      and the scatter widens. If the load stays and the nights stay uneven, the
+      mean falls. So the scatter is the early warning and a falling mean the
+      confirmation. Verve grades a week&rsquo;s scatter only against your own
+      prior weeks, never against a population figure. Illustrative values after
+      Esco et al, Sensors 2025.
+    </figcaption>
+  </figure>
+  <p class="mt-4 text-xs leading-relaxed text-text-tertiary">
+    On Android, Health Connect&rsquo;s one HRV type is defined as rMSSD, the
+    opposite choice to Apple&rsquo;s. Verve&rsquo;s Android build does not
+    read it yet; when it does, the same rules apply, and an Android rMSSD
+    baseline will never be drawn on an Apple SDNN line.
   </p>
 </div>
 

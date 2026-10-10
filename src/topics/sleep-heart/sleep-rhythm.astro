@@ -321,19 +321,31 @@ import {
     <strong class="text-text-primary">More than one wearable.</strong>
     An Apple Watch writes to Health directly; Oura, Whoop and Garmin write
     through their apps. Someone with a Watch and a Whoop therefore has two
-    writers, and Health keeps both copies. What reaches Verve then depends
-    on the data. <em>Steps</em>: Verve asks Health for its own daily total,
-    which follows the source order set in Health, so one source counts at
-    any moment. <em>Sleep and heart rate</em>: Verve reads the samples
-    themselves, and Health returns every source&rsquo;s, so two devices
-    both writing the same night can overlap. Two settings in Health decide
-    it; Verve has none of its own. <em>Which app may write what</em>:
-    Health &rarr; your picture &rarr; Apps &rarr; the app &rarr; untick the
-    types it should not write. This is the lever for sleep and heart rate,
-    because it stops the duplicate at the source. <em>Which source wins
-    when both exist</em>: Health &rarr; Browse &rarr; the data type, say
-    Steps &rarr; Data Sources &amp; Access &rarr; Edit &rarr; drag the
-    sources into order. This governs totals such as steps.
+    writers, and Health keeps both copies. Who decides which one counts
+    depends on the reading, and there are three cases.
+    <em>Verve chooses, and you can set it</em>: sleep stages, night HRV,
+    resting heart rate and VO&#8322;max. Health hands over every
+    writer&rsquo;s samples with no order attached, so Verve picks one writer
+    per night or day and names it on the card. By default the device that
+    covered more of the night, or wrote more readings; in Verve, Settings
+    &rarr; Apple Health &rarr; Preferred device, you can name the one that
+    leads for each of the four. The other still counts on the nights it is
+    alone.
+    <em>Health decides, by its source order</em>: steps, active energy and
+    distance. Verve asks Health for the day&rsquo;s total, and Health builds
+    it before answering, keeping one source for any minute both counted.
+    The order is yours to set: Health &rarr; Browse &rarr; Steps &rarr;
+    Data Sources &amp; Access &rarr; Edit &rarr; drag the device you trust
+    to the top. Verve never sees the pieces, so it cannot offer a choice.
+    <em>Each record on its own</em>: workouts, weight, blood pressure. A
+    workout is an event with a start time; Verve lists each as it came and
+    drops exact duplicates. Two devices recording the same run with
+    slightly different start times both appear, so a person wearing two
+    should let only one write workouts: Health &rarr; Sharing &rarr; Apps
+    &rarr; the app &rarr; switch Workouts off. That per-app switch is the
+    one Health control that reaches every reading, because it stops the
+    second copy at the source; the Apple Watch, being a device rather than
+    an app, has no such switches.
   </p>
 </div>
 <div class="mt-4 grid gap-4 sm:grid-cols-2">

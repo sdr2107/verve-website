@@ -545,6 +545,34 @@ export const NIGHT_HRV_SECTION: Citation[] = [
     url: "https://pubmed.ncbi.nlm.nih.gov/23852425/",
     color: "#15803d",
   },
+  {
+    title: "Plews, Laursen, Kilding & Buchheit — Heart rate variability in elite triathletes, is variation in variability the key to effective training? A case comparison, European Journal of Applied Physiology 2012",
+    summary:
+      "Two elite triathletes followed for 77 days, one of whom overreached and fell ill. Read on a 7-day rolling average of Ln rMSSD, the overreached athlete's HRV drifted down for weeks before the race while the other's held, and single mornings showed nothing of the kind. The study behind the rolling mean Verve draws through your nights: the smoothed line, not the night, is the reading to act on.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/22367011/",
+    color: "#0e7490",
+  },
+  {
+    title: "Plews, Laursen, Le Meur, Hausswirth, Kilding & Buchheit — Monitoring training with heart rate-variability: how much compliance is needed for valid assessment? International Journal of Sports Physiology and Performance 2014",
+    summary:
+      "How many mornings a week are enough. Averaging from 1 to 7 randomly chosen days, the agreement with the full week plateaued after 3 to 4 valid readings in trained triathletes. The reason Verve's 7-night mean appears from 3 nights of one writer and is marked settled at 7, and the reason a missed night does not blank the reading.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/24334285/",
+    color: "#b45309",
+  },
+  {
+    title: "Esco, Fields, Mohammadnabi & Kliszczewicz — Monitoring Training Adaptation and Recovery Status in Athletes Using Heart Rate Variability via Mobile Devices: A Narrative Review, Sensors 2025",
+    summary:
+      "The current review of how HRV is read for recovery: a weekly mean from a fixed week for adaptation, the week's coefficient of variation for recovery, and the two interpreted separately; a rolling 7-day mean for day-to-day reads; 1-minute rMSSD recordings in a consistent posture; a baseline of at least a week. A higher weekly scatter tends to precede a fall in the mean. The source of Verve's fixed-week scatter and the figure it is read beside.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/41516438/",
+    color: "#7e22ce",
+  },
+  {
+    title: "Flatt, Esco, Nakamura & Plews — Interpreting daily heart rate variability changes in collegiate female soccer players, Journal of Sports Medicine and Physical Fitness 2016",
+    summary:
+      "Two weeks of daily smartphone lnRMSSD in a women's team across a high and a low training load. A higher day-to-day coefficient of variation went with greater perceived fatigue and lower fitness. The evidence that a week's scatter carries information the mean does not, and the reason Verve reads it only against your own prior weeks: the athletes' scatter differed by fitness, so no single figure fits everyone.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/26997322/",
+    color: "#be123c",
+  },
 ];
 
 /**
