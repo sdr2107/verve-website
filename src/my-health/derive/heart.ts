@@ -123,8 +123,25 @@ export function sleepHeartSummaryRaw(rows: any[], today: string) {
     const status = w && q ? (w.cv < q.q1 ? "settled" : w.cv > q.q3 ? "unsettled" : "usual") : null;
     return { start: sp.start, endExcl: sp.end, mean: w?.mean ?? null, cv: w?.cv ?? null, nights: w?.nights ?? 0, status, usualCv: q ? Math.round(medianOf(priors)! * 10) / 10 : null };
   });
+  // Months: the last 12 calendar months, newest first, each month's mean and
+  // scatter over its nights, the mean read against the middle half of this
+  // person's own prior 6 months' means and the scatter against their CVs
+  // (needs 3). Years: each year's median night and nights on file. The app
+  // keeps these views off its phone page; this is where they live.
+  const monthStat = (y: number, m: number) => { const from = `${y}-${String(m + 1).padStart(2, "0")}-01`; const to = `${y}-${String(m + 1).padStart(2, "0")}-31`; const xs = own.filter((r) => r.day >= from && r.day <= to).map((r) => r.ms); if (xs.length < 3) return null; const mean = xs.reduce((a, b) => a + b, 0) / xs.length; const sd = Math.sqrt(xs.reduce((a, b) => a + (b - mean) ** 2, 0) / (xs.length - 1)); return { mean: Math.round(mean), cv: Math.round((sd / mean) * 1000) / 10, nights: xs.length, median: Math.round(medianOf(xs)!) }; };
+  const nowD = new Date(today + "T00:00:00");
+  const hrvMonths = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(nowD.getFullYear(), nowD.getMonth() - i, 1);
+    const st = monthStat(d.getFullYear(), d.getMonth());
+    const priors = Array.from({ length: 6 }, (_, k) => { const pd = new Date(d.getFullYear(), d.getMonth() - (k + 1), 1); return monthStat(pd.getFullYear(), pd.getMonth()); }).filter((x): x is NonNullable<typeof x> => x != null);
+    const qm = priors.length >= 3 ? quartilesOf(priors.map((x) => x.mean)) : null, qc = priors.length >= 3 ? quartilesOf(priors.map((x) => x.cv)) : null;
+    return { month: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, label: d.toLocaleDateString(undefined, { month: "short", year: i === 0 || d.getMonth() === 0 ? "numeric" : undefined }), mean: st?.mean ?? null, cv: st?.cv ?? null, nights: st?.nights ?? 0,
+      meanStatus: st && qm ? (st.mean < qm.q1 ? "below" : st.mean > qm.q3 ? "above" : "inside") : null, scatterStatus: st && qc ? (st.cv < qc.q1 ? "settled" : st.cv > qc.q3 ? "unsettled" : "usual") : null, priors: priors.length };
+  });
+  const yearsOn = [...new Set(own.map((r) => Number(r.day.slice(0, 4))))].sort((a, b) => b - a);
+  const hrvYears = yearsOn.map((y) => { const xs = own.filter((r) => r.day.startsWith(`${y}-`)).map((r) => r.ms); const months = Array.from({ length: 12 }, (_, m) => monthStat(y, m)).filter((x): x is NonNullable<typeof x> => x != null); return { year: y, median: Math.round(medianOf(xs)!), nights: xs.length, months: months.length, lowMonth: months.length ? Math.min(...months.map((x) => x.mean)) : null, highMonth: months.length ? Math.max(...months.map((x) => x.mean)) : null }; });
   const hrv = { latest: lastV?.ms ?? null, latestDay: lastV?.day ?? null, samples: lastV?.n ?? null, writer: hrvWriter, method: hrvMethod, otherWriters, usual: hrvUsual, band: hrvBand, priors: hrvPri.length,
-    below: lastV != null && hrvBand != null && lastV.ms < hrvBand.lo, run: hrvRun, read: hrvRead, nightsBelow: hrvBelow, absent: hrvAbsent, svg: hrvSvg, series: hrvJudged, mean7, weeks: hrvWeeks };
+    below: lastV != null && hrvBand != null && lastV.ms < hrvBand.lo, run: hrvRun, read: hrvRead, nightsBelow: hrvBelow, absent: hrvAbsent, svg: hrvSvg, series: hrvJudged, mean7, weeks: hrvWeeks, months: hrvMonths, years: hrvYears };
 
   // The one pattern the Guide names: night HRV low, resting rate high and
   // recovery small, each against its own band, for the last 3 readings of

@@ -28,6 +28,7 @@ export type Marker = {
   goal?: () => number | null;                 // a weekly goal, drawn as a line on the week
   band?: () => { lo: number; hi: number; why: string } | null;   // the person's own normal, shaded
   reads: (pts: Pt2[]) => string[];            // what Verve reads, in sentences (HTML)
+  rangeReads?: (range: Rng, year: number | null) => string[];   // sentences for one range, after `reads` (night HRV's months and years)
   group?: "metabolic" | "heart" | "muscle";   // Body only: the app's three shelves
   pointLabel?: (p: Pt2) => string;            // the tile's figure when one number is not the whole reading (118/76)
 };
@@ -184,6 +185,21 @@ export function buildMarkers(src: MarkerSources): Marker[] {
       science: "/science/sleep-heart/night-hrv", source: "The median of the HRV samples inside each night's sleep window, from the most recent writer only; the writer and its method are on the card.", fmt: (v) => round0(v),
       series: () => { const rows = signals.filter((r) => r.hrv_night_ms != null); const w = rows[rows.length - 1]?.hrv_source ?? null; return rows.filter((r) => (r.hrv_source ?? null) === w).map((r) => ({ d: String(r.day), v: Number(r.hrv_night_ms), note: `${String(r.hrv_source ?? "unknown writer")} · ${r.hrv_method === "sdnn" ? "SDNN" : r.hrv_method === "rmssd" ? "rMSSD" : "method undeclared"}` })); },
       band: () => { const h = heart(); return h?.hrv.band ? { lo: h.hrv.band.lo, hi: h.hrv.band.hi, why: `the middle half of the last ${h.hrv.priors} nights from ${h.hrv.writer}` } : null; },
+      rangeReads: (range, year) => {
+        const h = heart(); if (!h || h.hrv.latest == null) return [];
+        if (range === "months") {
+          const ms = h.hrv.months.filter((m) => m.mean != null);
+          if (!ms.length) return [];
+          const word = (m: typeof ms[number]) => `<strong class="text-text-primary">${esc(m.label)}</strong> ${m.mean} ms${m.meanStatus && m.meanStatus !== "inside" ? ` <span class="${m.meanStatus === "below" ? "text-warning" : "text-success-light"}">${m.meanStatus}</span>` : ""} · scatter ${Math.round(m.cv!)}%${m.scatterStatus && m.scatterStatus !== "usual" ? ` <span class="${m.scatterStatus === "unsettled" ? "text-warning" : "text-success-light"}">${m.scatterStatus}</span>` : ""} · ${m.nights} night${m.nights === 1 ? "" : "s"}`;
+          return [`Month by month, newest first, from ${esc(h.hrv.writer ?? "one writer")}: ${ms.map(word).join("; ")}.`, "Each month's mean is read against the middle half of your own 6 months before it, and its scatter against theirs: below, above, unsettled and settled are relative to you, never to a population. A month with under 3 nights is left out."];
+        }
+        if (range === "years") {
+          const ys = year != null ? h.hrv.years.filter((y) => y.year === year) : h.hrv.years;
+          if (!ys.length) return [];
+          return [`Year by year: ${ys.map((y) => `<strong class="text-text-primary">${y.year}</strong> median ${y.median} ms over ${y.nights} night${y.nights === 1 ? "" : "s"}${y.months >= 2 && y.lowMonth != null ? `, months from ${y.lowMonth} to ${y.highMonth} ms` : ""}`).join("; ")}.`, "A year's median is a long baseline, not a verdict: HRV falls slowly with age in everyone, so compare a year with the one before it, not with anyone else's."];
+        }
+        return [];
+      },
       reads: () => { const h = heart(); if (!h || h.hrv.latest == null) return [h?.hrv.absent ? "No HRV reaches Apple Health from this wearable." : "No night HRV on file yet: Apple Watch writes it, and the app sends the night's median on each sync."]; const v = h.hrv; const out = [`<strong class="${v.below ? "text-warning" : "text-text-primary"}">${v.latest} ms</strong> ${esc(dayWord(v.latestDay!))}, ${esc(v.writer ?? "")} · ${v.method === "sdnn" ? "SDNN" : v.method === "rmssd" ? "rMSSD" : "method undeclared"}${v.band ? `, against ${v.band.lo}–${v.band.hi}, the middle half of the last ${v.priors} nights${v.below ? ": <span class=\"text-warning\">under the band</span>" : ""}` : `; a band needs 7 nights from this writer, ${v.priors} so far`}.`]; if (v.otherWriters.length) out.push(`${esc(v.otherWriters.join(", "))} also wrote HRV in the last 30 nights with data. Only ${esc(v.writer ?? "the latest writer")}'s nights are read, never mixed: two methods are two different numbers.`); if (v.mean7) out.push(`<strong class="text-text-primary">7-night mean ${v.mean7.ms} ms</strong>${v.mean7.status ? `, ${v.mean7.status} the band` : ""}${v.mean7.settled ? "" : ` (${v.mean7.nights} of 7 nights)`}. One night is a night; the mean is the reading to act on.`); const wk = v.weeks.filter((w) => w.cv != null); if (wk.length) out.push(`Scatter, the week's spread around its own mean, newest first: ${wk.map((w) => `<strong class="text-text-primary">${Math.round(w.cv!)}%</strong>${w.status ? ` ${w.status === "usual" ? "usual" : w.status}` : ""}`).join(" · ")}${wk[0].usualCv != null ? `; your usual ${Math.round(wk[0].usualCv)}%` : ""}. It is read against your own prior weeks only, and it widens before the mean falls.`); out.push(v.run > 1 ? `<strong class="text-text-primary">${v.run} nights running</strong> below the band. One is a night; a pattern needs resting rate and recovery to agree${h.threeTogether ? ", <span class=\"text-warning\">and for the last 3 readings of each, they do</span>" : ", and they do not yet"}.` : "HRV spans a fivefold range between healthy people and falls with age, so there is no population figure here: only your own nights."); return out; } },
     // ── body ──
     { key: "waist_cm", section: "body", group: "metabolic", label: "Waist", unit: "cm", sub: "The measure that stands in for the fat that matters", daily: false, color: "#FBBF24",

@@ -199,7 +199,7 @@ function OpenMarker({ open, markers, acts, out }: { open: Marker; markers: Marke
   const yearMenu = (open.daily ? range === "years" : range === "all") && years.length;
   const band = open.daily && range === "week" ? (open.band?.() ?? null) : null;
   const pts = open.series();
-  const reads = open.reads(pts);
+  const reads = [...open.reads(pts), ...(open.rangeReads?.(range, year) ?? [])];
   const t = todayStr();
   const monthAgg = (from: string, to: string) => { const xs = pts.filter((p) => p.d >= from && p.d <= to).map((p) => p.v); return xs.length ? { v: open.sum ? xs.reduce((a, b) => a + b, 0) : xs.reduce((a, b) => a + b, 0) / xs.length, n: xs.length } : null; };
   const m30 = monthAgg(addDays(t, -29), t), y1 = monthAgg(addDays(t, -364), t), y2 = monthAgg(addDays(t, -729), addDays(t, -365));
