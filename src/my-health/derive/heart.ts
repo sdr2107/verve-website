@@ -103,8 +103,28 @@ export function sleepHeartSummaryRaw(rows: any[], today: string) {
   }
   // sleep rows in the window but no HRV: the wearable is not writing it
   const hrvAbsent = !hrvAll.some((r) => r.day > daysBack(today, 30)) && rows.some((r) => r.sleep_minutes != null && r.day > daysBack(today, 30));
+  // The 7-night mean, the app's rule (data/met-thresholds.json nightHrv.rollingNights
+  // / rollingMinNights): the writer's last 7 nights ending at the latest night, no
+  // further back than 14 days, shown from 3 nights, against the same band.
+  const m7Rows = lastV ? own.filter((r) => r.day <= lastV.day && r.day > daysBack(lastV.day, 14)).slice(-7) : [];
+  const mean7 = m7Rows.length >= 3 ? (() => { const ms = Math.round(m7Rows.reduce((a, r) => a + r.ms, 0) / m7Rows.length); return { ms, nights: m7Rows.length, settled: m7Rows.length >= 7, status: hrvBand ? (ms < hrvBand.lo ? "below" : ms > hrvBand.hi ? "above" : "inside") : null }; })() : null;
+  // The last four whole weeks, Monday to Sunday, newest first: each week's mean and
+  // scatter (sample SD / mean, %), the scatter read against this person's own prior
+  // 8 weeks (median and middle half; needs 3), the app's rule (nightHrv.scatter*).
+  const mondayOf = (iso: string) => { const d = new Date(iso + "T00:00:00"); const back = (d.getDay() + 6) % 7; d.setDate(d.getDate() - back); return d; };
+  const isoOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const weekCV = (startIso: string, endIsoExcl: string) => { const xs = own.filter((r) => r.day >= startIso && r.day < endIsoExcl).map((r) => r.ms); if (xs.length < 3) return null; const m = xs.reduce((a, b) => a + b, 0) / xs.length; const sd = Math.sqrt(xs.reduce((a, b) => a + (b - m) ** 2, 0) / (xs.length - 1)); return { mean: Math.round(m), cv: Math.round((sd / m) * 1000) / 10, nights: xs.length }; };
+  const thisMonday = mondayOf(today);
+  const weekSpan = (i: number) => { const s = new Date(thisMonday); s.setDate(s.getDate() - 7 * (i + 1)); const e = new Date(thisMonday); e.setDate(e.getDate() - 7 * i); return { start: isoOf(s), end: isoOf(e) }; };
+  const hrvWeeks = [0, 1, 2, 3].map((i) => {
+    const sp = weekSpan(i); const w = weekCV(sp.start, sp.end);
+    const priors = [1, 2, 3, 4, 5, 6, 7, 8].map((k) => { const ps = weekSpan(i + k); return weekCV(ps.start, ps.end)?.cv ?? null; }).filter((v): v is number => v != null);
+    const q = priors.length >= 3 ? quartilesOf(priors) : null;
+    const status = w && q ? (w.cv < q.q1 ? "settled" : w.cv > q.q3 ? "unsettled" : "usual") : null;
+    return { start: sp.start, endExcl: sp.end, mean: w?.mean ?? null, cv: w?.cv ?? null, nights: w?.nights ?? 0, status, usualCv: q ? Math.round(medianOf(priors)! * 10) / 10 : null };
+  });
   const hrv = { latest: lastV?.ms ?? null, latestDay: lastV?.day ?? null, samples: lastV?.n ?? null, writer: hrvWriter, method: hrvMethod, otherWriters, usual: hrvUsual, band: hrvBand, priors: hrvPri.length,
-    below: lastV != null && hrvBand != null && lastV.ms < hrvBand.lo, run: hrvRun, read: hrvRead, nightsBelow: hrvBelow, absent: hrvAbsent, svg: hrvSvg, series: hrvJudged };
+    below: lastV != null && hrvBand != null && lastV.ms < hrvBand.lo, run: hrvRun, read: hrvRead, nightsBelow: hrvBelow, absent: hrvAbsent, svg: hrvSvg, series: hrvJudged, mean7, weeks: hrvWeeks };
 
   // The one pattern the Guide names: night HRV low, resting rate high and
   // recovery small, each against its own band, for the last 3 readings of
