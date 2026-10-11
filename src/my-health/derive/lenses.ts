@@ -29,6 +29,7 @@ export type Marker = {
   band?: () => { lo: number; hi: number; why: string } | null;   // the person's own normal, shaded
   reads: (pts: Pt2[]) => string[];            // what Verve reads, in sentences (HTML)
   rangeReads?: (range: Rng, year: number | null) => string[];   // sentences for one range, after `reads` (night HRV's months and years)
+  companion?: string;                         // another marker's key whose same-range figure sits beside this one's (activity level ↔ active energy)
   group?: "metabolic" | "heart" | "muscle";   // Body only: the app's three shelves
   pointLabel?: (p: Pt2) => string;            // the tile's figure when one number is not the whole reading (118/76)
 };
@@ -155,6 +156,7 @@ export function buildMarkers(src: MarkerSources): Marker[] {
     { key: "pal", section: "movement", label: "Activity level", unit: "", sub: "The day's energy over the energy at rest, in the app's four bands", daily: true, color: "#34d399",
       science: "/science/movement/activity-level", source: "Worked out on the phone from Apple Health's energy, one figure a day, sent on each sync.", fmt: (v) => v.toFixed(2),
       series: () => signalSeries("pal"),
+      companion: "active_kcal",
       rangeReads: (range) => energyRangeReads(range, signals),
       reads: (pts) => { if (!pts.length) return ["No activity level yet: it needs a week of energy data in Apple Health, and an app that sends it."]; const l = pts[pts.length - 1]; const band = l.v < 1.4 ? "sedentary, 1.0 to 1.39" : l.v < 1.6 ? "low active, 1.4 to 1.59" : l.v < 1.9 ? "active, 1.6 to 1.89" : "very active, 1.9 and up"; return [`<strong class="text-text-primary">${l.v.toFixed(2)}</strong> ${l.d === todayStr() ? "today" : `on ${esc(fmtDay(l.d))}`}: ${band}, the same four bands the app's Physical activity level row uses.`]; } },
     { key: "active_kcal", section: "movement", label: "Active energy", unit: "kcal", sub: "Active energy a day, the part of the day's energy that makes the activity level rise", daily: true, color: "#F59E0B",

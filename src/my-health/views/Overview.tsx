@@ -204,6 +204,12 @@ function OpenMarker({ open, markers, acts, out }: { open: Marker; markers: Marke
   const monthAgg = (from: string, to: string) => { const xs = pts.filter((p) => p.d >= from && p.d <= to).map((p) => p.v); return xs.length ? { v: open.sum ? xs.reduce((a, b) => a + b, 0) : xs.reduce((a, b) => a + b, 0) / xs.length, n: xs.length } : null; };
   const m30 = monthAgg(addDays(t, -29), t), y1 = monthAgg(addDays(t, -364), t), y2 = monthAgg(addDays(t, -729), addDays(t, -365));
   const alongside = dr && open.daily && range === "week" ? alongsideHtml(markers, open, range, dr) : "";
+  // a companion marker's figure for the same range, beside this one's (activity level ↔ active energy)
+  const comp = open.companion ? markers.find((m) => m.key === open.companion) ?? null : null;
+  const compDr = comp ? drawnFor(comp, range, year) : null;
+  const compPts = comp ? comp.series() : [];
+  const compAgg = (from: string, to: string) => { const xs = compPts.filter((p) => p.d >= from && p.d <= to).map((p) => p.v); return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null; };
+  const c30 = comp ? compAgg(addDays(t, -29), t) : null, c1y = comp ? compAgg(addDays(t, -364), t) : null;
   return (
     <>
       <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
@@ -225,7 +231,12 @@ function OpenMarker({ open, markers, acts, out }: { open: Marker; markers: Marke
         {dr ? (
           <>
             <div class="mt-4 flex flex-wrap items-end justify-between gap-3">
-              <div class="flex items-baseline gap-2.5"><span class={`font-mono text-[38px] font-bold leading-none ${out ? "text-warning" : "text-text-primary"}`}>{dr.headline}</span><span class="text-[13.5px] text-text-secondary" dangerouslySetInnerHTML={{ __html: dr.caption }} /></div>
+              <div class="flex flex-wrap items-baseline gap-x-8 gap-y-2">
+                <div class="flex items-baseline gap-2.5"><span class={`font-mono text-[38px] font-bold leading-none ${out ? "text-warning" : "text-text-primary"}`}>{dr.headline}</span><span class="text-[13.5px] text-text-secondary" dangerouslySetInnerHTML={{ __html: dr.caption }} /></div>
+                {comp && compDr && compDr.headline !== "—" ? (
+                  <div class="flex items-baseline gap-2"><span class="font-mono text-[38px] font-bold leading-none" style={`color:${comp.color}`}>{compDr.headline}</span><span class="text-[13.5px] text-text-secondary">{range === "week" ? `kcal active ${compPts.length && compPts[compPts.length - 1].d === t ? "today" : "on the latest day"}` : "kcal active a day"}</span></div>
+                ) : null}
+              </div>
               <div class="flex flex-wrap gap-4 text-[12px] text-text-secondary">
                 {band ? <span><span class="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm border border-success/50 bg-success/20 align-[-1px]"></span>{band.why}</span> : null}
                 {range === "week" && open.goal?.() ? <span><span class="mr-1.5 inline-block h-0.5 w-3 bg-accent-light align-[3px]"></span>the week's running total, against the goal</span> : null}
@@ -248,8 +259,8 @@ function OpenMarker({ open, markers, acts, out }: { open: Marker; markers: Marke
         </div>
       </div>
       <div class="mt-3 grid gap-3 sm:grid-cols-3">
-        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4"><Kicker text={open.daily ? "LAST 30 DAYS" : "LAST YEAR"} /><div class="mt-1.5 font-mono text-[20px] font-bold text-text-primary">{open.daily ? (m30 ? open.fmt(m30.v) : "—") : (y1 ? open.fmt(y1.v) : "—")} <span class="text-[11px] font-semibold text-text-tertiary">{open.daily ? (m30 ? `${open.unit}${open.sum ? "" : " a day"}` : "") : (y1 ? `${open.unit} average` : "")}</span></div><div class="mt-0.5 text-[12px] text-text-tertiary">{open.daily ? (m30 ? `${m30.n} days read` : "nothing read") : (y1 ? `${y1.n} reading${y1.n === 1 ? "" : "s"}` : "no reading")}</div></div>
-        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4"><Kicker text={open.daily ? "LAST 12 MONTHS" : "THE YEAR BEFORE"} /><div class="mt-1.5 font-mono text-[20px] font-bold text-text-primary">{open.daily ? (y1 ? open.fmt(y1.v) : "—") : (y2 ? open.fmt(y2.v) : "—")} <span class="text-[11px] font-semibold text-text-tertiary">{open.daily ? (y1 ? `${open.unit}${open.sum ? " in all" : " a day"}` : "") : (y2 ? `${open.unit} average` : "")}</span></div><div class="mt-0.5 text-[12px] text-text-tertiary">{open.daily ? (y1 && y2 ? `the year before: ${open.fmt(y2.v)}` : y1 ? `${y1.n} days read` : "nothing read") : (y2 ? `${y2.n} reading${y2.n === 1 ? "" : "s"}` : "no reading")}</div></div>
+        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4"><Kicker text={open.daily ? "LAST 30 DAYS" : "LAST YEAR"} /><div class="mt-1.5 font-mono text-[20px] font-bold text-text-primary">{open.daily ? (m30 ? open.fmt(m30.v) : "—") : (y1 ? open.fmt(y1.v) : "—")} <span class="text-[11px] font-semibold text-text-tertiary">{open.daily ? (m30 ? `${open.unit}${open.sum ? "" : " a day"}` : "") : (y1 ? `${open.unit} average` : "")}</span></div><div class="mt-0.5 text-[12px] text-text-tertiary">{open.daily ? (m30 ? `${m30.n} days read` : "nothing read") : (y1 ? `${y1.n} reading${y1.n === 1 ? "" : "s"}` : "no reading")}</div>{comp && c30 != null ? <div class="mt-1 font-mono text-[13px] font-semibold" style={`color:${comp.color}`}>{Math.round(c30)} <span class="text-[11px] text-text-tertiary">kcal active a day</span></div> : null}</div>
+        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4"><Kicker text={open.daily ? "LAST 12 MONTHS" : "THE YEAR BEFORE"} /><div class="mt-1.5 font-mono text-[20px] font-bold text-text-primary">{open.daily ? (y1 ? open.fmt(y1.v) : "—") : (y2 ? open.fmt(y2.v) : "—")} <span class="text-[11px] font-semibold text-text-tertiary">{open.daily ? (y1 ? `${open.unit}${open.sum ? " in all" : " a day"}` : "") : (y2 ? `${open.unit} average` : "")}</span></div><div class="mt-0.5 text-[12px] text-text-tertiary">{open.daily ? (y1 && y2 ? `the year before: ${open.fmt(y2.v)}` : y1 ? `${y1.n} days read` : "nothing read") : (y2 ? `${y2.n} reading${y2.n === 1 ? "" : "s"}` : "no reading")}</div>{comp && c1y != null ? <div class="mt-1 font-mono text-[13px] font-semibold" style={`color:${comp.color}`}>{Math.round(c1y)} <span class="text-[11px] text-text-tertiary">kcal active a day</span></div> : null}</div>
         <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4"><Kicker text="SOURCE" /><div class="mt-1.5 text-[13px] leading-relaxed text-text-secondary">{open.source}</div></div>
       </div>
       {open.key === "sessions" ? <div dangerouslySetInnerHTML={{ __html: workoutsListHtml(acts, range) }} /> : null}
