@@ -155,7 +155,22 @@ export function buildMarkers(src: MarkerSources): Marker[] {
     { key: "pal", section: "movement", label: "Activity level", unit: "", sub: "The day's energy over the energy at rest, in the app's four bands", daily: true, color: "#34d399",
       science: "/science/movement/activity-level", source: "Worked out on the phone from Apple Health's energy, one figure a day, sent on each sync.", fmt: (v) => v.toFixed(2),
       series: () => signalSeries("pal"),
+      rangeReads: (range) => energyRangeReads(range, signals),
       reads: (pts) => { if (!pts.length) return ["No activity level yet: it needs a week of energy data in Apple Health, and an app that sends it."]; const l = pts[pts.length - 1]; const band = l.v < 1.4 ? "sedentary, 1.0 to 1.39" : l.v < 1.6 ? "low active, 1.4 to 1.59" : l.v < 1.9 ? "active, 1.6 to 1.89" : "very active, 1.9 and up"; return [`<strong class="text-text-primary">${l.v.toFixed(2)}</strong> ${l.d === todayStr() ? "today" : `on ${esc(fmtDay(l.d))}`}: ${band}, the same four bands the app's Physical activity level row uses.`]; } },
+    { key: "active_kcal", section: "movement", label: "Active energy", unit: "kcal", sub: "Active energy a day, the part of the day's energy that makes the activity level rise", daily: true, color: "#F59E0B",
+      science: "/science/movement/activity-level", source: "Apple Health's or Health Connect's active energy, one total a day, sent by the app on each sync, up to five years back.", fmt: (v) => round0(v),
+      series: () => signalSeries("active_kcal"),
+      reads: (pts) => {
+        if (!pts.length) return ["No active energy yet: the app sends it once Back up watch readings is on."];
+        const l = pts[pts.length - 1];
+        const avgOf = (from: string) => { const xs = pts.filter((p) => p.d > from).map((p) => p.v); return xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null; };
+        const a7 = avgOf(addDays(todayStr(), -7)), a30 = avgOf(addDays(todayStr(), -30));
+        return [
+          `<strong class="text-text-primary">${round0(l.v)} kcal</strong> ${l.d === todayStr() ? "today so far" : `on ${esc(fmtDay(l.d))}`}${a7 != null ? `; ${a7} a day over the last 7 days` : ""}${a30 != null ? `, ${a30} over the last 30` : ""}.`,
+          "It is the watch's estimate: wrist energy is off by more than 30% in studies, so read the trend and the activity level beside it, not the calorie.",
+        ];
+      },
+      rangeReads: (range) => energyRangeReads(range, signals) },
     { key: "standing", section: "movement", label: "Standing", unit: "min", sub: "Movement balance: minutes on your feet, with a watch", daily: true, color: "#34d399",
       science: "/science/movement/movement-balance", source: "Apple Health's stand minutes, one total a day, sent by the app on each sync.", fmt: (v) => round0(v),
       series: () => signalSeries("standing_minutes"),
@@ -244,6 +259,27 @@ export function buildMarkers(src: MarkerSources): Marker[] {
       series: () => sppbSeries(app), fmt: (v) => round0(v),
       reads: (pts) => { if (!pts.length) return ["No full battery on file: the three tests on one day score it."]; const l = pts[pts.length - 1]; const cat = l.v <= 6 ? "poor" : l.v <= 9 ? "intermediate" : "good"; return [`<strong class="text-text-primary">${round0(l.v)} of 12</strong> on ${esc(fmtDay(l.d))}${l.note ? ` (${esc(l.note)})` : ""}: <span class="${cat === "good" ? "text-success-light" : "text-warning"}">${cat}</span>, where 10 to 12 is good, 7 to 9 intermediate and 6 or under poor.`]; } }),
   ];
+}
+
+/**
+ * Months and years for activity level and active energy together, from the
+ * daily rows: each period's PAL is the mean of its days' 7-day PAL, its
+ * active energy the mean of its days', and its band the app's four. The
+ * same reading on both markers, so the two cannot disagree.
+ */
+function energyRangeReads(range: Rng, signals: any[]): string[] {
+  if (range !== "months" && range !== "years") return [];
+  const rows = signals.filter((r) => r.pal != null || r.active_kcal != null);
+  if (!rows.length) return [];
+  const band = (v: number) => (v < 1.4 ? "Sedentary" : v < 1.6 ? "Low Active" : v < 1.9 ? "Active" : "Very Active");
+  const keyOf = (d: string) => (range === "months" ? d.slice(0, 7) : d.slice(0, 4));
+  const groups = new Map<string, { pal: number[]; act: number[] }>();
+  for (const r of rows) { const k = keyOf(String(r.day)); const g = groups.get(k) ?? { pal: [], act: [] }; if (r.pal != null) g.pal.push(Number(r.pal)); if (r.active_kcal != null) g.act.push(Number(r.active_kcal)); groups.set(k, g); }
+  const keys = [...groups.keys()].sort().reverse().slice(0, range === "months" ? 12 : 5);
+  const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+  const label = (k: string) => (range === "months" ? new Date(`${k}-01T00:00:00`).toLocaleDateString(undefined, { month: "short", year: "numeric" }) : k);
+  const parts = keys.map((k) => { const g = groups.get(k)!; const p = mean(g.pal), a = mean(g.act); return `<strong class="text-text-primary">${esc(label(k))}</strong> ${p != null ? `${p.toFixed(2)} ${band(p)}` : "no PAL"}${a != null ? ` · ${Math.round(a)} kcal active a day` : ""}`; });
+  return [`${range === "months" ? "Month by month" : "Year by year"}, newest first: ${parts.join("; ")}.`, "Each period's activity level is the average of its days' seven-day readings; the bands are the app's four."];
 }
 
 // ── one range of one marker: the points to draw, the headline, the caption ──
