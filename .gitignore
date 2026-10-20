@@ -29,3 +29,6 @@ github-recovery-codes.txt
 
 # Generated design canvases (sources .dc.html + canvas.json are tracked)
 design-*/[a-z]*-page.html
+
+# third-party concept images kept for reference only; never published
+docs/inspiration/
