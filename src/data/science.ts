@@ -427,6 +427,21 @@ export const WEEKLY_VOLUME_SECTION: Citation[] = [
     color: "#0284c7",
     isCommentary: true,
   },
+  {
+    title: "Piercy et al — JAMA 2018, the Physical Activity Guidelines for Americans",
+    summary:
+      "The second edition of the US guidelines, in the journal article form. The aerobic dose is given in one unit that lets moderate and vigorous minutes add up fairly: 500 to 1,000 MET-minutes a week, the range that 150 to 300 moderate minutes, or 75 to 150 vigorous, come to. The 2026 ACC scientific statement on prescribing exercise restates the same 500–1,000. Verve's weekly goal is set in this unit, between those two figures, and counts the sessions you log at moderate or vigorous effort toward it.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/30418471/",
+    color: "#4338ca",
+  },
+  {
+    title: "The ACC statement, read — the founder's article on X",
+    summary:
+      "What the American College of Cardiology's 2026 statement says in plain terms: exercise prescribed as a drug, 500–1,000 MET-minutes a week as the aerobic dose, weekend-packed sessions carrying similar benefit, 7,000 steps a day as the practical mark, strength at least twice a week, and a 1 MET gain on a test as the proof that training worked.",
+    url: "https://x.com/RoplekarSudeep/status/2111468943374438612",
+    color: "#0ea5e9",
+    isCommentary: true,
+  },
 ];
 
 export const ZONE2_HR_SECTION: Citation[] = [
