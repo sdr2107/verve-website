@@ -85,10 +85,11 @@ test("sleepHeartSummaryRaw: the night HRV band appears after 7 nights of one wri
   assert.deepEqual(m.hrv.otherWriters, ["Apple Watch"]);
 });
 
-test("buildMarkers: 39 markers, the week lens of a summing marker adds the days", () => {
+// 40 since 6b0d423 (2026-10-11), when active_kcal joined the movement markers; the pin was left at 39 and failed unnoticed until 2026-10-20.
+test("buildMarkers: 40 markers, the week lens of a summing marker adds the days", () => {
   const acts = [{ timestamp: `${mondayOf(new Date())}T07:00:00`, duration_minutes: 30, met_hours: 2.5, intensity_category: "moderate", zone2_minutes: 10 }];
   const markers = buildMarkers({ signals: [], acts, weights: [], profile: { weekly_met_hours_goal: 7.5 }, crf: [], weeks: [], app: [], by: new Map() });
-  assert.equal(markers.length, 39);
+  assert.equal(markers.length, 40);
   const met = markers.find((m) => m.key === "met");
   const dr = drawnFor(met, "week");
   assert.equal(dr.headline, "2.5");
