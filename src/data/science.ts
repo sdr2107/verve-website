@@ -435,6 +435,13 @@ export const WEEKLY_VOLUME_SECTION: Citation[] = [
     color: "#4338ca",
   },
   {
+    title: "Myers et al — JACC 2026, the ACC scientific statement on exercise prescription",
+    summary:
+      "Exercise Prescriptions for Cardiovascular Health in Adults: 2026 ACC Scientific Statement, published 15 October 2026. Exercise prescribed as a foundational part of routine cardiovascular care: the largest gains when inactive people start, more benefit with more volume and intensity within clinical limits; aerobic, resistance, balance and flexibility work; cardiac rehabilitation and home-based models; coronary disease, heart failure, hypertension, obesity and older age. The weekly aerobic dose is given as 500 to 1,000 MET-minutes, the same range as the 2018 guidelines above.",
+    url: "https://doi.org/10.1016/j.jacc.2026.09.008",
+    color: "#0369a1",
+  },
+  {
     title: "The ACC statement, read — the founder's article on X",
     summary:
       "What the American College of Cardiology's 2026 statement says in plain terms: exercise prescribed as a drug, 500–1,000 MET-minutes a week as the aerobic dose, weekend-packed sessions carrying similar benefit, 7,000 steps a day as the practical mark, strength at least twice a week, and a 1 MET gain on a test as the proof that training worked.",

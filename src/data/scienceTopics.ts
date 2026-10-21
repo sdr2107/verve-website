@@ -184,6 +184,7 @@ export const TOPICS: Topic[] = [
     sub: "The weekly target, and the personal heart-rate band behind it",
     subject: "movement",
     citations: [...ZONE2_SECTION, ...ZONE2_HR_SECTION],
+    subAnchors: ["zone-2-from-a-test"],
   },
   { slug: "strength-training", label: "Strength training", sub: "Where the 60 minutes a week comes from, and why the app no longer draws it as a bar to clear", subject: "movement", citations: [] },
   { slug: "a-workout", label: "A workout, as Verve reads it", sub: "What the page keeps, what it only reads, and why one session shows one MET figure", subject: "movement", citations: [] },
