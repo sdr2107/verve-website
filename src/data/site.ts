@@ -37,8 +37,11 @@ export const TIKTOK_URL = "https://www.tiktok.com/@verveapp.health";
 export const INSTAGRAM_URL = "https://www.instagram.com/verveapp.health/";
 export const YOUTUBE_URL = "https://www.youtube.com/@verveapp.health";
 /**
- * The policy and the terms are served by this site at /privacy/ and /terms/,
- * copies of privacy-policy.html and verve-terms-index.html in the app repo,
+ * The policy and the terms are served by this site at /privacy/ and /terms/.
+ * From 2026-10-21 /privacy/ is THE policy: the GitHub Pages address the App
+ * Store lists redirects here, and the app repo keeps no copy. The next text
+ * (the 12 Oct rewrite, for 1.6.3) waits in docs/privacy-pending-1.6.3.html.
+ * The terms are still a copy of verve-terms-index.html in the app repo,
  * which stays the place they are written. Google's sign-in consent screen
  * needs both on a domain the project owns, which is why they moved here
  * from the separate Pages site; that site still serves the same text.
