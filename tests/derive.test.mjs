@@ -2,7 +2,7 @@
 // with rows shaped like the document's. `npm test`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { activitySummary, fitnessSummary, weeksFrom, mergeBy, actsByDay } from "../src/my-health/derive/activity.ts";
+import { activitySummary, fitnessSummary, weeksFrom, mergeBy, actsByDay, doseOf, isWorkout } from "../src/my-health/derive/activity.ts";
 import { markerPointsFrom, labRowsFrom, inRange, chartKeyFor } from "../src/my-health/derive/markers.ts";
 import { sleepHeartSummaryRaw, HRV_MIN_NIGHTS } from "../src/my-health/derive/heart.ts";
 import { buildMarkers, drawnFor } from "../src/my-health/derive/lenses.ts";
@@ -86,10 +86,10 @@ test("sleepHeartSummaryRaw: the night HRV band appears after 7 nights of one wri
 });
 
 // 40 since 6b0d423 (2026-10-11), when active_kcal joined the movement markers; the pin was left at 39 and failed unnoticed until 2026-10-20.
-test("buildMarkers: 40 markers, the week lens of a summing marker adds the days", () => {
+test("buildMarkers: 41 markers, the week lens of a summing marker adds the days", () => {
   const acts = [{ timestamp: `${mondayOf(new Date())}T07:00:00`, duration_minutes: 30, met_hours: 2.5, intensity_category: "moderate", zone2_minutes: 10 }];
   const markers = buildMarkers({ signals: [], acts, weights: [], profile: { weekly_met_hours_goal: 7.5 }, crf: [], weeks: [], app: [], by: new Map() });
-  assert.equal(markers.length, 40);
+  assert.equal(markers.length, 41); // 41 since 2026-10-23: the weekly dose joined the movement markers
   const met = markers.find((m) => m.key === "met");
   const dr = drawnFor(met, "week");
   assert.equal(dr.headline, "2.5");
@@ -100,4 +100,20 @@ test("buildMarkers: 40 markers, the week lens of a summing marker adds the days"
 test("medians and Tukey's hinges", () => {
   assert.equal(medianOf([3, 1, 2]), 2);
   assert.deepEqual(quartilesOf([1, 2, 3, 4, 5, 6, 7, 8]), { q1: 2.5, q3: 6.5 });
+});
+
+test("the dose: a workout's MET-minutes when aerobic and moderate or vigorous; nothing for light, strength or background", () => {
+  const mon = mondayOf(new Date());
+  const acts = [
+    { timestamp: `${mon}T07:00:00`, duration_minutes: 52, met_minutes: 176, met_hours: 2.93, intensity_category: "moderate", activity_type: "aerobic", source: "manual" },
+    { timestamp: `${mon}T18:00:00`, duration_minutes: 18, met_minutes: 47, met_hours: 0.78, intensity_category: "light", activity_type: "aerobic", source: "manual" },
+    { timestamp: `${mon}T19:00:00`, duration_minutes: 30, met_minutes: 150, met_hours: 2.5, intensity_category: "moderate", activity_type: "strength", source: "manual" },
+    { timestamp: `${mon}T12:00:00`, duration_minutes: 200, met_minutes: 600, met_hours: 10, intensity_category: "moderate", activity_type: "aerobic", source: "passive-nakanishi" },
+  ];
+  assert.equal(acts.map(doseOf).join(","), "176,0,0,0");
+  assert.equal(weeksFrom(acts.filter(isWorkout))[0].dose_met_min, 176);
+  assert.equal(actsByDay(acts).get(mon).dose, 176);
+  const a = activitySummary([], acts, 500 / 60, mon, mon);
+  assert.equal(a.goalDose, 500);
+  assert.equal(a.thisWeek.dose_met_min, 176);
 });

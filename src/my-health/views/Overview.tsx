@@ -47,13 +47,13 @@ function glanceOf(d: NonNullable<typeof derived.value>, self: boolean): { cards:
       beside: l ? `METs · ${esc(methodLabel(l.method))}${fit.trendWord ? ` · ${fit.trendWord}` : ""}` : "no test on file",
       line: l ? `Tested ${ago === 0 ? "today" : `${plural(ago, "day")} ago`}.${dueLine}` : "The app offers a test in six to twelve minutes." }); }
   // movement: the week against the goal, Zone 2, the sessions, the steps
-  { const tw = act?.thisWeek ? Number(act.thisWeek.met_hours) : 0, n = act?.thisWeek ? Number(act.thisWeek.workouts) : 0;
+  { const tw = act?.thisWeek ? Number(act.thisWeek.dose_met_min) : 0, n = act?.thisWeek ? Number(act.thisWeek.workouts) : 0, gd = act?.goalDose ?? Math.round(goal * 60);
     const z2 = [...actsByDay(d.acts)].filter(([x]) => x >= thisMonday).reduce((t, [, r]) => t + r.z2, 0);
-    const lastRow = d.weeks.find((w) => String(w.week_start) === addDays(thisMonday, -7));
+    const lastRow = act?.weeks.find((w: any) => String(w.week_start) === addDays(thisMonday, -7));
     const steps = heart?.steps.avg;
-    cards.push({ sec: "movement", value: act ? fmt1(tw) : "—",
-      beside: act ? `of ${fmt1(goal)} MET-hours this week${z2 ? ` · ${round0(z2)} min in Zone 2` : ""}` : "nothing from the app yet",
-      line: act ? `${n === 0 ? "No workout yet this week" : plural(n, "workout")}${steps ? `, ${steps.toLocaleString()} steps a day` : ""}.${lastRow ? ` Last week ended at ${fmt1(Number(lastRow.met_hours))}.` : ""}` : "Cloud sync in the app fills this in." }); }
+    cards.push({ sec: "movement", value: act ? round0(tw) : "—",
+      beside: act ? `of ${gd.toLocaleString()} MET-minutes this week${z2 ? ` · ${round0(z2)} min in Zone 2` : ""}` : "nothing from the app yet",
+      line: act ? `${n === 0 ? "No workout yet this week" : plural(n, "workout")}${steps ? `, ${steps.toLocaleString()} steps a day` : ""}.${lastRow ? ` Last week ended at ${round0(Number(lastRow.dose_met_min))}.` : ""}` : "Cloud sync in the app fills this in." }); }
   // sleep and heart: last night, the resting rate, the recovery, each against the person's own usual
   { const sl = heart?.sleep.last ?? null, usual = heart?.sleep.usual ?? null, r = heart?.rhr, h = heart?.hrr;
     const beside = [sl ? "last night" : "", r?.latest != null ? `resting ${r.latest}` : "", h?.latest != null ? `recovery ${h.latest}` : ""].filter(Boolean).join(" · ");
@@ -75,7 +75,7 @@ function glanceOf(d: NonNullable<typeof derived.value>, self: boolean): { cards:
 
   // the line under the greeting
   const bits: string[] = [];
-  if (act?.thisWeek) { const tw = Number(act.thisWeek.met_hours); bits.push(tw >= goal ? "a week past the goal" : tw >= goal / 2 ? "halfway to the week's goal" : "a quiet week so far"); }
+  if (act?.thisWeek) { const tw = Number(act.thisWeek.dose_met_min), gd = act.goalDose; bits.push(tw >= gd ? "a week past the goal" : tw >= gd / 2 ? "halfway to the week's goal" : "a quiet week so far"); }
   if (heart?.sleep.last && heart.sleep.usual != null) { const dd = heart.sleep.last.min - heart.sleep.usual; bits.push(Math.abs(dd) < 20 ? "sleep as usual" : dd < 0 ? "sleep a little short" : "sleep a little long"); }
   if (outside) bits.push(`${plural(outside, "lab value")} outside range`);
   if (dues[0] && dues[0].days <= 31) bits.push(dues[0].days < 0 ? `${dues[0].what.toLowerCase()} overdue` : "one retest due this month");

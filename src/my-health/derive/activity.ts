@@ -6,15 +6,26 @@
 import { addDays, byDate, daysBetween, localDay, mondayOf } from "./format.ts";
 import { CRF_RETEST, MAXIMAL, type Due } from "./markers.ts";
 
+/**
+ * The weekly dose, as the app counts it (lib/periodSummary aerobicMETMinutes):
+ * a session's MET-minutes when it is a workout (not the day's background
+ * movement), an aerobic one, and its average effort came out moderate or
+ * vigorous. The unit the ACC's 500–1,000 a week is written in.
+ */
+export const doseOf = (a: any): number =>
+  isWorkout(a) && (a.activity_type === "aerobic" || a.activity_type === "mixed") && (a.intensity_category === "moderate" || a.intensity_category === "vigorous")
+    ? Number(a.met_minutes) || 0
+    : 0;
+
 /** The app's weeks from its workouts, bucketed the way the app does: by the Monday, in local time. */
 export function weeksFrom(activities: any[]): any[] {
   const by = new Map<string, any>();
   for (const a of activities) {
     if (!a?.timestamp) continue;
     const start = mondayOf(new Date(a.timestamp));
-    const w = by.get(start) ?? { week_start: start, met_hours: 0, minutes: 0, light_min: 0, moderate_min: 0, vigorous_min: 0, workouts: 0, source: "sync" };
+    const w = by.get(start) ?? { week_start: start, met_hours: 0, minutes: 0, light_min: 0, moderate_min: 0, vigorous_min: 0, workouts: 0, dose_met_min: 0, source: "sync" };
     const mins = Number(a.duration_minutes) || 0;
-    w.met_hours += Number(a.met_hours) || 0; w.minutes += mins; w.workouts += 1;
+    w.met_hours += Number(a.met_hours) || 0; w.minutes += mins; w.workouts += 1; w.dose_met_min += doseOf(a);
     const cat = String(a.intensity_category ?? "");
     if (cat === "vigorous") w.vigorous_min += mins; else if (cat === "moderate") w.moderate_min += mins; else w.light_min += mins;
     by.set(start, w);
@@ -44,9 +55,9 @@ export function actsByDay(acts: any[]): Map<string, DayActs> {
   for (const a of acts) {
     if (!a?.timestamp) continue;
     const d = localDay(a.timestamp);
-    const r = by.get(d) ?? { met: 0, z2: 0, n: 0, vig: 0, mod: 0, min: 0 };
+    const r = by.get(d) ?? { met: 0, z2: 0, n: 0, vig: 0, mod: 0, min: 0, dose: 0 };
     const mins = Number(a.duration_minutes) || 0;
-    r.met += Number(a.met_hours) || 0; r.z2 += Number(a.zone2_minutes) || 0; r.n += 1; r.min += mins;
+    r.met += Number(a.met_hours) || 0; r.z2 += Number(a.zone2_minutes) || 0; r.n += 1; r.min += mins; r.dose += doseOf(a);
     if (a.intensity_category === "vigorous") r.vig += mins; else if (a.intensity_category === "moderate") r.mod += mins;
     by.set(d, r);
   }
@@ -56,10 +67,13 @@ export function actsByDay(acts: any[]): Map<string, DayActs> {
 /** Activity, from a person's weeks and (where synced) their workouts, against their own goal. */
 export function activitySummary(weeksIn: any[], actsIn: any[], goal: number, today: string, thisMonday: string) {
   // a week with nothing logged has no row anywhere, so the calendar is filled: an empty week is a zero week, not a missing one
-  const have = new Map<string, any>([...weeksIn].map((w) => [String(w.week_start), w]));
+  // The synced weeks table carries no MET-minutes; the dose is derived from the sessions and laid onto each week.
+  const doseByWeek = new Map<string, number>();
+  for (const a of actsIn) { if (!a?.timestamp) continue; const k = mondayOf(new Date(a.timestamp)); doseByWeek.set(k, (doseByWeek.get(k) ?? 0) + doseOf(a)); }
+  const have = new Map<string, any>([...weeksIn].map((w) => [String(w.week_start), { ...w, dose_met_min: doseByWeek.get(String(w.week_start)) ?? Number(w.dose_met_min) ?? 0 }]));
   const weeks: any[] = [];
   if (have.size) {
-    for (let d = [...have.keys()].sort()[0]; d <= thisMonday; d = addDays(d, 7)) weeks.push(have.get(d) ?? { week_start: d, met_hours: 0, minutes: 0, light_min: 0, moderate_min: 0, vigorous_min: 0, workouts: 0, source: "gap" });
+    for (let d = [...have.keys()].sort()[0]; d <= thisMonday; d = addDays(d, 7)) weeks.push(have.get(d) ?? { week_start: d, met_hours: 0, minutes: 0, light_min: 0, moderate_min: 0, vigorous_min: 0, workouts: 0, dose_met_min: doseByWeek.get(d) ?? 0, source: "gap" });
     for (const [d, w] of have) if (d > thisMonday) weeks.push(w);
   }
   const acts = [...actsIn].sort(byDate("timestamp"));
@@ -69,9 +83,11 @@ export function activitySummary(weeksIn: any[], actsIn: any[], goal: number, tod
   const recentAvg = recent.length ? sum(recent, "met_hours") / recent.length : 0;
   const priorAvg = prior.length ? sum(prior, "met_hours") / prior.length : null;
   const change = priorAvg && priorAvg > 0 ? (recentAvg - priorAvg) / priorAvg : null;
-  let streak = 0; for (let i = complete.length - 1; i >= 0 && Number(complete[i].met_hours) >= goal; i--) streak++;
+  // The goal is the app's: stored in MET-hours, judged as a dose in MET-minutes.
+  const goalDose = Math.round(goal * 60);
+  let streak = 0; for (let i = complete.length - 1; i >= 0 && Number(complete[i].dose_met_min) >= goalDose; i--) streak++;
   const last12 = complete.slice(-12);
-  const atGoal = last12.filter((w) => Number(w.met_hours) >= goal).length;
+  const atGoal = last12.filter((w) => Number(w.dose_met_min) >= goalDose).length;
   const thisWeek = weeks.find((w) => w.week_start === thisMonday) ?? null;
   const lastWorkoutDay = acts.length ? localDay(acts[acts.length - 1].timestamp) : ([...weeks].reverse().find((w) => Number(w.workouts) > 0)?.week_start ?? "");
   const quietDays = lastWorkoutDay ? daysBetween(lastWorkoutDay, today) : null;
@@ -81,7 +97,7 @@ export function activitySummary(weeksIn: any[], actsIn: any[], goal: number, tod
   const perWeek = recent.length ? sum(recent, "workouts") / recent.length : 0;
   const minutes = sum(recent, "minutes"), vig = sum(recent, "vigorous_min");
   const zone2 = recentActs.length ? recentActs.reduce((t, x) => t + (Number(x.zone2_minutes) || 0), 0) / recent.length : null;
-  return { weeks, complete, recent, prior, recentAvg, priorAvg, change, streak, atGoal, of: last12.length, thisWeek, lastWorkoutDay, quietDays, recentActs, kinds, perWeek, minutes, vig, zone2 };
+  return { weeks, complete, recent, prior, recentAvg, priorAvg, change, streak, atGoal, of: last12.length, thisWeek, lastWorkoutDay, quietDays, recentActs, kinds, perWeek, minutes, vig, zone2, goalDose };
 }
 export type ActivitySummary = ReturnType<typeof activitySummary>;
 
