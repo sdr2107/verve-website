@@ -48,7 +48,7 @@ export function mergeBy(key: string, primary: any[], fallback: any[]): any[] {
 /** A workout, not the day's background movement (source "passive-nakanishi", one row a day). */
 export const isWorkout = (a: any) => a && a.source !== "passive-nakanishi";
 
-export type DayActs = { met: number; z2: number; n: number; vig: number; mod: number; min: number };
+export type DayActs = { met: number; z2: number; n: number; vig: number; mod: number; min: number; dose: number };
 /** The app's rows by day: MET-hours, minutes by effort, Zone 2, the count. Only when the sessions themselves are here. */
 export function actsByDay(acts: any[]): Map<string, DayActs> {
   const by = new Map<string, DayActs>();
@@ -67,10 +67,19 @@ export function actsByDay(acts: any[]): Map<string, DayActs> {
 /** Activity, from a person's weeks and (where synced) their workouts, against their own goal. */
 export function activitySummary(weeksIn: any[], actsIn: any[], goal: number, today: string, thisMonday: string) {
   // a week with nothing logged has no row anywhere, so the calendar is filled: an empty week is a zero week, not a missing one
-  // The synced weeks table carries no MET-minutes; the dose is derived from the sessions and laid onto each week.
+  // The synced weeks table carries no MET-minutes: the dose is derived from the
+  // sessions and laid onto each week. A week the table has but the sessions do
+  // not (an import from before the app synced sessions) falls back to its
+  // MET-hours × 60 — all logged effort, the best the row can offer. Weeks the
+  // sessions know but the table lacks are added from the sessions.
+  const workouts = actsIn.filter(isWorkout);
   const doseByWeek = new Map<string, number>();
-  for (const a of actsIn) { if (!a?.timestamp) continue; const k = mondayOf(new Date(a.timestamp)); doseByWeek.set(k, (doseByWeek.get(k) ?? 0) + doseOf(a)); }
-  const have = new Map<string, any>([...weeksIn].map((w) => [String(w.week_start), { ...w, dose_met_min: doseByWeek.get(String(w.week_start)) ?? Number(w.dose_met_min) ?? 0 }]));
+  const sessionWeeks = new Set<string>();
+  for (const a of workouts) { if (!a?.timestamp) continue; const k = mondayOf(new Date(a.timestamp)); sessionWeeks.add(k); doseByWeek.set(k, (doseByWeek.get(k) ?? 0) + doseOf(a)); }
+  const doseFor = (w: any) => sessionWeeks.has(String(w.week_start)) ? (doseByWeek.get(String(w.week_start)) ?? 0)
+    : w.dose_met_min != null ? Number(w.dose_met_min) : Math.round((Number(w.met_hours) || 0) * 60);
+  const have = new Map<string, any>([...weeksIn].map((w) => [String(w.week_start), { ...w, dose_met_min: doseFor(w) }]));
+  for (const w of weeksFrom(workouts)) if (!have.has(w.week_start)) have.set(w.week_start, w);
   const weeks: any[] = [];
   if (have.size) {
     for (let d = [...have.keys()].sort()[0]; d <= thisMonday; d = addDays(d, 7)) weeks.push(have.get(d) ?? { week_start: d, met_hours: 0, minutes: 0, light_min: 0, moderate_min: 0, vigorous_min: 0, workouts: 0, dose_met_min: doseByWeek.get(d) ?? 0, source: "gap" });
