@@ -1,7 +1,8 @@
 /**
  * The Overview's glance and its four sections, as views of the document
- * (step 3). Three mounts: the line under the greeting, the four cards,
- * and one section with its tiles and the open marker. Each reads the
+ * (step 3). Three mounts: the line under the greeting, the six cards,
+ * and one section with its tiles and the open marker, drawn UNDER the
+ * cards rather than in their place since 24 October 2026. Each reads the
  * signals in ../state and the derived person; a fresh document or a tap
  * re-renders only the nodes whose values changed, and the entrance
  * animation plays once per session (../motion).
@@ -21,11 +22,18 @@ import { sleepHeartSummary } from "../derive/heart.ts";
 import { labsJudged } from "../derive/labs.ts";
 import { SEC_META, SEC_ORDER, RANGE_LABEL, SHELVES, alongsideHtml, chartSvg, drawnFor, workoutsListHtml, type Marker, type Rng, type SecKey } from "../derive/lenses.ts";
 
-// ── the glance: one number, two words of context and one sentence a section ──
+// ── the glance: six cards, one figure each, a sparkline and one plain line ──
+//
+// Rebuilt 24 October 2026 for air. Four section cards became six readings:
+// Fitness, Movement, Sleep, Resting heart rate, Recovery, Body, the way the
+// app now splits them. Each is one number in mono, its unit in words, a
+// sparkline of the last readings and one sentence a person would say. A
+// card opens its section IN PLACE, under the grid; the three heart cards
+// open the Sleep & heart section at their own marker.
 
-type Glance = { sec: SecKey; value: string; beside: string; line: string };
+type Glance = { key: string; sec: SecKey; marker?: string; label: string; color: string; value: string; beside: string; line: string; spark: number[] };
 
-/** The four cards and the line under the greeting, from the derived person. */
+/** The six cards and the line under the greeting, from the derived person. */
 function glanceOf(d: NonNullable<typeof derived.value>, self: boolean): { cards: Glance[]; line: string } {
   const today = todayStr(), thisMonday = mondayOf(new Date());
   const you = self ? "your" : "their";
@@ -37,31 +45,43 @@ function glanceOf(d: NonNullable<typeof derived.value>, self: boolean): { cards:
   const dues = [...labRowsFrom(by, today).map((r) => r.due), fit.due, bodyDueFrom(by, today)]
     .filter((x): x is Due => !!x).sort((x, y) => x.days - y.days);
   const { outside, judged } = labsJudged(d.labs);
+  /** The last n values of a marker's series, for a sparkline. */
+  const tail = (key: string, n: number) => (d.markers.find((m) => m.key === key)?.series() ?? []).slice(-n).map((p) => p.v);
   const cards: Glance[] = [];
   // fitness: the latest test, in METs, and when the next is due
   { const l = fit.latest;
     const mets = l ? (l.met_capacity != null ? Number(l.met_capacity) : l.v / 3.5) : null;
     const ago = l ? daysBetween(l.measured_on, today) : 0;
     const dueLine = fit.due ? (fit.due.days < 0 ? ` A retest is ${plural(-fit.due.days, "day")} overdue.` : fit.due.days === 0 ? " A retest is due today." : ` Next test in ${plural(fit.due.days, "day")}.`) : "";
-    cards.push({ sec: "fitness", value: mets != null ? fmt1(mets) : "—",
-      beside: l ? `METs · ${esc(methodLabel(l.method))}${fit.trendWord ? ` · ${fit.trendWord}` : ""}` : "no test on file",
-      line: l ? `Tested ${ago === 0 ? "today" : `${plural(ago, "day")} ago`}.${dueLine}` : "The app offers a test in six to twelve minutes." }); }
-  // movement: the week against the goal, Zone 2, the sessions, the steps
+    cards.push({ key: "fitness", sec: "fitness", label: "Fitness", color: SEC_META.fitness.dot, value: mets != null ? fmt1(mets) : "—",
+      beside: l ? `METs${fit.trendWord ? ` · ${fit.trendWord}` : ""}` : "no test on file", spark: tail("mets", 10),
+      line: l ? `By the ${esc(methodLabel(l.method))}, ${ago === 0 ? "today" : `${plural(ago, "day")} ago`}.${dueLine}` : "The app offers a test in six to twelve minutes." }); }
+  // movement: the week against the goal, the sessions, the steps; a bar a week
   { const tw = act?.thisWeek ? Number(act.thisWeek.dose_met_min) : 0, n = act?.thisWeek ? Number(act.thisWeek.workouts) : 0, gd = act?.goalDose ?? Math.round(goal * 60);
     const z2 = [...actsByDay(d.acts)].filter(([x]) => x >= thisMonday).reduce((t, [, r]) => t + r.z2, 0);
     const lastRow = act?.weeks.find((w: any) => String(w.week_start) === addDays(thisMonday, -7));
     const steps = heart?.steps.avg;
-    cards.push({ sec: "movement", value: act ? round0(tw) : "—",
-      beside: act ? `of ${gd.toLocaleString()} MET-minutes this week${z2 ? ` · ${round0(z2)} min in Zone 2` : ""}` : "nothing from the app yet",
-      line: act ? `${n === 0 ? "No workout yet this week" : plural(n, "workout")}${steps ? `, ${steps.toLocaleString()} steps a day` : ""}.${lastRow ? ` Last week ended at ${round0(Number(lastRow.dose_met_min))}.` : ""}` : "Cloud sync in the app fills this in." }); }
-  // sleep and heart: last night, the resting rate, the recovery, each against the person's own usual
-  { const sl = heart?.sleep.last ?? null, usual = heart?.sleep.usual ?? null, r = heart?.rhr, h = heart?.hrr;
-    const beside = [sl ? "last night" : "", r?.latest != null ? `resting ${r.latest}` : "", h?.latest != null ? `recovery ${h.latest}` : ""].filter(Boolean).join(" · ");
-    const sleepLine = sl ? (usual != null ? (Math.abs(sl.min - usual) < 20 ? "Sleep is about the usual." : `Sleep is ${fmtSleepMin(Math.abs(sl.min - usual))} ${sl.min < usual ? "under" : "over"} ${you} usual.`) : sl.band === "short" ? "Sleep was under seven hours." : "") : "";
-    const heartLine = r?.latest != null ? (r.baseline != null ? ((r.status === "elevated" || r.status === "stronglyElevated") && r.delta ? `Resting heart rate ${Math.abs(r.delta)} above ${you} own normal${r.run > 1 ? `, ${r.run} mornings running` : ""}.` : "The heart is where it usually is.") : "A normal for the heart needs 14 mornings.") : "";
-    cards.push({ sec: "heart", value: sl ? fmtSleepMin(sl.min) : r?.latest != null ? String(r.latest) : "—",
-      beside: sl ? beside : r?.latest != null ? `bpm resting${h?.latest != null ? ` · recovery ${h.latest}` : ""}` : "nothing from the watch yet",
-      line: [sleepLine, heartLine].filter(Boolean).join(" ") || "A watch worn to bed and a synced app fill this in." }); }
+    const weeks = act ? act.weeks.filter((w: any) => String(w.week_start) <= thisMonday).slice(-8).map((w: any) => Number(w.dose_met_min) || 0) : [];
+    cards.push({ key: "movement", sec: "movement", label: "Movement", color: SEC_META.movement.dot, value: act ? round0(tw) : "—",
+      beside: act ? `of ${gd.toLocaleString()} MET-minutes this week` : "nothing from the app yet", spark: weeks,
+      line: act ? `${n === 0 ? "No workout yet this week" : plural(n, "workout")}${z2 ? `, ${round0(z2)} min in Zone 2` : ""}${steps ? `, ${steps.toLocaleString()} steps a day` : ""}.${lastRow ? ` Last week ended at ${round0(Number(lastRow.dose_met_min))}.` : ""}` : "Cloud sync in the app fills this in." }); }
+  // sleep: last night against the person's own usual
+  { const sl = heart?.sleep.last ?? null, usual = heart?.sleep.usual ?? null;
+    const line = sl ? (usual != null ? (Math.abs(sl.min - usual) < 20 ? `About ${you} usual of ${fmtSleepMin(usual)}.` : `${fmtSleepMin(Math.abs(sl.min - usual))} ${sl.min < usual ? "under" : "over"} ${you} usual of ${fmtSleepMin(usual)}.`) : sl.band === "short" ? "Under seven hours. A usual comes after seven nights." : "A usual comes after seven nights.") : "A watch worn to bed and a synced app fill this in.";
+    cards.push({ key: "sleep", sec: "heart", marker: "sleep", label: "Sleep", color: "#a5b4fc", value: sl ? fmtSleepMin(sl.min) : "—",
+      beside: sl ? (sl.day === today ? "last night" : `night of ${esc(dayWord(sl.day))}`) : "nothing from the watch yet", spark: tail("sleep", 7), line }); }
+  // resting heart rate: this morning against the median of the 30 before
+  { const r = heart?.rhr;
+    const line = r?.latest != null ? (r.baseline != null
+      ? ((r.status === "elevated" || r.status === "stronglyElevated") && r.delta ? `${Math.abs(r.delta)} above ${you} own normal of ${r.baseline}${r.run > 1 ? `, ${r.run} mornings running` : ""}.` : r.delta === 0 ? `At ${you} own normal of ${r.baseline}.` : `${Math.abs(r.delta!)} ${r.delta! > 0 ? "above" : "under"} ${you} own normal of ${r.baseline}.`)
+      : `A normal needs 14 mornings; ${r.priors} so far.`) : "A watch worn overnight fills this in.";
+    cards.push({ key: "rhr", sec: "heart", marker: "rhr", label: "Resting heart rate", color: SEC_META.heart.dot, value: r?.latest != null ? String(r.latest) : "—",
+      beside: r?.latest != null ? (r.latestDay === today ? "bpm this morning" : `bpm, ${esc(dayWord(r.latestDay!))}`) : "nothing from the watch yet", spark: tail("rhr", 10), line }); }
+  // recovery: the drop after the last workout, against the own median and the one cited line
+  { const h = heart?.hrr;
+    cards.push({ key: "hrr", sec: "heart", marker: "hrr", label: "Recovery", color: "#22C55E", value: h?.latest != null ? `↓${h.latest}` : "—",
+      beside: h?.latest != null ? `bpm after the last workout${h.latestDay && h.latestDay !== today ? `, ${esc(dayWord(h.latestDay))}` : ""}` : "nothing after a workout yet", spark: tail("hrr", 7),
+      line: h?.latest != null ? `${h.median != null ? `${you.charAt(0).toUpperCase()}${you.slice(1)} own 30-day median is ${h.median}. ` : ""}The line is 12 (Cole 1999).` : "The watch records one after a workout that ends above the Zone 2 floor." }); }
   // body: waist to height when both are known, the grip, the count, and what is due
   { const waist = (by.get("waist_cm") ?? []).slice(-1)[0] ?? null, grip = (by.get("handgrip_kg") ?? []).slice(-1)[0] ?? null;
     const height = Number(d.profile?.height_cm) || null;
@@ -69,9 +89,10 @@ function glanceOf(d: NonNullable<typeof derived.value>, self: boolean): { cards:
     const read = [...by.values()].filter((v) => v.length).length;
     const due = dues[0] ?? null;
     const dueText = due ? (due.days < 0 ? ` ${esc(due.what)} is ${plural(-due.days, "day")} overdue.` : due.days === 0 ? ` ${esc(due.what)} is due today.` : due.days <= 31 ? ` ${esc(due.what)} is due in ${plural(due.days, "day")}.` : "") : "";
-    cards.push({ sec: "body", value: whr != null ? whr.toFixed(2) : grip ? fmt1(grip.v) : read ? String(read) : "—",
-      beside: whr != null ? `waist to height${grip ? ` · grip ${fmt1(grip.v)} kg` : ""}` : grip ? "kg grip" : read ? "markers read" : "nothing read yet",
-      line: `${read ? `${plural(read, "marker")} read${outside ? `, ${outside} outside ${outside === 1 ? "its" : "their"} range` : judged ? ", all in range" : ""}.` : "No marker read yet: drop a report on Reports."}${dueText}${read ? " The values themselves are on Labs." : ""}` }); }
+    const spark = whr != null && height ? (by.get("waist_cm") ?? []).slice(-8).map((p) => p.v / height) : grip ? (by.get("handgrip_kg") ?? []).slice(-8).map((p) => p.v) : [];
+    cards.push({ key: "body", sec: "body", label: "Body", color: SEC_META.body.dot, value: whr != null ? whr.toFixed(2) : grip ? fmt1(grip.v) : read ? String(read) : "—",
+      beside: whr != null ? "waist to height" : grip ? "kg grip" : read ? "markers read" : "nothing read yet", spark,
+      line: `${read ? `${plural(read, "marker")} read${outside ? `, ${outside} outside ${outside === 1 ? "its" : "their"} range` : judged ? ", all in range" : ""}.` : "No marker read yet: drop a report on Reports."}${dueText}` }); }
 
   // the line under the greeting
   const bits: string[] = [];
@@ -79,15 +100,27 @@ function glanceOf(d: NonNullable<typeof derived.value>, self: boolean): { cards:
   if (heart?.sleep.last && heart.sleep.usual != null) { const dd = heart.sleep.last.min - heart.sleep.usual; bits.push(Math.abs(dd) < 20 ? "sleep as usual" : dd < 0 ? "sleep a little short" : "sleep a little long"); }
   if (outside) bits.push(`${plural(outside, "lab value")} outside range`);
   if (dues[0] && dues[0].days <= 31) bits.push(dues[0].days < 0 ? `${dues[0].what.toLowerCase()} overdue` : "one retest due this month");
-  const line = bits.length ? `${bits[0].charAt(0).toUpperCase()}${bits[0].slice(1)}${bits.slice(1).map((x) => `, ${x}`).join("")}. The four cards say the rest.` : "";
+  const line = bits.length ? `${bits[0].charAt(0).toUpperCase()}${bits[0].slice(1)}${bits.slice(1).map((x) => `, ${x}`).join("")}.` : "";
   return { cards, line };
 }
 
-function Frame({ sec }: { sec: SecKey }) {
+/** The last readings as bars, the newest full. Nothing with fewer than two. */
+function Spark({ values, color }: { values: number[]; color: string }) {
+  if (values.length < 2) return <span class="block h-9" aria-hidden="true"></span>;
+  const hi = Math.max(...values), lo = Math.min(...values), range = hi - lo;
   return (
-    <div class="flex min-h-[150px] flex-col gap-2.5 rounded-[20px] border border-white/10 bg-white/[0.03] p-5" aria-hidden="true">
-      <span class="flex items-center gap-2"><span class="h-2 w-2 shrink-0 rounded-full" style={{ background: SEC_META[sec].dot }}></span><span class="text-[12px] font-bold tracking-[0.08em] text-text-secondary">{SEC_META[sec].label.toUpperCase()}</span></span>
-      <span class="mt-1 h-8 w-28 animate-pulse rounded-md bg-white/[0.05]"></span>
+    <span class="flex h-9 items-end gap-[3px]" aria-hidden="true">
+      {values.map((v, i) => <span key={i} class="flex-1 rounded-t-[2px]" style={{ height: `${range > 0 ? 30 + Math.round(((v - lo) / range) * 70) : 60}%`, background: color, opacity: i === values.length - 1 ? 1 : 0.55 }}></span>)}
+    </span>
+  );
+}
+
+const GLANCE_FRAMES = ["Fitness", "Movement", "Sleep", "Resting heart rate", "Recovery", "Body"];
+function Frame({ label }: { label: string }) {
+  return (
+    <div class="flex min-h-[172px] flex-col gap-3.5 rounded-[20px] border border-white/10 bg-white/[0.03] p-6" aria-hidden="true">
+      <span class="font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">{label}</span>
+      <span class="mt-1 h-10 w-28 animate-pulse rounded-md bg-white/[0.05]"></span>
       <span class="h-3.5 w-3/4 animate-pulse rounded bg-white/[0.04]"></span>
     </div>
   );
@@ -101,19 +134,26 @@ export function GlanceLine() {
 
 export function Glance() {
   const d = derived.value;
-  if (!d) return <>{SEC_ORDER.map((sec) => <Frame key={sec} sec={sec} />)}</>;
+  if (!d) return <>{GLANCE_FRAMES.map((l) => <Frame key={l} label={l} />)}</>;
   const { cards } = glanceOf(d, !!person.value?.self);
   const rise = riseOnce("glance");
+  const sec = ovSection.value, mk = openMarkerKey.value;
+  const open = (c: Glance) => { setSection(c.sec); if (c.marker) openMarkerKey.value = c.marker; };
+  const isOn = (c: Glance) => sec !== "all" && sec === c.sec && (c.marker ? mk === c.marker : !["sleep", "rhr", "hrr"].includes(mk));
   return (
     <>
-      {cards.map((c, i) => (
-        <button key={c.sec} type="button" style={{ "--i": i } as any} onClick={() => setSection(c.sec)}
-          class={`${rise} flex min-h-[150px] flex-col gap-2.5 rounded-[20px] border border-white/10 bg-white/[0.03] p-5 text-left transition-colors hover:border-white/20 hover:bg-white/[0.05]`}>
-          <span class="flex items-center gap-2"><span class="h-2 w-2 shrink-0 rounded-full" style={{ background: SEC_META[c.sec].dot }}></span><span class="text-[12px] font-bold tracking-[0.08em] text-text-secondary">{SEC_META[c.sec].label.toUpperCase()}</span><svg class="ml-auto shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg></span>
-          <span class="flex flex-wrap items-baseline gap-x-2 gap-y-1"><span class="font-mono text-[34px] font-bold leading-none" style={{ color: SEC_META[c.sec].dot }}>{c.value}</span><span class="text-[13px] text-text-secondary" dangerouslySetInnerHTML={{ __html: c.beside }} /></span>
-          <span class="text-[13px] leading-relaxed text-text-secondary" dangerouslySetInnerHTML={{ __html: c.line }} />
-        </button>
-      ))}
+      {cards.map((c, i) => {
+        const on = isOn(c);
+        return (
+          <button key={c.key} type="button" style={{ "--i": i } as any} aria-expanded={on ? "true" : "false"} onClick={() => on ? setSection("all") : open(c)}
+            class={`${rise} flex min-h-[172px] flex-col gap-3.5 rounded-[20px] border p-6 text-left transition-colors ${on ? "border-accent/60 bg-accent/[0.07]" : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]"}`}>
+            <span class="flex items-center gap-2"><span class="h-2 w-2 shrink-0 rounded-full" style={{ background: c.color }}></span><span class="font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">{c.label}</span>{on ? <span class="ml-auto text-[12px] font-bold text-accent-light">open ▾</span> : null}</span>
+            <span class="flex flex-wrap items-baseline gap-x-2 gap-y-1"><span class="font-mono text-[40px] font-bold leading-none tracking-[-0.02em]" style={{ color: c.color }}>{c.value}</span><span class="text-[14px] text-text-secondary" dangerouslySetInnerHTML={{ __html: c.beside }} /></span>
+            <Spark values={c.spark} color={c.color} />
+            <span class="text-[14px] leading-[1.55] text-text-secondary" dangerouslySetInnerHTML={{ __html: c.line }} />
+          </button>
+        );
+      })}
     </>
   );
 }
@@ -170,7 +210,10 @@ export function Section() {
           <h2 class="mt-1.5 flex items-center gap-2.5 text-[24px] font-extrabold tracking-[-0.02em] text-text-primary"><span class="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: meta.dot }}></span><span>{meta.label}</span></h2>
           <p class="mt-1.5 text-[13px] text-text-tertiary">{meta.blurb}</p>
         </div>
-        <a href={meta.science} class="text-[13px] font-medium text-accent-light hover:text-text-primary">The science behind these &rarr;</a>
+        <div class="flex items-center gap-4">
+          <a href={meta.science} class="text-[13px] font-medium text-accent-light hover:text-text-primary">The science behind these &rarr;</a>
+          <button type="button" onClick={() => setSection("all")} class="min-h-9 rounded-full border border-white/14 px-3.5 text-[12.5px] font-semibold text-text-secondary transition-colors hover:border-white/30 hover:text-text-primary">Close ▴</button>
+        </div>
       </div>
       <div class="mt-5 grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
         {focus

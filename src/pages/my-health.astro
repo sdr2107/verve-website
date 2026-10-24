@@ -544,21 +544,22 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <button id="emptyadd" class="mt-4 min-h-11 rounded-xl bg-accent px-5 py-2.5 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Add a report</button>
         </div>
 
-        <!-- ═══ THE GLANCE: four cards, one a section ═══════════════════════
-             One number, two words of context and one sentence each; a line
-             under the greeting that says the week in a breath. The lab values
-             stay on Labs; the Body card carries the count and what is due.
-             A card opens its section. -->
+        <!-- ═══ THE GLANCE: six cards, one figure each ═══════════════════════
+             One number, its unit in words, a sparkline and one sentence each;
+             a line under the greeting that says the week in a breath. The lab
+             values stay on Labs; the Body card carries the count and what is
+             due. A card opens its section IN PLACE, under the grid. -->
         <p id="ovline" class="mb-5 min-h-[22px] text-[14px] leading-relaxed text-text-secondary"></p>
         <!-- the four cards are a view (src/my-health/views/Overview): their frames are mounted
              before any request leaves, so the page has its height from the first paint -->
-        <div id="ovglance" class="grid min-h-[150px] gap-4 sm:grid-cols-2"></div>
+        <div id="ovglance" class="grid min-h-[172px] gap-[18px] sm:grid-cols-2 lg:grid-cols-3"></div>
 
         <p class="mt-7 font-mono text-[10.5px] text-text-muted lg:hidden">Drag a PDF anywhere on this page to add it.</p>
        </div>
 
        <!-- ═══ ONE SECTION: its markers as tiles, one of them open ═════════
-            Fitness, Movement, Sleep & heart or Body, picked in the sidebar.
+            Fitness, Movement, Sleep & heart or Body, picked by a card above
+            or in the sidebar; drawn under the cards, which stay.
             A view (src/my-health/views/Overview) of the document; nothing
             is fetched for it. -->
        <div id="ovsection" class="hidden"></div>
@@ -2951,7 +2952,9 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   function renderSection() { /* the section is a view of ovSectionSignal; nothing to draw here */ }
   effect(() => {
     const sec = ovSectionSignal.value;
-    show("ovall", sec === "all"); show("ovsection", sec !== "all");
+    // the glance stays; the section opens under it, and comes into view
+    show("ovall", true); show("ovsection", sec !== "all");
+    if (sec !== "all" && marked.has("painted")) requestAnimationFrame(() => $("ovsection").scrollIntoView({ behavior: "smooth", block: "start" }));
     document.querySelectorAll<HTMLElement>("[data-section]").forEach((b) => {
       const on = b.dataset.section === sec;
       b.setAttribute("aria-current", on ? "page" : "false");

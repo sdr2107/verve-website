@@ -1,0 +1,35 @@
+---
+/**
+ * The Today card, at its real size: the four tiles the app's Activity page
+ * opens with, this morning's read. The home page's hero, in place of the
+ * week's climb, because a visitor's first question is "what will it show me
+ * tomorrow morning", not "what does a sample week look like".
+ *
+ * Fixed sample figures, said so under the card. The colours are the app's
+ * own: amber for a reading outside its ordinary range, green for one
+ * inside it, white for a figure that is not judged.
+ */
+const tiles = [
+  { label: "Sleep", value: "6h 52", unit: "last night", color: "text-text-primary", ring: "border-white/10" },
+  { label: "Resting HR", value: "58", unit: "bpm", color: "text-warning", ring: "border-warning/55" },
+  { label: "Recovery", value: "↓26", unit: "bpm", color: "text-success", ring: "border-white/10" },
+  { label: "Sitting", value: "6.2", unit: "h", color: "text-text-primary", ring: "border-white/10" },
+];
+---
+
+<div class="relative rounded-3xl border border-accent/35 bg-white/[0.04] p-[18px] shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
+  <p class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">Today</p>
+  <div class="mt-3 grid grid-cols-2 gap-2.5">
+    {tiles.map((t) => (
+      <div class={`flex flex-col items-center gap-1 rounded-2xl border ${t.ring} bg-white/[0.04] px-3.5 py-4`}>
+        <span class="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-text-tertiary">{t.label}</span>
+        <span class={`text-[30px] font-extrabold leading-[1.1] tracking-[-0.6px] ${t.color}`}>{t.value}</span>
+        <span class="text-[11px] font-bold text-text-tertiary">{t.unit}</span>
+      </div>
+    ))}
+  </div>
+  <div class="mt-3 flex items-baseline justify-between gap-3 text-xs text-text-tertiary">
+    <span>This morning&rsquo;s read, as the app shows it.</span>
+    <span class="font-mono text-[10px] uppercase tracking-[0.08em]">Sample figures</span>
+  </div>
+</div>
