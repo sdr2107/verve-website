@@ -2,30 +2,92 @@
 
 Two password-reset emails landed in junk: a Yahoo inbox (2026-09-25) and
 a Gmail inbox reached through Apple's Hide-my-email relay (2026-10-25).
-Everything below was checked with `dig` from the founder's Mac on
-2026-10-25; the two dashboards (Supabase SMTP settings, Resend domain
-settings) need a sign-in and were not read.
+Checked on 2026-10-25: the DNS with `dig`, the Supabase SMTP and template
+screens, the Resend domain page, and the raw copy of today's reset email
+in Resend's log.
 
 ## 1. DNS for verve-app.health — what is there
 
 | Record | Value found | Verdict |
 |---|---|---|
 | `verve-app.health` TXT (SPF) | `v=spf1 include:_spf.google.com include:amazonses.com ~all` | OK. One SPF record, 4 of 10 lookups. `amazonses.com` is there for Apple's relay registration (newsletter HOW-IT-WORKS §9), keep it. |
-| `send.verve-app.health` MX | `10 feedback-smtp.us-east-1.amazonses.com` | OK — Resend's bounce (Return-Path) host. |
-| `send.verve-app.health` TXT | `v=spf1 include:amazonses.com ~all` | OK — Resend's SPF for the envelope sender. |
-| `resend._domainkey.verve-app.health` TXT | `p=MIGf…` (RSA 1024-bit) | OK. Resend signs `d=verve-app.health`, aligned with the From. 1024 bits is Resend's key; Gmail's floor is 1024. |
+| `send.verve-app.health` MX | `10 feedback-smtp.us-east-1.amazonses.com` | OK — Resend's bounce (Return-Path) host. Resend shows it Verified. |
+| `send.verve-app.health` TXT | `v=spf1 include:amazonses.com ~all` | OK — Resend's SPF for the envelope sender. Verified. |
+| `resend._domainkey.verve-app.health` TXT | `p=MIGf…` (RSA 1024-bit) | OK. Resend signs `d=verve-app.health`, aligned with the From. Verified. Gmail's floor is 1024. |
 | `google._domainkey.verve-app.health` TXT | `v=DKIM1; k=rsa; p=MIIB…` (2048-bit) | OK — Workspace mail is signed too. |
 | `_dmarc.verve-app.health` TXT | `v=DMARC1; p=none;` | **Incomplete.** No `rua`, so nobody receives the reports that would show which mail fails and why. |
 | DNSSEC | none | Fine; not a spam signal. |
 
 SPF, DKIM and DMARC alignment are all in place for mail Resend sends from
 an `@verve-app.health` address. There is no authentication gap that
-explains the junking; the remaining levers are reputation, the link
-domain, and the forwarding path.
+explains the junking.
 
-## 2. DNS records to add (at Namecheap, where the zone lives)
+## 2. Supabase and Resend — confirmed in the dashboards
 
-**DMARC with reporting (add now, replaces the existing `_dmarc` TXT):**
+Supabase → Authentication → Emails → SMTP Settings (project
+tlrkkciovzjzqsjoacus): custom SMTP on, sender `hello@verve-app.health`,
+sender name `Verve`, host `smtp.resend.com`, port 465, username `resend`.
+All right; nothing to change. `hello@` is a real Workspace mailbox, the
+welcome email's From, and the address registered with Apple for relay
+delivery.
+
+Resend → Domains → verve-app.health: Verified, region us-east-1, DNS
+provider Namecheap, all three records Verified. No tracking subdomain is
+configured, so click and open tracking are off (right for a one-link
+transactional email). TLS opportunistic. "Resend Forge" not activated.
+
+Resend's log, last 15 days: five emails, all Delivered. Today's reset went
+out 13:19 UTC as `"Verve" <hello@verve-app.health>` to the
+`privaterelay.appleid.com` address and Resend shows Delivered — to Apple's
+relay, which then forwarded it to Gmail. Five emails in two weeks is the
+volume of a domain with no reputation yet, at Yahoo or anywhere.
+
+Resend's own Insights on that email:
+
+- **Needs attention: link URLs do not match the sending domain.** The one
+  link is `https://tlrkkciovzjzqsjoacus.supabase.co/auth/v1/verify?…`.
+- Possible improvement: send from a subdomain (so the apex keeps its own
+  reputation). Low priority at this volume.
+- Doing great: DMARC present, plain-text part present, body small, no
+  "no-reply", no images, tracking on no shared domain.
+
+## 3. The template — what the raw message showed
+
+Supabase sends the HTML only; **Resend adds the text/plain part by
+converting the HTML.** The raw copy of today's email showed that
+conversion, and it carried two of the triggers we were looking for, in
+the text part rather than the HTML:
+
+```
+HERE IS YOUR CODE TO RESET YOUR PASSWORD.
+…
+Open My health to set it
+[https://tlrkkciovzjzqsjoacus.supabase.co/auth/v1/verify?token=…&type=recovery&redirect_to=verve://auth-callback]
+```
+
+- **All-caps headline — fixed today.** Resend's converter writes every
+  `<h1>` in capitals. The headline is now a `<p role="heading">` with the
+  same styles, so the text part reads "Here is your code to reset your
+  password." HTML rendering is unchanged.
+- **Bare URL in the text part — inherent.** The converter writes each
+  link as its text plus the URL in brackets. The link stays (it is the
+  "device that asked" path); the lever is the domain it points to (§4).
+- `<html>` tag — **fixed today**: the template was a bare `<div>`, so the
+  HTML part had no html/head/body (SpamAssassin HTML_MIME_NO_HTML_TAG).
+  It is now a full document with doctype, `lang="en"`, charset and title.
+- Code block: six digits, monospace, letter-spaced. Fine. Images, remote
+  fonts, hidden text, tracking pixels: none. Fine.
+- **The dashboard still holds the old template** (bare div, `<h1>`), read
+  today on the Reset password screen. Paste the whole file into Supabase →
+  Authentication → Emails → Templates → Reset password and save.
+
+The confirm-signup, magic-link and invite templates have the same bare-div
+shape and `<h1>` headlines, so their text parts shout too; same wrapper
+and same `<p role="heading">` change when they are next touched.
+
+## 4. DNS records to add (at Namecheap, where the zone lives)
+
+**DMARC with reporting (add now; replaces the existing `_dmarc` TXT):**
 
 ```
 Host:  _dmarc
@@ -44,12 +106,10 @@ Value: v=DMARC1; p=quarantine; rua=mailto:dmarc@verve-app.health; fo=1; adkim=r;
 `p=quarantine` is what Yahoo and Gmail reward; `p=none` is only the
 minimum they tolerate.
 
-**Optional, the one lever that changes the email's content: a Supabase
-custom domain.** The reset link today points at
-`https://tlrkkciovzjzqsjoacus.supabase.co/auth/v1/verify?...`, a shared
-domain used by every Supabase project, including phishing kits. Supabase's
-Custom Domains add-on (paid) makes it `auth.verve-app.health`, so the one
-link in the email is on the sending domain. If taken up, the record is:
+**The one lever left on content: a Supabase custom domain.** Resend's
+Insights flag it and it is the only "needs attention" item. Supabase's
+Custom Domains add-on (paid) makes the link `auth.verve-app.health`, on
+the sending domain. If taken up, the record is:
 
 ```
 Host:  auth
@@ -57,67 +117,25 @@ Type:  CNAME
 Value: tlrkkciovzjzqsjoacus.supabase.co
 ```
 
-plus the TXT verification record the Supabase dashboard prints at the time.
-Every `tlrkkciovzjzqsjoacus.supabase.co` in the app and site then changes
-too; that is a separate piece of work, not for today.
+plus the TXT verification record the Supabase dashboard prints at the
+time. Every `tlrkkciovzjzqsjoacus.supabase.co` in the app and site then
+changes too; separate work, not for today.
 
-## 3. Supabase SMTP settings — to confirm in the dashboard
-
-Not readable without a sign-in. Check at Supabase → Authentication → SMTP
-Settings (project tlrkkciovzjzqsjoacus):
-
-- Sender email is an `@verve-app.health` address — `hello@verve-app.health`
-  is the right one: the mailbox exists in Workspace, it is the From of the
-  welcome email, and it is the address registered with Apple for relay
-  delivery. A `noreply@` with no mailbox bounces every reply and matches
-  nothing Apple knows.
-- Sender name is `Verve`.
-- Host `smtp.resend.com`, port 587 (or 465), username `resend`.
-
-And in Resend (resend.com → Domains → verve-app.health):
-
-- Status Verified, region us-east-1 (matches the MX above).
-- **Click tracking and open tracking OFF.** Tracking rewrites the reset
-  link through Resend's shared tracking domain and adds a pixel; both are
-  classic junk signals on a one-link transactional email and tracking
-  breaks "the link works only on the device that asked".
-
-## 4. The template
-
-`reset-password-email.html`, checked against the usual triggers:
-
-- Code block: six digits, monospace, letter-spaced. Not all-caps text. Fine.
-- Links: one, with sentence text ("Open My health to set it"), no bare URL. Fine.
-- Images, remote fonts, hidden text, tracking pixels: none. Fine.
-- Plain-text part: **missing, and the template cannot add one.** Supabase
-  sends the template as the message's only part (text/html). SpamAssassin
-  scores that as MIME_HTML_ONLY (~0.7). The only fix is Supabase's Send
-  Email Hook, which would hand the mail to Resend's API with both an
-  `html` and a `text` body. Worth it only if the DMARC reports and a
-  mail-tester run still show trouble after the steps above.
-- `<html>` tag: **was missing** (the template was a bare `<div>`, so the
-  HTML part had no html/head/body). SpamAssassin HTML_MIME_NO_HTML_TAG.
-  **Fixed today**: the template is now a full document with doctype,
-  `lang="en"`, charset and a title; the content is unchanged. Paste the
-  whole file into the Supabase template screen. The confirm-signup,
-  magic-link and invite templates have the same bare-div shape and would
-  take the same wrapper.
-
-## 5. What else the two junked emails say
+## 5. What the two junked emails say
 
 - **Yahoo, 2026-09-25.** Same day as the template rewrite, from a domain
-  that had sent almost no mail. Yahoo weights domain age and volume
-  heavily and gives new low-volume domains the junk folder until a few
-  recipients mark mail as not spam. DMARC reporting will show whether
-  Yahoo saw a pass; `p=quarantine` later helps the score.
-- **Gmail via Apple's relay, 2026-10-25.** Apple's relay rewrites the From
-  to a `privaterelay.appleid.com` address and re-signs the mail, so at
-  Gmail the mail authenticates as Apple's, not ours: our DNS has little
-  say. What Gmail judges is the forwarding path plus content plus the
-  reader's history with the sender. The reader can fix this inbox in one
-  step (mark Not spam, or add the address to Contacts); on our side the
-  content fixes (html wrapper, tracking off, hello@ sender) are what
-  remain.
+  that had sent almost no mail; the Resend log shows it still sends a
+  handful a fortnight. Yahoo weights domain age and volume heavily and
+  gives new low-volume domains the junk folder until a few recipients mark
+  mail as not spam. The capitals headline and the supabase.co link in the
+  text part did not help.
+- **Gmail via Apple's relay, 2026-10-25.** Resend delivered to Apple;
+  Apple's relay rewrites the From to a `privaterelay.appleid.com` address
+  and re-signs, so at Gmail the mail authenticates as Apple's: our DNS has
+  little say. What Gmail judges is the forwarding path plus content plus
+  the reader's history with the sender. The reader fixes this inbox in one
+  step (Not spam, or add the address to Contacts); on our side the content
+  fixes above are what remain.
 
 ## 6. How to see for yourself
 
@@ -132,6 +150,9 @@ And in Resend (resend.com → Domains → verve-app.health):
 3. Add the domain to Google Postmaster Tools (postmaster.google.com) with
    the TXT it prints; it shows Gmail's spam rate and domain reputation
    once volume is above its floor.
+4. In Resend, each email's Insights tab repeats the link-domain check;
+   after the template is pasted, its Plain Text tab should show the
+   headline in sentence case.
 
 ## 7. The app repo
 
