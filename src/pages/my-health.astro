@@ -326,6 +326,16 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
             </button>
           </div>
         </div>
+        <!-- download what this page shows: the person's own data, or what a share lets you see -->
+        <div id="exportwrap" class="hidden">
+          <h3 class="mb-2 mt-4 hidden px-3 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary lg:block">Download</h3>
+          <div class="mt-3 flex items-center gap-2 px-0 lg:mt-0 lg:px-3">
+            <svg class="shrink-0 text-text-tertiary" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+            <span id="exportlabel" class="text-[13px] font-medium text-text-secondary">My data</span>
+            <button type="button" id="exportcsv" class="rounded-md border border-white/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-text-secondary hover:text-text-primary">CSV</button>
+            <button type="button" id="exportjson" class="rounded-md border border-white/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-text-secondary hover:text-text-primary">JSON</button>
+          </div>
+        </div>
         <p class="mt-auto hidden px-3 font-mono text-[10.5px] leading-relaxed text-text-muted lg:block">Drag a PDF anywhere on this page to add it.</p>
       </aside>
 
@@ -711,6 +721,10 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         Wellness screening, not a diagnosis — parsing can misread a report, which is
         why you confirm app-bound values. Reports and values are private to your account.
       </p>
+      <p class="mt-3 text-xs leading-5 text-text-muted">
+        <button type="button" id="deleteaccount" class="underline decoration-white/25 underline-offset-2 transition-colors hover:text-text-primary">Delete my account</button>
+        <span id="deletemsg" class="ml-2"></span>
+      </p>
       </div>
      </div>
     </section>
@@ -864,6 +878,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   import { mountPeople } from "../my-health/views/People";
   import { REPORT_EXT, pretty, stampOf, isPhotoName, unitFits, APP_KEYS, appBoundFor, isSent, reportAppState, pendingReports, uncheckedInApp, type AppBound } from "../my-health/derive/reports";
   import { SCOPE_LABEL, ALL_SCOPES, scopeList } from "../my-health/derive/scopes";
+  import { exportCSV, exportJSON, download } from "../my-health/export";
   import { readDocument, writeDocument, pruneDocuments, clearDocuments, sameDocument } from "../my-health/store";
 
   // ── the ruler ─────────────────────────────────────────────────────────
@@ -1081,6 +1096,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     show("personnotewrap", w && !self && !!person?.id);
     show("viewernotewrap", !!person?.id && !person.mine && !person.self && grantIdBy.has(person.id));
     show("accesswrap", w && !!person?.id); if (!(w && person?.id)) closeAccess();
+    show("exportwrap", !!person?.id);
+    $("exportlabel").textContent = self ? "My data" : `${person?.name?.split(" ")[0] || "Their"} data`;
     show("namechange", self && !!firstName);
     if (!self) hideNameForm();
     renderPeople();
@@ -1270,6 +1287,18 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       .upsert({ grant_id: gid, viewer_id: userId, note, updated_at: new Date().toISOString() }, { onConflict: "grant_id" });
     if (error) msg("upmsg", `Could not save the note: ${error.message}`, true);
   });
+  // ── Download: the same document the page draws, so the file holds what the page shows ──
+  async function exportAs(kind: "csv" | "json") {
+    const d = doc ?? (docPromise ? await docPromise : null);
+    if (!d) return;
+    const who = (d.person?.name || "me").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const today = new Date().toISOString().slice(0, 10);
+    if (kind === "csv") download(exportCSV(d), `verve-${who}-${today}.csv`, "text/csv");
+    else download(exportJSON(d), `verve-${who}-${today}.json`, "application/json");
+  }
+  $("exportcsv").addEventListener("click", () => exportAs("csv"));
+  $("exportjson").addEventListener("click", () => exportAs("json"));
+
   $("notesexport").addEventListener("click", async () => {
     const { data, error } = await supabase.from("viewer_notes").select("note, updated_at, grants(person_name, inviter_name)");
     if (error) { msg("upmsg", `Could not export: ${error.message}`, true); return; }
@@ -2857,6 +2886,24 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   }
 
   $("signout").addEventListener("click", async () => {
+    if (userId) await clearDocuments(userId);
+    await supabase.auth.signOut();
+    boot();
+  });
+
+  // Delete account: the same server function as the app's button. It removes
+  // report files, every row and the account itself, with no email to anyone.
+  $("deleteaccount").addEventListener("click", async () => {
+    if (!confirm("Delete your Verve account? Everything Verve stores on its servers is deleted at once: your reports and their values, your app backup, the people you look after and what you share. This cannot be undone.")) return;
+    const btn = $("deleteaccount") as HTMLButtonElement;
+    btn.disabled = true;
+    msg("deletemsg", "Deleting…");
+    const { error: fnErr } = await supabase.functions.invoke("delete-account", { body: {} });
+    if (fnErr) {
+      btn.disabled = false;
+      msg("deletemsg", "Not deleted yet. Check your connection and try again.");
+      return;
+    }
     if (userId) await clearDocuments(userId);
     await supabase.auth.signOut();
     boot();
