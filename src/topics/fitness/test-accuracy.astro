@@ -8,7 +8,10 @@ const accuracy = [
   ["6-minute walk", "submaximal", "text-text-secondary", "Built for lower fitness. It under-reads a fit person by design."],
   ["Watch estimate", "7 to 16 % error", "text-warning", "Carried with every wearable reading Verve shows. Never the headline."],
 ];
+import VideoSlot from "../../components/VideoSlot.astro";
 ---
+
+<div class="mt-6"><VideoSlot topic="test-accuracy" /></div>
 
 <div class="mt-[18px] rounded-2xl border border-white/8 bg-white/4 p-5 sm:px-[22px]">
   <dl class="flex flex-col gap-3">

@@ -56,7 +56,10 @@ const reasons: Array<{ head: string; body: string }> = [
     body: "Readiness scores fold HRV, sleep and resting rate into one number by a formula the vendor does not publish, with a cheerful word under it; there is no study behind the fold. Verve shows the three readings and names a pattern only when all three leave their own bands in the same direction, HRV low, resting rate high, recovery small, for 3 nights. A single low night is a night: a late meal, a drink, heat, a hard session and the first day of a cold all do this, and the number cannot tell them apart.",
   },
 ];
+import VideoSlot from "../../components/VideoSlot.astro";
 ---
+
+<div class="mt-6"><VideoSlot topic="night-hrv" /></div>
 
 <p class="mt-[18px] text-base leading-relaxed text-text-secondary">
   Verve reads whatever HRV reaches Apple Health, names the writer and its

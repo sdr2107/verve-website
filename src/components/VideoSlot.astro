@@ -1,25 +1,85 @@
 ---
 /**
- * VideoSlot — an honest placeholder for the explainer video each science
- * section will eventually carry. Text content ships immediately (the data
- * already exists); video is recorded and slotted in later without changing
- * this component's structure — just replace the placeholder body with a
- * real <video>/embed when the recording for `topic` exists.
+ * VideoSlot — the videos a science topic page carries, or any named set.
+ *
+ * Each is the silent website cut from data/videos.ts: a poster with a play
+ * button; the tap swaps in the file itself, playing, with the browser's own
+ * controls. Nothing loads until it is asked for, and nothing comes from a
+ * third party. Under the title, the length and, for a video that is also on
+ * the channel, the way to YouTube. A topic with no video yet keeps the
+ * dashed placeholder, so the page says so rather than showing a gap.
  */
+import { videosForTopic, videosBySlugs, videoSrc, videoPoster, videoChannel, fmtSeconds, type Video } from "../data/videos";
+import { TOPICS, topicHref } from "../data/scienceTopics";
+
 interface Props {
-  topic: string;
+  /** A science topic's slug: its videos, in order. */
+  topic?: string;
+  /** Or named videos, in the order named. */
+  slugs?: string[];
+  /** Name each video's topic page under it: the library does, a topic page need not. */
+  withTopic?: boolean;
 }
-const { topic } = Astro.props;
+const { topic, slugs, withTopic = false } = Astro.props;
+const videos: Video[] = slugs ? videosBySlugs(slugs) : topic ? videosForTopic(topic) : [];
+const topicLabel = (slug?: string) => TOPICS.find((t) => t.slug === slug)?.label ?? slug ?? "";
+const cols = videos.length > 2 ? "sm:grid-cols-2 lg:grid-cols-3" : videos.length === 2 ? "sm:grid-cols-2" : "";
 ---
 
-<div class="flex items-center gap-4 rounded-xl border border-dashed border-white/12 bg-white/2 px-5 py-4">
-  <div class="flex shrink-0 items-center justify-center rounded-full bg-white/6" style="width: 40px; height: 40px;">
-    <svg width="16" height="16" class="text-text-tertiary" style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <polygon points="5 3 19 12 5 21 5 3" />
-    </svg>
+{videos.length ? (
+  <div class={`grid gap-4 ${cols}`}>
+    {videos.map((v) => (
+      <figure class="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]" data-vrv-video={videoSrc(v)}>
+        <div class="relative aspect-video bg-canvas" data-vrv-stage>
+          <img src={videoPoster(v)} alt="" loading="lazy" decoding="async" class="h-full w-full object-cover" />
+          <button type="button" data-vrv-play aria-label={`Play: ${v.title}`} class="group absolute inset-0 flex items-center justify-center">
+            <span class="flex h-14 w-14 items-center justify-center rounded-full border border-white/20 bg-canvas/80 text-text-primary shadow-lg transition-transform group-hover:scale-105">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+            </span>
+          </button>
+        </div>
+        <figcaption class="flex items-start justify-between gap-3 px-4 py-3">
+          <span class="min-w-0">
+            <span class="block text-sm font-semibold leading-snug text-text-primary">{v.title}</span>
+            <span class="mt-0.5 block text-xs text-text-tertiary">
+              {fmtSeconds(v.seconds)} &middot; captions, no sound
+              {withTopic && v.topic && <> &middot; <a href={topicHref(v.topic)} class="text-accent-light hover:text-text-primary">{topicLabel(v.topic)}</a></>}
+            </span>
+          </span>
+          {v.youtube && (
+            <a href={videoChannel} target="_blank" rel="noopener" class="shrink-0 text-xs font-semibold text-text-tertiary hover:text-text-primary">YouTube &rarr;</a>
+          )}
+        </figcaption>
+      </figure>
+    ))}
   </div>
-  <div>
-    <p class="text-sm font-medium text-text-secondary">Video walkthrough — {topic}</p>
-    <p class="text-xs text-text-muted">In production, coming soon</p>
+  <script>
+    // One handler for every slot on the page: the tap swaps the poster for
+    // the file, playing. A second tap on another video leaves the first alone.
+    document.addEventListener("click", (e) => {
+      const btn = (e.target as HTMLElement).closest("[data-vrv-play]");
+      if (!btn) return;
+      const fig = btn.closest("[data-vrv-video]") as HTMLElement | null;
+      const stage = fig?.querySelector("[data-vrv-stage]") as HTMLElement | null;
+      if (!fig || !stage) return;
+      const poster = (stage.querySelector("img") as HTMLImageElement | null)?.src ?? "";
+      const video = document.createElement("video");
+      video.src = fig.dataset.vrvVideo!;
+      video.poster = poster;
+      video.controls = true; video.autoplay = true; video.playsInline = true; video.muted = true;
+      video.className = "h-full w-full";
+      stage.replaceChildren(video);
+      void video.play().catch(() => {});
+    });
+  </script>
+) : (
+  <div class="flex items-center gap-4 rounded-xl border border-dashed border-white/12 bg-white/2 px-5 py-4">
+    <div class="flex shrink-0 items-center justify-center rounded-full bg-white/6" style="width: 40px; height: 40px;">
+      <svg width="16" height="16" class="text-text-tertiary" style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+    </div>
+    <div>
+      <p class="text-sm font-medium text-text-secondary">Video &middot; {topicLabel(topic)}</p>
+      <p class="text-xs text-text-muted">To come. <a href="/videos" class="text-accent-light hover:text-text-primary">Every video so far &rarr;</a></p>
+    </div>
   </div>
-</div>
+)}

@@ -1,0 +1,56 @@
+---
+/**
+ * /videos — every video Verve has made, by subject, each one playable here
+ * and, where it explains a topic, linked to that topic's page.
+ *
+ * The videos are the silent website cuts (data/videos.ts): captions burned
+ * in, no voice, so nothing is lost without sound. Topics that have no video
+ * yet are not listed here; their pages say "to come".
+ */
+import Layout from "../layouts/Layout.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import Footer from "../components/Footer.astro";
+import VideoSlot from "../components/VideoSlot.astro";
+import { GROUPS, VIDEOS, videosInGroup, fmtSeconds } from "../data/videos";
+
+const total = VIDEOS.reduce((t, v) => t + v.seconds, 0);
+const onTopics = VIDEOS.filter((v) => v.topic).length;
+---
+
+<Layout
+  title="Videos — Verve"
+  description="Every short video Verve has made: how the app works, and the science behind each number, one study at a time."
+>
+  <SiteHeader current="videos" />
+
+  <main class="mx-auto max-w-6xl px-6 pt-12 pb-20 sm:px-10 lg:pt-16 sm:pb-28">
+    <div class="max-w-2xl">
+      <span class="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-text-tertiary">Videos</span>
+      <h1 class="mt-2 text-[34px] font-extrabold leading-[1.08] tracking-[-0.03em] text-text-primary sm:text-[44px]">
+        Every video, by subject.
+      </h1>
+      <p class="mt-4 text-[16px] leading-[1.6] text-text-secondary">
+        {VIDEOS.length} short videos, {fmtSeconds(total)} in all: how the app works, and the science behind each number,
+        one study at a time. Captions, no sound. {onTopics} of them sit on the topic page they explain; the rest are here alone.
+      </p>
+    </div>
+
+    {GROUPS.map((g) => {
+      const vs = videosInGroup(g.key);
+      if (!vs.length) return null;
+      return (
+        <section class="mt-14 border-t border-white/[0.07] pt-10" id={g.key}>
+          <div class="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 class="text-[24px] font-extrabold tracking-[-0.02em] text-text-primary">{g.label}</h2>
+            <p class="text-sm text-text-tertiary">{g.blurb} &middot; {vs.length}</p>
+          </div>
+          <div class="mt-6">
+            <VideoSlot slugs={vs.map((v) => v.slug)} withTopic />
+          </div>
+        </section>
+      );
+    })}
+  </main>
+
+  <Footer />
+</Layout>

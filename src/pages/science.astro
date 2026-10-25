@@ -15,6 +15,7 @@
  * App Store release is needed to keep an old link working.
  */
 import Layout from "../layouts/Layout.astro";
+import VideoSlot from "../components/VideoSlot.astro";
 import Footer from "../components/Footer.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import CrfMapPreview from "../components/science/CrfMapPreview.astro";
@@ -96,6 +97,9 @@ const figures = [
         <kbd class="pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 rounded-md border border-white/10 px-1.5 py-0.5 font-mono text-[10px] text-text-muted sm:block" aria-hidden="true">/</kbd>
         <div id="results" role="listbox" class="absolute left-0 right-0 top-full z-20 mt-2 hidden overflow-hidden rounded-2xl border border-white/10 bg-canvas-2/95 shadow-2xl shadow-black/40 backdrop-blur"></div>
       </div>
+
+      <!-- the search, shown: twenty-four seconds, in place of a paragraph about it -->
+      <div class="vrv-rise mx-auto mt-8 max-w-xl text-left" style="--i: 3.5"><VideoSlot slugs={["science-search"]} /></div>
 
       <dl class="vrv-rise mx-auto mt-8 flex items-center justify-center gap-6 sm:gap-10" style="--i: 4">
         {figures.map((f, i) => (

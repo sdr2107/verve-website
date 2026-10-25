@@ -9,7 +9,10 @@ const todayTiles = [
   { label: "Recovery", value: "\u219325", tone: "text-success", rule: "red at 12 or under" },
   { label: "Sitting", value: "3 h", tone: "text-text-primary", rule: "amber 10.6 h \u00b7 red 12 h" },
 ];
+import VideoSlot from "../../components/VideoSlot.astro";
 ---
+
+<div class="mt-6"><VideoSlot topic="today-tiles" /></div>
 
 <div class="mt-[18px] rounded-2xl border border-white/8 bg-white/4 p-5 sm:px-[22px]">
   <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
