@@ -430,7 +430,20 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           </div>
           <textarea id="viewernote" rows="2" placeholder="Seen 7 Oct. Walk test 540 m. Retest in eight weeks."
             class="mt-1 w-full resize-none rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[14px] leading-relaxed text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"></textarea>
+          <!-- feedback: unlike the note, this goes TO the person, on their own page (public.feedback) -->
+          <div class="mt-4 rounded-2xl border border-accent/40 bg-accent/[0.05] p-4">
+            <label for="feedbacktext" id="feedbacklabel" class="font-mono text-[10px] font-semibold tracking-wider text-accent-light">FEEDBACK &middot; THEY READ THIS ON THEIR PAGE</label>
+            <textarea id="feedbacktext" rows="3" maxlength="4000" placeholder="Good eight weeks: +1.3 METs on the Cooper run. Keep two strength days; recheck the lipid profile in 3 months."
+              class="mt-1 w-full resize-none rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[14px] leading-relaxed text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"></textarea>
+            <div class="mt-2 flex flex-wrap items-center gap-3">
+              <button type="button" id="feedbacksend" class="min-h-9 rounded-xl bg-accent px-4 py-1.5 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Send</button>
+              <span id="feedbackmsg" class="text-[12px] text-text-tertiary"></span>
+            </div>
+            <div id="feedbacksent" class="mt-3 flex flex-col gap-2"></div>
+          </div>
         </div>
+        <!-- feedback sent to this page by a coach or clinician: what the person reads -->
+        <div id="feedbackin" class="mt-3 hidden max-w-3xl flex-col gap-2"></div>
 
         <!-- the plan this account holds, and the way to the plans page; only once plans are open -->
         <p id="planline" class="mt-2 hidden text-[12px] text-text-tertiary"></p>
@@ -1253,6 +1266,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     const p = person;
     ($("personnote") as HTMLTextAreaElement).value = "";
     void loadViewerNote();
+    void loadFeedback();
     if (!p?.id || !p.mine || p.self) return;
     const d = await ensureDocument();
     if (person?.id === p.id) ($("personnote") as HTMLTextAreaElement).value = d.note ?? "";
@@ -1287,6 +1301,52 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       .upsert({ grant_id: gid, viewer_id: userId, note, updated_at: new Date().toISOString() }, { onConflict: "grant_id" });
     if (error) msg("upmsg", `Could not save the note: ${error.message}`, true);
   });
+  // ── Feedback: a coach or clinician writes TO the person (public.feedback).
+  // On a shared page the sender sees the box and what they sent; on the
+  // person's own page (or one they look after) the messages show under the
+  // greeting and are marked read once shown. Sent is sent: no edits. ─────────
+  const fbCard = (f: any, mine: boolean) =>
+    `<div class="rounded-2xl border ${mine ? "border-white/10 bg-white/[0.03]" : f.read_at ? "border-white/10 bg-white/[0.03]" : "border-success/50 bg-success/[0.06]"} p-4">
+      <div class="font-mono text-[10px] font-semibold tracking-wider ${mine ? "text-text-tertiary" : "text-success"}">${mine ? "SENT" : `FROM ${esc((f.from_label || "your coach or clinician").toUpperCase())}`} &middot; ${esc(fmtDay(String(f.created_at).slice(0, 10)).toUpperCase())}${mine && f.read_at ? " &middot; READ" : ""}</div>
+      <p class="mt-1.5 whitespace-pre-line text-[14px] leading-relaxed text-text-primary">${esc(f.body)}</p></div>`;
+  async function loadFeedback() {
+    const p = person;
+    $("feedbacksent").innerHTML = ""; $("feedbackin").innerHTML = ""; show("feedbackin", false);
+    $("feedbackmsg").textContent = "";
+    if (!p?.id) return;
+    const gid = !p.mine ? grantIdBy.get(p.id) : undefined;
+    if (gid) {
+      $("feedbacklabel").innerHTML = `FEEDBACK TO ${esc((p.name?.split(" ")[0] || "them").toUpperCase())} &middot; THEY READ THIS ON THEIR PAGE`;
+      const { data } = await supabase.from("feedback").select("body, created_at, read_at").eq("grant_id", gid).order("created_at", { ascending: false }).limit(20);
+      if (person?.id === p.id) $("feedbacksent").innerHTML = (data ?? []).map((f) => fbCard(f, true)).join("");
+      return;
+    }
+    if (!(p.self || p.mine)) return;
+    const { data } = await supabase.from("feedback").select("id, body, from_label, created_at, read_at").eq("person_id", p.id).order("created_at", { ascending: false }).limit(10);
+    if (person?.id !== p.id || !data?.length) return;
+    $("feedbackin").innerHTML = data.map((f) => fbCard(f, false)).join("");
+    show("feedbackin", true);
+    const unread = data.filter((f) => !f.read_at).map((f) => f.id);
+    if (unread.length) await supabase.from("feedback").update({ read_at: new Date().toISOString() }).in("id", unread);
+  }
+  $("feedbacksend").addEventListener("click", async () => {
+    const p = person;
+    const gid = p?.id && !p.mine ? grantIdBy.get(p.id) : undefined;
+    const body = ($("feedbacktext") as HTMLTextAreaElement).value.trim();
+    if (!gid || !body) return;
+    const btn = $("feedbacksend") as HTMLButtonElement;
+    btn.disabled = true;
+    const me = doc?.me;
+    const { data: pro } = await supabase.from("professionals").select("title").eq("email", (me?.email ?? "").toLowerCase()).maybeSingle();
+    const from_label = pro?.title || me?.email || "";
+    const { error } = await supabase.from("feedback").insert({ grant_id: gid, person_id: p!.id, viewer_id: userId, from_label, body });
+    btn.disabled = false;
+    if (error) { $("feedbackmsg").textContent = `Not sent: ${error.message}`; return; }
+    ($("feedbacktext") as HTMLTextAreaElement).value = "";
+    $("feedbackmsg").textContent = "Sent. It shows on their page.";
+    void loadFeedback();
+  });
+
   // ── Download: the same document the page draws, so the file holds what the page shows ──
   async function exportAs(kind: "csv" | "json") {
     const d = doc ?? (docPromise ? await docPromise : null);
