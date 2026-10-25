@@ -122,3 +122,18 @@ test("the step lines are the app's tier floors, lowest first, the zero floor lef
   assert.deepEqual(STEP_LINES.map((l) => l.value), [2600, 7000, 8800]);
   assert.ok(STEP_LINES.every((l) => l.label && l.color.startsWith("#")));
 });
+
+test("a table marker's twelve weeks carry one row a week, newest first, and the median of the complete ones", () => {
+  const mon = mondayOf(new Date());
+  const today = new Date().toLocaleDateString("en-CA");
+  const signals = [];
+  for (let w = 0; w < 12; w++) for (let d = 0; d < 7; d++) { const day = addDays(mon, -7 * w + d); if (day <= today) signals.push({ day, steps: w === 0 ? 1000 : 5000 + w * 100 }); }
+  const markers = buildMarkers({ signals, acts: [], weights: [], profile: {}, crf: [], weeks: [], app: [], by: new Map() });
+  const steps = markers.find((m) => m.key === "steps");
+  const dr = drawnFor(steps, "4w");
+  assert.equal(dr.pts.length, 12);
+  assert.equal(dr.rows.length, 12);
+  assert.equal(dr.rows[0].current, true);
+  assert.equal(dr.rows[1].total, 7 * 5100);
+  assert.equal(dr.median, 7 * 5600);   // the median of weeks 1..11: 5100..6100 a day × 7
+});

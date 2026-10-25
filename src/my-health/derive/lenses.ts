@@ -9,7 +9,7 @@
  * years); one read now and then (a fitness test, a waist, a grip) gets six
  * months, a year, or everything: a week of a waist is nothing to look at.
  */
-import { addDays, dayWord, esc, fmt1, fmtDay, fmtHM, fmtSleepMin, kicker, localDay, medianOf, mondayOf, round0, todayStr } from "./format.ts";
+import { addDays, daysBetween, dayWord, esc, fmt1, fmtDay, fmtHM, fmtSleepMin, kicker, localDay, medianOf, mondayOf, round0, todayStr } from "./format.ts";
 import { dueTone, dueWord, type Pt } from "./markers.ts";
 import { actsByDay, activitySummary, fitnessSummary, STEP_LINES } from "./activity.ts";
 import { sleepHeartSummary } from "./heart.ts";
@@ -27,6 +27,7 @@ export type Marker = {
   series: () => Pt2[];                        // every point, oldest first
   goal?: () => number | null;                 // a weekly goal, drawn as a line on the week
   lines?: () => { value: number; label: string; color: string }[];   // reference lines on the week-of-days view only (the step tiers)
+  table?: boolean;                            // the longer ranges as one chart and one quiet table, with the median period; twelve weeks instead of four
   band?: () => { lo: number; hi: number; why: string } | null;   // the person's own normal, shaded
   reads: (pts: Pt2[]) => string[];            // what Verve reads, in sentences (HTML)
   rangeReads?: (range: Rng, year: number | null) => string[];   // sentences for one range, after `reads` (night HRV's months and years)
@@ -151,7 +152,7 @@ export function buildMarkers(src: MarkerSources): Marker[] {
       reads: () => { const a = activitySummary(weeks, acts, weeklyGoal(), todayStr(), mondayOf(new Date())); return a.minutes ? [`Vigorous share <strong class="text-text-primary">${Math.round((a.vig / a.minutes) * 100)}%</strong> of the last four weeks' minutes.`, "Most of a week easy, one hard day: the shape the endurance literature keeps finding."] : ["No minutes on file yet."]; } },
     { key: "steps", section: "movement", label: "Steps", unit: "", sub: "Every source, one total a day", daily: true, sum: true, avgDay: true, color: "#34d399",
       science: "/science/movement/steps", source: "Apple Health's daily total, watch and phone together, pushed by the app on every sync.", fmt: (v) => Math.round(v).toLocaleString(),
-      series: () => signalSeries("steps"), lines: () => STEP_LINES,
+      series: () => signalSeries("steps"), lines: () => STEP_LINES, table: true,
       reads: () => { const h = heart(); if (!h?.steps.avg) return ["No steps on file yet."]; return [`<strong class="text-text-primary">${h.steps.avg.toLocaleString()} a day</strong> over the last seven${h.steps.prior != null ? `, ${h.steps.avg >= h.steps.prior ? "up" : "down"} from ${h.steps.prior.toLocaleString()} the week before` : ""}.`, "Paluch's 2023 pooled cohorts found the mortality curve flattening around 7,000 to 8,000 a day for adults over 60, higher for younger adults, with the fall steepest from the lowest counts."]; } },
     { key: "strength", section: "movement", label: "Strength", unit: "min", sub: "Minutes of strength work, by day", daily: true, sum: true, color: "#a78bfa",
       science: "/science/movement/strength-training", source: "Sessions the app graded as strength, each as the watch or the person recorded it.", fmt: (v) => round0(v),
@@ -290,7 +291,20 @@ function energyRangeReads(range: Rng, signals: any[]): string[] {
 }
 
 // ── one range of one marker: the points to draw, the headline, the caption ──
-export type Drawn = { pts: { x: string; v: number | null; tone?: string; note?: string }[]; headline: string; caption: string; labelEvery: number; goalLine?: number | null; monthLabels?: boolean };
+export type Drawn = { pts: { x: string; v: number | null; tone?: string; note?: string }[]; headline: string; caption: string; labelEvery: number; goalLine?: number | null; monthLabels?: boolean;
+  /** The quiet table under the chart (a `table` marker's longer ranges): one row a period, newest first. */
+  rows?: { label: string; total: number; avg: number | null; current: boolean }[];
+  /** The median of the complete periods with any value: the figure the range holds. */
+  median?: number | null;
+};
+
+/** The median total of the complete periods that hold anything (format.ts medianOf over the totals); null with none. */
+function medianPeriodTotal(rows: { total: number; current: boolean }[]): number | null {
+  const v = rows.filter((r) => !r.current && r.total > 0).map((r) => r.total);
+  const med = v.length ? medianOf(v) : null;
+  return med == null ? null : Math.round(med);
+}
+const daysPassed = (from: string, to: string, t: string) => Math.max(0, daysBetween(from, to < t ? to : t) + 1);
 export function drawnFor(m: Marker, range: Rng, year: number | null = null): Drawn | null {
   const all = m.series();
   if (!all.length) return null;
@@ -330,8 +344,14 @@ export function drawnFor(m: Marker, range: Rng, year: number | null = null): Dra
     // four bars, one a week, Monday to Sunday, this week unfinished: a week's
     // total for a marker that adds up, a day's average for one that is read
     const thisMon = mondayOf(new Date());
-    const pts = []; for (let i = 3; i >= 0; i--) { const from = addDays(thisMon, -7 * i); const v = agg(from, addDays(from, 6)); pts.push({ x: from, v, tone: i === 0 ? "today" : toneOf(v) }); }
+    const weeksN = m.table ? 12 : 4;
+    const pts = []; for (let i = weeksN - 1; i >= 0; i--) { const from = addDays(thisMon, -7 * i); const v = agg(from, addDays(from, 6)); pts.push({ x: from, v, tone: i === 0 ? "today" : toneOf(v) }); }
     const have = pts.filter((p) => p.v != null).map((p) => p.v!);
+    if (m.table && summing) {
+      const rows = [...pts].reverse().map((p) => { const to = addDays(p.x, 6); const n = daysPassed(p.x, to, t); return { label: `${new Date(p.x + "T00:00:00").getDate()}–${esc(fmtDay(to))}`, total: p.v ?? 0, avg: p.v != null && n ? Math.round(p.v / n) : null, current: p.x === thisMon }; });
+      const median = medianPeriodTotal(rows);
+      return { pts, headline: median != null ? m.fmt(median) : "—", caption: `${m.unit ? `${m.unit} ` : ""}a week, your median of the last ${weeksN}${rows[0].total ? ` · this week ${m.fmt(rows[0].total)} so far` : ""}`, labelEvery: 4, goalLine: null, rows, median };
+    }
     const val = have.length ? have.reduce((a, b) => a + b, 0) / have.length : null;
     return { pts, headline: val != null ? m.fmt(val) : "—", caption: `${m.unit ? `${m.unit} ` : ""}${summing ? "a week, averaged over the last four, this week so far included" : "a day, averaged over the last four weeks"}`, labelEvery: 1, goalLine: null };
   }
@@ -339,6 +359,12 @@ export function drawnFor(m: Marker, range: Rng, year: number | null = null): Dra
     const pts = []; const now = new Date();
     for (let i = 11; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); const from = d.toLocaleDateString("en-CA"), to = new Date(d.getFullYear(), d.getMonth() + 1, 0).toLocaleDateString("en-CA"); const v = agg(from, to); pts.push({ x: from, v, tone: i === 0 ? "today" : toneOf(v) }); }
     const have = pts.filter((p) => p.v != null).map((p) => p.v!);
+    if (m.table && summing) {
+      const nowM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+      const rows = [...pts].reverse().map((p) => { const d = new Date(p.x + "T00:00:00"); const to = new Date(d.getFullYear(), d.getMonth() + 1, 0).toLocaleDateString("en-CA"); const n = daysPassed(p.x, to, t); return { label: d.toLocaleDateString(undefined, { month: "long", year: "numeric" }), total: p.v ?? 0, avg: p.v != null && n ? Math.round(p.v / n) : null, current: p.x === nowM }; });
+      const median = medianPeriodTotal(rows);
+      return { pts, headline: median != null ? m.fmt(median) : "—", caption: `${m.unit ? `${m.unit} ` : ""}a month, your median of the last twelve${rows[0].total ? ` · this month ${m.fmt(rows[0].total)} so far` : ""}`, labelEvery: 1, goalLine: null, rows, median };
+    }
     const yearVal = summing ? have.reduce((a, b) => a + b, 0) : have.length ? have.reduce((a, b) => a + b, 0) / have.length : null;
     return { pts, headline: yearVal != null ? m.fmt(yearVal) : "—", caption: `${m.unit ? `${m.unit} ` : ""}${summing ? "over the last twelve months, month by month" : "a day, averaged over the last twelve months"}`, labelEvery: 1, goalLine: null };
   }
@@ -347,6 +373,11 @@ export function drawnFor(m: Marker, range: Rng, year: number | null = null): Dra
     const y1 = new Date().getFullYear(), y0 = Math.min(y1, Number(all[0].d.slice(0, 4)) || y1);
     const pts = []; for (let y = y0; y <= y1; y++) { const v = agg(`${y}-01-01`, `${y}-12-31`); pts.push({ x: `${y}-01-01`, v, tone: y === y1 ? "today" : toneOf(v) }); }
     const have = pts.filter((p) => p.v != null).map((p) => p.v!);
+    if (m.table && summing) {
+      const rows = [...pts].reverse().map((p) => { const y = Number(p.x.slice(0, 4)); const n = daysPassed(`${y}-01-01`, `${y}-12-31`, t); return { label: String(y), total: p.v ?? 0, avg: p.v != null && n ? Math.round(p.v / n) : null, current: y === y1 }; });
+      const median = medianPeriodTotal(rows);
+      return { pts, headline: median != null ? m.fmt(median) : "—", caption: `${m.unit ? `${m.unit} ` : ""}a year, your median of the complete years${rows[0].total ? ` · this year ${m.fmt(rows[0].total)} so far` : ""}`, labelEvery: 1, goalLine: null, rows, median };
+    }
     const val = have.length ? (summing ? have.reduce((a, b) => a + b, 0) : have.reduce((a, b) => a + b, 0) / have.length) : null;
     return { pts, headline: val != null ? m.fmt(val) : "—", caption: `${m.unit ? `${m.unit} ` : ""}${summing ? "over every year on file, this year so far included" : "a day, averaged over every year on file"}`, labelEvery: 1, goalLine: null };
   }
@@ -370,6 +401,7 @@ export function chartSvg(m: Marker, range: Rng, dr: Drawn): string {
   let lo = Math.min(...vals), hi = Math.max(...vals);
   if (band) { lo = Math.min(lo, band.lo); hi = Math.max(hi, band.hi); }
   for (const l of lines) hi = Math.max(hi, l.value * 1.08);
+  if (dr.median != null) hi = Math.max(hi, dr.median * 1.08);
   const bars = !!m.sum;
   if (bars) lo = 0; else { const pad = Math.max((hi - lo) * 0.15, 1); lo -= pad; hi += pad; }
   if (hi === lo) hi = lo + 1;
@@ -397,7 +429,8 @@ export function chartSvg(m: Marker, range: Rng, dr: Drawn): string {
     dr.pts.forEach((p, i) => {
       if (p.v == null) { if (p.x <= todayStr()) s += `<rect x="${(xf(i) - bw / 2).toFixed(1)}" y="${H - B - 3}" width="${bw.toFixed(1)}" height="3" rx="1.5" fill="rgba(255,255,255,0.08)"/>`; return; }
       const y = yf(p.v), hgt = Math.max(2, H - B - y);
-      s += `<rect x="${(xf(i) - bw / 2).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${hgt.toFixed(1)}" rx="3" fill="${color}" fill-opacity="${p.tone === "today" ? 1 : 0.6}"><title>${esc(fmtDay(p.x))}: ${m.fmt(p.v)} ${m.unit}</title></rect>`;
+      const hollow = dr.rows && p.tone === "today";
+      s += `<rect x="${(xf(i) - bw / 2).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${hgt.toFixed(1)}" rx="3" fill="${hollow ? "none" : color}" stroke="${hollow ? color : "none"}" stroke-dasharray="${hollow ? "3 3" : "0"}" fill-opacity="${p.tone === "today" ? 1 : 0.6}"><title>${esc(fmtDay(p.x))}: ${m.fmt(p.v)} ${m.unit}</title></rect>`;
       if (n <= 14 && p.v > 0) s += `<text x="${xf(i).toFixed(1)}" y="${(y - 6).toFixed(1)}" text-anchor="middle" fill="#f1f5f9" font-size="11" font-weight="700">${m.fmt(p.v)}</text>`;
     });
   } else {
@@ -408,6 +441,10 @@ export function chartSvg(m: Marker, range: Rng, dr: Drawn): string {
       s += `<circle cx="${xf(i).toFixed(1)}" cy="${yf(p.v!).toFixed(1)}" r="${n <= 14 ? 5.5 : 3.5}" fill="${fill}" stroke="#0D0D1C" stroke-width="1.5"><title>${esc(fmtDay(p.x))}: ${m.fmt(p.v!)} ${m.unit}${p.note ? ` · ${esc(p.note)}` : ""}</title></circle>`;
       if (n <= 14) s += `<text x="${xf(i).toFixed(1)}" y="${(yf(p.v!) - 11).toFixed(1)}" text-anchor="middle" fill="${p.tone === "warn" ? "#FBBF24" : "#c7d2fe"}" font-size="11" font-weight="700">${m.fmt(p.v!)}</text>`;
     }
+  }
+  if (dr.median != null && dr.median <= hi) {
+    const my = yf(dr.median);
+    s += `<line x1="${L}" y1="${my.toFixed(1)}" x2="${W - R}" y2="${my.toFixed(1)}" stroke="#94a3b8" stroke-opacity="0.5" stroke-dasharray="3 4"/><text x="${W - R}" y="${(my - 5).toFixed(1)}" text-anchor="end" fill="#64748b" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">your median</text>`;
   }
   const label = (x: string) => (range === "months" || dr.monthLabels) ? new Date(x + "T00:00:00").toLocaleDateString(undefined, { month: "short" }).toUpperCase() : range === "week" ? new Date(x + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" }).toUpperCase() : range === "4w" ? new Date(x + "T00:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short" }).toUpperCase() : range === "years" ? x.slice(0, 4) : new Date(x + "T00:00:00").toLocaleDateString(undefined, { month: "short", year: "2-digit" }).toUpperCase();
   dr.pts.forEach((p, i) => { if (i % dr.labelEvery === 0 || i === n - 1) s += `<text x="${xf(i).toFixed(1)}" y="${H - B + 16}" text-anchor="middle" fill="${p.tone === "today" ? "#f1f5f9" : "#94a3b8"}" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${label(p.x)}</text>`; });

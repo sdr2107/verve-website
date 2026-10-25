@@ -262,7 +262,7 @@ function OpenMarker({ open, markers, acts, out }: { open: Marker; markers: Marke
             <p class="mt-0.5 text-[12.5px] text-text-tertiary">{open.sub}</p>
           </div>
           <div class="flex gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1" role="group" aria-label="Range">
-            {ranges.map((r) => <button key={r} type="button" onClick={() => { openRange.value = r; openYear.value = null; }} class={`min-h-8 rounded-lg px-3.5 text-[13px] font-semibold transition-colors ${r === range ? "bg-accent/20 text-text-primary" : "text-text-tertiary hover:text-text-primary"}`}>{RANGE_LABEL[r]}</button>)}
+            {ranges.map((r) => <button key={r} type="button" onClick={() => { openRange.value = r; openYear.value = null; }} class={`min-h-8 rounded-lg px-3.5 text-[13px] font-semibold transition-colors ${r === range ? "bg-accent/20 text-text-primary" : "text-text-tertiary hover:text-text-primary"}`}>{r === "4w" && open.table ? "12 weeks" : RANGE_LABEL[r]}</button>)}
           </div>
           {yearMenu ? (
             <label class="flex items-center gap-2 text-[12px] text-text-tertiary">Year
@@ -287,6 +287,18 @@ function OpenMarker({ open, markers, acts, out }: { open: Marker; markers: Marke
               </div>
             </div>
             <div class="mt-2 overflow-x-auto"><svg viewBox="0 0 820 200" class="block h-auto w-full min-w-[560px]" role="img" aria-label={`${open.label}, ${RANGE_LABEL[range].toLowerCase()} view`} dangerouslySetInnerHTML={{ __html: chartSvg(open, range, dr) }} /></div>
+            {dr.rows ? (
+              <div class="mt-3 border-t border-white/[0.07]">
+                {dr.rows.map((r) => (
+                  <div key={r.label} class="grid grid-cols-[1.3fr_0.8fr_1fr_auto] items-baseline gap-3 border-b border-white/[0.07] py-1.5 text-[12.5px] tabular-nums">
+                    <span class={r.total ? (r.current ? "font-semibold text-text-primary" : "text-text-secondary") : "text-text-muted"}>{r.label}</span>
+                    <span class={`text-right font-mono ${r.total ? "text-text-primary" : "text-text-muted"}`}>{r.total ? open.fmt(r.total) : "—"}</span>
+                    <span class="text-right text-text-tertiary">{r.avg != null ? `${open.fmt(r.avg)} a day` : ""}</span>
+                    <span class="w-12 text-right font-mono text-[9.5px] tracking-[0.06em] text-accent-light">{r.current ? "SO FAR" : ""}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </>
         ) : <p class="mt-4 text-[13px] text-text-tertiary">Nothing read yet for {open.label.toLowerCase()}.{open.section === "heart" || open.key === "steps" ? " The app sends it on every sync once Apple Health is on." : ""}</p>}
         <div class="mt-4 grid gap-4 border-t border-white/[0.07] pt-4 lg:grid-cols-2">
