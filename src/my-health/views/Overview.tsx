@@ -283,6 +283,7 @@ function OpenMarker({ open, markers, acts, out }: { open: Marker; markers: Marke
               <div class="flex flex-wrap gap-4 text-[12px] text-text-secondary">
                 {band ? <span><span class="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm border border-success/50 bg-success/20 align-[-1px]"></span>{band.why}</span> : null}
                 {range === "week" && open.goal?.() ? <span><span class="mr-1.5 inline-block h-0.5 w-3 bg-accent-light align-[3px]"></span>the week's running total, against the goal</span> : null}
+                {range === "week" && open.daily && open.lines?.()?.length ? open.lines().map((l) => <span key={l.value}><span class="mr-1.5 inline-block h-0.5 w-3 align-[3px]" style={`background:${l.color}`}></span>{open.fmt(l.value)} {l.label.toLowerCase()}</span>) : null}
               </div>
             </div>
             <div class="mt-2 overflow-x-auto"><svg viewBox="0 0 820 200" class="block h-auto w-full min-w-[560px]" role="img" aria-label={`${open.label}, ${RANGE_LABEL[range].toLowerCase()} view`} dangerouslySetInnerHTML={{ __html: chartSvg(open, range, dr) }} /></div>

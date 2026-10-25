@@ -5,6 +5,16 @@
  */
 import { addDays, byDate, daysBetween, localDay, mondayOf } from "./format.ts";
 import { CRF_RETEST, MAXIMAL, type Due } from "./markers.ts";
+import stepData from "../../data/step-thresholds.ts";
+
+/**
+ * The step tier floors the app draws — 2,600, 7,000, 8,800 — from a copy of
+ * the app's data/step-thresholds.json kept in src/data (the same discipline
+ * as science.ts: if one changes, change both). Lowest first; the zero floor
+ * left out, since it is not a line.
+ */
+export const STEP_LINES: { value: number; label: string; color: string }[] =
+  (stepData.tiers as readonly { label: string; min: number; color: string }[]).filter((t) => t.min > 0).map((t) => ({ value: t.min, label: t.label, color: t.color }));
 
 /**
  * The weekly dose, as the app counts it (lib/periodSummary aerobicMETMinutes):

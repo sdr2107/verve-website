@@ -11,7 +11,7 @@
  */
 import { addDays, dayWord, esc, fmt1, fmtDay, fmtHM, fmtSleepMin, kicker, localDay, medianOf, mondayOf, round0, todayStr } from "./format.ts";
 import { dueTone, dueWord, type Pt } from "./markers.ts";
-import { actsByDay, activitySummary, fitnessSummary } from "./activity.ts";
+import { actsByDay, activitySummary, fitnessSummary, STEP_LINES } from "./activity.ts";
 import { sleepHeartSummary } from "./heart.ts";
 import { methodLabel } from "./markers.ts";
 
@@ -26,6 +26,7 @@ export type Marker = {
   fmt: (v: number) => string;
   series: () => Pt2[];                        // every point, oldest first
   goal?: () => number | null;                 // a weekly goal, drawn as a line on the week
+  lines?: () => { value: number; label: string; color: string }[];   // reference lines on the week-of-days view only (the step tiers)
   band?: () => { lo: number; hi: number; why: string } | null;   // the person's own normal, shaded
   reads: (pts: Pt2[]) => string[];            // what Verve reads, in sentences (HTML)
   rangeReads?: (range: Rng, year: number | null) => string[];   // sentences for one range, after `reads` (night HRV's months and years)
@@ -150,7 +151,7 @@ export function buildMarkers(src: MarkerSources): Marker[] {
       reads: () => { const a = activitySummary(weeks, acts, weeklyGoal(), todayStr(), mondayOf(new Date())); return a.minutes ? [`Vigorous share <strong class="text-text-primary">${Math.round((a.vig / a.minutes) * 100)}%</strong> of the last four weeks' minutes.`, "Most of a week easy, one hard day: the shape the endurance literature keeps finding."] : ["No minutes on file yet."]; } },
     { key: "steps", section: "movement", label: "Steps", unit: "", sub: "Every source, one total a day", daily: true, sum: true, avgDay: true, color: "#34d399",
       science: "/science/movement/steps", source: "Apple Health's daily total, watch and phone together, pushed by the app on every sync.", fmt: (v) => Math.round(v).toLocaleString(),
-      series: () => signalSeries("steps"),
+      series: () => signalSeries("steps"), lines: () => STEP_LINES,
       reads: () => { const h = heart(); if (!h?.steps.avg) return ["No steps on file yet."]; return [`<strong class="text-text-primary">${h.steps.avg.toLocaleString()} a day</strong> over the last seven${h.steps.prior != null ? `, ${h.steps.avg >= h.steps.prior ? "up" : "down"} from ${h.steps.prior.toLocaleString()} the week before` : ""}.`, "Paluch's 2023 pooled cohorts found the mortality curve flattening around 7,000 to 8,000 a day for adults over 60, higher for younger adults, with the fall steepest from the lowest counts."]; } },
     { key: "strength", section: "movement", label: "Strength", unit: "min", sub: "Minutes of strength work, by day", daily: true, sum: true, color: "#a78bfa",
       science: "/science/movement/strength-training", source: "Sessions the app graded as strength, each as the watch or the person recorded it.", fmt: (v) => round0(v),
@@ -362,10 +363,13 @@ export function chartSvg(m: Marker, range: Rng, dr: Drawn): string {
   const W = 820, H = 200, L = 34, R = 20, T = 18, B = 34;
   const band = m.daily && range === "week" ? (m.band?.() ?? null) : null;
   const weekGoal = range === "week" && m.goal?.() ? m.goal()! : null;
+  // the reference lines (the step tiers): the week-of-days view only, as the app's Day lens
+  const lines = m.daily && range === "week" ? (m.lines?.() ?? []) : [];
   const vals = dr.pts.map((p) => p.v).filter((v): v is number => v != null);
   if (!vals.length) return `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" fill="#64748b" font-size="13">Nothing read in this range.</text>`;
   let lo = Math.min(...vals), hi = Math.max(...vals);
   if (band) { lo = Math.min(lo, band.lo); hi = Math.max(hi, band.hi); }
+  for (const l of lines) hi = Math.max(hi, l.value * 1.08);
   const bars = !!m.sum;
   if (bars) lo = 0; else { const pad = Math.max((hi - lo) * 0.15, 1); lo -= pad; hi += pad; }
   if (hi === lo) hi = lo + 1;
@@ -375,6 +379,10 @@ export function chartSvg(m: Marker, range: Rng, dr: Drawn): string {
   let s = "";
   if (band) s += `<rect x="${L}" y="${yf(band.hi).toFixed(1)}" width="${W - L - R}" height="${(yf(band.lo) - yf(band.hi)).toFixed(1)}" fill="rgba(52,211,153,0.12)"/><text x="${W - R + 3}" y="${(yf(band.hi) + 4).toFixed(1)}" fill="#64748b" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${m.fmt(band.hi)}</text><text x="${W - R + 3}" y="${(yf(band.lo) + 4).toFixed(1)}" fill="#64748b" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${m.fmt(band.lo)}</text>`;
   s += `<line x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}" stroke="rgba(255,255,255,0.12)"/>`;
+  for (const l of lines) {
+    const ly = yf(l.value);
+    s += `<line x1="${L}" y1="${ly.toFixed(1)}" x2="${W - R}" y2="${ly.toFixed(1)}" stroke="${l.color}" stroke-opacity="0.55" stroke-dasharray="3 4"/><text x="${W - R}" y="${(ly - 4).toFixed(1)}" text-anchor="end" fill="${l.color}" fill-opacity="0.9" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${m.fmt(l.value)}</text>`;
+  }
   if (!bars) s += `<text x="4" y="${(yf(hi) + 4).toFixed(1)}" fill="#64748b" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${m.fmt(hi)}</text><text x="4" y="${(yf(lo) + 4).toFixed(1)}" fill="#64748b" font-size="10" font-family="JetBrains Mono, ui-monospace, monospace">${m.fmt(lo)}</text>`;
   if (weekGoal != null && m.sum) {
     // the week's running total against the goal, dashed; the goal line above

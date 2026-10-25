@@ -2,7 +2,7 @@
 // with rows shaped like the document's. `npm test`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { activitySummary, fitnessSummary, weeksFrom, mergeBy, actsByDay, doseOf, isWorkout } from "../src/my-health/derive/activity.ts";
+import { activitySummary, fitnessSummary, weeksFrom, mergeBy, actsByDay, doseOf, isWorkout, STEP_LINES } from "../src/my-health/derive/activity.ts";
 import { markerPointsFrom, labRowsFrom, inRange, chartKeyFor } from "../src/my-health/derive/markers.ts";
 import { sleepHeartSummaryRaw, HRV_MIN_NIGHTS } from "../src/my-health/derive/heart.ts";
 import { buildMarkers, drawnFor } from "../src/my-health/derive/lenses.ts";
@@ -116,4 +116,9 @@ test("the dose: a workout's MET-minutes when aerobic and moderate or vigorous; n
   const a = activitySummary([], acts, 500 / 60, mon, mon);
   assert.equal(a.goalDose, 500);
   assert.equal(a.thisWeek.dose_met_min, 176);
+});
+
+test("the step lines are the app's tier floors, lowest first, the zero floor left out", () => {
+  assert.deepEqual(STEP_LINES.map((l) => l.value), [2600, 7000, 8800]);
+  assert.ok(STEP_LINES.every((l) => l.label && l.color.startsWith("#")));
 });
