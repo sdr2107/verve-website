@@ -207,7 +207,7 @@ export const TOPICS: Topic[] = [
     sub: "Four ways to read one bedtime diary",
     subject: "sleep-heart",
     citations: SLEEP_RHYTHM_SECTION,
-    subAnchors: ["connect-wearables"],
+    subAnchors: ["connect-wearables", "whoop"],
   },
   { slug: "sleep-and-training", label: "Sleep and training", sub: "What the Guide’s sleep line is, and what it refuses to claim", subject: "sleep-heart", citations: SLEEP_TRAINING_SECTION },
   { slug: "resting-heart-rate", label: "Resting heart rate", sub: "Measured against your own normal, not a population range", subject: "sleep-heart", citations: RESTING_HR_SECTION },

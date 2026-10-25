@@ -312,10 +312,11 @@ import {
     switch the integration on varies by app; from that day on every night
     arrives. Stages appear when the app writes them; a plain asleep record
     shows as one block. Steps come from whatever writes them to Health:
-    the phone in a pocket, an Apple Watch, and Oura or Garmin through
-    their apps; Whoop does not write steps. In Verve, Settings &rarr;
+    the phone in a pocket, an Apple Watch, and Oura, Whoop or Garmin through
+    their apps. In Verve, Settings &rarr;
     Wearables shows which app wrote the latest sleep, heart-rate and
-    workout sample, and when.
+    workout sample, and when. Wearing a Whoop? The step-by-step is
+    <a href="#whoop" class="text-accent-light underline decoration-accent/40 underline-offset-2">below</a>.
   </p>
   <p class="mt-4 text-sm leading-relaxed text-text-secondary">
     <strong class="text-text-primary">More than one wearable.</strong>
@@ -348,6 +349,90 @@ import {
     per-app switch in Health, Sharing &rarr; Apps &rarr; the app &rarr; the
     type, stops a second copy at the source; the Apple Watch, being a
     device rather than an app, has no such switches.
+  </p>
+</div>
+
+<!-- ── WHOOP, step by step ── -->
+<div id="whoop" class="mt-4 scroll-mt-8 rounded-2xl border border-white/8 bg-white/4 p-6">
+  <p class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-accent-light">If you wear a Whoop</p>
+  <p class="mt-2 text-sm leading-relaxed text-text-secondary">
+    A Whoop band reaches Verve the same way every third-party wearable
+    does: the band talks to the Whoop app, the Whoop app writes to Apple
+    Health, and Verve reads Apple Health. Pairing the band is not the
+    connection; the two switches below are. What follows was checked on a
+    Whoop paired on 25 October 2026, reading Health&rsquo;s own permission
+    list for the app, and it will be updated as the first nights come in.
+  </p>
+
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">1. Let Whoop write to Health.</strong>
+    In the Whoop app: More &rarr; Integrations &rarr; Apple Health, and
+    follow it through. Once connected, Apple Health sits above the
+    &ldquo;Not connected&rdquo; line on that Integrations screen.
+  </p>
+  <p class="mt-3 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">2. Check the write switches, not the read ones.</strong>
+    iPhone Health app &rarr; your picture &rarr; Apps &rarr; WHOOP. The
+    page has two lists. <em>Allow &ldquo;WHOOP&rdquo; to write</em> is the
+    one that matters: every switch on. Below it, <em>Allow
+    &ldquo;WHOOP&rdquo; to read</em> is a long list (vitamins, caffeine,
+    insulin, blood glucose) of what Whoop may pull <em>out</em> of Health
+    for its own app; Verve never uses any of it, and it is fine either way.
+  </p>
+  <p class="mt-3 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">3. Let Verve read Health.</strong>
+    In Verve, Settings &rarr; Apple Health, on. Then Health &rarr; Apps
+    &rarr; Verve, every read switch on. Nothing else in Verve&rsquo;s
+    settings depends on which band you wear.
+  </p>
+  <p class="mt-3 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">4. Wait for the first night.</strong>
+    Whoop writes after it has processed something: a night&rsquo;s sleep or
+    a workout. Until then Health&rsquo;s &ldquo;Data from WHOOP&rdquo; says
+    no data found, and Verve lists no Whoop anywhere, because it only names
+    a device that has actually written in the last 14 days. Next morning,
+    open the Whoop app first and let it finish the night, then open Verve.
+    Settings &rarr; Wearables should name Whoop on the sleep and heart-rate
+    rows, with the time it wrote.
+  </p>
+  <p class="mt-3 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">5. If you also had an Apple Watch.</strong>
+    Settings &rarr; Apple Health &rarr; Preferred device. Once Whoop has
+    written, each row offers it; set sleep stages, resting heart rate and
+    workouts to Whoop. This matters even with the Watch in a drawer: for two
+    weeks the Watch still has more readings in Health&rsquo;s window than
+    the Whoop, and the automatic rule follows readings.
+  </p>
+
+  <p class="mt-5 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">What Whoop writes to Health</strong>
+    (Health&rsquo;s own write list for the app, October 2026): active
+    energy, blood oxygen, heart rate, respiratory rate, resting heart rate,
+    sleep, steps, workouts.
+  </p>
+  <p class="mt-2 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">What it does not write:</strong>
+    HRV, cardio fitness (VO&#8322;max), one-minute heart rate recovery,
+    standing time. Whoop keeps HRV and its recovery score inside its own
+    app. Verve can only read what a vendor writes.
+  </p>
+
+  <p class="mt-5 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">What that means on each Verve page.</strong>
+  </p>
+  <ul class="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-text-secondary">
+    <li><strong class="text-text-primary">Sleep</strong>: full. Every night arrives; stages show when Whoop writes them, otherwise one asleep block. Bedtime average, drift, spread and the regularity index all work.</li>
+    <li><strong class="text-text-primary">Resting heart rate</strong>: full, read against your own 30-day median. A Whoop&rsquo;s resting rate and a Watch&rsquo;s are different quantities, so Verve never averages the two; if you switched from a Watch, the &ldquo;usual&rdquo; line blends both devices until the Watch days age out, about 30 days.</li>
+    <li><strong class="text-text-primary">Workouts</strong>: full. Sessions Whoop records land in the week, and Verve classifies their minutes by the heart rate written with them.</li>
+    <li><strong class="text-text-primary">Steps and movement</strong>: Whoop writes steps, and so does the phone in your pocket; Health&rsquo;s own source order decides which counts a given minute. Standing minutes are an Apple Watch reading and go blank.</li>
+    <li><strong class="text-text-primary">Night HRV</strong>: blank. Not written. The Night HRV tile and page stop at the last night another device wrote; the number lives in the Whoop app.</li>
+    <li><strong class="text-text-primary">Recovery (one-minute heart rate recovery)</strong>: blank. An Apple Watch reading. Whoop&rsquo;s &ldquo;Recovery&rdquo; is a different thing: a score, not a heart-rate drop, and it stays in the Whoop app.</li>
+    <li><strong class="text-text-primary">VO&#8322;max</strong>: none from Whoop. If a Watch wrote one earlier, Verve keeps showing that estimate for up to a year. The fix is the one Verve prefers anyway: run a field test and let the measured number lead.</li>
+  </ul>
+  <p class="mt-4 text-xs leading-relaxed text-text-tertiary">
+    Still to confirm from real nights: whether Whoop writes heart rate across
+    the whole day or only inside workouts, and whether it writes sleep
+    stages or one asleep block. This paragraph will say once seen.
   </p>
 </div>
 <div class="mt-4 grid gap-4 sm:grid-cols-2">
