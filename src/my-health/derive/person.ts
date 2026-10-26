@@ -44,7 +44,7 @@ export function derivePerson(doc: MyHealthDocument): PersonData {
   const profile = synced ? doc.profile : null;
   const signals = synced ? doc.signals : [];
   const weights = synced ? doc.weights : [];
-  const by = markerPointsFrom(doc.labs, doc.app_labs, body);
+  const by = markerPointsFrom(doc.labs, doc.app_labs, body, signals);
   const markers = buildMarkers({ signals, acts, weights, profile, crf, weeks, app: doc.app_labs, by });
   const out: PersonData = {
     doc, synced,

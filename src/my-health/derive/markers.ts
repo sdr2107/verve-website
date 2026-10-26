@@ -87,14 +87,14 @@ export function appKeyFor(analyte: string): string | null {
 /** The chart's key for an analyte name: the app's column, or SPPB. */
 export const chartKeyFor = (analyte: string) => appKeyFor(analyte) ?? (squash(canonName(analyte)) === "sppb" || squash(canonName(analyte)) === "sppbscore" ? "sppb_score" : null);
 
-export type Pt = { d: string; v: number; lo: number | null; hi: number | null; unit: string | null };
+export type Pt = { d: string; v: number; lo: number | null; hi: number | null; unit: string | null; n?: number; max?: number };
 /**
  * Every reading of every marker this person has, by chart key, from the
  * three places one can come from: the values read from reports and
  * imports (web_labs), the app's own rows (lab_readings), and waist days
  * (web_body). The same value on the same day is one reading.
  */
-export function markerPointsFrom(labs: any[], app: any[], body: any[]): Map<string, Pt[]> {
+export function markerPointsFrom(labs: any[], app: any[], body: any[], signals: any[] = []): Map<string, Pt[]> {
   const by = new Map<string, Pt[]>();
   const seen = new Set<string>();
   const add = (key: string, pt: Pt) => {
@@ -118,6 +118,17 @@ export function markerPointsFrom(labs: any[], app: any[], body: any[]): Map<stri
         add(col, { d, v, lo: null, hi: null, unit: col === "lpa_value" ? (r.lpa_unit ?? null) : (LABELS[col]?.unit || null) });
       }
     }
+  }
+  // a cuff's readings from Apple Health, one point a day: the day's mean, how many, and its highest
+  // (daily_signals, 2026-10-26). A reading typed into Verve on the same day wins: it is the one that can be edited.
+  const typedDays = new Set((by.get("sbp") ?? []).map((p) => p.d));
+  for (const r of signals) {
+    const n = Number(r.bp_n);
+    if (!n || r.bp_sbp == null || r.bp_dbp == null) continue;
+    const d = String(r.day).slice(0, 10);
+    if (typedDays.has(d)) continue;
+    add("sbp", { d, v: Math.round(Number(r.bp_sbp)), lo: null, hi: null, unit: "mmHg", n, max: Number(r.bp_sbp_max) || undefined });
+    add("dbp", { d, v: Math.round(Number(r.bp_dbp)), lo: null, hi: null, unit: "mmHg", n, max: Number(r.bp_dbp_max) || undefined });
   }
   for (const b of body) if (b.waist_cm != null && Number.isFinite(Number(b.waist_cm)))
     add("waist_cm", { d: String(b.measured_on).slice(0, 10), v: Number(b.waist_cm), lo: null, hi: null, unit: "cm" });
@@ -185,12 +196,17 @@ export function labRowsFrom(by: Map<string, Pt[]>, today: string): LabRow[] {
     if (m.pair) {
       const S = by.get("sbp") ?? [], D = by.get("dbp") ?? [];
       if (!S.length) continue;
-      const s1 = S[S.length - 1], d1 = D.find((x) => x.d === s1.d) ?? D[D.length - 1] ?? null;
-      const s0 = S[S.length - 2] ?? null, d0 = s0 ? (D.find((x) => x.d === s0.d) ?? null) : null;
-      const out = s1.v >= 120 || (d1 ? d1.v >= 80 : false);
-      const due: Due = { what: "Blood pressure", on: addDays(s1.d, out ? RETEST.bp.out : RETEST.bp.ok), days: 0, why: RETEST.bp.text };
+      const bp = restingBPOf(S, D);
+      if (!bp) continue;
+      const out = bp.crisis || bp.sbp >= 120 || bp.dbp >= 80;
+      const due: Due = { what: "Blood pressure", on: addDays(bp.d, out ? RETEST.bp.out : RETEST.bp.ok), days: 0, why: RETEST.bp.text };
       due.days = daysBetween(today, due.on);
-      rows.push({ key: "bp", label: "Blood pressure", latest: `${s1.v}/${d1 ? d1.v : "?"} mmHg`, tone: out ? "text-warning" : "text-text-primary", range: "under 120/80", since: s0 ? `${signed(s1.v - s0.v, 0)}/${d0 && d1 ? signed(d1.v - d0.v, 0) : "?"} since ${monthOf(s0.d)}` : "measured once", sinceTone: out ? "text-warning" : "text-text-secondary", retest: `${dueWord(due)} · ${due.why}`, retestTone: dueTone(due), out, d: s1.d, due, noFollow: null });
+      const latest = bp.crisis ? `${bp.sbp}/${bp.dbp} mmHg, a crisis-level reading on ${fmtDay(bp.d)}`
+        : bp.basis === "average" ? `${bp.sbp}/${bp.dbp} mmHg, the ${bp.days}-day average of ${bp.n} readings to ${fmtDay(bp.d)}`
+        : `${bp.sbp}/${bp.dbp} mmHg, a single reading on ${fmtDay(bp.d)}`;
+      rows.push({ key: "bp", label: "Blood pressure", latest, tone: bp.crisis ? "text-danger" : out ? "text-warning" : "text-text-primary", range: "under 120/80 (crisis 180/120 or above)",
+        since: bp.prev ? `${signed(bp.sbp - bp.prev.sbp, 0)}/${signed(bp.dbp - bp.prev.dbp, 0)} against the ${bp.days ?? 30} days before` : "no earlier average", sinceTone: out ? "text-warning" : "text-text-secondary",
+        retest: bp.crisis ? "a reading at crisis level is acted on now, not averaged: see a doctor today" : `${dueWord(due)} · ${due.why}`, retestTone: bp.crisis ? "text-danger" : dueTone(due), out, d: bp.d, due, noFollow: null });
       continue;
     }
     const pts = by.get(m.key) ?? [];
@@ -206,6 +222,35 @@ export function labRowsFrom(by: Map<string, Pt[]>, today: string): LabRow[] {
   rows.sort((x, y) => Number(y.out) - Number(x.out) || y.d.localeCompare(x.d));
   return rows;
 }
+/**
+ * Resting blood pressure, the app's rule (lib/restingBPCore.ts): the mean of every reading in the 30 days to
+ * the newest, else 14, else 7 (each needs two readings or more), else the newest single reading. Days from a
+ * cuff carry their count, so the mean is of readings, not of days. The exception: a reading at hypertensive
+ * crisis level (180 systolic or 120 diastolic, or above; 2017 ACC/AHA) in those 30 days leads on its own.
+ */
+export function restingBPOf(S: Pt[], D: Pt[]) {
+  const pairs = S.map((s) => { const d = D.find((x) => x.d === s.d && (x.n ?? 1) === (s.n ?? 1)) ?? D.find((x) => x.d === s.d); return d ? { d: s.d, s: s.v, dv: d.v, n: s.n ?? 1, smax: s.max ?? s.v, dmax: d.max ?? d.v } : null; })
+    .filter((x): x is NonNullable<typeof x> => !!x).sort((a, b) => a.d.localeCompare(b.d));
+  if (!pairs.length) return null;
+  const newest = pairs[pairs.length - 1].d;
+  const within = (days: number, end = newest) => pairs.filter((p) => p.d > addDays(end, -days) && p.d <= end);
+  const crisis = within(30).filter((p) => p.smax >= 180 || p.dmax >= 120).pop();
+  if (crisis) return { basis: "crisis" as const, crisis: true, sbp: crisis.smax, dbp: crisis.dmax, d: crisis.d, n: 1, days: null as number | null, prev: null as { sbp: number; dbp: number } | null };
+  const mean = (w: typeof pairs) => { const n = w.reduce((a, p) => a + p.n, 0); return { n, sbp: Math.round(w.reduce((a, p) => a + p.s * p.n, 0) / n), dbp: Math.round(w.reduce((a, p) => a + p.dv * p.n, 0) / n) }; };
+  for (const days of [30, 14, 7]) {
+    const w = within(days);
+    const n = w.reduce((a, p) => a + p.n, 0);
+    if (n >= 2) {
+      const m = mean(w);
+      const before = within(days, addDays(newest, -days));
+      const pm = before.reduce((a, p) => a + p.n, 0) >= 2 ? mean(before) : null;
+      return { basis: "average" as const, crisis: false, sbp: m.sbp, dbp: m.dbp, d: newest, n: m.n, days, prev: pm ? { sbp: pm.sbp, dbp: pm.dbp } : null };
+    }
+  }
+  const last = pairs[pairs.length - 1];
+  return { basis: "single" as const, crisis: false, sbp: last.s, dbp: last.dv, d: last.d, n: 1, days: null, prev: null };
+}
+
 /** The next body assessment, six months after the latest muscle reading of any kind. */
 export function bodyDueFrom(by: Map<string, Pt[]>, today: string): Due | null {
   const days = ["alm_kg", "body_fat_pct", "skel_musc_pct", "handgrip_kg", "chair_stand_seconds", "gait_speed_ms", "single_leg_balance_seconds"].flatMap((k) => (by.get(k) ?? []).map((x) => x.d)).sort();
