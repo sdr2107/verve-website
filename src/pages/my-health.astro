@@ -2118,7 +2118,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     const on = aiOpen && spaceSignal.value === "clients" && clients.length > 0;
     show("glancereads", on);
     if (!on) return;
-    const { data } = await supabase.from("guide_reads").select("person_id, title, summary, created_at").eq("viewer_id", userId)
+    const { data } = await supabase.from("web_reads").select("person_id, title, summary, created_at").eq("viewer_id", userId)
       .in("person_id", clients.map((p) => p.id)).order("created_at", { ascending: false }).limit(200);
     const latest = new Map<string, any>();
     for (const r of data ?? []) if (!latest.has(r.person_id)) latest.set(r.person_id, r);

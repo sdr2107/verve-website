@@ -7,7 +7,7 @@
  *            then Your reads: filters, compare two, what your reads keep saying, the trend across reads
  *   premium  shown when the function answers pro_required: the first read is free, then Pro
  *
- * Rows: public.guide_reads (the viewer's own). Writing: the depth-summary function. Plain DOM, like the page.
+ * Rows: public.web_reads (the viewer's own). Writing: the depth-summary function. Plain DOM, like the page.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { esc, fmtDay } from "../derive/format";
@@ -89,7 +89,7 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
     const note = tab.querySelector("[data-r=notebox]") as HTMLTextAreaElement | null;
     note?.addEventListener("blur", async () => {
       if (!r) return;
-      const { error: e } = await supabase.from("guide_reads").update({ note: note.value.trim() }).eq("id", r.id);
+      const { error: e } = await supabase.from("web_reads").update({ note: note.value.trim() }).eq("id", r.id);
       if (!e) { r.note = note.value.trim(); (tab.querySelector("[data-r=notemsg]") as HTMLElement).textContent = "Note kept."; }
     });
   }
@@ -248,7 +248,7 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
       <div class="foot">Written by Verve from the numbers on the My health page. Wellness information, not a diagnosis. verve-app.health</div>
       <script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script></body></html>`);
     w.document.close();
-    void supabase.from("guide_reads").update({ downloaded_at: new Date().toISOString() }).eq("id", r.id).then(() => { r.downloaded_at = new Date().toISOString(); });
+    void supabase.from("web_reads").update({ downloaded_at: new Date().toISOString() }).eq("id", r.id).then(() => { r.downloaded_at = new Date().toISOString(); });
   }
 
   async function share(r: Read, grantId: string) {
@@ -259,7 +259,7 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
     });
     const msgEl = tab.querySelector("[data-r=msg]") as HTMLElement | null;
     if (e) { if (msgEl) msgEl.textContent = `Not shared: ${e.message}`; return; }
-    await supabase.from("guide_reads").update({ shared_at: new Date().toISOString() }).eq("id", r.id);
+    await supabase.from("web_reads").update({ shared_at: new Date().toISOString() }).eq("id", r.id);
     r.shared_at = new Date().toISOString();
     drawTab();
     const m2 = tab.querySelector("[data-r=msg]") as HTMLElement | null;
@@ -293,7 +293,7 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
 
   async function loadReads() {
     if (!ctx) { reads = []; return; }
-    const { data } = await supabase.from("guide_reads").select("id, title, summary, facts, note, shared_at, downloaded_at, created_at, model")
+    const { data } = await supabase.from("web_reads").select("id, title, summary, facts, note, shared_at, downloaded_at, created_at, model")
       .eq("person_id", ctx.personId).eq("viewer_id", ctx.userId).order("created_at", { ascending: false }).limit(100);
     reads = (data ?? []) as Read[];
   }
@@ -311,7 +311,7 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
     if (k.startsWith("share:") && cur) { await share(cur, k.slice(6)); return; }
     if (k === "delete" && cur) {
       if (!confirm("Delete this read? It is removed from your reads; a copy you shared into Messages stays there.")) return;
-      await supabase.from("guide_reads").delete().eq("id", cur.id);
+      await supabase.from("web_reads").delete().eq("id", cur.id);
       await loadReads(); open = null; picked = picked.filter((x) => x !== cur.id); draw(); return;
     }
     if (k === "compare") { comparing = picked.length === 2 ? !comparing : false; drawTab(); return; }
