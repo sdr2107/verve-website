@@ -23,7 +23,7 @@ export type MessagesContext = {
 
 const DOW = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MAX_BYTES = 15 * 1024 * 1024;
-const FILTERS: [string, string][] = [["all", "All"], ["text", "Messages"], ["file", "Files"], ["report", "Weekly reports"], ["test", "Tests"]];
+const FILTERS: [string, string][] = [["all", "All"], ["text", "Messages"], ["file", "Files"], ["read", "Reads"], ["report", "Weekly reports"], ["test", "Tests"]];
 const METHOD: Record<string, string> = {
   "six-minute-walk": "6-minute walk", "cooper-run": "Cooper 12-minute run", "1.5-mile-run": "1.5-mile run", "one-mile-walk": "1-mile walk",
 };
@@ -89,6 +89,14 @@ export function mountMessages(root: HTMLElement, supabase: SupabaseClient, onUnr
     const who = m.sender_role === "system" ? "VERVE" : mine ? "YOU" : esc((m.sender_label || (m.sender_role === "person" ? ctx!.personName : "Coach or clinician")).toUpperCase());
     const meta = `<div class="mt-1.5 font-mono text-[10.5px] tracking-wider text-text-muted">${who} · ${time(m.created_at)}${mine && m.read_at ? " · READ" : ""}</div>`;
     if (m.kind === "report") return reportCard(m);
+    if (m.kind === "read") {
+      const p = m.payload ?? {};
+      const items = (p.conversations ?? []).map((c: any) => `<div class="mt-2 flex items-start gap-2 text-[13.5px] text-text-primary"><span class="rounded-full ${c.who === "coach" ? "bg-success/15 text-success-light" : "bg-danger/15 text-danger"} px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider">${c.who === "coach" ? "COACH" : "DOCTOR"}</span><span>${esc(String(c.text ?? ""))}</span></div>`).join("");
+      return `<div class="${mine ? "ml-auto" : ""} w-full max-w-xl rounded-2xl border border-violet-400/45 p-4" style="background:linear-gradient(160deg,rgba(129,140,248,.12),rgba(255,255,255,.02))">
+        <div class="font-mono text-[10.5px] font-semibold tracking-wider text-accent-light">✦ THE GUIDE'S READ · ${esc(day(p.on ?? m.created_at))}</div>
+        <div class="mt-1 text-[18px] text-text-primary" style="font-family:'Newsreader',Georgia,serif">${esc(String(p.title ?? m.body ?? ""))}</div>
+        <p class="mt-1.5 text-[14px] leading-relaxed text-text-secondary">${esc(String(p.lead ?? ""))}</p>${items}${p.due ? `<p class="mt-2 text-[12.5px] text-text-tertiary">Due: ${esc(String(p.due))}</p>` : ""}${meta}</div>`;
+    }
     if (m.kind === "test") {
       const p = m.payload ?? {};
       return `<div class="mx-auto w-full max-w-xl rounded-2xl border border-orange-400/40 bg-orange-400/[0.06] p-4">

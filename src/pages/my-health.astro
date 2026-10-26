@@ -300,6 +300,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         <nav id="tabbar" aria-label="Views" class="mt-4 flex gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5 sm:w-fit lg:mt-0 lg:w-auto lg:flex-col lg:gap-0.5 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0">
           <h3 id="tabhead" class="mb-2 hidden px-3 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary lg:block">Your page</h3>
           <button type="button" data-tab="overview"><span class="w-2.5 shrink-0 font-mono text-[10px] font-semibold text-text-muted">1</span><svg class="hidden shrink-0 lg:block" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg><span>Overview</span></button>
+          <button type="button" data-tab="read" id="readtab" class="hidden"><span class="w-2.5 shrink-0 font-mono text-[11px] font-semibold text-accent-light">✦</span><span class="text-accent-light">The Guide's read</span><span class="ml-auto rounded-md bg-amber-200/15 px-1.5 py-0.5 font-mono text-[9.5px] font-bold tracking-wider text-amber-200">PRO</span></button>
           <!-- the four sections, nested under Overview in the column; the phone's copy is under the pills -->
           <div data-ovsections class="mb-1 hidden flex-col gap-0.5 pl-3 lg:flex" style="display: none">
             
@@ -528,6 +529,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
               <tbody id="glancerows" class="divide-y divide-white/[0.06]"></tbody>
             </table>
           </div>
+          <!-- Clients: each client's latest Guide's read, doctor and coach items (Reads, 26 Oct) -->
+          <div id="glancereads" class="mt-3 hidden rounded-2xl border border-violet-400/35 bg-white/[0.03] p-4"></div>
           <div class="mt-3 grid gap-3 lg:grid-cols-[7fr_5fr]">
             <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
               <h3 class="text-[15px] font-extrabold text-text-primary">This week</h3>
@@ -545,6 +548,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
 
       <!-- ═══ OVERVIEW ═══════════════════════════════════════════════════ -->
       <div id="tab-overview" class="mt-6 hidden">
+       <!-- the latest Guide's read, first on the page -->
+       <div id="readband" class="mb-6 hidden"></div>
        <!-- All: the person at a glance -->
        <div id="ovall">
         <!-- values for the app that were read but never sent: one line, until it is done -->
@@ -626,6 +631,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       <!-- ═══ REPORTS ════════════════════════════════════════════════════ -->
       <!-- Messages: one thread per share (src/my-health/views/Messages.ts) -->
       <div id="tab-messages" class="mt-6 hidden max-w-3xl"></div>
+      <!-- The Guide's read, its own place (src/my-health/views/Reads.ts) -->
+      <div id="tab-read" class="mt-6 hidden max-w-6xl"></div>
       <div id="tab-reports" class="mt-6 hidden">
         <p class="mb-5 max-w-3xl text-[13.5px] leading-relaxed text-text-secondary"><span class="font-semibold text-text-primary">This page:</span> the paper, and the years. The files every value came from, by year and month, and the history you brought in: the app's exports and workout CSVs. Every row stays on the Overview, however far back it reaches.</p>
         <!-- ── the archive first: a timeline, one card per original PDF, a year and a month at a time ── -->
@@ -892,6 +899,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   import { SCOPE_LABEL, ALL_SCOPES, scopeList } from "../my-health/derive/scopes";
   import { exportCSV, exportJSON, download } from "../my-health/export";
   import { mountMessages } from "../my-health/views/Messages";
+  import { mountReads } from "../my-health/views/Reads";
+  import { depthOf, depthEmpty } from "../my-health/derive/depth";
   import { readDocument, writeDocument, pruneDocuments, clearDocuments, sameDocument } from "../my-health/store";
 
   // ── the ruler ─────────────────────────────────────────────────────────
@@ -1280,6 +1289,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     ($("personnote") as HTMLTextAreaElement).value = "";
     void loadViewerNote();
     void loadFeedback();
+    void loadReadsFor();
     if (!p?.id || !p.mine || p.self) return;
     const d = await ensureDocument();
     if (person?.id === p.id) ($("personnote") as HTMLTextAreaElement).value = d.note ?? "";
@@ -2059,66 +2069,94 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     if (kept?.summary) aiSummary = { summary: kept.summary, created_at: kept.created_at, model: kept.model ?? "" };
     renderAiCard();
   }
-  const modelName = (m: string) => m.includes("fable") ? "Claude Fable 5.1" : m.includes("opus") ? "Claude Opus 5" : m.includes("sonnet") ? "Claude Sonnet 5" : m;
+  /** In depth keeps a pointer: the read has its own place now (the ✦ tab). */
   function renderAiCard() {
     const on = aiOpen && !!aiPersonId() && !depthLockedSignal.value;
     show("dp-ai", on); $("dp-ai").classList.toggle("flex", on);
     if (!on) return;
-    const who = person!.self ? "you" : (person!.name || "this person");
-    const head = (sub: string) => `
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-2.5">
-          <span class="flex h-8 w-8 items-center justify-center rounded-[9px] bg-accent/20"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg></span>
-          <div><div class="text-[15px] font-extrabold text-text-primary">The Guide's read${person!.self ? "" : `, for ${esc(person!.name || "this person")}`}</div><div class="text-[12px] text-text-tertiary">${sub}</div></div>
-        </div>
-        <button type="button" id="dp-ai-go" class="min-h-9 rounded-xl ${aiSummary ? "border border-white/14 text-text-secondary hover:text-text-primary" : "bg-accent text-canvas"} px-3.5 text-[13px] font-bold" ${aiState === "writing" ? "disabled" : ""}>${aiState === "writing" ? "Writing…" : aiSummary ? "Write it again" : "Sum it up"}</button>
-      </div>`;
-    if (!aiSummary) {
-      $("dp-ai").innerHTML = head("A short reading of this page, from its numbers and nothing else") + `
-        <p class="text-[13.5px] leading-relaxed text-text-secondary">How ${who === "you" ? "you are" : `${who} is`} doing in two or three sentences, at most three things worth a conversation with a doctor or a coach, and what is due. It can only say what this page already shows: a number that is not on the page cannot appear.</p>
-        ${aiConsented ? "" : `<label class="flex items-start gap-2.5 text-[13px] leading-relaxed text-text-secondary"><input type="checkbox" id="dp-ai-consent" class="mt-0.5 h-4 w-4 shrink-0 accent-[#818cf8]" /><span>Send the numbers on this page to Anthropic's Claude to write it. Not ${person!.self ? "your" : "the"} name, not the reports, not the email. Deleted from their systems within 30 days; never used to train.</span></label>`}
-        ${aiState === "error" ? `<p class="text-[13px] text-danger">${esc(aiError)}</p>` : ""}`;
-    } else {
-      const sm = aiSummary.summary;
-      const tone = (w: string) => w === "doctor" ? "text-warning" : "text-accent-light";
-      $("dp-ai").innerHTML = head(`From the working on this page · ${esc(fmtDay(String(aiSummary.created_at).slice(0, 10)))} · ${esc(modelName(aiSummary.model))}`) + `
-        <p class="text-[15px] leading-relaxed text-text-primary">${esc(String(sm.lead ?? ""))}</p>
-        ${Array.isArray(sm.conversations) && sm.conversations.length ? `<div class="grid gap-3 sm:grid-cols-${Math.min(3, sm.conversations.length)}">${sm.conversations.map((c: any) => `<div class="rounded-xl border border-white/10 bg-white/[0.03] p-3.5"><div class="font-mono text-[10px] font-semibold tracking-[0.12em] ${tone(c.who)}">WORTH A CONVERSATION · ${String(c.who ?? "").toUpperCase()}</div><p class="mt-1 text-[13px] leading-relaxed text-text-secondary">${esc(String(c.text ?? ""))}</p></div>`).join("")}</div>` : ""}
-        ${sm.due ? `<div class="rounded-xl border border-white/10 bg-white/[0.03] p-3.5"><div class="font-mono text-[10px] font-semibold tracking-[0.12em] text-text-tertiary">DUE</div><p class="mt-1 text-[13px] leading-relaxed text-text-secondary">${esc(String(sm.due))}</p></div>` : ""}
-        ${sm.notShared ? `<p class="text-[12.5px] text-text-tertiary">${esc(String(sm.notShared))}</p>` : ""}
-        <p class="text-[12px] leading-relaxed text-text-muted">Not a diagnosis. Every number above is on this page; ranges are the lab's own and cadences the cited ones. Nothing was sent but the numbers${sm.dropped ? `; ${sm.dropped} sentence${sm.dropped === 1 ? "" : "s"} the model wrote with a number not on this page ${sm.dropped === 1 ? "was" : "were"} dropped` : ""}.</p>
-        ${aiState === "error" ? `<p class="text-[13px] text-danger">${esc(aiError)}</p>` : ""}`;
-    }
-    $("dp-ai-go")?.addEventListener("click", writeSummary);
+    $("dp-ai").innerHTML = `<div class="flex flex-wrap items-center justify-between gap-3"><div><div class="text-[15px] font-extrabold text-text-primary">✦ The Guide's read</div>
+      <div class="text-[12.5px] text-text-tertiary">This page in a few calm sentences, filed by date, to compare, share and download.</div></div>
+      <button type="button" id="dp-ai-go" class="min-h-9 rounded-xl bg-accent px-3.5 text-[13px] font-bold text-canvas">Open the Guide's read →</button></div>`;
+    $("dp-ai-go")?.addEventListener("click", () => setTab("read"));
   }
-  async function writeSummary() {
-    if (!depthWorkingSignal.value || !aiPersonId()) return;
-    if (!aiConsented) {
-      const box = $("dp-ai").querySelector("#dp-ai-consent") as HTMLInputElement | null;
-      if (!box?.checked) { aiState = "error"; aiError = "Tick the box first: it says what is sent, and what is not."; renderAiCard(); return; }
-      const { error } = await supabase.from("ai_consent").upsert({ user_id: userId, summary_at: new Date().toISOString() }, { onConflict: "user_id" });
-      if (error) { aiState = "error"; aiError = `Could not record your consent: ${error.message}`; renderAiCard(); return; }
-      aiConsented = true;
-    }
-    aiState = "writing"; aiError = ""; renderAiCard();
+
+  // ── The Guide's read: the Overview band, the ✦ tab, the library (src/my-health/views/Reads.ts) ──
+  let readShown = false;
+  const readsView = mountReads($("readband"), $("tab-read"), supabase as any, (t) => setTab(t));
+  async function callRead(body: Record<string, unknown>) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const resp = await fetch(`${SUPABASE_URL}/functions/v1/depth-summary`, {
         method: "POST",
         headers: { "content-type": "application/json", authorization: `Bearer ${session?.access_token}`, apikey: SUPABASE_ANON_KEY },
-        body: JSON.stringify({ person_id: aiPersonId(), working: depthWorkingSignal.value, force: !!aiSummary }),
+        body: JSON.stringify(body),
       });
-      const out = await resp.json().catch(() => ({}));
-      if (!resp.ok || !out.summary) {
-        aiState = "error";
-        aiError = out.error === "summary_not_open" ? "The Guide's read is not switched on yet." : out.error === "consent_required" ? "Consent was not recorded; tick the box and try again." : resp.status === 429 ? "Today's allowance is used up; try tomorrow." : `Could not write it${out.detail ? `: ${out.detail}` : out.error ? `: ${out.error}` : ""}.`;
-        renderAiCard(); return;
-      }
-      aiSummary = { summary: out.summary, created_at: out.created_at, model: out.model, cached: out.cached };
-      aiState = "idle"; renderAiCard();
-    } catch { aiState = "error"; aiError = "Could not reach the writer. Try again in a moment."; renderAiCard(); }
+      return { ok: resp.ok, status: resp.status, out: await resp.json().catch(() => ({})) };
+    } catch { return { ok: false, status: 0, out: { error: "Could not reach the writer. Try again in a moment." } }; }
+  }
+  async function loadReadsFor() {
+    const p = person;
+    readShown = aiOpen && !!p?.id;
+    show("readtab", readShown); show("readband", readShown);
+    if (!readShown) { await readsView.load(null); if (activeTab === "read") setTab("overview"); return; }
+    const d = await ensureDocument();
+    if (person?.id !== p!.id) return;
+    const gid = !p!.mine && !p!.self ? grantIdBy.get(p!.id) : undefined;
+    const pros = new Map((d.sharing_pros ?? []).map((x) => [String(x.email).toLowerCase(), x.title]));
+    const threads = gid ? [{ id: gid, label: p!.name || "them" }]
+      : (p!.self || p!.mine) ? (d.sharing ?? []).filter((g) => g.status === "active").map((g) => ({ id: g.id, label: pros.get(String(g.viewer_email).toLowerCase()) || g.viewer_email })) : [];
+    await readsView.load({
+      personId: p!.id, personName: p!.self ? "" : (p!.name || ""), self: !!p!.self, userId, myLabel: p!.self ? (firstName || userEmail) : userEmail,
+      consented: !!d.ai.consent, threads, working: () => depthWorkingSignal.value, call: callRead,
+    });
   }
 
+  /** Clients: each client's latest read, and a way to read every client's week. */
+  async function drawClientReads(pool: Person[]) {
+    const el = $("glancereads");
+    const clients = pool.filter((p) => isClient(p));
+    const on = aiOpen && spaceSignal.value === "clients" && clients.length > 0;
+    show("glancereads", on);
+    if (!on) return;
+    const { data } = await supabase.from("guide_reads").select("person_id, title, summary, created_at").eq("viewer_id", userId)
+      .in("person_id", clients.map((p) => p.id)).order("created_at", { ascending: false }).limit(200);
+    const latest = new Map<string, any>();
+    for (const r of data ?? []) if (!latest.has(r.person_id)) latest.set(r.person_id, r);
+    const monday = mondayOf(new Date());
+    const item = (r: any, who: string) => (r?.summary?.conversations ?? []).filter((c: any) => c.who === who).map((c: any) => esc(String(c.text))).join("<br>") || `<span class="text-text-muted">—</span>`;
+    el.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-3"><div><div class="font-mono text-[10.5px] font-semibold tracking-[0.14em] text-accent-light">✦ THE GUIDE'S READ · EACH CLIENT</div>
+        <div class="mt-1 text-[12.5px] text-text-tertiary">Only what each client shares is read. Open a client for the full read and share it into their Messages.</div></div>
+        <button type="button" id="readall" class="rounded-xl border border-violet-400/50 px-3.5 py-1.5 text-[13px] font-bold text-accent-light">Read every client's week</button></div>
+      <div class="mt-3 overflow-x-auto"><table class="w-full min-w-[720px] text-[13px]"><thead><tr class="text-left font-mono text-[10px] tracking-wider text-text-tertiary"><th class="px-2 py-2">CLIENT</th><th class="px-2 py-2">DOCTOR</th><th class="px-2 py-2">COACH</th><th class="px-2 py-2">READ</th></tr></thead>
+      <tbody class="divide-y divide-white/[0.06]">${clients.map((p) => { const r = latest.get(p.id); return `<tr data-openread="${p.id}" class="cursor-pointer hover:bg-white/[0.03]"><td class="px-2 py-2.5 font-semibold text-text-primary">${esc(p.name || "Unnamed")}</td>
+        <td class="px-2 py-2.5 text-danger">${r ? item(r, "doctor") : `<span class="text-text-muted">not read yet</span>`}</td><td class="px-2 py-2.5 text-success-light">${r ? item(r, "coach") : ""}</td>
+        <td class="px-2 py-2.5 font-mono text-[11.5px] ${r && day0(r.created_at) >= monday ? "text-accent-light" : "text-text-tertiary"}">${r ? esc(fmtDay(day0(r.created_at))) : "—"}</td></tr>`; }).join("")}</tbody></table></div>
+      <p id="readallmsg" class="mt-2 text-[12.5px] text-text-tertiary"></p>`;
+    el.querySelectorAll("[data-openread]").forEach((tr) => tr.addEventListener("click", async () => { await switchPerson((tr as HTMLElement).dataset.openread!); setTab("read"); }));
+    $("readall").addEventListener("click", async () => {
+      const todo = clients.filter((p) => { const r = latest.get(p.id); return !r || day0(r.created_at) < monday; });
+      const say = (t: string) => { $("readallmsg").textContent = t; };
+      if (!todo.length) { say("Every client already has a read this week."); return; }
+      const d0 = await ensureDocument();
+      if (!d0.ai.consent) { say("Write one read from a client's page first: it asks once for consent to send the numbers."); return; }
+      let n = 0;
+      for (const p of todo) {
+        say(`Reading ${p.name || "a client"}… (${n + 1} of ${todo.length})`);
+        const { data: doc } = await supabase.rpc("my_health_document", { person: p.id });
+        if (!doc) continue;
+        const dp = derivePerson(doc as any);
+        if (depthEmpty(dp)) continue;
+        const working = depthOf(dp, p as any).working;
+        const { status, out } = await callRead({ person_id: p.id, working, force: true });
+        if (status === 402 || out?.error === "pro_required") { say("Reads for every client come with the coach plan. Your first read was free."); return; }
+        if (status === 429) { say("Today's allowance is used up; the rest tomorrow."); break; }
+        n++;
+      }
+      say(`${n} client${n === 1 ? "" : "s"} read.`);
+      void drawClientReads(pool);
+    });
+  }
+  const day0 = (iso: string) => String(iso).slice(0, 10);
 
   async function loadGlance() {
     const inClients = spaceSignal.value === "clients";
@@ -2223,6 +2261,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     $("glancedue").innerHTML = dueList.length
       ? dueList.map(({ d, who }) => { const [g, tone] = group(d.days); return `<div><span class="font-mono text-[10px] tracking-[0.1em] ${tone}">${g}</span> &nbsp;${esc(who)} · ${esc(d.what)}, ${esc(d.days < 0 ? dueWord(d).replace("overdue", "overdue by") : dueWord(d))}</div>`; }).join("")
       : `<div class="text-text-tertiary">Nothing due in the next 90 days.</div>`;
+    void drawClientReads(pool);
   }
 
   // one fetch feeds Overview, Labs and the Reports cards
@@ -2257,7 +2296,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     const switching = activeTab !== t;
     const wasGroup = activeTab === "group", group = t === "group";
     activeTab = t; activeTabSignal.value = t;
-    ["group", "overview", "labs", "reports", "depth", "messages"].forEach((x) => show("tab-" + x, x === t));
+    ["group", "overview", "labs", "reports", "depth", "messages", "read"].forEach((x) => show("tab-" + x, x === t));
     if (t === "messages" && switching) void messagesView.refresh();
     show("pagehead", !group); show("personwrap", !group && people.some((x) => !!x.id));
     show("mhsearchwrap", t === "labs" || t === "reports");
@@ -2272,7 +2311,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     $("tabbar").querySelectorAll("[data-tab]").forEach((b) => {
       const on = (b as HTMLElement).dataset.tab === t;
       b.className = `flex min-h-9 flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors sm:flex-none lg:min-h-10 lg:w-full lg:justify-start lg:gap-2.5 lg:rounded-[10px] lg:border-l-2 lg:px-3 lg:py-2 lg:text-[13.5px] ${
-        on ? "bg-accent/20 text-text-primary lg:border-accent lg:bg-white/6" : "text-text-tertiary hover:text-text-primary lg:border-transparent lg:text-text-secondary lg:hover:bg-white/[0.04]"}${(b as HTMLElement).id === "messagestab" && !messagesShown ? " hidden" : ""}`;
+        on ? "bg-accent/20 text-text-primary lg:border-accent lg:bg-white/6" : "text-text-tertiary hover:text-text-primary lg:border-transparent lg:text-text-secondary lg:hover:bg-white/[0.04]"}${((b as HTMLElement).id === "messagestab" && !messagesShown) || ((b as HTMLElement).id === "readtab" && !readShown) ? " hidden" : ""}`;
     });
     history.replaceState(null, "", t === "overview" && ovSectionSignal.value !== "all" ? `#overview-${ovSectionSignal.value}` : t === "group" && spaceSignal.value === "clients" ? "#clients" : "#" + t);
   }
@@ -2370,7 +2409,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       show("signout", true); show("home", true); show("auth", false);
       const wanted = window.location.hash.replace("#", "") || (coachDoor ? "clients" : "");
       if (wanted.startsWith("overview-") && SEC_ORDER.includes(wanted.slice(9) as SecKey)) setSectionState(wanted.slice(9) as SecKey);
-      setTab(["overview", "labs", "reports", "depth", "messages"].includes(wanted) || wanted.startsWith("overview-") ? wanted.split("-")[0] : "overview");
+      setTab(["overview", "labs", "reports", "depth", "messages", "read"].includes(wanted) || wanted.startsWith("overview-") ? wanted.split("-")[0] : "overview");
       // The first round trip, one for everything the page needs before it
       // can say whose page this is: the name, the people, the plan, the
       // role, and the one-time merge of other accounts under this email.
