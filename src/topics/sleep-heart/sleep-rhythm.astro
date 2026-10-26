@@ -7,6 +7,21 @@ import SleepDiaries from "../../components/science/SleepDiaries.astro";
 import {
   SLEEP_RHYTHM_SECTION,
 } from "../../data/science";
+
+/** The Whoop-only setup, reading by reading: source, timing, and the phone's part. Kept with the section it belongs to. */
+const whoopReadings: Array<[string, string, string]> = [
+  ["Sleep: hours, bedtime, drift, spread, regularity", "Whoop", "The next morning, once the Whoop app has processed the night. One asleep block; stages stay in the Whoop app."],
+  ["Resting heart rate", "Whoop", "The next morning, against your own 30-day usual."],
+  ["Workouts, with heart rate and intensity minutes", "Whoop", "About 15 to 20 minutes after a session you started in the Whoop app. Sessions you did not start get no heart rate."],
+  ["Steps total", "Whoop", "The next morning, as one block for the day. Shown as its own line; it never drives the live tile."],
+  ["Steps today, live", "Phone in your pocket", "Live. Without the phone, the tile stays low."],
+  ["Cadence (steps a minute at your fastest stretch)", "Phone in your pocket", "Live. Needs minute-by-minute steps; Whoop's one block has no minutes in it."],
+  ["Sitting hours and sit bouts", "Phone in your pocket", "Live. Same reason: Whoop's block says nothing about when you moved."],
+  ["Night HRV", "Nothing", "Blank. Whoop keeps it in its app."],
+  ["1-minute heart rate recovery", "Nothing", "Blank. An Apple Watch reading."],
+  ["Standing minutes", "Nothing", "Blank. An Apple Watch reading."],
+  ["VO₂max estimate from a wearable", "Nothing", "Blank. Verve's own field test is the measure that counts, so run it."],
+];
 ---
 
 <SplitCard eyebrow="In the app" wide>
@@ -444,12 +459,46 @@ import {
     <li><strong class="text-text-primary">Recovery (one-minute heart rate recovery)</strong>: blank. An Apple Watch reading; the tile shows a dash once the last Watch reading is older than yesterday. Whoop&rsquo;s &ldquo;Recovery&rdquo; is a different thing: a score, not a heart-rate drop, and it stays in the Whoop app.</li>
     <li><strong class="text-text-primary">VO&#8322;max</strong>: none from Whoop. If a Watch wrote one earlier, Verve keeps showing that estimate for up to a year. The fix is the one Verve prefers anyway: run a field test and let the measured number lead.</li>
   </ul>
+  <p class="mt-5 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">The whole picture, in one table.</strong>
+    Whoop instead of an Apple Watch, reading by reading: who gives it to
+    Verve, and when.
+  </p>
+  <div class="mt-3 overflow-x-auto rounded-xl border border-white/10 bg-black/20">
+    <table class="w-full min-w-[620px] text-[12.5px]">
+      <thead>
+        <tr class="text-left font-mono text-[10px] uppercase tracking-wider text-text-tertiary">
+          <th class="px-3 py-2.5 font-semibold">Reading</th>
+          <th class="px-3 py-2.5 font-semibold">Comes from</th>
+          <th class="px-3 py-2.5 font-semibold">When, and what to know</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-white/[0.06]">
+        {whoopReadings.map(([r, from, note]) => (
+          <tr class="align-top">
+            <td class="px-3 py-2.5 font-semibold text-text-primary">{r}</td>
+            <td class="px-3 py-2.5 font-mono text-text-secondary">{from}</td>
+            <td class="px-3 py-2.5 text-text-tertiary">{note}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p class="mt-3 text-sm leading-relaxed text-text-secondary">
+    In one sentence: with a Whoop you keep sleep, resting heart rate and
+    started workouts; the phone in your pocket carries live steps, cadence
+    and sitting; and you do without night HRV, one-minute heart rate
+    recovery, standing minutes and a wearable VO&#8322;max. That last group
+    is the real trade of leaving the Watch, and no setting changes it.
+  </p>
   <p class="mt-4 text-xs leading-relaxed text-text-tertiary">
     Settled on 26 October, from the first night and the first session: sleep
     is one asleep block, not stages; heart rate is written inside a started
     workout and nowhere else; the workout itself lands about 15 to 20
-    minutes after it ends. Nothing on this page is from the permission list
-    alone.
+    minutes after it ends; steps arrive as one block the morning after.
+    Nothing on this page is from the permission list alone. The
+    &ldquo;Steps total&rdquo; line in Verve is being built and will be noted
+    here when it ships.
   </p>
 </div>
 <div class="mt-4 grid gap-4 sm:grid-cols-2">
