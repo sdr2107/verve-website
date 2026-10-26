@@ -291,6 +291,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <div class="mt-1 break-all text-[12.5px] leading-snug text-text-secondary" id="whoamiaddr"></div>
         </div>
         <div id="peoplewrap" class="hidden">
+          <!-- two places on one sign-in: your own health, and your clients (only when someone shares with you) -->
+          <div id="spaceswitch" class="mb-4"></div>
           <h3 class="mb-2 hidden px-3 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary lg:block">People</h3>
           <!-- one control: the name of whose page this is, with the menu under it -->
           <div id="people" class="relative"></div>
@@ -880,7 +882,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   import { derivePerson, type PersonData } from "../my-health/derive/person";
   import { labsJudged, SECTIONS, SECTION_ORDER, searchTermsOf, landsAll, dateHay } from "../my-health/derive/labs";
   import { effect } from "@preact/signals";
-  import { doc as docSignal, person as personSignal, people as peopleSignal, firstName as firstNameSignal, ovSection as ovSectionSignal, setSection as setSectionState, activeTab as activeTabSignal, searchQuery as searchQuerySignal, depthLocked as depthLockedSignal, depthWorking as depthWorkingSignal, actions, openLabs } from "../my-health/state";
+  import { doc as docSignal, person as personSignal, people as peopleSignal, firstName as firstNameSignal, ovSection as ovSectionSignal, setSection as setSectionState, activeTab as activeTabSignal, searchQuery as searchQuerySignal, depthLocked as depthLockedSignal, depthWorking as depthWorkingSignal, actions, openLabs, space as spaceSignal, isClient } from "../my-health/state";
   import { mountOverview } from "../my-health/views/Overview";
   import { mountLabs } from "../my-health/views/Labs";
   import { mountDepth } from "../my-health/views/Depth";
@@ -1138,7 +1140,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   async function switchPerson(id: string) {
     const p = people.find((x) => x.id === id);
     if (!p) return;
-    if (p.id === person?.id) { if (activeTab === "group") setTab("overview"); closePersonForm(); closeAccess(); return; }
+    spaceSignal.value = isClient(p) ? "clients" : "health";
+    if (p.id === person?.id) { if (activeTab === "group") setTab("overview"); closePersonForm(); closeAccess(); renderPeople(); return; }
     person = p;
     if (activeTab === "group") setTab("overview");
     syncSignals = []; syncActs = []; syncProfile = null; syncWeights = []; allWeeks = []; allCrf = []; allBody = [];   // the last person's, until loadActivity brings this one's
@@ -2118,7 +2121,9 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
 
 
   async function loadGlance() {
-    const others = people.filter((p) => p.id && !p.self);
+    const inClients = spaceSignal.value === "clients";
+    const pool = people.filter((p) => (inClients ? isClient(p) : !isClient(p)));
+    const others = pool.filter((p) => p.id && !p.self);
     const on = others.length > 0;
     const locked = on && enforced && !ent.depthOthers;
     show("glancelocked", locked); $("glancelocked").classList.toggle("flex", locked);
@@ -2130,15 +2135,15 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     show("glanceempty", !on);
     if (!on || locked) return;
     const managed = others.filter((p) => p.mine).length, shared = others.length - managed;
-    const coach = shared > 0 && managed === 0;
+    const coach = inClients;
     $("glancetitle").textContent = coach ? (myRole === "clinician" ? "Patients" : "Clients") : "People";
     $("glancesub").textContent = coach
       ? "You see what each person chose, and nothing else. Tap a row for their page; In depth has the working."
       : [managed ? `${managed} you look after` : "", shared ? `${shared} sharing with you` : ""].filter(Boolean).join(", ") + ". Tap a row for their page; In depth has the working.";
     $("glanceaddr").textContent = userEmail;
 
-    const ids = people.filter((p) => p.id).map((p) => p.id);
-    const accounts = people.filter((p) => p.account_id).map((p) => p.account_id!);
+    const ids = pool.filter((p) => p.id).map((p) => p.id);
+    const accounts = pool.filter((p) => p.account_id).map((p) => p.account_id!);
     const thisMonday = mondayOf(new Date()), today = new Date().toLocaleDateString("en-CA");
     const since = new Date(new Date(thisMonday + "T00:00:00").getTime() - 12 * 7 * 86400000).toISOString();
     const none = Promise.resolve({ data: [] as any[] });
@@ -2159,7 +2164,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     const goalOf = new Map<string, number>((profiles.data ?? []).map((r: any) => [r.user_id, Number(r.weekly_met_hours_goal) || 7.5]));
 
     // one summary per person, from the same working the In depth tab uses
-    const lines = people.filter((p) => p.id).map((p) => {
+    const lines = pool.filter((p) => p.id).map((p) => {
       const labsP = (labs.data ?? []).filter((r: any) => r.person_id === p.id);
       const appP = p.account_id ? (app.data ?? []).filter((r: any) => r.user_id === p.account_id) : [];
       const bodyP = (body.data ?? []).filter((r: any) => r.person_id === p.id);
@@ -2269,7 +2274,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       b.className = `flex min-h-9 flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors sm:flex-none lg:min-h-10 lg:w-full lg:justify-start lg:gap-2.5 lg:rounded-[10px] lg:border-l-2 lg:px-3 lg:py-2 lg:text-[13.5px] ${
         on ? "bg-accent/20 text-text-primary lg:border-accent lg:bg-white/6" : "text-text-tertiary hover:text-text-primary lg:border-transparent lg:text-text-secondary lg:hover:bg-white/[0.04]"}${(b as HTMLElement).id === "messagestab" && !messagesShown ? " hidden" : ""}`;
     });
-    history.replaceState(null, "", t === "overview" && ovSectionSignal.value !== "all" ? `#overview-${ovSectionSignal.value}` : "#" + t);
+    history.replaceState(null, "", t === "overview" && ovSectionSignal.value !== "all" ? `#overview-${ovSectionSignal.value}` : t === "group" && spaceSignal.value === "clients" ? "#clients" : "#" + t);
   }
   /** The small figure beside a tab in the sidebar: how many outside range, how many reports. */
   function setTabCount(t: string, text: string, tone = "text-text-tertiary") {
@@ -2363,7 +2368,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       askForNewsletter(session.user);
       appLink?.classList.add("hidden"); signinLink?.classList.add("hidden");
       show("signout", true); show("home", true); show("auth", false);
-      const wanted = window.location.hash.replace("#", "") || (coachDoor ? "group" : "");
+      const wanted = window.location.hash.replace("#", "") || (coachDoor ? "clients" : "");
       if (wanted.startsWith("overview-") && SEC_ORDER.includes(wanted.slice(9) as SecKey)) setSectionState(wanted.slice(9) as SecKey);
       setTab(["overview", "labs", "reports", "depth", "messages"].includes(wanted) || wanted.startsWith("overview-") ? wanted.split("-")[0] : "overview");
       // The first round trip, one for everything the page needs before it
@@ -2400,7 +2405,10 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       else hideNameForm();
       void showRoleChip();
       applyPersonMode();
-      if (wanted === "group") setTab("group");   // only once the people are known
+      // the place follows whose page opened: a client's page is under Clients
+      if (person && isClient(person)) spaceSignal.value = "clients";
+      if (wanted === "clients" && people.some(isClient)) { spaceSignal.value = "clients"; renderPeople(); setTab("group"); }
+      else if (wanted === "group") setTab("group");   // only once the people are known
       // The second round trip, and the last: every table of the person's
       // own at once. refresh() itself fetches labs, the app's rows and the
       // report folder together, then draws every tab once.
@@ -3829,10 +3837,18 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   mountLabs($("labsroot"));
   mountDepth($("depthroot"));
   mountReports({ cards: $("repcards"), imports: $("appimportsroot"), years: $("yearsonfileroot") });
-  mountPeople({ menu: $("people"), head: $("personhead"), tabhead: $("tabhead") });
+  mountPeople({ menu: $("people"), head: $("personhead"), tabhead: $("tabhead"), space: $("spaceswitch") });
   actions.person = (kind, id) => {
     if (kind === "switch" && id) { void switchPerson(id); return; }
     if (kind === "everyone") { setTab("group"); return; }
+    if (kind === "clients") { spaceSignal.value = "clients"; renderPeople(); setTab("group"); void loadGlance(); return; }
+    if (kind === "health") {
+      spaceSignal.value = "health"; renderPeople();
+      const self = people.find((x) => x.self);
+      if (self && self.id !== person?.id) { void switchPerson(self.id); setTab("overview"); }
+      else { setTab("overview"); void loadGlance(); }
+      return;
+    }
     if (kind === "add") { if (activeTab === "group") setTab("overview"); openPersonForm(null); return; }
     if (kind === "ask") { if (activeTab === "group") setTab("overview"); openPersonForm(null); setPersonMode("ask"); return; }
     if (kind === "access") { openAccess(); return; }

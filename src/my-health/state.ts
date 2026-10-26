@@ -16,6 +16,11 @@ export const person = signal<PersonLite | null>(null);
 /** Everyone on the account: you first, then the people you look after, then those who share with you. */
 export const people = signal<PersonLite[]>([]);
 export const firstName = signal("");
+/** Two places on one sign-in (26 Oct 2026): "health" is your own page and the people you look after;
+ *  "clients" is everyone who shares a page with you. The People menu and the group table show one at a time. */
+export const space = signal<"health" | "clients">("health");
+/** Someone who shares their page with you: a client, not yours to look after. */
+export const isClient = (p: PersonLite) => !!p.id && !p.self && !p.mine;
 /** One derived object per document; the same document gives the same object. */
 export const derived = computed(() => (doc.value ? derivePerson(doc.value) : null));
 
@@ -51,7 +56,7 @@ export const actions = {
   /** The Reports tab's writes: parse, view, del, send, rename, rmimport. */
   report: (_kind: string, _name: string, _extra?: string) => {},
   /** The People control: open someone's page, the group, the forms, the access sheet. */
-  person: (_kind: "switch" | "add" | "ask" | "access" | "everyone" | "edit" | "remove", _id?: string) => {},
+  person: (_kind: "switch" | "add" | "ask" | "access" | "everyone" | "edit" | "remove" | "health" | "clients", _id?: string) => {},
 };
 /** Jump into one section of Labs, or straight to one marker's chart. */
 export function openLabs(sec: string, analyte = "") {

@@ -14,8 +14,8 @@
 
 export const PLANS_OPEN = false;
 export const PLANS_ENFORCED = false;
-/** "In Verve's words" on the In depth tab: off until the depth-summary function is switched on and the policy names it. */
-export const AI_SUMMARY_OPEN = false;
+/** "In Verve's words" on the In depth tab: on from 26 Oct 2026 (the policy names it; the function secret DEPTH_SUMMARY_OPEN=true). */
+export const AI_SUMMARY_OPEN = true;
 /** The yearly price is twelve months less this many. */
 export const YEARLY_MONTHS_FREE = 2;
 
