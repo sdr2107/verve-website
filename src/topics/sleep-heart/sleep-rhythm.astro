@@ -312,8 +312,10 @@ import {
     switch the integration on varies by app; from that day on every night
     arrives. Stages appear when the app writes them; a plain asleep record
     shows as one block. Steps come from whatever writes them to Health:
-    the phone in a pocket, an Apple Watch, and Oura, Whoop or Garmin through
-    their apps. In Verve, Settings &rarr;
+    the phone in a pocket, an Apple Watch, and Oura or Garmin through
+    their apps; Whoop writes a day&rsquo;s steps as one block the morning
+    after, which Health drops beside the phone&rsquo;s own samples (see the
+    Whoop section below). In Verve, Settings &rarr;
     Wearables shows which app wrote the latest sleep, heart-rate and
     workout sample, and when. Wearing a Whoop? The step-by-step is
     <a href="#whoop" class="text-accent-light underline decoration-accent/40 underline-offset-2">below</a>.
@@ -437,7 +439,7 @@ import {
     <li><strong class="text-text-primary">Sleep</strong>: full. Every night arrives as one asleep block, with wake-ups as gaps; the stage split stays in the Whoop app. Bedtime average, drift, spread and the regularity index all work, since none of them needs stages.</li>
     <li><strong class="text-text-primary">Resting heart rate</strong>: full, read against your own 30-day median. A Whoop&rsquo;s resting rate and a Watch&rsquo;s are different quantities, so Verve never averages the two; if you switched from a Watch, the &ldquo;usual&rdquo; line blends both devices until the Watch days age out, about 30 days.</li>
     <li><strong class="text-text-primary">Workouts</strong>: full, seen on the first session (a 31-minute walk, 26 October). Whoop writes the workout and the heart rate inside it, several samples a minute, about 15 to 20 minutes after the session ends; Verve classifies the minutes from that heart rate. Outside a session Whoop writes no heart rate at all, so a walk you did not start in the Whoop app reaches Verve as steps only.</li>
-    <li><strong class="text-text-primary">Steps and movement</strong>: Whoop writes steps, and so does the phone in your pocket; Health&rsquo;s own source order decides which counts a given minute. Standing minutes are an Apple Watch reading and go blank.</li>
+    <li><strong class="text-text-primary">Steps and movement</strong>: from the phone, not the band. Whoop writes a whole day&rsquo;s steps as one block, the morning after (2,523 steps stamped from midnight on the 24th to bedtime on the 25th, added at 06:52 on the 26th). Health settles two sources whole sample against whole sample, so with iPhone above WHOOP in Health&rsquo;s source order that block is dropped wherever the phone wrote a sample inside it, which is every day you carry the phone; with WHOOP above iPhone the block wins and the phone&rsquo;s minute-by-minute samples inside it are dropped instead, and Verve&rsquo;s sitting hours and cadence, which read steps in 5-minute buckets, see a day smeared flat. Keep iPhone above WHOOP and carry the phone. Standing minutes are an Apple Watch reading and go blank.</li>
     <li><strong class="text-text-primary">Night HRV</strong>: blank. Not written. The Today tile shows a dash with &ldquo;No HRV asleep&rdquo;; the Night HRV page keeps every night another device wrote. The number lives in the Whoop app.</li>
     <li><strong class="text-text-primary">Recovery (one-minute heart rate recovery)</strong>: blank. An Apple Watch reading; the tile shows a dash once the last Watch reading is older than yesterday. Whoop&rsquo;s &ldquo;Recovery&rdquo; is a different thing: a score, not a heart-rate drop, and it stays in the Whoop app.</li>
     <li><strong class="text-text-primary">VO&#8322;max</strong>: none from Whoop. If a Watch wrote one earlier, Verve keeps showing that estimate for up to a year. The fix is the one Verve prefers anyway: run a field test and let the measured number lead.</li>
