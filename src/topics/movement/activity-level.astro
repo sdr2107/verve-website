@@ -12,7 +12,8 @@ import VideoSlot from "../../components/VideoSlot.astro";
     entire day is, not just your workouts. It is your total daily energy expenditure divided by
     your basal metabolic rate — the energy your body would use lying still. A PAL of 1.0 would
     mean complete bed rest. Around 2.5 is elite-athlete territory. Verve reads it from Apple
-    Health's basal and active energy, averaged over seven days.
+    Health's basal and active energy, averaged over seven days, and from your profile's
+    estimated basal rate when your wearable writes none.
   </p>
 
   <h3 id="the-four-levels" class="scroll-mt-8 vrv-anchor pt-2 text-lg font-semibold text-text-primary">The four levels</h3>
@@ -55,6 +56,20 @@ import VideoSlot from "../../components/VideoSlot.astro";
     active energy your watch estimates; and the energy of digesting food, which Health does not
     report and Verve adds back (below). Active energy a day is the period's active energy over
     its days with a resting reading, so a day the watch was off does not dilute the average.
+  </p>
+  <p>
+    Only an Apple Watch writes resting energy to Health. A Whoop, an Oura ring or a Garmin
+    writes active energy and no resting figure, so the ratio had no denominator and the page
+    stayed empty for anyone wearing one. When a window has fewer than three days of resting
+    energy, Verve now estimates your basal metabolic rate from the height, weight, age and sex
+    on your profile with the Mifflin-St Jeor equation (Mifflin et al, <em>Am J Clin Nutr</em>
+    1990), the equation a 2005 systematic review found within 10% of measured resting
+    metabolic rate in more adults than Harris-Benedict, Owen or the WHO equation, multiplies it
+    by the days the window has active energy for, and computes PAL by the same formula. Health's
+    own resting figure is itself an equation over the same inputs, so this swaps one estimate
+    for another rather than a measurement for an estimate; even so, the app says
+    <em>BMR estimated from your profile</em> wherever it shows such a figure, and measured
+    resting energy wins whenever there is enough of it.
   </p>
 
   <p>
