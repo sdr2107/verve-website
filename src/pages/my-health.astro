@@ -1610,12 +1610,14 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     const sent = await sendInvite({ grant_id: data.id });
     msg("sharemsg", sent
       ? `Invited. ${email} gets an email; the moment they accept, they see what you ticked, and you see it here.`
-      : `Invited. The email could not be sent just now; ${email} still finds the invitation under their greeting when they sign in with that address.`);
+      : `Invited, but the email did not go${inviteWhy ? ` (${inviteWhy})` : ""}. ${email} still finds the invitation under their greeting when they sign in with that address.`);
     invalidateDocument(); await loadSharing();
   });
 
   /** The email, through the share-invite function, for an invitation or a request; false when it could not go. */
+  let inviteWhy = "";   // why the last email did not go, in the function's own words
   async function sendInvite(body: { grant_id?: string; request_id?: string }): Promise<boolean> {
+    inviteWhy = "";
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const resp = await fetch(`${SUPABASE_URL}/functions/v1/share-invite`, {
@@ -1623,8 +1625,13 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         headers: { "content-type": "application/json", authorization: `Bearer ${session?.access_token}`, apikey: SUPABASE_ANON_KEY },
         body: JSON.stringify(body),
       });
+      if (!resp.ok) {
+        const e = await resp.json().catch(() => ({}));
+        inviteWhy = [e.error, e.detail].filter(Boolean).join(": ");
+        console.warn("share-invite", resp.status, e);
+      }
       return resp.ok;
-    } catch { return false; }
+    } catch (err) { inviteWhy = String(err); return false; }
   }
 
   /** Ask an adult to share their page with you. The grant is theirs to make, when they accept. */
@@ -1642,7 +1649,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     const sent = await sendInvite({ request_id: data.id });
     msg("upmsg", sent
       ? `Asked. ${email} gets an email and decides what you may see; their page appears here when they do.`
-      : `Asked. The email could not be sent just now; ${email} still finds the request under their greeting when they sign in with that address.`);
+      : `Asked, but the email did not go${inviteWhy ? ` (${inviteWhy})` : ""}. ${email} still finds the request under their greeting when they sign in with that address.`);
     invalidateDocument(); await loadAsked();
   }
 
