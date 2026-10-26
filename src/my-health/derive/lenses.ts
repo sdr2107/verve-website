@@ -10,7 +10,7 @@
  * months, a year, or everything: a week of a waist is nothing to look at.
  */
 import { addDays, daysBetween, dayWord, esc, fmt1, fmtDay, fmtHM, fmtSleepMin, kicker, localDay, medianOf, mondayOf, round0, todayStr } from "./format.ts";
-import { dueTone, dueWord, type Pt } from "./markers.ts";
+import { dueTone, dueWord, restingBPOf, type Pt } from "./markers.ts";
 import { actsByDay, activitySummary, fitnessSummary, STEP_LINES } from "./activity.ts";
 import { sleepHeartSummary } from "./heart.ts";
 import { methodLabel } from "./markers.ts";
@@ -34,6 +34,7 @@ export type Marker = {
   companion?: string;                         // another marker's key whose same-range figure sits beside this one's (activity level ↔ active energy)
   group?: "metabolic" | "heart" | "muscle";   // Body only: the app's three shelves
   pointLabel?: (p: Pt2) => string;            // the tile's figure when one number is not the whole reading (118/76)
+  tile?: () => { headline: string; sub: string; out: boolean } | null;   // the tile leads with a rule, not the newest point (BP's average)
 };
 export const SEC_META: Record<SecKey, { label: string; dot: string; blurb: string; science: string }> = {
   fitness:  { label: "Fitness",       dot: "#f97316", blurb: "What a MET is, how yours is measured, and how much to trust the answer.", science: "/science/fitness" },
@@ -251,7 +252,23 @@ export function buildMarkers(src: MarkerSources): Marker[] {
       series: () => sparseFrom("sbp"),
       pointLabel: (p) => { const d = dbpOn(p.d); return d ? `${round0(p.v)}/${round0(d.v)}` : round0(p.v); },
       fmt: (v) => round0(v),
-      reads: (pts) => { if (!pts.length) return ["No blood pressure on file."]; const l = pts[pts.length - 1], d = dbpOn(l.d); return [`<strong class="text-text-primary">${round0(l.v)}${d ? `/${round0(d.v)}` : ""} mmHg</strong> on ${esc(fmtDay(l.d))}. The chart follows the systolic figure; <span class="${l.v < 120 && (!d || d.v < 80) ? "text-success-light" : "text-warning"}">${l.v < 120 && (!d || d.v < 80) ? "under" : "at or over"} the 120 and 80 lines</span>. The app's bands, AHA or ESC, are on Labs.`]; } }),
+      // the app's rule: the 30-, 14- or 7-day average of the readings, a crisis-level reading on its own
+      tile: () => {
+        const bp = restingBPOf(by.get("sbp") ?? [], by.get("dbp") ?? []);
+        if (!bp) return null;
+        return { headline: `${bp.sbp}/${bp.dbp}`, out: bp.crisis || bp.sbp >= 120 || bp.dbp >= 80,
+          sub: bp.crisis ? `crisis level, ${dayWord(bp.d)}` : bp.basis === "average" ? `${bp.days}-day average · ${bp.n} readings` : `one reading, ${bp.d === todayStr() ? "today" : dayWord(bp.d)}` };
+      },
+      reads: (pts) => {
+        if (!pts.length) return ["No blood pressure on file."];
+        const bp = restingBPOf(by.get("sbp") ?? [], by.get("dbp") ?? []);
+        const lead = !bp ? "" : bp.crisis
+          ? `<strong class="text-danger">${bp.sbp}/${bp.dbp} mmHg on ${esc(fmtDay(bp.d))}, at crisis level</strong> (180 or 120 and above): acted on now, not averaged. See a doctor today.`
+          : bp.basis === "average"
+            ? `<strong class="text-text-primary">${bp.sbp}/${bp.dbp} mmHg</strong>, the average of ${bp.n} readings over the ${bp.days} days to ${esc(fmtDay(bp.d))}: <span class="${bp.sbp < 120 && bp.dbp < 80 ? "text-success-light" : "text-warning"}">${bp.sbp < 120 && bp.dbp < 80 ? "under" : "at or over"} the 120 and 80 lines</span>. Verve leads with the average because one cuff reading is noisy; 30 days if there are two readings or more, else 14, else 7.`
+            : "";
+        if (lead) return [lead, "The chart shows every day's reading; the app's bands, AHA or ESC, are on Labs."];
+        const l = pts[pts.length - 1], d = dbpOn(l.d); return [`<strong class="text-text-primary">${round0(l.v)}${d ? `/${round0(d.v)}` : ""} mmHg</strong> on ${esc(fmtDay(l.d))}. The chart follows the systolic figure; <span class="${l.v < 120 && (!d || d.v < 80) ? "text-success-light" : "text-warning"}">${l.v < 120 && (!d || d.v < 80) ? "under" : "at or over"} the 120 and 80 lines</span>. The app's bands, AHA or ESC, are on Labs.`]; } }),
     labMarker("triglycerides_mgdl", "metabolic", "Triglycerides", "mg/dL", "The fat in the blood after fasting", "/science/body/body-phenotyping"),
     labMarker("hdl_mgdl", "metabolic", "HDL", "mg/dL", "The one lipid where higher is the better side", "/science/body/body-phenotyping"),
     labMarker("post_meal_glucose_mgdl", "metabolic", "Post-meal glucose", "mg/dL", "Two hours after eating", "/science/body/body-phenotyping"),

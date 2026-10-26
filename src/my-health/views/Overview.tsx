@@ -162,14 +162,16 @@ export function Glance() {
 
 function Tile({ m, i, on, out, rise, dim, onTap }: { m: Marker; i: number; on: boolean; out: boolean; rise: string; dim: boolean; onTap: () => void }) {
   const pts = m.series(); const l = pts[pts.length - 1] ?? null;
+  const t = m.tile ? m.tile() : null;
+  if (t) out = t.out;
   return (
     <button type="button" style={{ "--i": i } as any} aria-current={on ? "true" : "false"} onClick={onTap}
       class={`${rise}${dim ? " mh-dim" : ""} flex flex-col gap-1 rounded-2xl border p-3.5 text-left transition-colors ${on ? "border-accent/60 bg-accent/[0.08]" : l ? "border-white/8 bg-white/4 hover:border-white/16" : "border-dashed border-white/10 hover:border-white/20"}`}>
       <span class="text-[12px] text-text-secondary">{m.label}</span>
       <span class={`font-mono text-[20px] font-bold leading-none ${l ? (out ? "text-warning" : "text-text-primary") : "text-text-muted"}`}>
-        {l ? (m.pointLabel ? m.pointLabel(l) : m.fmt(l.v)) : "—"}{l && m.unit ? <> <span class="text-[10px] text-text-tertiary">{m.unit}</span></> : null}
+        {t ? t.headline : l ? (m.pointLabel ? m.pointLabel(l) : m.fmt(l.v)) : "—"}{l && m.unit ? <> <span class="text-[10px] text-text-tertiary">{m.unit}</span></> : null}
       </span>
-      <span class="text-[11.5px] leading-snug text-text-tertiary">{l ? (l.d === todayStr() ? "today" : dayWord(l.d)) : "not read yet"}</span>
+      <span class="text-[11.5px] leading-snug text-text-tertiary">{t ? t.sub : l ? (l.d === todayStr() ? "today" : dayWord(l.d)) : "not read yet"}</span>
     </button>
   );
 }
