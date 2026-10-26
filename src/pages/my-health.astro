@@ -285,6 +285,11 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
            put while the page scrolls, so the page itself is only about the
            one person picked. -->
       <aside class="pt-5 lg:sticky lg:top-6 lg:flex lg:min-h-[72vh] lg:w-[248px] lg:shrink-0 lg:flex-col lg:gap-6 lg:pt-8">
+        <!-- which account this is: the sign-in method and the address (Apple may hide it behind a relay) -->
+        <div id="whoami" class="hidden px-3">
+          <div class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary" id="whoamikind">Signed in</div>
+          <div class="mt-1 break-all text-[12.5px] leading-snug text-text-secondary" id="whoamiaddr"></div>
+        </div>
         <div id="peoplewrap" class="hidden">
           <h3 class="mb-2 hidden px-3 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary lg:block">People</h3>
           <!-- one control: the name of whose page this is, with the menu under it -->
@@ -997,6 +1002,18 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
 
   let userId = "";
   let userEmail = "";
+  /** The account in use, so a person with two (Apple and Google, say) knows which one this page is. */
+  function showWhoAmI(u: any) {
+    const ids: string[] = (u?.identities ?? []).map((i: any) => String(i.provider));
+    const main = String(u?.app_metadata?.provider ?? ids[0] ?? "email");
+    const name = (p: string) => (p === "apple" ? "Apple" : p === "google" ? "Google" : p === "github" ? "GitHub" : "Email code");
+    const kinds = [...new Set([main, ...ids])].map(name).join(" · ");
+    const email = String(u?.email ?? "");
+    const relay = /@privaterelay\.appleid\.com$/i.test(email);
+    $("whoamikind").textContent = `Signed in with ${kinds}`;
+    $("whoamiaddr").textContent = relay ? `${email} (an address Apple made to hide your own)` : email;
+    show("whoami", !!email);
+  }
   /** The name on the account, and its first word for the greeting; "" when there is none. */
   let fullName = "";
   let firstName = "";
@@ -2342,6 +2359,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       try { const d = localStorage.getItem(COACH_DOOR); coachDoor = d === "1" || d === "coach" || d === "clinician"; localStorage.removeItem(COACH_DOOR); } catch { /* private mode */ }
       userId = session.user.id;
       userEmail = session.user.email ?? "";
+      showWhoAmI(session.user);
       askForNewsletter(session.user);
       appLink?.classList.add("hidden"); signinLink?.classList.add("hidden");
       show("signout", true); show("home", true); show("auth", false);
@@ -2394,7 +2412,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       people = []; person = null;
       show("peoplewrap", false);
       appLink?.classList.remove("hidden"); signinLink?.classList.add("hidden");
-      show("auth", true); show("home", false); show("signout", false);
+      show("auth", true); show("home", false); show("signout", false); show("whoami", false);
       if (oauthError) msg("authmsg", `Apple sign-in did not finish: ${oauthError.replace(/\+/g, " ")}.`, true);
       if (door === "coach") {
         $("authkick").textContent = "Coach · the coach's door";

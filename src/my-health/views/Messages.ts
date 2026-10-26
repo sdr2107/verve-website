@@ -144,7 +144,7 @@ export function mountMessages(root: HTMLElement, supabase: SupabaseClient, onUnr
     const el = $m("plan");
     if (!plan) { el.classList.add("hidden"); return; }
     const start = new Date(plan.starts_on + "T00:00:00"), end = new Date(plan.ends_on + "T00:00:00"), now = new Date();
-    const weeks = Math.round((end.getTime() - start.getTime()) / 6.048e8) + 1;
+    const weeks = Math.floor((end.getTime() - start.getTime()) / 6.048e8) + 1;   // 8 weeks = start + 55 days
     const wk = Math.min(weeks, Math.max(1, Math.floor((now.getTime() - start.getTime()) / 6.048e8) + 1));
     const done = now > end;
     el.classList.remove("hidden");
@@ -268,20 +268,25 @@ export function mountMessages(root: HTMLElement, supabase: SupabaseClient, onUnr
     const start = ($m("pstart") as HTMLInputElement).value;
     const weeks = Math.max(1, Number(($m("pweeks") as HTMLInputElement).value) || 8);
     const end = new Date(start + "T00:00:00"); end.setDate(end.getDate() + weeks * 7 - 1);
+    const ends = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`;   // local, not UTC
+    const pinBtn = $m("pinform").querySelector("button[type=submit]") as HTMLButtonElement;
+    if (pinBtn.disabled) return;
+    pinBtn.disabled = true;
     const file = ($m("file") as HTMLInputElement).files?.[0];
     const up = file ? await upload(file) : null;
-    if (file && !up) return;
+    if (file && !up) { pinBtn.disabled = false; return; }
     const { error } = await supabase.from("plans").insert({
-      grant_id: current.id, person_id: ctx.personId, name, starts_on: start, ends_on: end.toISOString().slice(0, 10),
+      grant_id: current.id, person_id: ctx.personId, name, starts_on: start, ends_on: ends,
       file_path: up?.path ?? null, file_name: up?.name ?? null, created_by: ctx.userId,
     });
-    if (error) { say(`Not pinned: ${error.message}`); return; }
+    if (error) { pinBtn.disabled = false; say(`Not pinned: ${error.message}`); return; }
     await supabase.from("messages").insert({
       grant_id: current.id, person_id: ctx.personId, sender_id: ctx.userId, sender_role: ctx.role, sender_label: ctx.myLabel, kind: "plan",
       body: `${name}: ${weeks} weeks from ${fmtDay(start)}.`, file_path: up?.path ?? null, file_name: up?.name ?? null, file_size: up?.size ?? null,
     });
     ($m("file") as HTMLInputElement).value = ""; $m("filename").textContent = "";
     $m("pinform").classList.add("hidden"); $m("pinform").classList.remove("flex");
+    pinBtn.disabled = false;
     await loadThread();
   });
   const exportAs = (kind: "csv" | "txt") => {
