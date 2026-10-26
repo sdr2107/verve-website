@@ -360,8 +360,8 @@ import {
     does: the band talks to the Whoop app, the Whoop app writes to Apple
     Health, and Verve reads Apple Health. Pairing the band is not the
     connection; the two switches below are. What follows was checked on a
-    Whoop paired on 25 October 2026, reading Health&rsquo;s own permission
-    list for the app, and it will be updated as the first nights come in.
+    Whoop paired on 25 October 2026: Health&rsquo;s own permission list for
+    the app, then what the first night actually wrote.
   </p>
 
   <p class="mt-4 text-sm leading-relaxed text-text-secondary">
@@ -405,10 +405,20 @@ import {
   </p>
 
   <p class="mt-5 text-sm leading-relaxed text-text-secondary">
-    <strong class="text-text-primary">What Whoop writes to Health</strong>
+    <strong class="text-text-primary">What Whoop may write to Health</strong>
     (Health&rsquo;s own write list for the app, October 2026): active
     energy, blood oxygen, heart rate, respiratory rate, resting heart rate,
     sleep, steps, workouts.
+  </p>
+  <p class="mt-2 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">What the first night actually wrote</strong>
+    (Health &rarr; Apps &rarr; WHOOP &rarr; Data from WHOOP, the morning of
+    26 October): steps, resting heart rate, sleep, blood oxygen, respiratory
+    rate. Sleep arrived as one asleep block from 21:30 to 06:24 with gaps for
+    the wake-ups; the Whoop app showed light, deep and REM for the same
+    night, but Health did not get them. No heart rate was written overnight,
+    switch on or not. Verve read the night as 8h 30, the Whoop app&rsquo;s
+    own figure.
   </p>
   <p class="mt-2 text-sm leading-relaxed text-text-secondary">
     <strong class="text-text-primary">What it does not write:</strong>
@@ -421,18 +431,19 @@ import {
     <strong class="text-text-primary">What that means on each Verve page.</strong>
   </p>
   <ul class="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-text-secondary">
-    <li><strong class="text-text-primary">Sleep</strong>: full. Every night arrives; stages show when Whoop writes them, otherwise one asleep block. Bedtime average, drift, spread and the regularity index all work.</li>
+    <li><strong class="text-text-primary">Sleep</strong>: full. Every night arrives as one asleep block, with wake-ups as gaps; the stage split stays in the Whoop app. Bedtime average, drift, spread and the regularity index all work, since none of them needs stages.</li>
     <li><strong class="text-text-primary">Resting heart rate</strong>: full, read against your own 30-day median. A Whoop&rsquo;s resting rate and a Watch&rsquo;s are different quantities, so Verve never averages the two; if you switched from a Watch, the &ldquo;usual&rdquo; line blends both devices until the Watch days age out, about 30 days.</li>
-    <li><strong class="text-text-primary">Workouts</strong>: full. Sessions Whoop records land in the week, and Verve classifies their minutes by the heart rate written with them.</li>
+    <li><strong class="text-text-primary">Workouts</strong>: permitted, not yet seen. Whoop may write workouts, and Verve classifies a session&rsquo;s minutes by the heart rate written with it; whether Whoop writes heart rate inside a session is still to be seen on a real workout. This line will say.</li>
     <li><strong class="text-text-primary">Steps and movement</strong>: Whoop writes steps, and so does the phone in your pocket; Health&rsquo;s own source order decides which counts a given minute. Standing minutes are an Apple Watch reading and go blank.</li>
-    <li><strong class="text-text-primary">Night HRV</strong>: blank. Not written. The Night HRV tile and page stop at the last night another device wrote; the number lives in the Whoop app.</li>
-    <li><strong class="text-text-primary">Recovery (one-minute heart rate recovery)</strong>: blank. An Apple Watch reading. Whoop&rsquo;s &ldquo;Recovery&rdquo; is a different thing: a score, not a heart-rate drop, and it stays in the Whoop app.</li>
+    <li><strong class="text-text-primary">Night HRV</strong>: blank. Not written. The Today tile shows a dash with &ldquo;No HRV asleep&rdquo;; the Night HRV page keeps every night another device wrote. The number lives in the Whoop app.</li>
+    <li><strong class="text-text-primary">Recovery (one-minute heart rate recovery)</strong>: blank. An Apple Watch reading; the tile shows a dash once the last Watch reading is older than yesterday. Whoop&rsquo;s &ldquo;Recovery&rdquo; is a different thing: a score, not a heart-rate drop, and it stays in the Whoop app.</li>
     <li><strong class="text-text-primary">VO&#8322;max</strong>: none from Whoop. If a Watch wrote one earlier, Verve keeps showing that estimate for up to a year. The fix is the one Verve prefers anyway: run a field test and let the measured number lead.</li>
   </ul>
   <p class="mt-4 text-xs leading-relaxed text-text-tertiary">
-    Still to confirm from real nights: whether Whoop writes heart rate across
-    the whole day or only inside workouts, and whether it writes sleep
-    stages or one asleep block. This paragraph will say once seen.
+    Settled by the first night, 26 October: one asleep block, not stages;
+    no heart rate written overnight. Still open: whether heart rate arrives
+    inside a workout. This paragraph will say once a Whoop session has been
+    seen.
   </p>
 </div>
 <div class="mt-4 grid gap-4 sm:grid-cols-2">
