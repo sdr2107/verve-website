@@ -45,7 +45,7 @@ export const searchQuery = signal("");
 // ── In depth ──
 /** The plan gate: in depth is on Pro for yourself, on Max for everyone you see. The page sets it from the plan. */
 export const depthLocked = signal(false);
-/** The page's working, for "In Verve's words"; the Depth view publishes it, the page's AI card reads it. */
+/** The page's working, for "The Guide's read"; the Depth view publishes it, the page's AI card reads it. */
 export const depthWorking = signal<Record<string, unknown> | null>(null);
 
 /** What the views ask the page to do: the page fills these in. */

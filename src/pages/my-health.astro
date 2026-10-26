@@ -600,7 +600,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
            client's page shows only what their scopes let you read. -->
       <div id="tab-depth" class="mt-6 hidden">
         <p class="mb-5 max-w-3xl text-[13.5px] leading-relaxed text-text-secondary"><span class="font-semibold text-text-primary">This page:</span> why the week read the way the Overview said. The same four cards, with the working shown.</p>
-        <!-- "In Verve's words": a short reading of this page, written by Claude from the page's own working -->
+        <!-- "The Guide's read": a short reading of this page, written by Claude from the page's own working -->
         <section id="dp-ai" class="mb-5 hidden flex-col gap-3 rounded-2xl border border-accent/50 bg-accent/[0.07] p-5"></section>
         <!-- a view (src/my-health/views/Depth): the plan gate, the head, the four answers, the six chapters, what changed -->
         <div id="depthroot"></div>
@@ -2033,7 +2033,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
 
 
 
-  // ── "In Verve's words": the card, the consent, the call ─────────────────
+  // ── "The Guide's read": the card, the consent, the call ─────────────────
   // Off until AI_SUMMARY_OPEN is on and the depth-summary function is
   // switched on; the owner can preview the card with sessionStorage
   // mh-ai-open=1, which only shows a card whose function answers "not open".
@@ -2069,7 +2069,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-2.5">
           <span class="flex h-8 w-8 items-center justify-center rounded-[9px] bg-accent/20"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg></span>
-          <div><div class="text-[15px] font-extrabold text-text-primary">In Verve's words${person!.self ? "" : `, for ${esc(person!.name || "this person")}`}</div><div class="text-[12px] text-text-tertiary">${sub}</div></div>
+          <div><div class="text-[15px] font-extrabold text-text-primary">The Guide's read${person!.self ? "" : `, for ${esc(person!.name || "this person")}`}</div><div class="text-[12px] text-text-tertiary">${sub}</div></div>
         </div>
         <button type="button" id="dp-ai-go" class="min-h-9 rounded-xl ${aiSummary ? "border border-white/14 text-text-secondary hover:text-text-primary" : "bg-accent text-canvas"} px-3.5 text-[13px] font-bold" ${aiState === "writing" ? "disabled" : ""}>${aiState === "writing" ? "Writing…" : aiSummary ? "Write it again" : "Sum it up"}</button>
       </div>`;
@@ -2111,7 +2111,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       const out = await resp.json().catch(() => ({}));
       if (!resp.ok || !out.summary) {
         aiState = "error";
-        aiError = out.error === "summary_not_open" ? "In Verve's words is not switched on yet." : out.error === "consent_required" ? "Consent was not recorded; tick the box and try again." : resp.status === 429 ? "Today's allowance is used up; try tomorrow." : `Could not write it${out.detail ? `: ${out.detail}` : out.error ? `: ${out.error}` : ""}.`;
+        aiError = out.error === "summary_not_open" ? "The Guide's read is not switched on yet." : out.error === "consent_required" ? "Consent was not recorded; tick the box and try again." : resp.status === 429 ? "Today's allowance is used up; try tomorrow." : `Could not write it${out.detail ? `: ${out.detail}` : out.error ? `: ${out.error}` : ""}.`;
         renderAiCard(); return;
       }
       aiSummary = { summary: out.summary, created_at: out.created_at, model: out.model, cached: out.cached };

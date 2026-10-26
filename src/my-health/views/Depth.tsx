@@ -3,7 +3,7 @@
  * head, the four answers, the six chapters and what changed this week.
  * The figures and the markup are ../derive/depth, set once per document;
  * the goto buttons and the heart export are handled by delegation. The
- * working for "In Verve's words" is published on a signal for the page's
+ * working for "The Guide's read" is published on a signal for the page's
  * AI card, which still writes.
  */
 import { render } from "preact";

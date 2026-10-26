@@ -1,7 +1,7 @@
 /**
  * In depth, as a function of the person's document: the four answers, six
  * chapters with the working beside each, what changed this week, and the
- * working itself for "In Verve's words". Every figure is from the derived
+ * working itself for "The Guide's read". Every figure is from the derived
  * person; the markup is HTML strings as the page drew them, so the view
  * sets them once per document and nothing else moves. Pure.
  */
@@ -334,7 +334,7 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
       ${col("Pattern", patternText)}
       ${col("Around it", aroundBits.length ? aroundBits.join(" ") : "Sleep, steps and sessions arrive with the sync.")}
       ${col("What it is not", `No score, no readiness number. Each reading against ${their} own 30-night median; nothing against a population.`)}
-      ${col("In Verve’s words", heart?.threeTogether ? "“Three readings agree for three nights. The readings say rest before they say train.”" : "“One reading on one night is a night. The Guide stays quiet until all three agree.”")}
+      ${col("In a line", heart?.threeTogether ? "“Three readings agree for three nights. The readings say rest before they say train.”" : "“One reading on one night is a night. The Guide stays quiet until all three agree.”")}
     </div>
   </div>`;
   const heartRows = d.signals.filter((r) => r.day > daysBack(today, 90) && (r.resting_hr != null || r.sleep_minutes != null || r.hrr_bpm != null || r.hrv_night_ms != null));
@@ -375,7 +375,7 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
     </div>`);
   const chapters = ch1 + ch2 + ch3 + ch4 + ch5 + ch6;
 
-  // ── the working, for "In Verve's words" ─────────────────────────────
+  // ── the working, for "The Guide's read" ─────────────────────────────
   const working = {
     person: { self: p.self, ageBand: d.profile?.age ? `${Math.floor(Number(d.profile.age) / 10) * 10}s` : null, sex: d.profile?.sex ?? null, weeklyGoalMetHours: goal, scopes: p.self || p.mine ? "all" : p.scopes },
     activity: { weeksOnFile: act.weeks.length, recentWeeks: recent.length, recentAvgMetHours: fmt1(recentAvg), changeVsPrior: change == null ? null : `${Math.round(change * 100)}%`, weeksAtGoalInARow: streak, atGoalOfLast12: `${act.atGoal} of ${act.of}`, daysSinceLastWorkout: quietDays, workoutsAWeek: Math.round(perWeek), kinds: [...kinds].map(([k, n]) => `${k} ${n}`), vigorousShare: minutes ? `${Math.round((vig / minutes) * 100)}%` : null, zone2MinutesAWeek: zone2 != null ? Math.round(zone2) : null, zone2WeeklyDose: 150, lastWorkouts: lastWorkouts.map((w) => ({ on: localDay(w.timestamp), name: String(w.activity_name ?? "workout"), minutes: Math.round(Number(w.duration_minutes) || 0), metHours: fmt1(Number(w.met_hours) || 0), intensity: w.intensity_category ?? null, zone2Minutes: w.zone2_minutes != null ? Math.round(Number(w.zone2_minutes)) : null, effort: w.effort != null ? Number(w.effort) : null, effortSource: w.effort != null ? (w.effort_source ?? null) : null })) },

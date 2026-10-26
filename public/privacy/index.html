@@ -109,7 +109,7 @@
   <p class="subtitle">Effective date: March 6, 2026 &middot; Last updated: October 26, 2026</p>
 
   <h2>Overview</h2>
-  <p>Verve ("the App") is a cardiorespiratory fitness tracker designed with privacy as a core principle. Your health and fitness data is stored locally on your device by default. Cloud features (sync, AI&nbsp;Coach) are optional and require your explicit consent.</p>
+  <p>Verve ("the App") is a cardiorespiratory fitness tracker designed with privacy as a core principle. Your health and fitness data is stored locally on your device by default. Cloud features (sync, the Guide) are optional and require your explicit consent.</p>
   <p>Verve is also a website, <a href="https://verve-app.health">verve-app.health</a> ("the Website"), where you sign in with the same account, read the science, and keep your lab and imaging reports on the My health page. This policy covers both.</p>
 
   <h2>Data We Collect</h2>
@@ -151,8 +151,8 @@
   <h3>Account Backup</h3>
   <p>When you are signed in, the data described above is backed up to Supabase (servers in Mumbai, India) over TLS and encrypted at rest. There is no separate switch for this backup; it is what the account is for. Signing out keeps the backup and restores it when you sign in again; deleting your account removes it. Watch readings are backed up only with the switch described above turned on.</p>
 
-  <h3>AI Coach (Optional, Subscription Required)</h3>
-  <p>If you ask for the Guide (the AI Coach), fitness context is sent through our secure server to the AI provider to generate it. The data sent includes age, sex, weight, resting heart rate, your fitness tier and METs, the week's Zone 2, strength and total minutes, steps, MET-hours, and, when you have entered them, your lab values, body phenotype and metabolic criteria.</p>
+  <h3>The Guide (Optional)</h3>
+  <p>If you ask for the Guide, Verve&rsquo;s AI reading of your weeks, fitness context is sent through our secure server to the AI provider to generate it. The data sent includes age, sex, weight, resting heart rate, your fitness tier and METs, the week's Zone 2, strength and total minutes, steps, MET-hours, and, when you have entered them, your lab values, body phenotype and metabolic criteria.</p>
   <div class="highlight">
     <strong>Your name is never sent.</strong> The AI provider deletes the request from its systems within 30 days and does not use it to train models.
   </div>
@@ -193,7 +193,7 @@
   <h3>Weekly report</h3>
   <p>You can choose to send a coach or clinician an automatic weekly report on the day you pick (Monday unless you change it). It contains last week's figures as the app counts them: your activity dose against your goal, minutes of moderate to vigorous activity, strength days, average steps, resting heart rate and any fitness test, and only the parts your share allows. It is written by our database from your numbers, not by an AI. You can turn it off at any time, and it stops when the share stops.</p>
 
-  <h3>&ldquo;In Verve's words&rdquo;: the Website's written read</h3>
+  <h3>The Guide&rsquo;s read on the Website</h3>
   <p>On the In depth part of My health you can ask for a short written read of your page. It is off until you turn it on, and it runs only when you ask for it.</p>
   <p>When you ask, our server sends the numbers the page has already worked out to Anthropic's Claude model to write the read: your age band and sex, and computed figures such as your fitness test results, weekly activity, sleep and heart readings, and which lab values sit inside or outside each report's own printed range. <strong>Your name, your email address, your report files, the wording of your reports and any notes are never sent.</strong> If you look at someone else's page through a share, only what their share covers is sent, and only after we check you are allowed to see it.</p>
   <p>Under Anthropic's commercial terms the request and the reply are not used to train models and are deleted from Anthropic's systems within 30 days, unless retained for legal or safety reasons. We keep the written read on our Supabase servers in Mumbai so the page does not ask again until your numbers change; it is deleted when you delete your account. The read is wellness information, not a diagnosis or medical advice.</p>
@@ -223,7 +223,7 @@
     <tbody>
       <tr><td>Supabase</td><td>Authentication, account backup &amp; reports</td><td>Email, profile, activities including those read from Apple Health, fitness tests, lab, waist and body values, daily watch readings if switched on, reports and their values</td></tr>
       <tr><td>RevenueCat</td><td>Subscription management</td><td>Anonymous user ID, subscription status</td></tr>
-      <tr><td>Anthropic</td><td>AI activity suggestions; reading uploaded reports</td><td>Anonymised fitness context (if AI Coach used); the report file (when you upload one)</td></tr>
+      <tr><td>Anthropic</td><td>AI activity suggestions; reading uploaded reports</td><td>Anonymised fitness context (if you use the Guide); the report file (when you upload one)</td></tr>
       <tr><td>Apple</td><td>HealthKit, Sign-In, App Store</td><td>Per Apple's privacy policies</td></tr>
       <tr><td>GitHub</td><td>Hosts the Website</td><td>Visitor IP addresses in GitHub's logs, for security, under GitHub's privacy statement; Verve does not receive them</td></tr>
       <tr><td>Substack</td><td>Sends the newsletter</td><td>Your email address, if you subscribe</td></tr>
@@ -248,7 +248,7 @@
     <li><strong>Delete data</strong> &mdash; Clear all local data from Settings</li>
     <li><strong>Delete account</strong> &mdash; Permanently delete your account and all cloud data</li>
     <li><strong>Disable Cloud Sync</strong> &mdash; Stop syncing to the cloud at any time</li>
-    <li><strong>Disable AI Coach</strong> &mdash; Stop sending data to the AI service at any time</li>
+    <li><strong>Stop using the Guide</strong> &mdash; Stop sending data to the AI service at any time</li>
     <li><strong>Revoke HealthKit</strong> &mdash; Remove permissions in iOS Settings &rarr; Health &rarr; Verve</li>
     <li><strong>Sign out</strong> &mdash; Disconnect from cloud services</li>
     <li><strong>View or delete a report</strong> &mdash; From the Reports tab on the Website</li>
@@ -272,7 +272,7 @@
     <li>We do not sell HealthKit data to third parties</li>
     <li>We do not share HealthKit data with third parties for purposes unrelated to health or fitness</li>
     <li>HealthKit data is not stored in iCloud or any external cloud service</li>
-    <li>HealthKit data sent to AI Coach is anonymised and limited to aggregate fitness metrics</li>
+    <li>HealthKit data sent for the Guide is anonymised and limited to aggregate fitness metrics</li>
   </ul>
 
   <h2>Changes to This Policy</h2>

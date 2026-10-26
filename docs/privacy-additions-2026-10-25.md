@@ -26,7 +26,7 @@ dose against your goal, minutes of moderate to vigorous activity, strength days,
 heart rate and any fitness test, and only the parts your share allows. It is written by our database from
 your numbers, not by an AI. You can turn it off at any time, and it stops when the share stops.
 
-## "In Verve's words": the website's written read
+## The Guide's read on the website
 
 On the In depth part of My health you can ask for a short written read of your page. It is off until
 you turn it on, and it runs only when you ask for it.
