@@ -503,6 +503,116 @@ const whoopReadings: Array<[string, string, string]> = [
     whatever Health&rsquo;s source order says.
   </p>
 </div>
+
+<!-- ── WHOOP on Android, and iPhone against Android ── -->
+<div id="whoop-android" class="mt-4 scroll-mt-8 rounded-2xl border border-white/8 bg-white/4 p-6">
+  <p class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-accent-light">If you wear a Whoop on Android</p>
+  <p class="mt-2 text-sm leading-relaxed text-text-secondary">
+    On Android the store is <strong class="text-text-primary">Health Connect</strong>,
+    built into Android 14 and newer, and the path is the same shape: the band
+    talks to the Whoop app, the Whoop app writes to Health Connect, and Verve
+    reads Health Connect. What follows was checked on a Motorola Edge 60 with a
+    Whoop, the evening of 27 October 2026, against Health Connect&rsquo;s own
+    permission list for the app and what reached Verve the same evening.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">1. Let Whoop write to Health Connect.</strong>
+    In the Whoop app: More &rarr; Integrations &rarr; Health Connect, and allow
+    everything it asks for.
+  </p>
+  <p class="mt-3 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">2. Check the write list.</strong>
+    Phone Settings &rarr; search &ldquo;Health Connect&rdquo; &rarr; App
+    permissions &rarr; WHOOP. The list has a read half and a write half;
+    <em>Allowed to write</em> is the one that matters, every switch on.
+  </p>
+  <p class="mt-3 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">3. Let Verve read Health Connect.</strong>
+    In Verve, Settings &rarr; Health Connect, on, and allow the permissions it
+    asks for. Settings &rarr; Health Connect &rarr; Preferred device then names
+    Whoop on the sleep, resting heart rate and workout rows once it has
+    written.
+  </p>
+  <p class="mt-3 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">4. One account, both phones.</strong>
+    Verve&rsquo;s account is the same on iPhone and Android. What you type and
+    what the app keeps for you, tests, weekly totals, labs, the Guide, come
+    down to the second phone on sign-in. What a store holds is read on the
+    phone that holds it: Apple Health on the iPhone, Health Connect on
+    Android. An account made with Sign in with Apple signs in on Android by
+    email, with a password set once from &ldquo;Forgot password&rdquo;.
+  </p>
+
+  <p class="mt-5 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">What Whoop may write to Health Connect</strong>
+    (Health Connect&rsquo;s own write list for the app, 27 October 2026):
+    active calories, exercise, heart rate, lean body mass, oxygen saturation,
+    respiratory rate, resting heart rate, sleep, steps, weight.
+  </p>
+  <p class="mt-2 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">What it does not write on Android:</strong>
+    HRV, distance, basal (resting) energy, cardio fitness (VO&#8322;max),
+    height. The same as on the iPhone, with distance and basal energy added:
+    Health Connect has a record for each, and Whoop writes neither.
+  </p>
+  <p class="mt-2 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">What the first evening wrote:</strong>
+    the night&rsquo;s sleep (Verve read 6h 48, the Whoop app&rsquo;s own
+    figure), resting heart rate, and the week&rsquo;s two started sessions
+    with their heart rate, so the dashboard showed Zone 2 minutes and the
+    weekly dose the same evening. No steps yet: as on the iPhone, Whoop
+    writes a day&rsquo;s steps as one block the morning after.
+  </p>
+
+  <p class="mt-5 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">iPhone against Android, reading by reading.</strong>
+    &ldquo;From the first&rdquo; means the card fills from the first night or
+    session. The waits are Verve&rsquo;s own settling rules and are the same on
+    both phones; they count nights or days the store actually holds, so a
+    band worn from today starts the count today.
+  </p>
+  <div class="mt-3 overflow-x-auto rounded-xl border border-white/[0.08]">
+    <table class="w-full text-xs">
+      <thead class="bg-white/[0.04]">
+        <tr class="text-left font-mono text-[10px] uppercase tracking-wider text-text-tertiary">
+          <th class="px-3 py-2.5 font-semibold">Reading</th>
+          <th class="px-3 py-2.5 font-semibold">iPhone + Whoop</th>
+          <th class="px-3 py-2.5 font-semibold">Android + Whoop</th>
+          <th class="px-3 py-2.5 font-semibold">How long until it shows</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-white/[0.06]">
+        <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Workouts, Zone 2, weekly dose</td><td class="px-3 py-2.5 text-text-secondary">Yes, with heart rate inside the session</td><td class="px-3 py-2.5 text-text-secondary">Yes, the same</td><td class="px-3 py-2.5 text-text-tertiary">From the first session, about 15 to 20 minutes after it ends</td></tr>
+        <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Sleep duration, bedtime</td><td class="px-3 py-2.5 text-text-secondary">Yes, one asleep block a night</td><td class="px-3 py-2.5 text-text-secondary">Yes, the same</td><td class="px-3 py-2.5 text-text-tertiary">From the first night; the bedtime average after 3 nights</td></tr>
+        <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Sleep stages</td><td class="px-3 py-2.5 text-text-secondary">No: Whoop keeps the split in its app</td><td class="px-3 py-2.5 text-text-secondary">No, the same</td><td class="px-3 py-2.5 text-text-tertiary">Never from Whoop; Oura, Garmin, Pixel Watch and Galaxy Watch write them</td></tr>
+        <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Bedtime spread, sleep regularity</td><td class="px-3 py-2.5 text-text-secondary">Yes</td><td class="px-3 py-2.5 text-text-secondary">Yes</td><td class="px-3 py-2.5 text-text-tertiary">A first reading after 7 nights, trustworthy at 44</td></tr>
+        <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Resting heart rate, against your own baseline</td><td class="px-3 py-2.5 text-text-secondary">Yes</td><td class="px-3 py-2.5 text-text-secondary">Yes</td><td class="px-3 py-2.5 text-text-tertiary">The number from the first night; the baseline after 14 nights, full at 30</td></tr>
+        <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Night HRV</td><td class="px-3 py-2.5 text-text-secondary">No: Whoop does not write it</td><td class="px-3 py-2.5 text-text-secondary">No, the same</td><td class="px-3 py-2.5 text-text-tertiary">Never from Whoop. From a band that writes it: 7 nights, baseline at 30. Apple Health carries SDNN, Health Connect rMSSD; Verve names which and never mixes them</td></tr>
+        <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">One-minute heart rate recovery</td><td class="px-3 py-2.5 text-text-secondary">Derived from the heart rate after a started session</td><td class="px-3 py-2.5 text-text-secondary">Derived the same way</td><td class="px-3 py-2.5 text-text-tertiary">From the first session that ends with the band still reading; the baseline after 5 readings over 30 days</td></tr>
+        <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Steps total</td><td class="px-3 py-2.5 text-text-secondary">Yes, one block the morning after</td><td class="px-3 py-2.5 text-text-secondary">Yes, the same</td><td class="px-3 py-2.5 text-text-tertiary">Yesterday from the next morning; today only from a phone or watch counting through the day</td></tr>
+        <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Step cadence, sitting hours</td><td class="px-3 py-2.5 text-text-secondary">From the phone in a pocket, not the band</td><td class="px-3 py-2.5 text-text-secondary">From a phone or watch that writes steps by the minute; Whoop&rsquo;s one block a day is not enough</td><td class="px-3 py-2.5 text-text-tertiary">The same day, when such a writer exists</td></tr>
+        <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Physical activity level</td><td class="px-3 py-2.5 text-text-secondary">Yes, estimated from your profile when no basal energy is written</td><td class="px-3 py-2.5 text-text-secondary">Not yet: needs a basal energy writer, which Whoop is not</td><td class="px-3 py-2.5 text-text-tertiary">After 3 days of active energy on the iPhone</td></tr>
+        <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Weight, lean body mass</td><td class="px-3 py-2.5 text-text-secondary">Each reading as written</td><td class="px-3 py-2.5 text-text-secondary">The same</td><td class="px-3 py-2.5 text-text-tertiary">As soon as a scale or the app writes one</td></tr>
+        <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Breathing rate, blood oxygen in sleep</td><td class="px-3 py-2.5 text-text-secondary">Yes</td><td class="px-3 py-2.5 text-text-secondary">Yes</td><td class="px-3 py-2.5 text-text-tertiary">From the first night</td></tr>
+        <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Wearable VO&#8322;max</td><td class="px-3 py-2.5 text-text-secondary">No</td><td class="px-3 py-2.5 text-text-secondary">No</td><td class="px-3 py-2.5 text-text-tertiary">Never from Whoop; a typed fitness test shows at once on both</td></tr>
+        <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Standing minutes</td><td class="px-3 py-2.5 text-text-secondary">Apple Watch only</td><td class="px-3 py-2.5 text-text-secondary">No Android store carries it</td><td class="px-3 py-2.5 text-text-tertiary">Never from Whoop on either</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="mt-3 text-sm leading-relaxed text-text-secondary">
+    In one sentence: a Whoop gives the same Verve on either phone, sleep,
+    resting heart rate and started workouts, and leaves the same gaps, night
+    HRV, stages, a wearable VO&#8322;max; the one difference today is the
+    physical activity level, which the Android app does not yet estimate
+    without a basal energy writer.
+  </p>
+  <p class="mt-4 text-xs leading-relaxed text-text-tertiary">
+    Settled on 27 October from the first evening on Android: the night and
+    the week&rsquo;s two sessions arrived within minutes of switching the
+    integration on; steps had not. The permission list is Health Connect&rsquo;s
+    own; the rest is what Verve showed.
+  </p>
+</div>
 <div class="mt-4 grid gap-4 sm:grid-cols-2">
   {SLEEP_RHYTHM_SECTION.map((c) => <CitationCard {...c} />)}
 </div>

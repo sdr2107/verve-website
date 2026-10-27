@@ -134,7 +134,7 @@ export const SUBJECTS: Subject[] = [
     accentTint: "rgba(129,140,248,0.14)",
     icon: "M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z",
     aside: {
-      text: "Wearing something else? Oura, Whoop and Garmin reach Verve through Apple Health.",
+      text: "Wearing something else? Oura, Whoop and Garmin reach Verve through Apple Health on iPhone and Health Connect on Android.",
       href: "/science/sleep-heart/sleep-rhythm#connect-wearables",
       label: "How to connect",
     },
@@ -207,7 +207,7 @@ export const TOPICS: Topic[] = [
     sub: "Four ways to read one bedtime diary",
     subject: "sleep-heart",
     citations: SLEEP_RHYTHM_SECTION,
-    subAnchors: ["connect-wearables", "whoop"],
+    subAnchors: ["connect-wearables", "whoop", "whoop-android"],
   },
   { slug: "sleep-and-training", label: "Sleep and training", sub: "What the Guide’s sleep line is, and what it refuses to claim", subject: "sleep-heart", citations: SLEEP_TRAINING_SECTION },
   { slug: "resting-heart-rate", label: "Resting heart rate", sub: "Measured against your own normal, not a population range", subject: "sleep-heart", citations: RESTING_HR_SECTION },
