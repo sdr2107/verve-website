@@ -33,7 +33,7 @@ function Row({ name, rs }: { name: string; rs: any[] }) {
 
 export function Labs() {
   const d = derived.value;
-  const labs = d?.labs ?? [];
+  const labs = d?.labsShown ?? [];   // report rows + the computed lipid ratios
   const query = searchQuery.value;
   const terms = searchTermsOf(query);
   const secs = groupLabs(labs);

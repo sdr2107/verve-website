@@ -1,10 +1,13 @@
 ---
 /** ApoB · LDL-C · Lp(a) · hs-CRP — screening bands, not treatment targets. Rendered by /science/body/heart-health; see scienceTopics.ts. */
 import CitationCard from "../../components/CitationCard.astro";
+import ScienceSection from "../../components/science/ScienceSection.astro";
 import VideoSlot from "../../components/VideoSlot.astro";
 import {
   HEART_HEALTH_SECTION,
+  LIPID_RATIO_SECTION,
 } from "../../data/science";
+import LR from "../../data/lipid-ratios";
 ---
 
 <div class="mt-6"><VideoSlot topic="heart-health" /></div>
@@ -19,4 +22,34 @@ import {
 </div>
 <div class="mt-4 grid gap-4 sm:grid-cols-2">
   {HEART_HEALTH_SECTION.map((c) => <CitationCard {...c} />)}
+</div>
+
+<!-- ── The two lipid ratios ──────────────────────────────────────────
+     Computed from values already on the panel (TG and HDL on the
+     Triglycerides card; ApoB and ApoA1 on the ApoB card), never stored.
+     The app's cards and the website's Labs tab link here. ── -->
+<div class="mt-10">
+<ScienceSection
+  id="lipid-ratios"
+  title="Two ratios from one panel"
+  sub="TG/HDL as an insulin-resistance screen, ApoB/ApoA1 as the balance of particles in and out, and where each line comes from"
+>
+  <div class="mt-[18px] grid gap-4 text-[13.5px] leading-relaxed text-text-secondary sm:grid-cols-2">
+    <div id="tg-hdl-ratio" class="scroll-mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+      <h4 class="text-[15px] font-semibold text-text-primary">TG/HDL ratio</h4>
+      <p class="mt-2">Triglycerides divided by HDL cholesterol, both in mg/dL. Below {LR.tgHdl.inRangeBelow.toFixed(1)} reads in range, {LR.tgHdl.inRangeBelow.toFixed(1)} to {(LR.tgHdl.elevatedFrom - 0.1).toFixed(1)} borderline, {LR.tgHdl.elevatedFrom.toFixed(1)} and above elevated. A report in mmol/L is converted first (triglycerides &times; 88.57, HDL &times; 38.67), so the same blood gives the same ratio whichever unit the lab printed.</p>
+      <p class="mt-2">It is a screen for insulin resistance, read beside HOMA-IR, waist and fasting insulin rather than alone. The cut-points were found in mostly white, overweight adults; in African-American adults the ratio does not track insulin resistance, so for that ancestry setting Verve shows the number and draws no band. South Asian cut-points are not settled.</p>
+      <p class="mt-2 text-text-tertiary">On the Triglycerides card, with its own trend. It pairs the newest triglyceride with the newest HDL and says when the two are from different days.</p>
+    </div>
+    <div id="apob-apoa1-ratio" class="scroll-mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+      <h4 class="text-[15px] font-semibold text-text-primary">ApoB/ApoA1 ratio</h4>
+      <p class="mt-2">One ApoB sits on every particle that carries cholesterol into an artery wall; ApoA1 sits on the particles that carry it out. The ratio is the balance. Verve reads {LR.apoBApoA1.elevatedFromMale.toFixed(1)} and above as elevated for men and {LR.apoBApoA1.elevatedFromFemale.toFixed(1)} and above for women; the units cancel, so a g/L report gives the same ratio as a mg/dL one.</p>
+      <p class="mt-2">ApoA1 is not on a standard lipid panel. It is printed beside ApoB on an advanced one, which is why the app asks for it on the ApoB card rather than on a card of its own, and why the ratio appears only when both are there.</p>
+      <p class="mt-2 text-text-tertiary">Screening lines, not treatment targets. What counts as a good number for you is set by your overall risk, with your doctor.</p>
+    </div>
+  </div>
+  <div class="mt-4 grid gap-4 sm:grid-cols-2">
+    {LIPID_RATIO_SECTION.map((c) => <CitationCard {...c} />)}
+  </div>
+</ScienceSection>
 </div>

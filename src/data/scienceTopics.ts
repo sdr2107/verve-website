@@ -215,7 +215,7 @@ export const TOPICS: Topic[] = [
   { slug: "night-hrv", label: "Night HRV", sub: "Your own baseline, one writer at a time — and what SDNN is not", subject: "sleep-heart", citations: NIGHT_HRV_SECTION },
 
   // ── Body ───────────────────────────────────────────────────────────────
-  { slug: "heart-health", label: "Heart health", sub: "ApoB · LDL-C · Lp(a) · hs-CRP — screening bands, not treatment targets", subject: "body", citations: HEART_HEALTH_SECTION },
+  { slug: "heart-health", label: "Heart health", sub: "ApoB · LDL-C · Lp(a) · hs-CRP, and the two ratios from one panel — screening bands, not treatment targets", subject: "body", citations: HEART_HEALTH_SECTION, subAnchors: ["lipid-ratios", "tg-hdl-ratio", "apob-apoa1-ratio"] },
   {
     slug: "body-phenotyping",
     label: "Body phenotyping",

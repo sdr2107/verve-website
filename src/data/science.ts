@@ -523,6 +523,45 @@ export const HEART_HEALTH_SECTION: Citation[] = [
   },
 ];
 
+/** The two lipid ratios: computed from values already on the panel, never stored. Thresholds in data/lipid-ratios.ts (a copy of the app's). */
+export const LIPID_RATIO_SECTION: Citation[] = [
+  {
+    title: "TG/HDL — McLaughlin et al, Ann Intern Med 2003",
+    summary:
+      "258 overweight, non-diabetic adults, insulin resistance measured directly by the insulin suppression test. The triglyceride to HDL-cholesterol ratio was among the three most useful simple markers; the best cut-point was 3.0 in mg/dL units (sensitivity 64%, specificity 68%). Verve reads below 3.0 as in range.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/14623617/",
+    color: "#b45309",
+  },
+  {
+    title: "TG/HDL ≥ 3.5 — McLaughlin et al, Am J Cardiol 2005",
+    summary:
+      "449 apparently healthy adults, plus LDL particle size in 1,135. A ratio of 3.5 or more best identified people who were both insulin resistant and carrying small, dense LDL, with sensitivity and specificity comparable to the metabolic-syndrome criteria. Verve's elevated band starts here; 3.0 to 3.4 is borderline.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/16054467/",
+    color: "#be123c",
+  },
+  {
+    title: "Where TG/HDL does not work — Sumner et al, Arch Intern Med 2005",
+    summary:
+      "98 African-American adults with BMI 25 or more and insulin sensitivity measured by intravenous glucose tolerance testing. Neither fasting triglyceride nor the TG/HDL ratio tracked insulin resistance (area under the curve 0.56; sensitivity 17%). For that ancestry setting Verve shows the ratio and draws no band.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/15983289/",
+    color: "#64748b",
+  },
+  {
+    title: "ApoB/ApoA1 — INTERHEART, McQueen et al, Lancet 2008",
+    summary:
+      "12,461 first heart attacks and 14,637 controls in 52 countries, non-fasting blood. The ApoB/ApoA1 ratio carried the highest population-attributable risk of any lipid measure (54%, against 37% for LDL/HDL and 32% for total cholesterol/HDL), consistent in every ethnic group including South Asia, in both sexes and at every age.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/18640459/",
+    color: "#7e22ce",
+  },
+  {
+    title: "ApoB/ApoA1 — AMORIS, Walldius et al, Lancet 2001",
+    summary:
+      "175,553 Swedish adults followed for about five and a half years. ApoB and the ApoB/ApoA1 ratio predicted fatal heart attack in men and women, and ApoB outperformed LDL-cholesterol; ApoA1 was protective. The cut-offs Verve reads against, about 0.9 for men and 0.8 for women, come from Walldius and Jungner's 2004 review of this cohort (J Intern Med 2004;255:188-205, PMID 14746556).",
+    url: "https://pubmed.ncbi.nlm.nih.gov/11755609/",
+    color: "#0891b2",
+  },
+];
+
 export const MUSCLE_HEALTH_SECTION: Citation[] = [
   {
     title: "Leong et al — PURE Study, The Lancet 2015",

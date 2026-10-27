@@ -1,5 +1,5 @@
 /**
- * The 21 markers the app tracks, read from a person's rows: the columns,
+ * The 22 markers the app tracks (ApoA1 joined ApoB on 2026-10-27), read from a person's rows: the columns,
  * the names a report may use for them, every reading of each by chart key,
  * the lab's own range on each reading, and when each is next due. Pure.
  */
@@ -17,6 +17,7 @@ export const LABELS: Record<string, { label: string; unit: string; section: "met
   sbp:                    { label: "Systolic BP",       unit: "mmHg",   section: "metabolic" },
   dbp:                    { label: "Diastolic BP",      unit: "mmHg",   section: "metabolic" },
   apo_b_mgdl:             { label: "ApoB",              unit: "mg/dL",  section: "heart" },
+  apo_a1_mgdl:            { label: "ApoA1",             unit: "mg/dL",  section: "heart" },
   ldl_mgdl:               { label: "LDL",               unit: "mg/dL",  section: "heart" },
   lpa_value:              { label: "Lp(a)",             unit: "",       section: "heart" },
   hs_crp_mgl:             { label: "hs-CRP",            unit: "mg/L",   section: "heart" },
@@ -33,7 +34,7 @@ export const LABELS: Record<string, { label: string; unit: string; section: "met
 // A chart key is a lab_readings column, except "bp", which pairs sbp and
 // dbp, and "sppb_score", which the app computes and no table stores. A
 // marker with no reading anywhere shows as a dashed chip, never hidden:
-// the page says 21 markers, and 21 it is.
+// the page says 22 markers, and 22 it is.
 export type ChartMarker = { key: string; label: string; section: "metabolic" | "heart" | "muscle"; pair?: [string, string]; lines?: [number, number] };
 export const CHART_MARKERS: ChartMarker[] = [
   { key: "glucose_mgdl", label: "Fasting glucose", section: "metabolic" },
@@ -45,6 +46,7 @@ export const CHART_MARKERS: ChartMarker[] = [
   { key: "post_meal_glucose_mgdl", label: "Post-meal glucose", section: "metabolic" },
   { key: "fasting_insulin_uiuml", label: "Fasting insulin", section: "metabolic" },
   { key: "apo_b_mgdl", label: "ApoB", section: "heart" },
+  { key: "apo_a1_mgdl", label: "ApoA1", section: "heart" },
   { key: "ldl_mgdl", label: "LDL", section: "heart" },
   { key: "lpa_value", label: "Lp(a)", section: "heart" },
   { key: "hs_crp_mgl", label: "hs-CRP", section: "heart" },
@@ -68,7 +70,7 @@ export const APP_KEY_BY_NAME: Record<string, string> = {
   triglycerides: "triglycerides_mgdl", hdl: "hdl_mgdl", hdlcholesterol: "hdl_mgdl",
   waist: "waist_cm", waistcircumference: "waist_cm",
   systolicbp: "sbp", systolicbloodpressure: "sbp", diastolicbp: "dbp", diastolicbloodpressure: "dbp",
-  apob: "apo_b_mgdl", apolipoproteinb: "apo_b_mgdl", ldl: "ldl_mgdl", ldlcholesterol: "ldl_mgdl",
+  apob: "apo_b_mgdl", apolipoproteinb: "apo_b_mgdl", apoa1: "apo_a1_mgdl", apolipoproteina1: "apo_a1_mgdl", ldl: "ldl_mgdl", ldlcholesterol: "ldl_mgdl",
   lpa: "lpa_value", lipoproteina: "lpa_value",
   hscrp: "hs_crp_mgl", highsensitivitycrp: "hs_crp_mgl", crphs: "hs_crp_mgl", hscreactiveprotein: "hs_crp_mgl",
   bodyfat: "body_fat_pct", bodyfatpercentage: "body_fat_pct", skeletalmuscle: "skel_musc_pct", skeletalmusclepercentage: "skel_musc_pct",

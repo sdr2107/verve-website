@@ -44,7 +44,7 @@ function glanceOf(d: NonNullable<typeof derived.value>, self: boolean): { cards:
   const by = d.by;
   const dues = [...labRowsFrom(by, today).map((r) => r.due), fit.due, bodyDueFrom(by, today)]
     .filter((x): x is Due => !!x).sort((x, y) => x.days - y.days);
-  const { outside, judged } = labsJudged(d.labs);
+  const { outside, judged } = labsJudged(d.labsShown);
   /** The last n values of a marker's series, for a sparkline. */
   const tail = (key: string, n: number) => (d.markers.find((m) => m.key === key)?.series() ?? []).slice(-n).map((p) => p.v);
   const cards: Glance[] = [];

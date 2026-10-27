@@ -9,12 +9,15 @@ import type { MyHealthDocument } from "../document.ts";
 import { bodyFromSync, crfFromSync, isWorkout, mergeBy, weeksFrom } from "./activity.ts";
 import { markerPointsFrom, type Pt } from "./markers.ts";
 import { buildMarkers, type Marker } from "./lenses.ts";
+import { withLipidRatios } from "./lipids.ts";
 
 export interface PersonData {
   doc: MyHealthDocument;
   /** The person has an account of their own: the app's rows exist. */
   synced: boolean;
   labs: any[];
+  /** The report rows plus the two computed lipid ratios (derive/lipids): what the Labs tab lists and judges. Exports and report echoes read `labs`. */
+  labsShown: any[];
   imaging: any[];
   app: any[];
   exportRows: { weeks: any[]; crf: any[]; body: any[] };
@@ -48,7 +51,7 @@ export function derivePerson(doc: MyHealthDocument): PersonData {
   const markers = buildMarkers({ signals, acts, weights, profile, crf, weeks, app: doc.app_labs, by });
   const out: PersonData = {
     doc, synced,
-    labs: doc.labs, imaging: doc.imaging, app: doc.app_labs,
+    labs: doc.labs, labsShown: withLipidRatios(doc.labs, profile), imaging: doc.imaging, app: doc.app_labs,
     exportRows: { weeks: doc.weeks, crf: doc.web_crf, body: doc.web_body },
     weeks, crf, body, acts, profile, signals, weights, by,
     goal: Number(profile?.weekly_met_hours_goal) || 7.5,
