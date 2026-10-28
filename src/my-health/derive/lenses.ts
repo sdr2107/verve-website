@@ -94,6 +94,21 @@ export interface MarkerSources {
 export function buildMarkers(src: MarkerSources): Marker[] {
   const { signals, acts, weights, profile, crf, weeks, app, by } = src;
   const signalSeries = (col: string): Pt2[] => signals.filter((r) => r[col] != null).map((r) => ({ d: String(r.day), v: Number(r[col]) }));
+  /**
+   * Who the day's steps are from, as the app elected it (one writer a day,
+   * never two added; lib/health/dailyWriter in the app). steps_source names a
+   * chosen device or a block writer; null is the store's own merge. Said for
+   * the last seven days with steps, so the source line reads e.g. "WHOOP on
+   * 5 of the last 7 days, Apple Health's merge on 2".
+   */
+  const stepWriterWords = (): string => {
+    const rows = signals.filter((r) => r.steps != null).slice(-7);
+    if (!rows.length) return "Apple Health's daily total, one writer a day as the app elected it, pushed on every sync.";
+    const counts = new Map<string, number>();
+    for (const r of rows) { const k = r.steps_source ? String(r.steps_source) : "the store's merge of its writers"; counts.set(k, (counts.get(k) ?? 0) + 1); }
+    const parts = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} on ${n}`);
+    return `One writer a day, as the app elected it: ${parts.join(", ")} of the last ${rows.length} day${rows.length === 1 ? "" : "s"}. Two devices are never added together.`;
+  };
   const sparseFrom = (key: string): Pt2[] => (by.get(key) ?? []).map((p) => ({ d: p.d, v: p.v }));
   const weeklyGoal = () => Number(profile?.weekly_met_hours_goal) || 7.5;
   const days = () => actsByDay(acts);
@@ -152,8 +167,8 @@ export function buildMarkers(src: MarkerSources): Marker[] {
       series: () => [...days()].map(([d, r]) => ({ d, v: r.vig })).sort((a, b) => a.d.localeCompare(b.d)),
       reads: () => { const a = activitySummary(weeks, acts, weeklyGoal(), todayStr(), mondayOf(new Date())); return a.minutes ? [`Vigorous share <strong class="text-text-primary">${Math.round((a.vig / a.minutes) * 100)}%</strong> of the last four weeks' minutes.`, "Most of a week easy, one hard day: the shape the endurance literature keeps finding."] : ["No minutes on file yet."]; } },
     { key: "steps", section: "movement", label: "Steps", unit: "", sub: "Every source, one total a day", daily: true, sum: true, avgDay: true, color: "#34d399",
-      science: "/science/movement/steps", source: "Apple Health's daily total, watch and phone together, pushed by the app on every sync.", fmt: (v) => Math.round(v).toLocaleString(),
-      series: () => signalSeries("steps"), lines: () => STEP_LINES, table: true,
+      science: "/science/movement/steps", source: stepWriterWords(), fmt: (v) => Math.round(v).toLocaleString(),
+      series: () => signals.filter((r) => r.steps != null).map((r) => ({ d: String(r.day), v: Number(r.steps), ...(r.steps_source ? { note: String(r.steps_source) } : {}) })), lines: () => STEP_LINES, table: true,
       reads: () => { const h = heart(); if (!h?.steps.avg) return ["No steps on file yet."]; return [`<strong class="text-text-primary">${h.steps.avg.toLocaleString()} a day</strong> over the last seven${h.steps.prior != null ? `, ${h.steps.avg >= h.steps.prior ? "up" : "down"} from ${h.steps.prior.toLocaleString()} the week before` : ""}.`, "Paluch's 2023 pooled cohorts found the mortality curve flattening around 7,000 to 8,000 a day for adults over 60, higher for younger adults, with the fall steepest from the lowest counts."]; } },
     { key: "strength", section: "movement", label: "Strength", unit: "min", sub: "Minutes of strength work, by day", daily: true, sum: true, color: "#a78bfa",
       science: "/science/movement/strength-training", source: "Sessions the app graded as strength, each as the watch or the person recorded it.", fmt: (v) => round0(v),
