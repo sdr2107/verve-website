@@ -137,3 +137,15 @@ test("a table marker's twelve weeks carry one row a week, newest first, and the 
   assert.equal(dr.rows[1].total, 7 * 5100);
   assert.equal(dr.median, 7 * 5600);   // the median of weeks 1..11: 5100..6100 a day × 7
 });
+
+test("sleepHeartSummaryRaw: efficiency is asleep ÷ the in-bed window the app sends, awake carried through", () => {
+  const rows = [];
+  for (let i = 10; i >= 1; i--) rows.push({ day: `2026-10-${String(29 - i).padStart(2, "0")}`, sleep_minutes: 440 });
+  rows.push({ day: "2026-10-29", sleep_minutes: 481, sleep_start: "2026-10-28T16:52:00.000Z", sleep_end: "2026-10-29T01:12:00.000Z", sleep_awake_min: 14 });
+  const h = sleepHeartSummaryRaw(rows, "2026-10-29");
+  assert.equal(h.sleep.last.inBedMin, 500);
+  assert.equal(h.sleep.last.efficiency, 96);
+  assert.equal(h.sleep.last.awakeMin, 14);
+  const bare = sleepHeartSummaryRaw([{ day: "2026-10-29", sleep_minutes: 400 }], "2026-10-29");
+  assert.equal(bare.sleep.last.efficiency, null);
+});

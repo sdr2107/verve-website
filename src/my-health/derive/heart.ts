@@ -62,7 +62,19 @@ export function sleepHeartSummaryRaw(rows: any[], today: string) {
   const usual = nightRows.length >= 7 ? Math.round(medianOf(nightRows.map((r) => Number(r.sleep_minutes)))!) : null;
   const bedOf = (iso: string | null) => iso ? new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) : "";
   const sleep = { nights: nightRows.length, shortNights: nightRows.filter((r) => Number(r.sleep_minutes) < 420).length, usual,
-    last: lastN ? { day: String(lastN.day), min: Number(lastN.sleep_minutes), band: Number(lastN.sleep_minutes) < 420 ? "short" : Number(lastN.sleep_minutes) > 540 ? "long" : "inRange", bed: bedOf(lastN.sleep_start) } : null };
+    last: lastN ? (() => {
+      // sleep_start/sleep_end are the night's in-bed window from app 2026-10-29 (the writer's own when it
+      // wrote one, else onset to final wake), so asleep ÷ in bed is the app's efficiency, computed, not stored.
+      const t0 = lastN.sleep_start ? new Date(lastN.sleep_start).getTime() : NaN, t1 = lastN.sleep_end ? new Date(lastN.sleep_end).getTime() : NaN;
+      const inBedMin = Number.isFinite(t0) && Number.isFinite(t1) && t1 > t0 ? Math.round((t1 - t0) / 60_000) : null;
+      const min = Number(lastN.sleep_minutes);
+      return {
+        day: String(lastN.day), min, band: min < 420 ? "short" : min > 540 ? "long" : "inRange",
+        bed: bedOf(lastN.sleep_start), woke: bedOf(lastN.sleep_end), inBedMin,
+        efficiency: inBedMin && inBedMin > 0 ? Math.round((min / inBedMin) * 100) : null,
+        awakeMin: lastN.sleep_awake_min != null ? Number(lastN.sleep_awake_min) : null,
+      };
+    })() : null };
 
   // recovery: the latest day's median, against the median of the 30 days before
   const hrrRows = rows.filter((r) => r.hrr_bpm != null);
