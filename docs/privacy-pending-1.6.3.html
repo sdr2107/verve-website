@@ -139,8 +139,8 @@
     <li><strong>Questions you ask the Guide</strong>.</li>
   </ul>
 
-  <h3>What Verve reads from Apple Health (with your permission)</h3>
-  <p>Workouts, heart rate, resting heart rate, heart rate variability, heart rate recovery, VO2 max, sleep, respiratory rate, steps, walking and running distance, stand time, active and resting energy, blood pressure, weight, height, body fat percentage, lean body mass, waist circumference, date of birth and biological sex. Verve only reads; it never writes to Apple Health. On Android, Verve reads the same kinds of data from Health Connect.</p>
+  <h3>What Verve reads from Apple Health or Health Connect (with your permission)</h3>
+  <p>Workouts, heart rate, resting heart rate, heart rate variability, heart rate recovery, VO2 max, sleep, respiratory rate, steps, walking and running distance, stand time, active and resting energy, blood pressure, weight, height, body fat percentage, lean body mass, waist circumference, date of birth and biological sex. Verve only reads; it never writes to Apple Health. On Android, Verve reads from Health Connect instead: exercise sessions, heart rate, resting heart rate, heart rate variability, VO2 max, steps, distance, active and basal energy, sleep, respiratory rate, blood pressure, weight, height, body fat and lean body mass. It reads only while the App is open, never in the background, and it never writes to Health Connect.</p>
 
   <h3>Device and install information</h3>
   <p>When the App starts, our attribution partner (Tenjin) and our subscription service (RevenueCat) receive information about your device and how the App was installed. Section 5 explains exactly what. If the App crashes, a report of the crash goes to Sentry (section 6); it carries no account or health data. Verve does not ask for or use your device's location.</p>
@@ -148,19 +148,19 @@
   <h2>2. Where your data is kept</h2>
 
   <h3>On your phone</h3>
-  <p>Everything Verve shows you is stored on your phone, protected by iOS encryption. Your sign-in token is kept in the iOS Keychain.</p>
+  <p>Everything Verve shows you is stored on your phone, protected by the phone's own encryption (iOS or Android). Your sign-in token is kept in the iOS Keychain or, on Android, in storage protected by the Android Keystore.</p>
 
   <h3>Your account backup</h3>
   <p>While you are signed in, Verve backs up the following to your account on Supabase, on servers in Mumbai, India. It is sent over an encrypted connection (TLS), encrypted at rest, and protected so that only your account can read it. Signing in is required to use the App, and this backup has no separate switch; it is what the account is for. It lets the Website show your data and brings it back if you reinstall or change phones.</p>
   <ul>
     <li>Everything listed under "What you enter" above, except your Guide questions, which are not stored.</li>
-    <li>The workouts Verve reads from Apple Health, with their heart rate, calories and effort.</li>
-    <li>Your weight history: the last 400 days of weighings from Apple Health, and any weight you type.</li>
+    <li>The workouts Verve reads from Apple Health or Health Connect, with their heart rate, calories and effort.</li>
+    <li>Your weight history: the last 400 days of weighings from Apple Health or Health Connect, and any weight you type.</li>
   </ul>
 
   <h3>Daily watch readings: only if you turn them on</h3>
   <p>Resting heart rate, steps, sleep times and stages, one-minute heart rate recovery, night heart rate variability, energy burned, standing and sitting time, and walking cadence are backed up only if you turn on <strong>Back up watch readings</strong> in Settings &rarr; Your data &rarr; Backup. It is off until you turn it on. The first backup after you turn it on covers up to five years of these daily readings, then the last five weeks on each sync. Turning it off deletes the backed-up readings from your account at once.</p>
-  <p>Blood pressure read from Apple Health is shown in the App but not backed up. Blood pressure you type is backed up with your other values.</p>
+  <p>Blood pressure read from Apple Health or Health Connect is shown in the App but not backed up. Blood pressure you type is backed up with your other values.</p>
 
   <div class="table-wrap"><table>
     <thead>
@@ -168,10 +168,10 @@
     </thead>
     <tbody>
       <tr><td>Profile, health questions, logged workouts, fitness tests, lab, blood pressure, waist and body values</td><td>Your phone, and backed up to Supabase (Mumbai, India)</td><td>iOS encryption; TLS in transit, encrypted at rest, row-level security</td></tr>
-      <tr><td>Workouts and weight read from Apple Health</td><td>Apple Health, your phone, and backed up to Supabase (Mumbai, India)</td><td>As above</td></tr>
-      <tr><td>Daily watch readings</td><td>Apple Health and your phone; Supabase only with Back up watch readings on</td><td>As above; deleted from Supabase when the switch is turned off</td></tr>
+      <tr><td>Workouts and weight read from Apple Health or Health Connect</td><td>The health store, your phone, and backed up to Supabase (Mumbai, India)</td><td>As above</td></tr>
+      <tr><td>Daily watch readings</td><td>The health store and your phone; Supabase only with Back up watch readings on</td><td>As above; deleted from Supabase when the switch is turned off</td></tr>
       <tr><td>Reports you upload on the Website, and the values read from them</td><td>Supabase (Mumbai, India)</td><td>Private storage, row-level security, TLS in transit, encrypted at rest</td></tr>
-      <tr><td>Sign-in token</td><td>iOS Keychain</td><td>Hardware-backed encryption</td></tr>
+      <tr><td>Sign-in token</td><td>iOS Keychain, or Android Keystore-protected storage</td><td>Hardware-backed encryption</td></tr>
     </tbody>
   </table></div>
 
@@ -264,7 +264,7 @@
       <tr><td>Google</td><td>Sign in with Google; Google Play on Android</td><td>Under Google's privacy policy</td><td>United States</td></tr>
       <tr><td>Resend</td><td>Sends sign-in codes, invitations, the newsletter welcome email and the one-time notice when your account is opened on a new phone</td><td>Your email address and the email's content</td><td>United States</td></tr>
       <tr><td>Substack</td><td>Sends the newsletter</td><td>Your email address, if you subscribe</td><td>United States</td></tr>
-      <tr><td>Sentry</td><td>Crash reports from the App</td><td>When the App crashes: the stack trace, the App's version, your iOS version and device model. Never your name, email, account ID or any health data</td><td>United States</td></tr>
+      <tr><td>Sentry</td><td>Crash reports from the App</td><td>When the App crashes: the stack trace, the App's version, your iOS or Android version and device model. Never your name, email, account ID or any health data</td><td>United States</td></tr>
       <tr><td>GitHub</td><td>Hosts the Website</td><td>Visitors' IP addresses, in GitHub's security logs</td><td>United States</td></tr>
       <tr><td>Google Fonts</td><td>Fonts on one Website page</td><td>Your IP address, when you open that page</td><td>United States</td></tr>
     </tbody>
@@ -288,6 +288,7 @@
     <li><strong>Clear the data on your phone</strong>: Settings &rarr; Export &amp; erase.</li>
     <li><strong>Turn watch-reading backup on or off</strong>: Settings &rarr; Your data &rarr; Backup.</li>
     <li><strong>Change Apple Health access</strong>: iOS Settings &rarr; Health &rarr; Data Access &amp; Devices &rarr; Verve.</li>
+    <li><strong>Change Health Connect access</strong>: Android Settings &rarr; Health Connect &rarr; App permissions &rarr; Verve.</li>
     <li><strong>Change tracking permission</strong>: iOS Settings &rarr; Privacy &amp; Security &rarr; Tracking.</li>
     <li><strong>View or delete a report</strong>: the Reports tab on the Website.</li>
     <li><strong>Stop sharing your page</strong>: the Give access panel on My health.</li>
@@ -300,19 +301,19 @@
   <ul>
     <li>All connections use HTTPS/TLS.</li>
     <li>Data on our servers is encrypted at rest and protected by row-level security, so each account can read only its own data and what has been shared with it.</li>
-    <li>Your sign-in token is kept in the iOS Keychain.</li>
+    <li>Your sign-in token is kept in the iOS Keychain or, on Android, in Keystore-protected storage.</li>
     <li>If a breach affects your personal data, we will tell you and the authorities as the law requires.</li>
   </ul>
 
   <h2>10. Children</h2>
   <p>Verve is for adults aged 18 and over. Don't create an account if you are under 18. If you add a page for a child you look after (section 4), you must be their parent or guardian. If you believe a child has created an account, email us and we will delete it.</p>
 
-  <h2>11. Apple Health</h2>
+  <h2>11. Apple Health and Health Connect</h2>
   <ul>
-    <li>We do not use Apple Health data for advertising or marketing, and we do not sell it.</li>
-    <li>No health or fitness data, from Apple Health or entered by you, is sent to Tenjin or RevenueCat.</li>
-    <li>Apple Health data is shared with a third party only to give you a Verve feature you asked for: summaries go to Anthropic when you use the Guide (section 3).</li>
-    <li>Workouts and weight read from Apple Health, and daily watch readings if you turn the switch on, are backed up to your account on Supabase as described in section 2. Apple Health data is never stored in iCloud by Verve.</li>
+    <li>We do not use Apple Health or Health Connect data for advertising or marketing, and we do not sell it.</li>
+    <li>No health or fitness data, from Apple Health, Health Connect or entered by you, is sent to Tenjin or RevenueCat.</li>
+    <li>Apple Health and Health Connect data is shared with a third party only to give you a Verve feature you asked for: summaries go to Anthropic when you use the Guide (section 3).</li>
+    <li>Workouts and weight read from Apple Health or Health Connect, and daily watch readings if you turn the switch on, are backed up to your account on Supabase as described in section 2. Verve never stores health-store data in iCloud or Google Drive.</li>
   </ul>
 
   <h2>12. Changes to this policy</h2>
