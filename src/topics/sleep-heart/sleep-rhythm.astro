@@ -354,12 +354,18 @@ const whoopReadings: Array<[string, string, string]> = [
     &rarr; Apple Health &rarr; Preferred device, you can name the one that
     leads for each of the four. The other still counts on the nights it is
     alone.
-    <em>Health decides, by its source order</em>: steps, active energy and
-    distance. Verve asks Health for the day&rsquo;s total, and Health builds
-    it before answering, keeping one source for any minute both counted.
-    The order is yours to set: Health &rarr; Browse &rarr; Steps &rarr;
-    Data Sources &amp; Access &rarr; Edit &rarr; drag the device you trust
-    to the top. Verve never sees the pieces, so it cannot offer a choice.
+    <em>Health decides, by its source order</em>: distance, and until 28
+    October steps and active energy too. Verve asks Health for the
+    day&rsquo;s total, and Health builds it before answering, keeping one
+    source for any minute both counted. The order is yours to set: Health
+    &rarr; Browse &rarr; Steps &rarr; Data Sources &amp; Access &rarr; Edit
+    &rarr; drag the device you trust to the top. Since 28 October Verve
+    also reads steps and active energy by writer: where the phone wrote,
+    Health&rsquo;s merged total still stands; where only a block writer
+    such as Whoop wrote, its block counts whole on the day it ends; and
+    under Settings &rarr; Apple Health &rarr; Preferred device you can name
+    the device whose own count stands for each. One count a day, its
+    writer named under the figure.
     <em>Workouts</em> are events with a start time, and two devices
     recording the same run leave two records a minute apart. Verve treats
     two records from different writers that cover most of the same minutes
@@ -604,8 +610,8 @@ const whoopReadings: Array<[string, string, string]> = [
   <p class="mt-2 text-sm leading-relaxed text-text-secondary">
     <strong class="text-text-primary">What the next three mornings wrote:</strong>
     one steps block a day, the morning after: 5,990 for Monday, 6,642 for
-    Tuesday, 6,329 for Wednesday, each the same figure the iPhone&rsquo;s
-    Whoop line showed for the same day. Until a day&rsquo;s block is
+    Tuesday, 6,329 for Wednesday, each the same figure the iPhone showed
+    for the same day. Until a day&rsquo;s block is
     written Verve shows a dash for it, never a zero, and the night&rsquo;s
     sleep kept arriving by the time the phone was picked up: 6h 48 and
     6h 53 on the two mornings checked, the Whoop app&rsquo;s own figures.
@@ -674,10 +680,11 @@ const whoopReadings: Array<[string, string, string]> = [
     </table>
   </div>
   <p class="mt-3 text-sm leading-relaxed text-text-secondary">
-    In one sentence: a Whoop gives the same Verve on either phone, sleep,
-    resting heart rate, started workouts and each day&rsquo;s steps the
-    morning after, and leaves the same gaps, night HRV, stages, a wearable
-    VO&#8322;max. The one difference is what else the phone counts: an
+    In one sentence: a Whoop gives the same Verve on either phone, sleep
+    with its efficiency and wakes, resting heart rate, breathing, started
+    workouts and each day&rsquo;s steps the morning after, and leaves the
+    same gaps, night HRV, stages, heart rate while asleep, a wearable
+    VO&#8322;max and a physical activity level. The one difference is what else the phone counts: an
     iPhone counts your steps through the day by itself, an Android phone
     needs a step-counting app for that, so without one the Steps page reads
     the band&rsquo;s day, not a live today.
