@@ -8,7 +8,9 @@
  * its mark and its handle, the same five the header's Social opens; they
  * rise into place one after another as the footer scrolls into view. Then
  * the row the footer always had: the mark, the year, and the page links,
- * the same NAV the header prints, plus Home and the privacy policy. All
+ * the same NAV the header prints, plus Home, the privacy policy and the
+ * terms. Under it, the company: name, CIN and registered office, as the
+ * Companies Act asks and as anyone verifying the site expects to find. All
  * addresses come from data/site.ts.
  */
 interface Props {
@@ -19,7 +21,7 @@ interface Props {
 }
 const { showHome = true, showScience = true } = Astro.props;
 
-import { NAV, SOCIAL, PRIVACY_URL } from "../data/site";
+import { NAV, SOCIAL, PRIVACY_URL, TERMS_URL, COMPANY } from "../data/site";
 import SocialIcon from "./SocialIcon.astro";
 ---
 
@@ -52,7 +54,7 @@ import SocialIcon from "./SocialIcon.astro";
     <div class="mt-10 flex flex-col items-center gap-6 text-center sm:flex-row sm:justify-between sm:text-left">
       <div class="flex items-center gap-2.5">
         <img src="/app-icon.png" alt="" class="h-6 w-6 rounded-md" />
-        <span class="text-sm font-medium text-text-secondary">&copy; {new Date().getFullYear()} Verve</span>
+        <span class="text-sm font-medium text-text-secondary">&copy; {new Date().getFullYear()} {COMPANY.name}</span>
       </div>
       <nav class="flex flex-wrap justify-center gap-6 text-sm text-text-secondary" aria-label="Pages">
         {showHome && <a href="/" class="hover:text-text-primary">Home</a>}
@@ -60,8 +62,13 @@ import SocialIcon from "./SocialIcon.astro";
           <a href={l.href} class="hover:text-text-primary">{l.label}</a>
         ))}
         <a href={PRIVACY_URL} class="hover:text-text-primary">Privacy Policy</a>
+        <a href={TERMS_URL} class="hover:text-text-primary">Terms</a>
       </nav>
     </div>
+    <p class="mt-6 text-center text-xs leading-relaxed text-text-tertiary sm:text-left">
+      Verve is made by {COMPANY.name}, CIN {COMPANY.cin}. Registered office: {COMPANY.registeredOffice}.
+      <a href={`mailto:${COMPANY.email}`} class="hover:text-text-primary">{COMPANY.email}</a>
+    </p>
   </div>
 </footer>
 

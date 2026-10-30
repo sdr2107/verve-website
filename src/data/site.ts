@@ -49,6 +49,20 @@ export const YOUTUBE_URL = "https://www.youtube.com/@verveapp.health";
 export const PRIVACY_URL = "/privacy/";
 export const TERMS_URL = "/terms/";
 
+/**
+ * The company behind Verve, as the Certificate of Incorporation prints it
+ * (30 October 2026). The footer prints these on every page: the Companies
+ * Act, 2013 asks a company to show its name, CIN and registered office on
+ * its website, and anyone checking that the site and the company are one
+ * thing (a store, a payment provider, a startup programme) looks here.
+ */
+export const COMPANY = {
+  name: "Sadiya Healthcare Private Limited",
+  cin: "U58202MR2026PTC482242",
+  registeredOffice: "Flat 403, Plot 152, Sector 2, Ulwe, Panvel, Raigad, Maharashtra 410206, India",
+  email: "hello@verve-app.health",
+} as const;
+
 export type NavKey = "start" | "science" | "videos" | "my-health" | "coach" | "clinician" | "plans";
 
 export interface NavLink {
