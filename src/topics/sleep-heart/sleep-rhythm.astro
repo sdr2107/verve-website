@@ -10,13 +10,16 @@ import {
 
 /** The Whoop-only setup, reading by reading: source, timing, and the phone's part. Kept with the section it belongs to. */
 const whoopReadings: Array<[string, string, string]> = [
-  ["Sleep: hours, bedtime, drift, spread, regularity", "Whoop", "The next morning, once the Whoop app has processed the night. One asleep block; stages stay in the Whoop app."],
+  ["Sleep: hours, bedtime, drift, spread, regularity, efficiency, wakes", "Whoop", "The next morning, once the Whoop app has processed the night. In-bed, asleep and awake intervals, read as written (the in-bed window is Whoop's own); stages stay in the Whoop app on both phones."],
   ["Resting heart rate", "Whoop", "The next morning, against your own 30-day usual."],
   ["Workouts, with heart rate and intensity minutes", "Whoop", "About 15 to 20 minutes after a session you started in the Whoop app. Sessions you did not start get no heart rate."],
-  ["Steps total", "Whoop", "The next morning, as one block for the day, once the Whoop app has run. On an iPhone it is its own line under the phone's live count and never drives the live tile; on an Android phone with no step-counting app it is the Steps page itself, the latest written day by name (the Android section below)."],
+  ["Steps total", "Whoop", "The next morning, as one block for the day, stamped bedtime to bedtime and counted whole on the day it ends. Verve shows ONE count a day: Apple Health's merge where the phone also wrote, Whoop's block where nothing else did, or Whoop's own count if you choose it under Settings → Apple Health → Preferred device → Steps; the Steps page says which under the figure. On an Android phone with no step-counting app the block is the Steps page itself (the Android section below)."],
   ["Steps today, live", "Phone in your pocket", "Live. Without the phone, the tile stays low."],
   ["Cadence (steps a minute at your fastest stretch)", "Phone in your pocket", "Live. Needs minute-by-minute steps; Whoop's one block has no minutes in it."],
   ["Sitting hours and sit bouts", "Phone in your pocket", "Live. Same reason: Whoop's block says nothing about when you moved."],
+  ["Active energy, physical activity level", "Whoop, workouts only", "One sample per started workout, nothing for the rest of the day. The kilocalories show as workout energy; PAL is not read from a Whoop alone."],
+  ["Breathing rate in sleep", "Whoop", "The next morning, read against your 30 nights."],
+  ["Heart rate while asleep", "Nothing", "Blank: Whoop writes heart rate inside a started workout and nowhere else."],
   ["Night HRV", "Nothing", "Blank. Whoop keeps it in its app."],
   ["1-minute heart rate recovery", "Nothing", "Blank. An Apple Watch reading."],
   ["Standing minutes", "Nothing", "Blank. An Apple Watch reading."],
@@ -412,15 +415,22 @@ const whoopReadings: Array<[string, string, string]> = [
     a device that has actually written in the last 14 days. Next morning,
     open the Whoop app first and let it finish the night, then open Verve.
     Settings &rarr; Wearables should name Whoop on the sleep and heart-rate
-    rows, with the time it wrote.
+    rows, with the time it wrote. If you open Verve before the Whoop app
+    has run, the Sleep page&rsquo;s Day tab shows the last night it has,
+    dated, with an amber line: &ldquo;No night since Wed, 28 Oct in Apple
+    Health. Open Whoop so it can write last night.&rdquo; The Activity
+    row&rsquo;s energy says &ldquo;188 kcal yesterday&rdquo; for the same
+    reason, never a blank.
   </p>
   <p class="mt-3 text-sm leading-relaxed text-text-secondary">
     <strong class="text-text-primary">5. If you also had an Apple Watch.</strong>
     Settings &rarr; Apple Health &rarr; Preferred device. Once Whoop has
-    written, each row offers it; set sleep stages, resting heart rate and
-    workouts to Whoop. This matters even with the Watch in a drawer: for two
-    weeks the Watch still has more readings in Health&rsquo;s window than
-    the Whoop, and the automatic rule follows readings.
+    written, each row offers it; set resting heart rate, workouts, and from
+    28 October steps and active energy, to Whoop. Sleep stages cannot be
+    set to Whoop: it writes none. This matters even with the Watch in a
+    drawer: for two weeks the Watch still has more readings in
+    Health&rsquo;s window than the Whoop, and the automatic rule follows
+    readings.
   </p>
 
   <p class="mt-5 text-sm leading-relaxed text-text-secondary">
@@ -445,8 +455,12 @@ const whoopReadings: Array<[string, string, string]> = [
   <p class="mt-2 text-sm leading-relaxed text-text-secondary">
     <strong class="text-text-primary">What it does not write:</strong>
     HRV, cardio fitness (VO&#8322;max), one-minute heart rate recovery,
-    standing time. Whoop keeps HRV and its recovery score inside its own
-    app. Verve can only read what a vendor writes.
+    standing time, sleep stages, heart rate outside a started workout (so
+    the Sleep page&rsquo;s heart rate while asleep is blank), and all-day
+    active energy (its active energy is the workouts&rsquo; own, so
+    physical activity level is not read from it). Whoop keeps HRV, the
+    stage split and its recovery score inside its own app. Verve can only
+    read what a vendor writes.
   </p>
 
   <p class="mt-5 text-sm leading-relaxed text-text-secondary">
@@ -456,8 +470,8 @@ const whoopReadings: Array<[string, string, string]> = [
     <li><strong class="text-text-primary">Sleep</strong>: full, without stages. Every night arrives as in-bed, asleep and awake intervals; the light, deep and REM split stays in the Whoop app (confirmed on both phones, 30 October 2026, and asked for in Whoop&rsquo;s own forum for years). Bedtime average, drift, spread and the regularity index all work, since none of them needs stages. From 30 October the Sleep page also reads two things the intervals do carry, for any device: <em>efficiency</em>, time asleep over the band&rsquo;s own in-bed window (Whoop&rsquo;s 22:22 to 06:42 is read as written, 8h 20, not onset to final wake), and <em>wakes</em>, the awake episodes between falling asleep and the final wake with those over five minutes counted, against the National Sleep Foundation&rsquo;s marks of 85% and one. The page says under the cells that Whoop shares asleep and awake, not its stages.</li>
     <li><strong class="text-text-primary">Resting heart rate</strong>: full, read against your own 30-day median. A Whoop&rsquo;s resting rate and a Watch&rsquo;s are different quantities, so Verve never averages the two; if you switched from a Watch, the &ldquo;usual&rdquo; line blends both devices until the Watch days age out, about 30 days.</li>
     <li><strong class="text-text-primary">Workouts</strong>: full, seen on the first session (a 31-minute walk, 26 October). Whoop writes the workout and the heart rate inside it, several samples a minute, about 15 to 20 minutes after the session ends; Verve classifies the minutes from that heart rate. Outside a session Whoop writes no heart rate at all, so a walk you did not start in the Whoop app reaches Verve as steps only.</li>
-    <li><strong class="text-text-primary">Steps and movement</strong>: from the phone, not the band. Whoop writes a whole day&rsquo;s steps as one block, the morning after (2,523 steps stamped from midnight on the 24th to bedtime on the 25th, added at 06:52 on the 26th). Health settles two sources whole sample against whole sample, so with iPhone above WHOOP in Health&rsquo;s source order that block is dropped wherever the phone wrote a sample inside it, which is every day you carry the phone; with WHOOP above iPhone the block wins and the phone&rsquo;s minute-by-minute samples inside it are dropped instead, and Verve&rsquo;s sitting hours and cadence, which read steps in 5-minute buckets, see a day smeared flat. Keep iPhone above WHOOP and carry the phone. The two counts stay close: for 27 October the phone counted 6,324 and the band 6,642, pocket against wrist, about 5% apart, and the band&rsquo;s figure was the very block an Android phone on the same account read the next morning. Standing minutes are an Apple Watch reading and go blank.</li>
-    <li><strong class="text-text-primary">Active energy and physical activity level</strong>: workout energy only, and no PAL. Whoop writes one active-energy sample per started workout, about 30 minutes long, 170 to 190 kcal, and nothing for the rest of the day (four samples in four days on both phones, each a session). PAL is a whole day&rsquo;s energy over resting energy, and a day&rsquo;s workouts alone are not a day; built on them it read 1.22, &ldquo;Sedentary&rdquo;, for a week with 123 aerobic minutes. So when every energy writer in the window is workout-shaped, Verve withholds PAL, shows a dash with the reason, and labels the kilocalories <em>workout energy</em> wherever they appear: the Activity row, the Physical activity level page, the backed-up daily signals and this site. A Watch beside the Whoop restores PAL, and from 30 October each day in the window has its own denominator (Health&rsquo;s resting energy when it wrote one, the profile&rsquo;s BMR when it did not), so a Whoop workout on a day the Watch was off no longer inflates the week.</li>
+    <li><strong class="text-text-primary">Steps and movement</strong>: one count a day, never two. Whoop writes a whole day&rsquo;s steps as one block, stamped bedtime to bedtime and added the morning after (6,642 for 27 October, written at 18:44 on the 28th), and the phone writes a sample every few minutes while you carry it. Until 28 October both could reach the screen; since then every daily figure in Verve goes through one election: Apple Health&rsquo;s own merge where the phone wrote (what the Health app itself shows), Whoop&rsquo;s block counted whole on the day it ends where nothing else wrote, or Whoop&rsquo;s own count on every day it wrote if you choose it under Settings &rarr; Apple Health &rarr; Preferred device &rarr; Steps. The Steps page says under the figure where the count came from and what another writer wrote that was not counted. The hourly bars, cadence and sitting hours come from the phone&rsquo;s minute samples only, so the block never paints forty-five hours of bars; without the phone in a pocket they stay blank. The two counts stay close: for 27 October the phone counted 6,324 and the band 6,642, pocket against wrist, about 5% apart.</li>
+    <li><strong class="text-text-primary">Active energy and physical activity level</strong>: workout energy only, and no PAL. Whoop writes one active-energy sample per started workout, about 30 minutes long, 170 to 190 kcal, and nothing for the rest of the day (four samples in four days on both phones, each a session). PAL is a whole day&rsquo;s energy over resting energy, and a day&rsquo;s workouts alone are not a day; built on them it read 1.22, &ldquo;Sedentary&rdquo;, for a week with 123 aerobic minutes. So when every energy writer in the window is workout-shaped, Verve withholds PAL, shows a dash with the reason, and labels the kilocalories <em>workout energy</em> wherever they appear: the Activity row, the Physical activity level page, the backed-up daily signals and this site. A Watch beside the Whoop restores PAL, and from 30 October each day in the window has its own denominator (Health&rsquo;s resting energy when it wrote one, the profile&rsquo;s BMR when it did not), so a Whoop workout on a day the Watch was off no longer inflates the week. While Watch days are still in the window, PAL reads, and it slides lower on each Whoop-only day, because those days carry the workouts&rsquo; energy alone; once the last Watch day leaves the seven, it is withheld on the iPhone too, as on Android. Energy arrives per workout, not the next morning: a session started in the Whoop app is on the Activity row within the half hour.</li>
     <li><strong class="text-text-primary">Night HRV</strong>: blank. Not written. The Today tile shows a dash with &ldquo;No HRV asleep&rdquo;; the Night HRV page keeps every night another device wrote. The number lives in the Whoop app.</li>
     <li><strong class="text-text-primary">Recovery (one-minute heart rate recovery)</strong>: blank. An Apple Watch reading; the tile shows a dash once the last Watch reading is older than yesterday. Whoop&rsquo;s &ldquo;Recovery&rdquo; is a different thing: a score, not a heart-rate drop, and it stays in the Whoop app.</li>
     <li><strong class="text-text-primary">VO&#8322;max</strong>: none from Whoop. If a Watch wrote one earlier, Verve keeps showing that estimate for up to a year. The fix is the one Verve prefers anyway: run a field test and let the measured number lead.</li>
@@ -501,11 +515,12 @@ const whoopReadings: Array<[string, string, string]> = [
     is one asleep block, not stages; heart rate is written inside a started
     workout and nowhere else; the workout itself lands about 15 to 20
     minutes after it ends; steps arrive as one block the morning after.
-    Nothing on this page is from the permission list alone. The
-    &ldquo;Steps total&rdquo; line is in Verve from the same day: Steps
-    &rarr; Day, under the yesterday strip, &ldquo;WHOOP &middot; 2,523
-    &middot; yesterday&rdquo;, read from the band&rsquo;s own samples
-    whatever Health&rsquo;s source order says.
+    Nothing on this page is from the permission list alone. Until 28
+    October the Steps page carried the band&rsquo;s block as its own line
+    under the phone&rsquo;s count; two counts for one day confused more
+    than they told, so since then one elected count stands, with a line
+    under it saying whose it is, and the choice of device sits under
+    Settings &rarr; Apple Health &rarr; Preferred device.
   </p>
 </div>
 
@@ -557,6 +572,7 @@ const whoopReadings: Array<[string, string, string]> = [
     Apps &rarr; WHOOP &rarr; Battery &rarr; Unrestricted. Failing that, open
     Whoop before Verve each morning; a pull down on Verve&rsquo;s Activity tab
     then imports what it wrote.
+    Until the app has run, the Sleep page&rsquo;s Day tab keeps the last night it has, dated, with an amber line: &ldquo;No night since Wed, 28 Oct in Health Connect. Open Whoop so it can write last night.&rdquo;
   </p>
 
   <p class="mt-5 text-sm leading-relaxed text-text-secondary">
@@ -608,8 +624,15 @@ const whoopReadings: Array<[string, string, string]> = [
     Year lenses take their first median once the first full week closes on
     Sunday; the week the band was paired is not counted. Cadence and sitting
     hours stay blank until an app on the phone writes steps minute by
-    minute (Samsung Health on a Galaxy does); Settings &rarr; Health Connect
-    lists Whoop with &ldquo;steps, a day late&rdquo; so you know why.
+    minute (Samsung Health on a Galaxy does). Since 28 October the Steps
+    page says under the figure where the count came from (&ldquo;Whoop, one
+    block for the day, written after it ended&rdquo;), and Settings &rarr;
+    Health Connect &rarr; Preferred device has rows for steps and active
+    energy beside sleep and heart rate; on Android the automatic rule is
+    Health Connect&rsquo;s own app order, which you change in Health
+    Connect itself. A block is credited to the day it ends, bedtime to
+    bedtime, so Thursday&rsquo;s steps appear on Thursday once the app has
+    run on Friday morning.
   </p>
 
   <p class="mt-5 text-sm leading-relaxed text-text-secondary">
@@ -637,8 +660,9 @@ const whoopReadings: Array<[string, string, string]> = [
         <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Bedtime spread, sleep regularity</td><td class="px-3 py-2.5 text-text-secondary">Yes</td><td class="px-3 py-2.5 text-text-secondary">Yes</td><td class="px-3 py-2.5 text-text-tertiary">A first reading after 7 nights, trustworthy at 44</td></tr>
         <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Resting heart rate, against your own baseline</td><td class="px-3 py-2.5 text-text-secondary">Yes</td><td class="px-3 py-2.5 text-text-secondary">Yes</td><td class="px-3 py-2.5 text-text-tertiary">The number from the first night; your own normal after 14 days with a reading, full at 30. Until then the card says how many of the 14 it has</td></tr>
         <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Night HRV</td><td class="px-3 py-2.5 text-text-secondary">No: Whoop does not write it</td><td class="px-3 py-2.5 text-text-secondary">No, the same</td><td class="px-3 py-2.5 text-text-tertiary">Never from Whoop. From a band that writes it: 7 nights, baseline at 30. Apple Health carries SDNN, Health Connect rMSSD; Verve names which and never mixes them</td></tr>
+        <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Heart rate while asleep</td><td class="px-3 py-2.5 text-text-secondary">No: Whoop writes heart rate inside started workouts only</td><td class="px-3 py-2.5 text-text-secondary">No, the same</td><td class="px-3 py-2.5 text-text-tertiary">Never from Whoop; the Sleep page&rsquo;s heart-rate cell shows a dash</td></tr>
         <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">One-minute heart rate recovery</td><td class="px-3 py-2.5 text-text-secondary">Derived from the heart rate after a started session</td><td class="px-3 py-2.5 text-text-secondary">Derived the same way</td><td class="px-3 py-2.5 text-text-tertiary">From the first session that ends with the band still reading; the baseline after 5 readings over 30 days</td></tr>
-        <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Steps total</td><td class="px-3 py-2.5 text-text-secondary">Yes, one block the morning after, as a line under the phone&rsquo;s live count</td><td class="px-3 py-2.5 text-text-secondary">Yes: with no step-counting app on the phone it is the Steps page itself, the latest written day by name</td><td class="px-3 py-2.5 text-text-tertiary">Yesterday from the next morning, once the Whoop app has run; today only from a phone or watch counting through the day</td></tr>
+        <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Steps total</td><td class="px-3 py-2.5 text-text-secondary">Yes, one block the morning after; one count a day, Health&rsquo;s merge where the phone wrote, the block otherwise or when chosen as the preferred device</td><td class="px-3 py-2.5 text-text-secondary">Yes: with no step-counting app on the phone it is the Steps page itself, the latest written day by name</td><td class="px-3 py-2.5 text-text-tertiary">The morning after each day, once the Whoop app has run; credited to the day the block ends</td></tr>
         <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Steps, week and month medians</td><td class="px-3 py-2.5 text-text-secondary">Yes</td><td class="px-3 py-2.5 text-text-secondary">Yes</td><td class="px-3 py-2.5 text-text-tertiary">A first median once the first full week closes on Sunday; the week the band was paired does not count</td></tr>
         <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Step cadence, sitting hours</td><td class="px-3 py-2.5 text-text-secondary">From the phone in a pocket, not the band</td><td class="px-3 py-2.5 text-text-secondary">From a phone or watch that writes steps by the minute; Whoop&rsquo;s one block a day is not enough</td><td class="px-3 py-2.5 text-text-tertiary">The same day, when such a writer exists</td></tr>
         <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Physical activity level</td><td class="px-3 py-2.5 text-text-secondary">No: Whoop writes workout calories only, so PAL is withheld and the kilocalories are labelled workout energy</td><td class="px-3 py-2.5 text-text-secondary">No, the same</td><td class="px-3 py-2.5 text-text-tertiary">Never from a Whoop alone; with a Watch or a watch that writes all-day energy beside it, PAL returns, each day on its own denominator</td></tr>
