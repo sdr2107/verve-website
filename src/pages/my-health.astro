@@ -574,10 +574,29 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
              a line under the greeting that says the week in a breath. The lab
              values stay on Labs; the Body card carries the count and what is
              due. A card opens its section IN PLACE, under the grid. -->
-        <p id="ovline" class="mb-5 min-h-[22px] text-[14px] leading-relaxed text-text-secondary"></p>
+        <div class="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <p id="ovline" class="min-h-[22px] text-[14px] leading-relaxed text-text-secondary"></p>
+          <!-- fourteen dots: which days the store held a night or a reading (a view) -->
+          <div id="ovdays"></div>
+        </div>
         <!-- the four cards are a view (src/my-health/views/Overview): their frames are mounted
              before any request leaves, so the page has its height from the first paint -->
-        <div id="ovglance" class="grid min-h-[172px] gap-[18px] sm:grid-cols-2 lg:grid-cols-3"></div>
+        <div id="ovglance" class="grid min-h-[220px] gap-[18px] sm:grid-cols-2 lg:grid-cols-3"></div>
+        <!-- the week as a table, and where the readings come from (a view, and one static strip) -->
+        <div id="ovweek" class="mt-[18px]"></div>
+        <div class="mt-[18px] rounded-[20px] border border-white/10 bg-white/[0.03] p-5 sm:px-6">
+          <div class="font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">Where the readings come from</div>
+          <div class="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] sm:items-center">
+            <div class="rounded-2xl border border-white/14 px-4 py-3 text-center"><span class="block text-sm font-extrabold text-text-primary">Whatever you wear</span><span class="mt-0.5 block text-[11.5px] text-text-tertiary">Apple Watch, Garmin, Oura, WHOOP, Samsung, a phone alone</span></div>
+            <span class="hidden text-center text-xl text-text-muted sm:block" aria-hidden="true">&rarr;</span>
+            <div class="rounded-2xl border border-white/14 px-4 py-3 text-center"><span class="block text-sm font-extrabold text-text-primary">Apple Health &middot; Health Connect</span><span class="mt-0.5 block text-[11.5px] text-text-tertiary">the phone's own store; the wearable's app writes to it</span></div>
+            <span class="hidden text-center text-xl text-text-muted sm:block" aria-hidden="true">&rarr;</span>
+            <div class="rounded-2xl border border-white/14 px-4 py-3 text-center"><span class="block text-sm font-extrabold text-text-primary">Verve on the phone</span><span class="mt-0.5 block text-[11.5px] text-text-tertiary">reads the store, never one maker's cloud</span></div>
+            <span class="hidden text-center text-xl text-text-muted sm:block" aria-hidden="true">&rarr;</span>
+            <div class="rounded-2xl border border-white/14 px-4 py-3 text-center"><span class="block text-sm font-extrabold text-text-primary">This page</span><span class="mt-0.5 block text-[11.5px] text-text-tertiary">the same daily signals, with the writer's name</span></div>
+          </div>
+          <p class="mt-3 text-[12.5px] leading-relaxed text-text-secondary">Verve depends on the store, not on any wearable. What reaches this page is what your device's app chose to write there, and each card says who wrote it and what that writer leaves out, so a missing stage or a missing HRV is named, never guessed.</p>
+        </div>
 
         <p class="mt-7 font-mono text-[10.5px] text-text-muted lg:hidden">Drag a PDF anywhere on this page to add it.</p>
        </div>
@@ -3872,7 +3891,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   });
 
   // the Overview's four frames, before the session is even checked: the page has its shape from the first paint
-  mountOverview({ line: $("ovline"), glance: $("ovglance"), section: $("ovsection") });
+  mountOverview({ line: $("ovline"), glance: $("ovglance"), section: $("ovsection"), days: $("ovdays"), week: $("ovweek") });
   mountLabs($("labsroot"));
   mountDepth($("depthroot"));
   mountReports({ cards: $("repcards"), imports: $("appimportsroot"), years: $("yearsonfileroot") });

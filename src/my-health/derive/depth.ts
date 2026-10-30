@@ -305,7 +305,7 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
     hrFig != null ? String(hrFig) : hr?.latest != null ? String(hr.latest) : null,
     hrFig != null ? `bpm · ${hr7.length === 1 ? "1 reading this week" : `7-day median of ${hr7.length}`}` : "bpm · latest workout", hrOff ? (hrFig != null && hrFig <= 12 ? "text-danger" : "text-warning") : "text-text-primary",
     hr && hrPts.length ? miniTrend(hrPts.map((j) => ({ day: j.day, v: j.bpm, off: j.low, title: `${esc(fmtDay(j.day))}: ${j.bpm} bpm in the first minute` })), hr.band, hr.median, hrWin.length ? daysBack(today, 27) : hrPts[0].day, today) : "",
-    !p.account_id || !canSeeHeart ? nothingYet : "No recovery on file: the watch records one after a workout that ends above the Zone 2 floor.",
+    !p.account_id || !canSeeHeart ? nothingYet : "No recovery on file: a wearable records one after a workout that ends above the Zone 2 floor.",
     hr?.latest == null ? "—" : hr.band ? `usual ${hr.median} · band ${hr.band.lo}–${hr.band.hi} · cited line 12` : `a usual needs 5 readings · ${hr.judged.length} so far · cited line 12`,
     "Heart rate recovery after each workout, the person's own middle-half band shaded, the usual dashed, readings under it marked");
 

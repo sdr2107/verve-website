@@ -39,7 +39,7 @@ export type Marker = {
 export const SEC_META: Record<SecKey, { label: string; dot: string; blurb: string; science: string }> = {
   fitness:  { label: "Fitness",       dot: "#f97316", blurb: "What a MET is, how yours is measured, and how much to trust the answer.", science: "/science/fitness" },
   movement: { label: "Movement",      dot: "#34d399", blurb: "How much, how hard, how often, and how much of the rest of the day is sitting.", science: "/science/movement" },
-  heart:    { label: "Sleep & heart", dot: "#818cf8", blurb: "What the watch reads while you are asleep and in the minute after you stop.", science: "/science/sleep-heart" },
+  heart:    { label: "Sleep & heart", dot: "#818cf8", blurb: "What your wearable records while you are asleep and in the minute after you stop, whichever it is.", science: "/science/sleep-heart" },
   body:     { label: "Body",          dot: "#FBBF24", blurb: "Metabolic, heart and muscle: the same three shelves as the app's Body page, from the app and the reports.", science: "/science/body" },
 };
 export const SEC_ORDER: SecKey[] = ["fitness", "movement", "heart", "body"];
@@ -159,7 +159,7 @@ export function buildMarkers(src: MarkerSources): Marker[] {
       series: () => [...days()].map(([d, r]) => ({ d, v: r.z2 })).sort((a, b) => a.d.localeCompare(b.d)), goal: () => 150,
       reads: (pts) => { const m = mondayOf(new Date()); const wk = pts.filter((p) => p.d >= m).reduce((t, p) => t + p.v, 0); return [`<strong class="text-text-primary">${round0(wk)} of 150 minutes</strong> this week in the band. The target is a weekly dose, not a daily one.`, "The band moves as you do: a morning above your normal resting rate narrows it."]; } },
     { key: "sessions", section: "movement", label: "Workouts", unit: "", sub: "Sessions the app read, by day", daily: true, sum: true, color: "#a5b4fc",
-      science: "/science/movement/a-workout", source: "One session is one row; the app keeps what the watch recorded and only reads the rest.", fmt: (v) => round0(v),
+      science: "/science/movement/a-workout", source: "One session is one row; the app keeps what the wearable recorded and only reads the rest.", fmt: (v) => round0(v),
       series: () => [...days()].map(([d, r]) => ({ d, v: r.n })).sort((a, b) => a.d.localeCompare(b.d)),
       reads: () => { const a = activitySummary(weeks, acts, weeklyGoal(), todayStr(), mondayOf(new Date())); const kinds = [...a.kinds].sort((x, y) => y[1] - x[1]).slice(0, 3).map(([k, n]) => `${k} ${Math.round(n / Math.max(1, a.recent.length))}`).join(", "); return [`<strong class="text-text-primary">${Math.round(a.perWeek)} a week</strong> over the last ${a.recent.length} weeks${kinds ? `: ${esc(kinds)}` : ""}.`, `Last workout <strong class="text-text-primary">${a.quietDays == null ? "none on file" : a.quietDays === 0 ? "today" : a.quietDays === 1 ? "yesterday" : `${a.quietDays} days ago`}</strong>.`]; } },
     { key: "vig", section: "movement", label: "Vigorous", unit: "min", sub: "Minutes graded vigorous, by day", daily: true, sum: true, color: "#f87171",
@@ -171,7 +171,7 @@ export function buildMarkers(src: MarkerSources): Marker[] {
       series: () => signals.filter((r) => r.steps != null).map((r) => ({ d: String(r.day), v: Number(r.steps), ...(r.steps_source ? { note: String(r.steps_source) } : {}) })), lines: () => STEP_LINES, table: true,
       reads: () => { const h = heart(); if (!h?.steps.avg) return ["No steps on file yet."]; return [`<strong class="text-text-primary">${h.steps.avg.toLocaleString()} a day</strong> over the last seven${h.steps.prior != null ? `, ${h.steps.avg >= h.steps.prior ? "up" : "down"} from ${h.steps.prior.toLocaleString()} the week before` : ""}.`, "Paluch's 2023 pooled cohorts found the mortality curve flattening around 7,000 to 8,000 a day for adults over 60, higher for younger adults, with the fall steepest from the lowest counts."]; } },
     { key: "strength", section: "movement", label: "Strength", unit: "min", sub: "Minutes of strength work, by day", daily: true, sum: true, color: "#a78bfa",
-      science: "/science/movement/strength-training", source: "Sessions the app graded as strength, each as the watch or the person recorded it.", fmt: (v) => round0(v),
+      science: "/science/movement/strength-training", source: "Sessions the app graded as strength, each as the wearable or the person recorded it.", fmt: (v) => round0(v),
       series: () => { const by2 = new Map<string, number>(); for (const a of acts) { if (!a?.timestamp || a.activity_type !== "strength") continue; const d = localDay(a.timestamp); by2.set(d, (by2.get(d) ?? 0) + (Number(a.duration_minutes) || 0)); } return [...by2].map(([d, v]) => ({ d, v })).sort((a, b) => a.d.localeCompare(b.d)); },
       goal: () => 60,
       reads: (pts) => { const m = mondayOf(new Date()); const wk = pts.filter((p) => p.d >= m).reduce((t, p) => t + p.v, 0); return [`<strong class="text-text-primary">${round0(wk)} min</strong> this week, Monday to today, against the cited 60 a week.`]; } },
@@ -191,11 +191,11 @@ export function buildMarkers(src: MarkerSources): Marker[] {
         const a7 = avgOf(addDays(todayStr(), -7)), a30 = avgOf(addDays(todayStr(), -30));
         return [
           `<strong class="text-text-primary">${round0(l.v)} kcal</strong> ${l.d === todayStr() ? "today so far" : `on ${esc(fmtDay(l.d))}`}${a7 != null ? `; ${a7} a day over the last 7 days` : ""}${a30 != null ? `, ${a30} over the last 30` : ""}.`,
-          "It is the watch's estimate: wrist energy is off by more than 30% in studies, so read the trend and the activity level beside it, not the calorie.",
+          "It is the wearable's estimate: wrist energy is off by more than 30% in studies, so read the trend and the activity level beside it, not the calorie.",
         ];
       },
       rangeReads: (range) => energyRangeReads(range, signals) },
-    { key: "standing", section: "movement", label: "Standing", unit: "min", sub: "Movement balance: minutes on your feet, with a watch", daily: true, color: "#34d399",
+    { key: "standing", section: "movement", label: "Standing", unit: "min", sub: "Movement balance: minutes on your feet, from a wearable that writes stand time", daily: true, color: "#34d399",
       science: "/science/movement/movement-balance", source: "Apple Health's stand minutes, one total a day, sent by the app on each sync.", fmt: (v) => round0(v),
       series: () => signalSeries("standing_minutes"),
       reads: (pts) => pts.length ? [`<strong class="text-text-primary">${round0(pts[pts.length - 1].v)} min</strong> standing ${pts[pts.length - 1].d === todayStr() ? "today" : `on ${esc(fmtDay(pts[pts.length - 1].d))}`}; the other side of the day is Sitting, beside this.`] : ["No standing minutes yet: a watch writes them, and the app sends them."] },
@@ -206,7 +206,7 @@ export function buildMarkers(src: MarkerSources): Marker[] {
     { key: "cadence", section: "movement", label: "Cadence", unit: "spm", sub: "The day's best thirty minutes, steps a minute", daily: true, color: "#34d399",
       science: "/science/movement/steps", source: "Apple Health's walking cadence, the day's best half hour, sent by the app on each sync.", fmt: (v) => round0(v),
       series: () => signalSeries("cadence_spm"),
-      reads: (pts) => pts.length ? [`<strong class="text-text-primary">${round0(pts[pts.length - 1].v)} steps a minute</strong> for the best thirty minutes ${pts[pts.length - 1].d === todayStr() ? "today" : `on ${esc(fmtDay(pts[pts.length - 1].d))}`}; a hundred is the brisk line the app cites.`] : ["No cadence yet: a watch or phone in the pocket writes it, and the app sends it."] },
+      reads: (pts) => pts.length ? [`<strong class="text-text-primary">${round0(pts[pts.length - 1].v)} steps a minute</strong> for the best thirty minutes ${pts[pts.length - 1].d === todayStr() ? "today" : `on ${esc(fmtDay(pts[pts.length - 1].d))}`}; a hundred is the brisk line the app cites.`] : ["No cadence yet: a wearable or a phone in the pocket writes it, and the app sends it."] },
     // ── sleep & heart ──
     { key: "rhr", section: "heart", label: "Resting heart rate", unit: "bpm", sub: "Every morning, against your own normal", daily: true, color: "#818cf8",
       science: "/science/sleep-heart/resting-heart-rate", source: "Apple's one figure per day, from heart rate during stillness, weighted to sleep and the early morning.", fmt: (v) => round0(v),
@@ -219,7 +219,7 @@ export function buildMarkers(src: MarkerSources): Marker[] {
     { key: "hrr", section: "heart", label: "Heart rate recovery", unit: "bpm", sub: "The drop in the minute after a workout", daily: true, color: "#818cf8",
       science: "/science/sleep-heart/heart-rate-recovery", source: "Apple's stored one-minute recovery after each workout; for a workout without one, the rate at the end minus the rate a minute later, marked derived.", fmt: (v) => round0(v),
       series: () => signalSeries("hrr_bpm"),
-      reads: () => { const h = heart(); if (!h || h.hrr.latest == null) return ["No recovery on file: the watch records one after a workout that ends above the Zone 2 floor."]; return [`<strong class="${h.hrr.latest <= 12 ? "text-danger" : "text-text-primary"}">${h.hrr.latest} bpm</strong> ${esc(dayWord(h.hrr.latestDay!))}${h.hrr.median != null ? `, own 30-day median ${h.hrr.median}` : ""}.`, h.hrr.latest <= 12 ? `<span class="text-danger">At or under the one cited line, 12 bpm</span> (Cole 1999). Worth a conversation if it stays there; one reading is not.` : "Above the one cited line, 12 bpm. There is no validated \"good\" threshold, so no verdict word above it."]; } },
+      reads: () => { const h = heart(); if (!h || h.hrr.latest == null) return ["No recovery on file: a wearable records one after a workout that ends above the Zone 2 floor."]; return [`<strong class="${h.hrr.latest <= 12 ? "text-danger" : "text-text-primary"}">${h.hrr.latest} bpm</strong> ${esc(dayWord(h.hrr.latestDay!))}${h.hrr.median != null ? `, own 30-day median ${h.hrr.median}` : ""}.`, h.hrr.latest <= 12 ? `<span class="text-danger">At or under the one cited line, 12 bpm</span> (Cole 1999). Worth a conversation if it stays there; one reading is not.` : "Above the one cited line, 12 bpm. There is no validated \"good\" threshold, so no verdict word above it."]; } },
     { key: "hrv", section: "heart", label: "Night HRV", unit: "ms", sub: "One writer's nights, against your own middle half", daily: true, color: "#818cf8",
       science: "/science/sleep-heart/night-hrv", source: "The median of the HRV samples inside each night's sleep window, from the most recent writer only; the writer and its method are on the card.", fmt: (v) => round0(v),
       series: () => { const rows = signals.filter((r) => r.hrv_night_ms != null); const w = rows[rows.length - 1]?.hrv_source ?? null; return rows.filter((r) => (r.hrv_source ?? null) === w).map((r) => ({ d: String(r.day), v: Number(r.hrv_night_ms), note: `${String(r.hrv_source ?? "unknown writer")} · ${r.hrv_method === "sdnn" ? "SDNN" : r.hrv_method === "rmssd" ? "rMSSD" : "method undeclared"}` })); },
