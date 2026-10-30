@@ -71,6 +71,26 @@ import VideoSlot from "../../components/VideoSlot.astro";
     <em>BMR estimated from your profile</em> wherever it shows such a figure, and measured
     resting energy wins whenever there is enough of it.
   </p>
+  <p id="per-day-denominator" class="scroll-mt-8">
+    Since 30 October 2026 that choice is made a day at a time, not a window at a time. Each day in
+    a window has its own denominator: Health's resting energy for that day when it wrote one, the
+    profile's BMR when it did not. The window used to sum active energy over seven days and divide
+    by the five days that had a resting figure, which inflated both the kilocalories a day and the
+    PAL whenever a second device wrote energy on days the watch was off. A window now reads
+    <em>BMR estimated</em> when every day took the profile's figure, says <em>resting energy from
+    your profile on N of 7 days</em> when some did, and says nothing when none did.
+  </p>
+  <p id="workout-energy-only" class="scroll-mt-8">
+    One device gets no PAL at all: a Whoop. Whoop writes one active-energy sample per started
+    workout, about 30 minutes long, and nothing for the rest of the day, on iPhone and on Android
+    alike (four samples in four days on both phones, each a session, 30 October 2026). A day's
+    workouts are not a day's energy; built on them, the ratio read 1.22, &ldquo;Sedentary&rdquo;,
+    for a week with 123 aerobic minutes. So when every writer of active energy in the window is
+    workout-shaped (its samples run ten minutes or more and it writes at most four a day), Verve
+    withholds PAL, shows a dash with the reason, and labels the kilocalories <em>workout
+    energy</em> on the Activity row, on this page's lenses, in the backed-up daily signals and on
+    this site. A watch that writes energy through the day beside the Whoop restores it.
+  </p>
 
   <p>
     On the website, My health shows the same two figures, activity level and active energy,

@@ -197,7 +197,7 @@ export const TOPICS: Topic[] = [
     subject: "movement",
     citations: [...MOVEMENT_BALANCE_SECTION, ...SEDENTARY_EXTRA],
   },
-  { slug: "activity-level", label: "Physical activity level", sub: "How active your whole day is, and how much of that number to trust", subject: "movement", citations: [] },
+  { slug: "activity-level", label: "Physical activity level", sub: "How active your whole day is, and how much of that number to trust", subject: "movement", citations: [], subAnchors: ["per-day-denominator", "workout-energy-only"] },
 
   // ── Sleep & heart ──────────────────────────────────────────────────────
   { slug: "today-tiles", label: "The morning read", sub: "How the four Today tiles are coloured, and where each line comes from", subject: "sleep-heart", citations: [] },
