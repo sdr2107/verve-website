@@ -5,6 +5,11 @@
  * how many people they can see and how deep; it never decides what anyone
  * else must allow. Consent is free on every plan.
  *
+ * A paid seat is a paid seat (2026-10-31): Pro is the same plan here and in
+ * the app, and every seat a plan pays for — the five of a Max, the coach and
+ * each client of an Enterprise — carries that person's app Pro. Nobody is
+ * charged twice for one person. The app never mentions these plans.
+ *
  * Prices are null until the business is registered and the numbers are
  * chosen: the page then prints "price to be set" and offers no checkout.
  * Two flags gate the whole thing: PLANS_OPEN puts the page in the nav and
@@ -104,9 +109,11 @@ export const FEATURE_ROWS: { section: string; rows: { label: string; cells: [boo
   ] },
   { section: "The app", rows: [
     { label: "Verve app, free tier", cells: [true, true, true, true] },
-    // One Pro, two tills (decided 2026-10-31): Pro is the same plan here and in the app. The
-    // purchase working in both places is being built; the card under the chart says so.
-    { label: "Pro in the app", cells: [false, "the same Pro", "the same Pro, for the payer", "the same Pro, for the payer"] },
+    // One Pro, two tills (decided 2026-10-31): Pro is the same plan here and in the app, and a
+    // paid seat is a paid seat — everyone on a Max plan and every client on an Enterprise plan
+    // has app Pro through it (a person needs their own login to receive it). The purchase
+    // working in both places is being built; the card under the chart says so.
+    { label: "Pro in the app", cells: [false, "the same Pro", "the same Pro, for all five", "the same Pro, for the coach and every client"] },
   ] },
 ];
 
