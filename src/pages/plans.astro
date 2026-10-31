@@ -30,6 +30,7 @@ const CURRENCIES = ["inr", "usd"] as const;
         <div class="font-mono text-[10px] font-semibold tracking-[0.14em] text-accent-light">PLANS</div>
         <h1 class="mt-2 text-[30px] font-extrabold leading-[1.05] tracking-[-0.02em] text-text-primary sm:text-4xl">One login. Three plans.</h1>
         <p class="mt-3 text-[15px] leading-relaxed text-text-secondary">Every person has their own login. A plan sits on whoever pays and decides how many people they can see, and how deep. Sharing your page, and stopping it, is free on every plan.</p>
+        <p class="mt-2 text-[14px] leading-relaxed text-text-secondary">How to choose: just yourself, <strong class="font-semibold text-text-primary">Pro</strong>, the same Pro as in the app. Your family, <strong class="font-semibold text-text-primary">Max</strong>. A coach and their clients, <strong class="font-semibold text-text-primary">Enterprise</strong>. Free shows you your numbers; Pro reads them for you.</p>
       </div>
       <div class="flex flex-wrap items-center gap-3">
         <div class="flex items-center gap-1 rounded-full border border-white/12 p-1" role="group" aria-label="Billing period">
@@ -58,7 +59,7 @@ const CURRENCIES = ["inr", "usd"] as const;
               <span> Each further {p.peopleWord}: {CURRENCIES.map((c) => <span data-extra data-currency={c}>{extraText(p, c)}</span>)} a month.</span>
             ) : null}
           </div>
-          <button type="button" data-choose={p.key} class={`mt-3 min-h-11 rounded-xl px-4 text-sm font-bold transition-opacity hover:opacity-90 ${p.highlight ? "bg-accent text-canvas" : "border border-white/18 text-text-primary"}`}>{p.cta}</button>
+          <button type="button" data-choose={p.key} data-priced={p.monthly.inr != null ? "" : undefined} class={`mt-3 min-h-11 rounded-xl px-4 text-sm font-bold transition-opacity hover:opacity-90 ${p.highlight ? "bg-accent text-canvas" : "border border-white/18 text-text-primary"}`}>{p.monthly.inr == null ? "Price to be set" : p.cta}</button>
         </div>
       ))}
     </div>
@@ -104,7 +105,7 @@ const CURRENCIES = ["inr", "usd"] as const;
     <div class="mt-8 grid gap-3 sm:grid-cols-3">
       <div class="rounded-2xl border border-white/10 p-4">
         <div class="font-mono text-[10px] font-semibold tracking-[0.12em] text-text-tertiary">BILLED WHERE</div>
-        <p class="mt-1 text-[13px] leading-relaxed text-text-secondary">On the website: Razorpay in India, Stripe elsewhere. Prices in ₹ include GST. The app's Pro is a separate purchase in the App Store, and the app never mentions these plans.</p>
+        <p class="mt-1 text-[13px] leading-relaxed text-text-secondary">On the website: Razorpay in India, Stripe elsewhere. Prices in ₹ include GST. Pro is one plan, the same here and in the app. A Pro bought here working in the app, and the app's Pro working here, is being built; until it is, they are two purchases.</p>
       </div>
       <div class="rounded-2xl border border-white/10 p-4">
         <div class="font-mono text-[10px] font-semibold tracking-[0.12em] text-text-tertiary">CONSENT IS NEVER PAID</div>
@@ -149,6 +150,8 @@ const CURRENCIES = ["inr", "usd"] as const;
     document.querySelectorAll<HTMLElement>("[data-choose]").forEach((b) => b.addEventListener("click", async () => {
       const plan = b.dataset.choose!, period = main.dataset.period!;
       if (plan === "free") { location.href = "/my-health/"; return; }
+      // a plan whose price is still null: say so, never call checkout for it
+      if (!b.hasAttribute("data-priced")) { msg("This plan's price is being set. Until it is, everything here is free: your own page, your first two reports read, sharing with anyone."); return; }
       if (!open) { msg("Plans open soon. Until then everything here is free: your own page, your first two reports read, sharing with anyone."); return; }
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { msg("Sign in on My health first, then choose a plan; it is tied to your account."); return; }
