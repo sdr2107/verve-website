@@ -12,7 +12,8 @@
  * people to their plan. Both off, nothing changes for anyone.
  */
 
-export const PLANS_OPEN = false;
+/** On from 2026-10-31: the page is in the nav with its prices still to be set; a plan without a price cannot be chosen. */
+export const PLANS_OPEN = true;
 export const PLANS_ENFORCED = false;
 /** "The Guide's read" (was "In Verve's words") on the In depth tab: on from 26 Oct 2026 (the policy names it; the function secret DEPTH_SUMMARY_OPEN=true). */
 export const AI_SUMMARY_OPEN = true;
@@ -103,7 +104,9 @@ export const FEATURE_ROWS: { section: string; rows: { label: string; cells: [boo
   ] },
   { section: "The app", rows: [
     { label: "Verve app, free tier", cells: [true, true, true, true] },
-    { label: "App Pro", cells: ["separate, in the App Store", "separate", "separate", "separate"] },
+    // One Pro, two tills (decided 2026-10-31): Pro is the same plan here and in the app. The
+    // purchase working in both places is being built; the card under the chart says so.
+    { label: "Pro in the app", cells: [false, "the same Pro", "the same Pro, for the payer", "the same Pro, for the payer"] },
   ] },
 ];
 
