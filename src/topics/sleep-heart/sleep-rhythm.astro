@@ -25,6 +25,23 @@ const whoopReadings: Array<[string, string, string]> = [
   ["Standing minutes", "Nothing", "Blank. An Apple Watch reading."],
   ["VO₂max estimate from a wearable", "Nothing", "Blank. Verve's own field test is the measure that counts, so run it."],
 ];
+
+/**
+ * What writes what — the night's readings and the body's, device by device
+ * (1 November 2026). WHOOP's column is WHOOP's own Apple Health support
+ * article; the Watch column is Apple's Vitals page; the Health Connect column
+ * is the record type the Android store has. The last column is Verve 1.7.
+ */
+const whatWritesWhat: Array<[string, string, string, string, string, string]> = [
+  ["Resting heart rate", "RestingHeartRate", "Yes, one a day", "Yes", "RestingHeartRate", "Vitals card and page; its own page; the Guide; daily signals"],
+  ["Night HRV", "HeartRateVariabilitySDNN", "No (rMSSD, not SDNN)", "Yes, several a night", "HeartRateVariabilityRmssd", "Vitals card and page; its own page; the Guide; daily signals"],
+  ["Breathing rate", "RespiratoryRate", "Yes, a nightly average", "Yes, during sleep", "RespiratoryRate", "Vitals card and page; the Sleep page"],
+  ["Blood oxygen", "OxygenSaturation", "Yes, an overnight average", "Yes, Series 6 and later", "OxygenSaturation", "Vitals card and page, from 1.7"],
+  ["Wrist or skin temperature", "AppleSleepingWristTemperature", "No, stays in WHOOP", "Yes, Series 8 and later", "SkinTemperature (deltas)", "Android from 1.7; iPhone waits for one more piece of native code"],
+  ["Blood pressure", "BloodPressureSystolic and Diastolic", "No (MG insights stay in WHOOP)", "No values; a cuff writes them", "BloodPressure", "Body's metabolic marker, read live; the Vitals row; the website"],
+  ["Body fat, fat-free mass", "BodyFatPercentage, LeanBodyMass", "No; a scale writes them", "No; a scale writes them", "BodyFat, LeanBodyMass", "Body, read live from the store's log from 1.7"],
+  ["Waist", "WaistCircumference", "No; typed, or a tape app", "No", "No record type", "Body, read live on iPhone from 1.7; typed on Android"],
+];
 ---
 
 <SplitCard eyebrow="In the app" wide>
@@ -530,6 +547,55 @@ const whoopReadings: Array<[string, string, string]> = [
   </p>
 </div>
 
+<!-- ── What writes what: WHOOP, Apple Watch, cuff, Health Connect ── -->
+<div id="what-writes-what" class="mt-4 scroll-mt-8 rounded-2xl border border-white/8 bg-white/4 p-6">
+  <p class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-accent-light">What writes what</p>
+  <p class="mt-2 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">The night&rsquo;s readings and the body&rsquo;s, device by device.</strong>
+    Verve reads the phone&rsquo;s health store and nothing else, so a reading
+    reaches it only when something wrote it there. Who writes each one, as of
+    1 November 2026: WHOOP&rsquo;s column is WHOOP&rsquo;s own Apple Health
+    support article, the Watch column is Apple&rsquo;s Vitals page, and the
+    last column is what Verve does with it.
+  </p>
+  <div class="mt-3 overflow-x-auto rounded-xl border border-white/10 bg-black/20">
+    <table class="w-full min-w-[820px] text-[12.5px]">
+      <thead>
+        <tr class="text-left font-mono text-[10px] uppercase tracking-wider text-text-tertiary">
+          <th class="px-3 py-2.5 font-semibold">Reading</th>
+          <th class="px-3 py-2.5 font-semibold">Apple Health type</th>
+          <th class="px-3 py-2.5 font-semibold">Whoop writes</th>
+          <th class="px-3 py-2.5 font-semibold">Apple Watch writes</th>
+          <th class="px-3 py-2.5 font-semibold">Health Connect</th>
+          <th class="px-3 py-2.5 font-semibold">In Verve</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-white/[0.06]">
+        {whatWritesWhat.map(([r, type, whoop, watch, hc, verve]) => (
+          <tr class="align-top">
+            <td class="px-3 py-2.5 font-semibold text-text-primary">{r}</td>
+            <td class="px-3 py-2.5 font-mono text-[11px] text-text-secondary">{type}</td>
+            <td class="px-3 py-2.5 text-text-secondary">{whoop}</td>
+            <td class="px-3 py-2.5 text-text-secondary">{watch}</td>
+            <td class="px-3 py-2.5 font-mono text-[11px] text-text-secondary">{hc}</td>
+            <td class="px-3 py-2.5 text-text-tertiary">{verve}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p class="mt-3 text-xs leading-relaxed text-text-tertiary">
+    In the app every one of these is read against your own last 30 nights,
+    never a population range: the middle half of your nights is your range,
+    and the Vitals card says how many of the night&rsquo;s readings sat inside
+    it. WHOOP&rsquo;s Health Connect list is not published; on an Android
+    phone, Health Connect &rarr; App permissions &rarr; WHOOP shows it. Blood
+    pressure comes from a cuff that syncs to the store, or from the readings
+    you type into Body; Verve stores none of the store&rsquo;s readings and
+    reads its log when a page opens.
+  </p>
+</div>
+
 <!-- ── WHOOP on Android, and iPhone against Android ── -->
 <div id="whoop-android" class="mt-4 scroll-mt-8 rounded-2xl border border-white/8 bg-white/4 p-6">
   <p class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-accent-light">If you wear a Whoop on Android</p>
@@ -673,7 +739,7 @@ const whoopReadings: Array<[string, string, string]> = [
         <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Step cadence, sitting hours</td><td class="px-3 py-2.5 text-text-secondary">From the phone in a pocket, not the band</td><td class="px-3 py-2.5 text-text-secondary">From a phone or watch that writes steps by the minute; Whoop&rsquo;s one block a day is not enough</td><td class="px-3 py-2.5 text-text-tertiary">The same day, when such a writer exists</td></tr>
         <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Physical activity level</td><td class="px-3 py-2.5 text-text-secondary">No: Whoop writes workout calories only, so PAL is withheld and the kilocalories are labelled workout energy</td><td class="px-3 py-2.5 text-text-secondary">No, the same</td><td class="px-3 py-2.5 text-text-tertiary">Never from a Whoop alone; with a Watch or a watch that writes all-day energy beside it, PAL returns, each day on its own denominator</td></tr>
         <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Weight, lean body mass</td><td class="px-3 py-2.5 text-text-secondary">Each reading as written</td><td class="px-3 py-2.5 text-text-secondary">The same</td><td class="px-3 py-2.5 text-text-tertiary">As soon as a scale or the app writes one</td></tr>
-        <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Breathing rate in sleep</td><td class="px-3 py-2.5 text-text-secondary">Yes</td><td class="px-3 py-2.5 text-text-secondary">Yes</td><td class="px-3 py-2.5 text-text-tertiary">From the first night. Whoop also writes blood oxygen, which Verve does not read on either phone</td></tr>
+        <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Breathing rate in sleep</td><td class="px-3 py-2.5 text-text-secondary">Yes</td><td class="px-3 py-2.5 text-text-secondary">Yes</td><td class="px-3 py-2.5 text-text-tertiary">From the first night. Whoop also writes blood oxygen, which Verve reads from 1.7 as a Vitals row</td></tr>
         <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Wearable VO&#8322;max</td><td class="px-3 py-2.5 text-text-secondary">No</td><td class="px-3 py-2.5 text-text-secondary">No</td><td class="px-3 py-2.5 text-text-tertiary">Never from Whoop; a typed fitness test shows at once on both</td></tr>
         <tr class="align-top"><td class="px-3 py-2.5 font-semibold text-text-primary">Standing minutes</td><td class="px-3 py-2.5 text-text-secondary">Apple Watch only</td><td class="px-3 py-2.5 text-text-secondary">No Android store carries it</td><td class="px-3 py-2.5 text-text-tertiary">Never from Whoop on either</td></tr>
       </tbody>
