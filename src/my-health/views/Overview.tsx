@@ -234,7 +234,7 @@ export function DaysWithData() {
   );
 }
 
-/** Your week: Monday to Sunday across, the five signals down, straight from the daily signals. */
+/** Your week: Monday to Sunday across, the signals down, straight from the daily signals. */
 export function WeekTable() {
   const d = derived.value;
   if (!d || !d.signals.length) return null;
@@ -247,6 +247,12 @@ export function WeekTable() {
   type Row = { label: string; unit: string; of: (x: string) => number | null; fmt: (v: number) => string; tone: (v: number) => string };
   const rows: Row[] = [
     { label: "Sleep", unit: "h", of: (x) => byDay.get(x)?.sleep_minutes != null ? byDay.get(x).sleep_minutes / 60 : null, fmt: (v) => v.toFixed(1), tone: (v) => v < 7 ? "text-warning" : "" },
+    // the rest of the night, from the same rows since 2 Nov 2026: efficiency against the app's 85% mark, the breathing,
+    // the oxygen and the sleeping heart rate as read — a column the app has not pushed yet simply stays a dash
+    { label: "Sleep efficiency", unit: "%", of: (x) => { const r = byDay.get(x); return r?.sleep_minutes != null && r?.sleep_in_bed_min > 0 ? (100 * r.sleep_minutes) / r.sleep_in_bed_min : null; }, fmt: (v) => round0(v), tone: (v) => v < 85 ? "text-warning" : "" },
+    { label: "Sleeping heart rate", unit: "bpm", of: (x) => byDay.get(x)?.sleep_hr_bpm ?? null, fmt: (v) => round0(v), tone: () => "" },
+    { label: "Breathing", unit: "/min", of: (x) => byDay.get(x)?.breathing_rpm ?? null, fmt: (v) => Number(v).toFixed(1), tone: () => "" },
+    { label: "Blood oxygen", unit: "%", of: (x) => byDay.get(x)?.spo2_pct ?? null, fmt: (v) => round0(v), tone: () => "" },
     { label: "Resting heart rate", unit: "bpm", of: (x) => byDay.get(x)?.resting_hr ?? null, fmt: (v) => round0(v), tone: (v) => base != null && v - base >= 10 ? "text-danger" : base != null && v - base >= 5 ? "text-warning" : "" },
     { label: "Recovery", unit: "↓bpm", of: (x) => byDay.get(x)?.hrr_bpm ?? null, fmt: (v) => round0(v), tone: (v) => v <= 12 ? "text-danger" : "" },
     { label: "Dose", unit: "MET-min", of: (x) => x <= today ? (dose.get(x)?.dose ?? 0) : null, fmt: (v) => round0(v), tone: () => "" },
@@ -275,7 +281,7 @@ export function WeekTable() {
           </tbody>
         </table>
       </div>
-      <p class="mt-3 text-[11.5px] text-text-tertiary">A dash is a day the store holds nothing for; a dot is a day not yet here. Colour only where a line is crossed: sleep under 7 h, a resting rate 5 over normal, a recovery under 12, sitting past 10.6 h.</p>
+      <p class="mt-3 text-[11.5px] text-text-tertiary">A dash is a day the store holds nothing for; a dot is a day not yet here. Colour only where a line is crossed: sleep under 7 h, efficiency under 85%, a resting rate 5 over normal, a recovery under 12, sitting past 10.6 h. Breathing, oxygen and the sleeping rate are shown as read; the app judges them against your own 30 nights.</p>
     </div>
   );
 }
