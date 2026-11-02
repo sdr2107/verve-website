@@ -134,6 +134,19 @@ export function markerPointsFrom(labs: any[], app: any[], body: any[], signals: 
   }
   for (const b of body) if (b.waist_cm != null && Number.isFinite(Number(b.waist_cm)))
     add("waist_cm", { d: String(b.measured_on).slice(0, 10), v: Number(b.waist_cm), lo: null, hi: null, unit: "cm" });
+  // body fat, whole-body lean mass and waist from a scale or a tape that writes to the phone's store, the day's
+  // last reading (daily_signals, 2026-11-02): the app reads them live and never stores them, so this is their
+  // only road here. A reading typed into Verve the same day wins, as for the cuff. Last, so every typed row is in.
+  for (const [col, unit] of [["body_fat_pct", "%"], ["ffm_kg", "kg"], ["waist_cm", "cm"]] as const) {
+    const typed = new Set((by.get(col) ?? []).map((p) => p.d));
+    for (const r of signals) {
+      const v = Number(r[col]);
+      if (r[col] == null || !Number.isFinite(v)) continue;
+      const d = String(r.day).slice(0, 10);
+      if (typed.has(d)) continue;
+      add(col, { d, v, lo: null, hi: null, unit });
+    }
+  }
   for (const pts of by.values()) pts.sort((a, b) => a.d.localeCompare(b.d));
   return by;
 }
