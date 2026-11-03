@@ -84,8 +84,12 @@ const figures = [
       </p>
 
       <!-- Search everything the section says. The index is one file built
-           from the same registry as the pages, fetched on first focus. -->
-      <div class="vrv-rise relative mx-auto mt-8 max-w-xl text-left" style="--i: 3">
+           from the same registry as the pages, fetched on first focus.
+           z-30 on the wrapper, not only on the results: .vrv-rise animates a
+           transform, so every risen block is a stacking context of its own
+           and the results' z-index could not climb out of this one — the
+           video card and the counts, risen later, painted over the hits. -->
+      <div class="vrv-rise relative z-30 mx-auto mt-8 max-w-xl text-left" style="--i: 3">
         <label for="q" class="sr-only">Search the science</label>
         <svg class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
         <input
@@ -95,7 +99,7 @@ const figures = [
           class="w-full rounded-2xl border border-white/10 bg-white/[0.04] py-3.5 pl-11 pr-12 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent/60 focus:outline-none"
         />
         <kbd class="pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 rounded-md border border-white/10 px-1.5 py-0.5 font-mono text-[10px] text-text-muted sm:block" aria-hidden="true">/</kbd>
-        <div id="results" role="listbox" class="absolute left-0 right-0 top-full z-20 mt-2 hidden overflow-hidden rounded-2xl border border-white/10 bg-canvas-2/95 shadow-2xl shadow-black/40 backdrop-blur"></div>
+        <div id="results" role="listbox" class="absolute left-0 right-0 top-full z-20 mt-2 hidden overflow-hidden rounded-2xl border border-white/10 bg-canvas-2 shadow-2xl shadow-black/40"></div>
       </div>
 
       <!-- the search, shown: twenty-four seconds, in place of a paragraph about it -->

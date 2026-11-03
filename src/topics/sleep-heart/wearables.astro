@@ -1,0 +1,175 @@
+---
+/** Which readings each wearable writes to Apple Health and Health Connect, and so to Verve. Rendered by /science/sleep-heart/wearables; see scienceTopics.ts. */
+import { topicHref } from "../../data/scienceTopics";
+const connect = "/science/sleep-heart/sleep-rhythm#connect-wearables";
+const whatWritesWhat = "/science/sleep-heart/sleep-rhythm#what-writes-what";
+const energyWithRest = `${topicHref("weekly-volume")}#energy-with-rest`;
+const nightHrv = topicHref("night-hrv");
+const activityLevel = topicHref("activity-level");
+const steps = topicHref("steps");
+
+/**
+ * Reading · Apple Watch · WHOOP · Oura · Garmin · Fitbit and Pixel Watch (the
+ * Google Health app) · Galaxy Watch (Samsung Health) · what Verve makes of it.
+ * "Not listed" means the reading is not on the maker's own published list
+ * for that store when it was checked (2–3 November 2026); an app may still
+ * write it, and Verve reads whatever is there.
+ */
+const rows: [string, string, string, string, string, string, string, string][] = [
+  ["Workouts, with heart rate inside the session", "Yes", "Yes: started sessions, both stores", "Yes, both stores", "Yes, both stores", "Yes, both stores", "Yes", "Zone 2, the band split, heart rate recovery and the weekly dose all start here"],
+  ["What the workout's energy figure holds", "Above rest: Verve adds the resting MET", "Rest included: read as it is", "Above rest, as the store defines the field", "Above rest, as the store defines the field", "Health Connect: total calories only, so the Compendium value stands in; Apple Health: not confirmed", "Not listed; the Compendium value stands in", "The session's MET, so its class and its MET-minutes"],
+  ["Heart rate through the day and asleep", "Yes", "No: inside started sessions only", "Yes, one-minute heart rate", "Yes, all day", "Yes", "Yes", "Sleeping heart rate on the Sleep page; the Vitals card"],
+  ["Resting heart rate", "Yes", "Yes", "Yes, the night's", "Not listed", "Yes", "Not listed", "Against your own last 30 nights"],
+  ["Night HRV", "Yes, SDNN", "No: kept in the WHOOP app", "Health Connect yes (rMSSD); not in its Apple Health list", "No", "Health Connect yes; Apple Health not confirmed", "Not listed", "Your own baseline, one writer at a time; SDNN and rMSSD never mixed"],
+  ["Sleep: duration, bedtime, wakes", "Yes", "Yes: one asleep block with its wakes", "Yes", "Yes", "Yes", "Yes", "Timing, regularity, efficiency"],
+  ["Sleep stages", "Yes", "No: kept in the WHOOP app", "Yes", "Apple Health yes; Health Connect not confirmed", "Health Connect yes; Apple Health not confirmed", "Yes", "The stage split on the Sleep page; never from a WHOOP"],
+  ["Breathing rate in sleep", "Yes", "Yes", "Apple Health yes; Health Connect not listed", "No", "Health Connect yes; Apple Health in the vitals it writes", "Not listed", "A Vitals row"],
+  ["Blood oxygen", "Yes, on models that measure it", "Yes", "Not listed: kept in the Oura app", "No", "No: Google Health reads it from Health Connect but does not write it", "Yes", "A Vitals row from 1.7"],
+  ["Wrist or skin temperature", "Yes: sleeping wrist temperature, Series 8 and later", "No: kept in the WHOOP app", "No: kept in the Oura app", "No", "Health Connect yes, skin temperature; Apple Health not confirmed", "Not listed", "A Vitals row: Apple's sleeping wrist temperature on iPhone, skin temperature on Android"],
+  ["VO₂max from the wearable", "Yes: cardio fitness", "No", "No: Oura imports Apple's cardio fitness instead", "No: kept in Garmin Connect", "Health Connect yes; Apple Health not confirmed", "Not listed", "Secondary to the fitness test, with its 7 to 16% error named"],
+  ["Steps", "Yes, by the minute (the iPhone too)", "One block a day, written the morning after, both stores", "Yes; how fine is not published", "Yes; how fine is not published", "Yes, and step cadence on Android", "Yes, by the minute", "The total from one writer a day; cadence, sitting hours and bouts only from steps by the minute"],
+  ["All-day energy, for physical activity level", "Yes: active and resting", "No: workout energy only, so PAL is withheld", "Active energy yes, resting no: PAL on your profile's BMR", "Active energy yes, resting no: PAL on your profile's BMR", "Health Connect: total calories, not active, so PAL is not read; Apple Health not confirmed", "Resting rate yes; active not confirmed", "Physical activity level, each day on its own denominator"],
+  ["Stand minutes", "Yes", "No", "No", "No", "No", "No store on Android carries it", "The Standing tile, Apple Watch only"],
+  ["Weight, body fat, lean mass", "From a scale or typed, not the watch", "Health Connect: weight and lean mass; Apple Health: reads yours", "Weight and height", "Weight and body fat", "Weight and body fat", "Weight, body fat, height", "Body markers, read live from the store's log"],
+];
+const cols = ["Reading", "Apple Watch", "WHOOP", "Oura", "Garmin", "Fitbit, Pixel Watch", "Galaxy Watch", "In Verve"];
+const colIds = ["", "apple-watch", "whoop", "oura", "garmin", "fitbit", "galaxy-watch", ""];
+---
+
+<p class="mt-6 text-sm leading-relaxed text-text-secondary">
+  Verve reads the phone&rsquo;s health store and nothing else: Apple Health on an iPhone, Health
+  Connect on Android. A reading reaches it only when the wearable&rsquo;s own app has written it
+  there. An Apple Watch writes to Apple Health alone and a Galaxy Watch to Health Connect alone;
+  WHOOP, Oura, Garmin and the Google Health app behind Fitbit and Pixel Watch write to both, each
+  its own list. The table is those lists, reading by reading, against what Verve does with each.
+  Type a wearable&rsquo;s name into the search on the <a href="/science">science hub</a> to land on
+  its column; <a href={connect}>how to connect</a> has the switches to turn on.
+</p>
+<p class="mt-3 text-sm leading-relaxed text-text-secondary">
+  <strong class="text-text-primary">How to read it.</strong> &ldquo;Not listed&rdquo; means the reading
+  is not on the maker&rsquo;s own published list for that store when it was checked, on 2 and 3
+  November 2026; an app may still write it, and Verve reads whatever is there. &ldquo;Not
+  confirmed&rdquo; means the maker publishes no list for that store. Settings &rarr; Data sources in
+  the app names every writer Verve has actually seen on your phone, which is the answer for your
+  own devices.
+</p>
+
+<div class="mt-4 overflow-x-auto rounded-xl border border-white/10 bg-black/20">
+  <table class="w-full min-w-[1180px] text-[12px]">
+    <thead>
+      <tr class="text-left font-mono text-[10px] uppercase tracking-wider text-text-tertiary">
+        {cols.map((c, i) => (
+          <th class="px-3 py-2.5 font-semibold">{colIds[i] ? <a href={`#${colIds[i]}`} class="hover:text-text-primary">{c}</a> : c}</th>
+        ))}
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-white/[0.06]">
+      {rows.map(([r, watch, whoop, oura, garmin, fitbit, galaxy, verve]) => (
+        <tr class="align-top">
+          <td class="px-3 py-2.5 font-semibold text-text-primary">{r}</td>
+          <td class="px-3 py-2.5 text-text-secondary">{watch}</td>
+          <td class="px-3 py-2.5 text-text-secondary">{whoop}</td>
+          <td class="px-3 py-2.5 text-text-secondary">{oura}</td>
+          <td class="px-3 py-2.5 text-text-secondary">{garmin}</td>
+          <td class="px-3 py-2.5 text-text-secondary">{fitbit}</td>
+          <td class="px-3 py-2.5 text-text-secondary">{galaxy}</td>
+          <td class="px-3 py-2.5 text-text-tertiary">{verve}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+
+<h3 id="apple-watch" class="scroll-mt-8 vrv-anchor mt-10 pt-2 text-lg font-semibold text-text-primary">Apple Watch</h3>
+<p class="mt-3 text-sm leading-relaxed text-text-secondary">
+  The full list, to Apple Health only: workouts with heart rate and active energy, heart rate
+  through the day and the night, resting heart rate, night HRV as SDNN, sleep with its stages,
+  breathing rate, blood oxygen where the model measures it, sleeping wrist temperature from Series
+  8, cardio fitness, steps and distance by the minute, stand minutes, and resting energy beside
+  the active. Its active energy is the burn above rest, so Verve adds the resting MET before a
+  session is classed (<a href={energyWithRest}>why</a>). Nothing from it reaches an Android phone.
+  Source: Apple&rsquo;s own Health app documentation, read 1 November 2026.
+</p>
+
+<h3 id="whoop" class="scroll-mt-8 vrv-anchor mt-10 pt-2 text-lg font-semibold text-text-primary">WHOOP</h3>
+<p class="mt-3 text-sm leading-relaxed text-text-secondary">
+  To Apple Health, by WHOOP&rsquo;s own article: workouts, heart rate inside them, sleep as asleep and
+  awake intervals, resting heart rate, breathing rate, blood oxygen, and steps as one block for the
+  day written the morning after. To Health Connect, the same list, with weight and lean mass added;
+  Verve checked the permission list on a Motorola on 27 October 2026 and found it so. In its own
+  app and nowhere else: HRV, recovery, strain, skin temperature, sleep stages, and VO&#8322;max. Its
+  one calorie figure per activity already holds the resting burn, so Verve reads it as it is: the
+  founder&rsquo;s walk of 2 November was 232 kcal in the WHOOP app and 232 active, 232 total, in
+  Health. In Verve a WHOOP gives sleep with efficiency and wakes, resting heart rate, breathing,
+  blood oxygen, started workouts with Zone 2 and the dose, and a steps total; it gives no HRV, no
+  stages, no physical activity level, and no cadence or sitting hours unless the phone counts steps
+  in a pocket. Sources:
+  <a href="https://support.whoop.com/s/article/Apple-Health-Integration?language=en_US" target="_blank" rel="noopener">WHOOP, Apple Health integration</a>;
+  <a href="https://support.whoop.com/s/article/Google-Health-Integration-For-Android?language=en_US" target="_blank" rel="noopener">WHOOP, Health Connect for Android</a>;
+  <a href={whatWritesWhat}>the night&rsquo;s readings on both phones</a>.
+</p>
+
+<h3 id="oura" class="scroll-mt-8 vrv-anchor mt-10 pt-2 text-lg font-semibold text-text-primary">Oura</h3>
+<p class="mt-3 text-sm leading-relaxed text-text-secondary">
+  To Apple Health, by Oura&rsquo;s article: sleep with start, end, duration and stages, heart rate at
+  one-minute intervals, breathing rate, active energy, steps, weight and height, mindful minutes
+  and workouts. HRV is not on that list, and VO&#8322;max flows the other way: Oura imports
+  Apple&rsquo;s cardio fitness. To Health Connect: active calories, distance, exercise and steps;
+  body measurements; sleep with stages; heart rate and HRV. So on Android a ring gives Verve a
+  night HRV baseline (rMSSD, named as such, never mixed with a Watch&rsquo;s SDNN, see
+  <a href={nightHrv}>Night HRV</a>) and on an iPhone it does not. Readiness, temperature deviation
+  and blood oxygen stay in the Oura app. Sources:
+  <a href="https://support.ouraring.com/hc/en-us/articles/360025438734-Apple-Health-Integration" target="_blank" rel="noopener">Oura, Apple Health integration</a>;
+  <a href="https://support.ouraring.com/hc/en-us/articles/10786105824531-Health-Connect-by-Android-Integration" target="_blank" rel="noopener">Oura, Health Connect by Android</a>.
+</p>
+
+<h3 id="garmin" class="scroll-mt-8 vrv-anchor mt-10 pt-2 text-lg font-semibold text-text-primary">Garmin</h3>
+<p class="mt-3 text-sm leading-relaxed text-text-secondary">
+  To Apple Health, by Garmin&rsquo;s support article read on 2 November 2026: workouts, heart rate
+  through the day, sleep, steps, active energy, weight and body fat. To Health Connect, by the list
+  Garmin gave when it added the integration: body fat, calories burned, floors climbed, heart rate,
+  sleep, steps and step distance, weight, and workout data such as elevation and speed; not running
+  power, cadence or sweat loss. Garmin keeps HRV status, Body Battery, stress, VO&#8322;max, pulse ox
+  and breathing rate in Garmin Connect, so none of those rows fill from a Garmin on either phone;
+  a resting heart rate type is not on either list, and a sleep stage split reached Apple Health in
+  Verve&rsquo;s checks but is not confirmed for Health Connect. Sources: Garmin Connect, Apple Health
+  support article;
+  <a href="https://www.tomsguide.com/wellness/fitness-trackers/garmin-clarifies-what-data-its-sharing-with-google-health-connect-heres-the-full-list" target="_blank" rel="noopener">Garmin&rsquo;s Health Connect list, as reported</a>.
+</p>
+
+<h3 id="fitbit" class="scroll-mt-8 vrv-anchor mt-10 pt-2 text-lg font-semibold text-text-primary">Fitbit and Pixel Watch, through the Google Health app</h3>
+<p class="mt-3 text-sm leading-relaxed text-text-secondary">
+  The Fitbit app is now the Google Health app, and its Health Connect table is published. It
+  writes: steps, speed and step cadence, floors, distance, elevation, exercise with its route,
+  total calories burned, VO&#8322;max, sleep sessions and stages, skin temperature, heart rate, heart
+  rate variability, breathing rate, resting heart rate, weight and body fat. It reads blood oxygen
+  and active calories from Health Connect but writes neither, so from a Fitbit or a Pixel Watch
+  Verve has no blood oxygen row and no active energy: a session&rsquo;s MET takes the Compendium
+  value and physical activity level is not read (<a href={activityLevel}>why PAL needs active and
+  resting energy</a>). On an iPhone the Google Health app writes steps, sleep, vitals and exercise
+  to Apple Health from its August 2026 release; which vitals exactly is not published. Source:
+  <a href="https://support.google.com/fitbit/answer/14506680" target="_blank" rel="noopener">Google Health, Health Connect data types</a>.
+</p>
+
+<h3 id="galaxy-watch" class="scroll-mt-8 vrv-anchor mt-10 pt-2 text-lg font-semibold text-text-primary">Galaxy Watch, through Samsung Health</h3>
+<p class="mt-3 text-sm leading-relaxed text-text-secondary">
+  Android only: a Galaxy Watch does not pair with an iPhone. Samsung Health writes to Health
+  Connect: steps by the minute, heart rate including exercise heart rate, exercise sessions, sleep
+  with stages, blood oxygen, weight, body fat, height and basal metabolic rate. Resting heart rate,
+  HRV, breathing rate, skin temperature and VO&#8322;max are not on its mapping. Because its steps
+  arrive by the minute, a Galaxy phone with Samsung Health is the Android setup on which cadence,
+  sitting hours and sitting bouts read as they do on an iPhone (<a href={steps}>steps</a>). Sources:
+  <a href="https://developer.samsung.com/health/blog/en/accessing-samsung-health-data-through-health-connect" target="_blank" rel="noopener">Samsung, accessing Samsung Health data through Health Connect</a>;
+  <a href="https://developer.samsung.com/health/health-connect-faq.html" target="_blank" rel="noopener">Samsung, Health Connect FAQ</a>.
+</p>
+
+<h3 id="gaps" class="scroll-mt-8 vrv-anchor mt-10 pt-2 text-lg font-semibold text-text-primary">What Verve does with a gap</h3>
+<p class="mt-3 text-sm leading-relaxed text-text-secondary">
+  A reading no writer on your phone supplies shows as a dash, never a zero, and the card says why
+  when it can: &ldquo;WHOOP keeps HRV in its own app&rdquo;. Where two wearables write the same
+  reading, one leads and the other counts where it is alone; Settings &rarr; Data sources names
+  which, per reading, and lets you choose. Steps and energy are one writer&rsquo;s count a day,
+  never two added together. Workout energy is read for what the writer&rsquo;s figure holds, rest
+  included or not, before the session is classed. And physical activity level is withheld rather
+  than guessed when every energy writer in the window is workout-shaped.
+</p>
