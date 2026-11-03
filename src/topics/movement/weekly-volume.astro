@@ -15,7 +15,7 @@ const testCrf = topicHref("test-crf");
 
 /** Which number, which ruler: the table under #two-rulers. */
 const rulers: [string, string, string, string][] = [
-  ["Weekly dose", "MET-minutes", "The session's one MET (the watch's energy; else the Compendium; the Swain cascade for a typed heart rate) × its minutes. The session is classed by its average MET: 3.0 to 5.99 moderate, 6.0 and above vigorous.", "Logged aerobic or mixed sessions classed moderate or vigorous"],
+  ["Weekly dose", "MET-minutes", "The session's one MET (the watch's energy above rest plus the 1 MET of rest; a WHOOP's figure as it is; else the Compendium; the Swain cascade for a typed heart rate) × its minutes. The session is classed by its average MET: 3.0 to 5.99 moderate, 6.0 and above vigorous.", "Logged aerobic or mixed sessions classed moderate or vigorous"],
   ["Weekly Ascent", "minutes", "The heart-rate trace, minute by minute, against your own band. Without a trace, the whole session takes its MET class.", "Every aerobic session, the walking read from your steps included"],
   ["Zone 2", "minutes", "The minutes of the trace inside your band.", "Logged aerobic or mixed sessions"],
   ["Under a workout", "minutes", "The same trace, split light / moderate / vigorous.", "That session"],
@@ -110,15 +110,37 @@ const rulers: [string, string, string, string][] = [
 </p>
 <p class="mt-3 text-sm leading-relaxed text-text-secondary">
   <strong class="text-text-primary">The session&rsquo;s MET.</strong> A synced workout&rsquo;s MET comes
-  from the energy the watch recorded for it: active kilocalories, your weight and the minutes, through
+  from the energy the watch recorded for it: its kilocalories, your weight and the minutes, through
   the definition of a MET as 3.5 ml of oxygen per kilogram per minute, which is close to 1 kcal per
-  kilogram per hour. A 40-minute walk that cost 215 kcal in a 75 kg body is 4.1 METs. When the store
-  holds no energy for the session, or the figure falls outside 1.5 to 18 METs and is not believable,
-  Verve uses the Compendium of Physical Activities value for that activity type instead. A session you
-  log by hand with a heart rate gets its MET from the heart-rate-reserve cascade (Swain 1997), anchored
-  to your own <a href={testCrf}>fitness test</a> when you have one, to your age and sex norms when you do
-  not. MET-minutes are then MET × minutes: 4.1 × 40 is 164. <a href={mets}>METs vs MET-hours</a> has
-  the unit; <a href={workout}>a workout, as Verve reads it</a> has why the page prints one MET figure.
+  kilogram per hour. A MET is gross: sitting is 1, and the cut-points below assume that 1 is in. A
+  watch&rsquo;s <em>active</em> energy is not: Apple defines it as the energy burned above resting
+  energy, and Health Connect&rsquo;s active calories exclude basal metabolic rate. So Verve adds the
+  resting MET back. A 40-minute walk the watch costs at 160 kcal above rest, in a 75 kg body, is
+  3.0 METs above rest and 4.0 METs in all: moderate, 160 MET-minutes. Until 1.7 the app read the
+  energy as if it were the whole burn, so every watch session sat about 1 MET low, a slightly
+  easier walk fell to light and counted nothing, and a week&rsquo;s dose was short by about one
+  MET-minute per minute; the update corrects the stored sessions once. When the store holds no
+  energy for the session, or the figure falls outside 1.5 to 18 METs and is not believable, Verve
+  uses the Compendium of Physical Activities value for that activity type instead. A session you
+  log by hand with a heart rate gets its MET from the heart-rate-reserve cascade (Swain 1997),
+  anchored to your own <a href={testCrf}>fitness test</a> when you have one, to your age and sex
+  norms when you do not; that formula returns a gross MET already. MET-minutes are then
+  MET × minutes: 4.0 × 40 is 160. <a href={mets}>METs vs MET-hours</a> has the unit;
+  <a href={workout}>a workout, as Verve reads it</a> has why the page prints one MET figure.
+</p>
+<p class="mt-3 text-sm leading-relaxed text-text-secondary" id="energy-with-rest">
+  <strong class="text-text-primary">One writer is different: WHOOP.</strong> WHOOP writes one calorie
+  figure per activity, and the resting burn is inside it. WHOOP support gives its calories as basal
+  metabolic rate plus a heart-rate term (<a href="https://www.community.whoop.com/t/how-is-calorie-burn-estimated-and-how-accurate-is-it/113" target="_blank" rel="noopener">how WHOOP estimates calorie burn</a>,
+  <a href="https://www.whoop.com/thelocker/calorie-tracking-science/" target="_blank" rel="noopener">the science of calorie tracking</a>),
+  and Cronometer, which imports WHOOP workouts, subtracts the BMR for the workout&rsquo;s duration from
+  every entry for that reason (<a href="https://support.cronometer.com/hc/en-us/articles/44189146042516-WHOOP" target="_blank" rel="noopener">Cronometer: WHOOP</a>).
+  The founder&rsquo;s walk of 2 November 2026 is the check: 232 kcal in the WHOOP app, 232 active
+  and 232 total in Apple Health, 30 minutes, 118 bpm on average. Verve reads a WHOOP figure as it is
+  and adds nothing: in a 75 kg body that walk is 5.8 METs, moderate. The same 232 kcal written by an
+  Apple Watch would be 6.8, because a Watch&rsquo;s 232 is the burn above rest. The rule is by
+  writer and lives in one place in the code; a writer it does not know is read as the stores define
+  the field, above rest.
 </p>
 <p class="mt-3 text-sm leading-relaxed text-text-secondary">
   <strong class="text-text-primary">The session&rsquo;s class.</strong> That one average MET is read against
