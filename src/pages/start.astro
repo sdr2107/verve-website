@@ -17,6 +17,7 @@ import Footer from "../components/Footer.astro";
 import SheetBox from "../components/SheetBox.astro";
 import { GET_APP_PATH, SUBSTACK_URL, X_URL, YOUTUBE_URL, TIKTOK_URL, INSTAGRAM_URL, CALENDLY_URL } from "../data/site";
 import { AI_SUMMARY_OPEN } from "../data/plans";
+import { RETURNS } from "../data/returns";
 
 const LETTERS = "https://roplekarsudeep.substack.com";
 const claims = [
@@ -114,6 +115,21 @@ const order = [
         </div>
       </div>
     </section>
+    <!-- 3b. What you come back for: the four returns (4 Nov 2026), the same four as the home page -->
+    <section class="flex flex-col gap-5">
+      <h2 class="text-[28px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[32px]">What you come back for</h2>
+      <ul class="grid gap-4 sm:grid-cols-2">
+        {RETURNS.map((r) => (
+          <li class="flex flex-col gap-2 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-6">
+            <span class="font-mono text-[11px] tracking-[0.1em] text-accent-light">{r.cadence.toUpperCase()}</span>
+            <p class="text-[19px] font-bold text-text-primary">{r.title}</p>
+            <p class="text-[15.5px] text-text-secondary">{r.body}</p>
+            <a href={r.href} class="mt-1 inline-block text-[14px] font-bold text-accent-light transition-colors hover:text-text-primary">{r.cta} &rarr;</a>
+          </li>
+        ))}
+      </ul>
+    </section>
+
 
     <!-- 4. What the website does -->
     <section class="flex flex-col gap-5">
