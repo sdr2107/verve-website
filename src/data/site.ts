@@ -63,7 +63,7 @@ export const COMPANY = {
   email: "hello@verve-app.health",
 } as const;
 
-export type NavKey = "start" | "science" | "videos" | "my-health" | "coach" | "clinician" | "plans";
+export type NavKey = "start" | "how" | "science" | "videos" | "my-health" | "coach" | "clinician" | "plans";
 
 export interface NavLink {
   key: NavKey;
@@ -76,6 +76,8 @@ export interface NavLink {
 export const NAV: NavLink[] = [
   // the free sheet: where a visitor with no number yet begins
   { key: "start", label: "Start here", href: "/start" },
+  // how the app works, section by section: the tabs, the Guide, free and Pro, how it counts, the wearables (4 Nov 2026)
+  { key: "how", label: "How it works", href: "/how-it-works" },
   { key: "science", label: "Science", href: "/science" },
   { key: "videos", label: "Videos", href: "/videos" },
   { key: "my-health", label: "My health", href: "/my-health" },
