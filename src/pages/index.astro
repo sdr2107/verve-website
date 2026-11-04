@@ -27,6 +27,7 @@ import TodayCard from "../components/TodayCard.astro";
 import { COUNTS } from "../data/scienceTopics";
 import { BODY_MARKERS } from "../data/bodyMarkers";
 import { GET_APP_PATH } from "../data/site";
+import { RETURNS, RETURNS_INTRO } from "../data/returns";
 
 /**
  * The two cited claims. Both studies are in CRF_SECTION (data/science.ts),
@@ -129,6 +130,29 @@ const bandTone = ["text-success-light", "text-warning", "text-danger"];
         </p>
         <a href="/science" class="mt-3 inline-block text-[13.5px] font-bold text-accent-light transition-colors hover:text-text-primary">Read the evidence base &rarr;</a>
       </div>
+    </div>
+  </section>
+
+  <!-- ── What you come back for: the four returns, one per cadence (4 Nov 2026) ── -->
+  <section class="px-6 pt-16 sm:px-10 lg:pt-[88px]">
+    <div class="mx-auto flex max-w-6xl flex-col gap-7">
+      <div class="max-w-3xl">
+        <span class="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-text-tertiary">What you come back for</span>
+        <h2 class="mt-2 text-[28px] font-extrabold leading-[1.1] tracking-[-0.03em] text-text-primary sm:text-[34px]">
+          Your wearable says how you are today. Verve says where you stand.
+        </h2>
+        <p class="mt-4 text-[15px] leading-[1.6] text-text-secondary sm:text-[16px]">{RETURNS_INTRO}</p>
+      </div>
+      <ul class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {RETURNS.map((r) => (
+          <li class="flex flex-col gap-3 rounded-[20px] border border-white/10 bg-white/[0.03] p-6">
+            <span class="font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-accent-light">{r.cadence}</span>
+            <p class="text-[18px] font-bold leading-[1.2] tracking-[-0.01em] text-text-primary">{r.title}</p>
+            <p class="text-[14px] leading-[1.55] text-text-secondary">{r.body}</p>
+            <a href={r.href} class="mt-auto inline-block text-[13.5px] font-bold text-accent-light transition-colors hover:text-text-primary">{r.cta} &rarr;</a>
+          </li>
+        ))}
+      </ul>
     </div>
   </section>
 
