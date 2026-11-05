@@ -16,16 +16,32 @@ function Row({ name, rs }: { name: string; rs: any[] }) {
   const ok = inRange(latest);
   const valColor = ok === false ? "text-warning" : ok === true ? "text-success" : "text-text-primary";
   const open = expandedAnalyte.value === name;
+  const tags: string[] = latest.tags ?? [];
+  const explain = latest.explain as { formula: string; body: string; link: { label: string; href: string } } | undefined;
   return (
     <div data-an={name}>
       <button type="button" class="flex w-full items-center gap-3 py-2 text-left"
         onClick={(e) => { expandedAnalyte.value = open ? "" : name; if (!open) (e.currentTarget as HTMLElement).scrollIntoView({ block: "nearest" }); }}>
-        <span class="min-w-0 flex-1 truncate text-[13px] font-semibold text-text-primary" title={name}>{name}</span>
+        <span class="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+          <span class="min-w-0 truncate text-[13px] font-semibold text-text-primary" title={name}>{name}</span>
+          {/* What kind of number this is: worked out here rather than printed, and for an LDL, how the lab got it. */}
+          {tags.map((t) => (
+            <span key={t} class={`shrink-0 rounded-[5px] border px-1.5 py-px font-mono text-[9px] font-semibold uppercase tracking-[0.5px] ${t === "computed" ? "border-accent-light/40 text-accent-light" : "border-white/[0.14] text-text-secondary"}`}>{t}</span>
+          ))}
+        </span>
         <svg class="hidden shrink-0 sm:block" width="120" height="28" viewBox="0 0 120 28" dangerouslySetInnerHTML={{ __html: sparkSvg(rs) }} />
         <span class={`shrink-0 whitespace-nowrap text-right font-mono text-xs ${valColor}`}>{latest.value}{latest.unit ? ` ${latest.unit}` : ""}</span>
         <span class="hidden w-24 shrink-0 truncate text-right font-mono text-[10px] text-text-muted sm:inline" title={rangeLabel(latest)}>{rangeLabel(latest)}</span>
         <span class="text-text-muted">{open ? "▾" : "▸"}</span>
       </button>
+      {/* A computed figure that needs a sentence: the arithmetic in the report's own numbers, then what it means. */}
+      {open && explain ? (
+        <div class="mb-2 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+          <div class="font-mono text-[11px] text-text-secondary">{explain.formula}</div>
+          <p class="mt-1.5 text-[12.5px] leading-[1.55] text-text-secondary">{explain.body}</p>
+          <a href={explain.link.href} class="mt-2 inline-block text-[12.5px] font-bold text-accent-light hover:underline">{explain.link.label} &rarr;</a>
+        </div>
+      ) : null}
       {open ? <div dangerouslySetInnerHTML={{ __html: bigChartHtml(rs) }} /> : null}
     </div>
   );

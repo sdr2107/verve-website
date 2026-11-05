@@ -562,6 +562,57 @@ export const LIPID_RATIO_SECTION: Citation[] = [
   },
 ];
 
+/**
+ * Remnant cholesterol: total minus HDL minus LDL, computed, never stored, and
+ * labelled by how the lab got the LDL. Thresholds in data/lipid-ratios.ts
+ * under remnantCholesterol (a copy of the app's). Every figure below was
+ * read against the paper's PubMed abstract on 5 Nov 2026.
+ */
+export const REMNANT_SECTION: Citation[] = [
+  {
+    title: "Causal, not a bystander — Varbo et al, J Am Coll Cardiol 2013",
+    summary:
+      "Copenhagen, 73,513 adults genotyped, non-fasting remnant cholesterol. A 1 mmol/L (39 mg/dL) higher level went with 1.4 times the observed risk of ischaemic heart disease and, by genetic instruments, 2.8 times the causal risk, independent of reduced HDL cholesterol.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/23265341/",
+    color: "#be123c",
+  },
+  {
+    title: "Remnant, not LDL — Castañer et al, J Am Coll Cardiol 2020",
+    summary:
+      "PREDIMED, 6,901 overweight or obese adults at high cardiovascular risk, followed for a median of 4.8 years. Triglycerides and remnant cholesterol, but not LDL cholesterol, were associated with major cardiovascular events. Remnant cholesterol of 30 mg/dL (0.78 mmol/L) or more marked the higher-risk group whether or not LDL was on target at 100 mg/dL or below. Verve's line.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/33272365/",
+    color: "#b45309",
+  },
+  {
+    title: "Beyond LDL and ApoB — Quispe et al, Eur Heart J 2021",
+    summary:
+      "17,532 adults free of cardiovascular disease, pooled from ARIC, MESA and CARDIA; 2,143 events over a median of 18.7 years. After adjusting for LDL cholesterol and ApoB, higher remnant cholesterol still went with higher risk. People whose remnant ran high against a low LDL carried more risk than those whose two agreed (hazard ratio 1.21); low remnant against high LDL did not. The remnant here was computed from a calculated LDL.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/34293083/",
+    color: "#7e22ce",
+  },
+  {
+    title: "Mendelian randomisation — Navarese et al, Arterioscler Thromb Vasc Biol 2023",
+    summary:
+      "Genetic instruments for remnant cholesterol in a combined sample of 958,434 participants. Remnant cholesterol had a causal effect on coronary artery disease, heart attack and stroke; for coronary disease and heart attack the effect held after accounting for LDL cholesterol.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/37439258/",
+    color: "#0891b2",
+  },
+  {
+    title: "The calculated LDL — Friedewald, Levy and Fredrickson, Clin Chem 1972",
+    summary:
+      "VLDL cholesterol taken as triglycerides ÷ 5 in mg/dL, so LDL is total minus HDL minus that fifth; not used at 400 mg/dL of triglycerides and above. Subtract this LDL and the remnant is triglycerides ÷ 5 by construction, which is why Verve names the method.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/4337382/",
+    color: "#64748b",
+  },
+  {
+    title: "Better divisors — Martin et al, JAMA 2013 · Sampson et al, JAMA Cardiol 2020",
+    summary:
+      "Martin-Hopkins replaces the fixed 5 with a factor read from a 180-cell table by triglycerides and non-HDL cholesterol; the Sampson equation calculates LDL up to 800 mg/dL of triglycerides. Either changes the remnant a calculated LDL leaves behind, so Verve reads the method off the report rather than guessing the equation (Martin: PMID 24240933).",
+    url: "https://pubmed.ncbi.nlm.nih.gov/32101259/",
+    color: "#475569",
+  },
+];
+
 export const MUSCLE_HEALTH_SECTION: Citation[] = [
   {
     title: "Leong et al — PURE Study, The Lancet 2015",

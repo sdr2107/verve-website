@@ -1,13 +1,15 @@
 ---
-/** ApoB · LDL-C · Lp(a) · hs-CRP — screening bands, not treatment targets. Rendered by /science/body/heart-health; see scienceTopics.ts. */
+/** ApoB · LDL-C · Lp(a) · hs-CRP, the two ratios and remnant cholesterol — screening bands, not treatment targets. Rendered by /science/body/heart-health; see scienceTopics.ts. */
 import CitationCard from "../../components/CitationCard.astro";
 import ScienceSection from "../../components/science/ScienceSection.astro";
 import VideoSlot from "../../components/VideoSlot.astro";
 import {
   HEART_HEALTH_SECTION,
   LIPID_RATIO_SECTION,
+  REMNANT_SECTION,
 } from "../../data/science";
 import LR from "../../data/lipid-ratios";
+const RC = LR.remnantCholesterol;
 ---
 
 <div class="mt-6"><VideoSlot topic="heart-health" /></div>
@@ -50,6 +52,35 @@ import LR from "../../data/lipid-ratios";
   </div>
   <div class="mt-4 grid gap-4 sm:grid-cols-2">
     {LIPID_RATIO_SECTION.map((c) => <CitationCard {...c} />)}
+  </div>
+</ScienceSection>
+</div>
+
+<!-- ── Remnant cholesterol ───────────────────────────────────────────
+     Total minus HDL minus LDL, from one report; computed, never stored.
+     The LDL's method labels the figure and never changes the arithmetic.
+     The app's LDL card and the website's Labs tab link here. ── -->
+<div class="mt-10">
+<ScienceSection
+  id="remnant-cholesterol"
+  title="Remnant cholesterol, from the same panel"
+  sub="The cholesterol in triglyceride-rich particles, how Verve computes it from three printed numbers, and why the LDL's method decides what the figure means"
+>
+  <div class="mt-[18px] grid gap-4 text-[13.5px] leading-relaxed text-text-secondary sm:grid-cols-2">
+    <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+      <h4 class="text-[15px] font-semibold text-text-primary">What it is, and the arithmetic</h4>
+      <p class="mt-2">Remnant cholesterol is the cholesterol carried in VLDL, IDL and chylomicron remnants: everything on the panel that is neither LDL nor HDL. Verve takes total cholesterol minus HDL minus LDL, the three from one report date. A mmol/L report stays in mmol/L and the line converts ({RC.elevatedFrom} mg/dL is {RC.elevatedFromMmol} mmol/L).</p>
+      <p class="mt-2">Below {RC.elevatedFrom} mg/dL reads in range; {RC.elevatedFrom} and above reads elevated. One line, because the studies draw one: PREDIMED at {RC.elevatedFrom} mg/dL, Copenhagen at 1 mmol/L (39 mg/dL). A pooled primary-prevention cohort found the risk held after adjusting for LDL cholesterol and ApoB.</p>
+      <p class="mt-2 text-text-tertiary">On the LDL card in the app, with total cholesterol as its second field; in the Labs tab on My health as a computed row. With no total cholesterol or no HDL there is no figure: nothing is estimated from triglycerides alone. A screening line, not a treatment target.</p>
+    </div>
+    <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+      <h4 class="text-[15px] font-semibold text-text-primary">Measured or calculated: the method decides the meaning</h4>
+      <p class="mt-2">Most labs do not measure LDL. They calculate it: Friedewald sets VLDL cholesterol at triglycerides &divide; {RC.friedewald.tgDivisor} and subtracts; Martin-Hopkins and Sampson refine the divisor. Subtract a Friedewald LDL from total minus HDL and the remnant comes back as triglycerides &divide; {RC.friedewald.tgDivisor}, an echo of a number already on the panel.</p>
+      <p class="mt-2">Verve reads the method off the report (&ldquo;Direct&rdquo; or &ldquo;Homogeneous&rdquo; against &ldquo;Calc&rdquo;, &ldquo;Friedewald&rdquo;, &ldquo;Martin-Hopkins&rdquo;, &ldquo;Sampson&rdquo;) and labels the figure. A direct LDL makes the remnant a measurement. A calculated LDL makes it a triglyceride share, still worth watching, honestly named. Where no method came with the LDL and the arithmetic matches triglycerides &divide; {RC.friedewald.tgDivisor}, the label says so; where nothing matches, it says the method is not known.</p>
+    </div>
+  </div>
+  <div class="mt-4 grid gap-4 sm:grid-cols-2">
+    {REMNANT_SECTION.map((c) => <CitationCard {...c} />)}
   </div>
 </ScienceSection>
 </div>

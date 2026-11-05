@@ -16,7 +16,7 @@ export interface PersonData {
   /** The person has an account of their own: the app's rows exist. */
   synced: boolean;
   labs: any[];
-  /** The report rows plus the two computed lipid ratios (derive/lipids): what the Labs tab lists and judges. Exports and report echoes read `labs`. */
+  /** The report rows, each LDL tagged with its method, plus the computed lipid rows (derive/lipids: the two ratios and remnant cholesterol): what the Labs tab lists and judges. Exports and report echoes read `labs`. */
   labsShown: any[];
   imaging: any[];
   app: any[];
