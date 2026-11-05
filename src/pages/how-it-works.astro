@@ -19,6 +19,7 @@ import { GET_APP_PATH } from "../data/site";
 
 const weeklyVolume = topicHref("weekly-volume");
 const crf = topicHref("crf");
+const heartHealth = topicHref("heart-health");
 const wearablesTopic = topicHref("wearables");
 
 const sections = [
@@ -141,7 +142,7 @@ const gates: [string, string, string][] = [
     <!-- ── 4 · how Verve counts ── -->
     <section id="counting" class="scroll-mt-24 flex flex-col gap-6">
       <h2 class="text-[28px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[32px]">How Verve counts</h2>
-      <div class="grid gap-4 sm:grid-cols-3">
+      <div class="grid gap-4 sm:grid-cols-2">
         <div class="flex flex-col gap-2.5 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-6">
           <span class="font-mono text-[11px] tracking-[0.1em] text-accent-light">THE WEEKLY DOSE</span>
           <p class="text-[14.5px] leading-[1.6] text-text-secondary">MET-minutes of your logged moderate and vigorous aerobic sessions, each session's MET times its minutes, summed over the ISO week. The goal is the ACC's 500 to 1,000. One ledger computes it, so the Activity card, Prior Weeks, the Monday note and the Guide show the same number.</p>
@@ -156,6 +157,11 @@ const gates: [string, string, string][] = [
           <span class="font-mono text-[11px] tracking-[0.1em] text-accent-light">THE RESTING MET</span>
           <p class="text-[14.5px] leading-[1.6] text-text-secondary">A watch's active energy is energy above rest. A MET derived from it is one MET short, so Verve adds the resting MET before a session meets the moderate and vigorous cut-points. One exception, by writer: WHOOP's figure already holds the resting burn and is read as it is. Synced sessions from before this rule were repaired once.</p>
           <a href={`${weeklyVolume}#energy-with-rest`} class="text-[13.5px] font-bold text-accent-light hover:text-text-primary">Energy, with rest &rarr;</a>
+        </div>
+        <div class="flex flex-col gap-2.5 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-6">
+          <span class="font-mono text-[11px] tracking-[0.1em] text-accent-light">REMNANT CHOLESTEROL</span>
+          <p class="text-[14.5px] leading-[1.6] text-text-secondary">Total cholesterol minus HDL minus LDL, the three printed on one report. The LDL's method is read off the report and labels the number: a directly measured LDL makes the remnant a measurement; a calculated LDL makes it the share of triglycerides the equation set aside, triglycerides &divide; 5 under Friedewald. Thirty mg/dL and above reads elevated, the same line on the LDL card in the app and in the Labs tab on My health.</p>
+          <a href={`${heartHealth}#remnant-cholesterol`} class="text-[13.5px] font-bold text-accent-light hover:text-text-primary">Remnant cholesterol, with its evidence &rarr;</a>
         </div>
       </div>
       <p class="max-w-[820px] text-[14px] leading-[1.6] text-text-tertiary">Fitness itself is graded the other way round: the test gives METs directly, and the tier comes from the table for your age and sex. <a href={crf} class="font-semibold text-accent-light hover:text-text-primary">How fitness is graded &rarr;</a></p>

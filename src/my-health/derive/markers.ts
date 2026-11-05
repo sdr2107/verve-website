@@ -19,6 +19,9 @@ export const LABELS: Record<string, { label: string; unit: string; section: "met
   apo_b_mgdl:             { label: "ApoB",              unit: "mg/dL",  section: "heart" },
   apo_a1_mgdl:            { label: "ApoA1",             unit: "mg/dL",  section: "heart" },
   ldl_mgdl:               { label: "LDL",               unit: "mg/dL",  section: "heart" },
+  // Not a 23rd marker: the second field on the app's LDL card, sent with the
+  // LDL so the app can work out remnant cholesterol. No chart chip of its own.
+  total_cholesterol_mgdl: { label: "Total cholesterol", unit: "mg/dL",  section: "heart" },
   lpa_value:              { label: "Lp(a)",             unit: "",       section: "heart" },
   hs_crp_mgl:             { label: "hs-CRP",            unit: "mg/L",   section: "heart" },
   body_fat_pct:           { label: "Body fat",          unit: "%",      section: "sarcopenia" },
@@ -70,7 +73,7 @@ export const APP_KEY_BY_NAME: Record<string, string> = {
   triglycerides: "triglycerides_mgdl", hdl: "hdl_mgdl", hdlcholesterol: "hdl_mgdl",
   waist: "waist_cm", waistcircumference: "waist_cm",
   systolicbp: "sbp", systolicbloodpressure: "sbp", diastolicbp: "dbp", diastolicbloodpressure: "dbp",
-  apob: "apo_b_mgdl", apolipoproteinb: "apo_b_mgdl", apoa1: "apo_a1_mgdl", apolipoproteina1: "apo_a1_mgdl", ldl: "ldl_mgdl", ldlcholesterol: "ldl_mgdl",
+  apob: "apo_b_mgdl", apolipoproteinb: "apo_b_mgdl", apoa1: "apo_a1_mgdl", apolipoproteina1: "apo_a1_mgdl", ldl: "ldl_mgdl", ldlcholesterol: "ldl_mgdl", totalcholesterol: "total_cholesterol_mgdl",
   lpa: "lpa_value", lipoproteina: "lpa_value",
   hscrp: "hs_crp_mgl", highsensitivitycrp: "hs_crp_mgl", crphs: "hs_crp_mgl", hscreactiveprotein: "hs_crp_mgl",
   bodyfat: "body_fat_pct", bodyfatpercentage: "body_fat_pct", skeletalmuscle: "skel_musc_pct", skeletalmusclepercentage: "skel_musc_pct",

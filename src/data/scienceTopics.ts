@@ -216,7 +216,7 @@ export const TOPICS: Topic[] = [
   { slug: "wearables", label: "What each wearable writes", sub: "Apple Watch, WHOOP, Oura, Garmin, Fitbit and Galaxy Watch: which readings reach Apple Health and Health Connect, and so Verve", subject: "sleep-heart", citations: [] },
 
   // ── Body ───────────────────────────────────────────────────────────────
-  { slug: "heart-health", label: "Heart health", sub: "ApoB · LDL-C · Lp(a) · hs-CRP, and the two ratios from one panel — screening bands, not treatment targets", subject: "body", citations: HEART_HEALTH_SECTION, subAnchors: ["lipid-ratios", "tg-hdl-ratio", "apob-apoa1-ratio"] },
+  { slug: "heart-health", label: "Heart health", sub: "ApoB · LDL-C · Lp(a) · hs-CRP, the two ratios and remnant cholesterol from one panel — screening bands, not treatment targets", subject: "body", citations: HEART_HEALTH_SECTION, subAnchors: ["lipid-ratios", "tg-hdl-ratio", "apob-apoa1-ratio", "remnant-cholesterol"] },
   {
     slug: "body-phenotyping",
     label: "Body phenotyping",

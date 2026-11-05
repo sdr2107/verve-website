@@ -345,6 +345,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     units: ["mg/dL"],
     howTo: [
       "Ask for a lipid panel; LDL is on every one, calculated or measured.",
+      "Note whether the report says calculated or direct beside the LDL row.",
       "Enter in mg/dL as printed.",
     ],
     bands: [
