@@ -69,7 +69,8 @@ function glanceOf(d: NonNullable<typeof derived.value>, self: boolean): { cards:
   const act = d.weeks.length || d.acts.length ? activitySummary(d.weeks, d.acts, goal, today, thisMonday) : null;
   const fit = fitnessSummary(d.crf, today);
   const by = d.by;
-  const dues = [...labRowsFrom(by, today).map((r) => r.due), fit.due, bodyDueFrom(by, today)]
+  // The app's own two reminders only: a lab marker has no retest date (derive/markers.ts).
+  const dues = [fit.due, bodyDueFrom(by, today)]
     .filter((x): x is Due => !!x).sort((x, y) => x.days - y.days);
   const { outside, judged } = labsJudged(d.labs);
   const series = (key: string) => d.markers.find((m) => m.key === key)?.series() ?? [];

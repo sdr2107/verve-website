@@ -143,12 +143,12 @@ export const SUBJECTS: Subject[] = [
     slug: "body",
     label: "Body",
     blurb:
-      "The readings that come from a cuff, a tape measure and a blood draw, in the order the Body page shows them. Each one carries the band Verve screens against and how often it is worth repeating.",
+      "The readings that come from a cuff, a tape measure and a blood draw, in the order the Body page shows them. Each one carries the band Verve screens against.",
     teaser:
       "Blood pressure and lipids, waist and phenotype, grip and muscle, ageing well.",
     metaTitle: "Body — The Science Behind Verve",
     metaDescription:
-      "Blood sugar, blood pressure, lipids, waist and phenotype, muscle health and intrinsic capacity — the screening band Verve uses for each, and how often to repeat it.",
+      "Blood sugar, blood pressure, lipids, waist and phenotype, muscle health and intrinsic capacity — and the screening band Verve uses for each.",
     accent: "#FBBF24",
     accentTint: "rgba(251,191,36,0.12)",
     icon: "M12 8v6M8 10h8M9.5 21l2.5-7 2.5 7"

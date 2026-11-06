@@ -63,7 +63,8 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
     : { k: "STEADY", v: `${signed(change * 100, 0)}%`, tone: "", sub: `${recent.length}-week MET-hours against the ${prior.length} before` };
   const outRows = labRows.filter((r) => r.out);
   const oldest = outRows.filter((r) => r.noFollow != null).sort((x, y) => y.noFollow! - x.noFollow!)[0];
-  const dues: Due[] = [...labRows.map((r) => r.due).filter((d): d is Due => !!d), ...(crfDue ? [crfDue] : []), ...(bodyDue ? [bodyDue] : [])].sort((x, y) => x.days - y.days);
+  // The app's own two reminders only: a lab marker has no retest date (derive/markers.ts).
+  const dues: Due[] = [...(crfDue ? [crfDue] : []), ...(bodyDue ? [bodyDue] : [])].sort((x, y) => x.days - y.days);
   const nextDue = dues[0] ?? null;
   const who = p.self ? "you" : (p.name || "they");
   const their = p.self ? "your" : "their";
@@ -83,7 +84,7 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
     cell(moving.k, moving.v, moving.sub, moving.tone),
     cell("FITNESS", latest ? `${fmt1(latest.v)} <span class="text-[13px] font-semibold ${trendWord === "rising" ? "text-success-light" : trendWord === "falling" ? "text-danger" : "text-text-tertiary"}">${trendWord}</span>` : "—", latest ? `VO₂max by ${esc(methodLabel(latest.method))}${within != null ? `, ${within >= 0 ? "up" : "down"} ${fmt1(Math.abs(within))} within the method` : ", first of its method"}` : "no fitness test on file"),
     cell("LABS", labRows.length ? `${outRows.length} <span class="text-[13px] font-semibold ${outRows.length ? "text-warning" : "text-success-light"}">${outRows.length ? "outside range" : "all in range"}</span>` : "—", labRows.length ? (outRows.length ? `${esc(outRows.slice(0, 2).map((r) => r.label).join(" and "))}${outRows.length > 2 ? ` and ${outRows.length - 2} more` : ""}${oldest ? `, no follow-up in ${oldest.noFollow} months` : ""}` : `${labRows.length} marker${labRows.length === 1 ? "" : "s"} on file, latest ${esc(fmtDay(labRows[0].d))}`) : "no lab values on file", outRows.length ? "warning" : ""),
-    cell("DUE", nextDue ? esc(nextDue.what) : "Nothing due", nextDue ? `${esc(nextDue.why)} · ${dueWord(nextDue)}` : "in the cited cadences", nextDue && nextDue.days < 0 ? "danger" : nextDue && nextDue.days <= 30 ? "warning" : "", true),
+    cell("DUE", nextDue ? esc(nextDue.what) : "Nothing due", nextDue ? `${esc(nextDue.why)} · ${dueWord(nextDue)}` : "from the app's own reminders", nextDue && nextDue.days < 0 ? "danger" : nextDue && nextDue.days <= 30 ? "warning" : "", true),
   ].join("");
 
   // ── 1 · training rhythm: twelve weeks, one dot a day ─────────────────
@@ -380,7 +381,7 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
     person: { self: p.self, ageBand: d.profile?.age ? `${Math.floor(Number(d.profile.age) / 10) * 10}s` : null, sex: d.profile?.sex ?? null, weeklyGoalMetHours: goal, scopes: p.self || p.mine ? "all" : p.scopes },
     activity: { weeksOnFile: act.weeks.length, recentWeeks: recent.length, recentWindow: recent.length ? `the ${recent.length} complete weeks from ${fmtDay(recent[0].week_start)} to ${fmtDay(addDays(recent[recent.length - 1].week_start, 6))}` : null, recentAvgMetHours: fmt1(recentAvg), changeVsPrior: change == null ? null : `${Math.round(change * 100)}%`, weeksAtGoalInARow: streak, atGoalOfLast12: `${act.atGoal} of ${act.of}`, daysSinceLastWorkout: quietDays, workoutsAWeek: Math.round(perWeek), kinds: [...kinds].map(([k, n]) => `${k} ${n}`), vigorousShare: minutes ? `${Math.round((vig / minutes) * 100)}%` : null, zone2MinutesAWeek: zone2 != null ? Math.round(zone2) : null, zone2WeeklyDose: 150, lastWorkouts: lastWorkouts.map((w) => ({ on: localDay(w.timestamp), name: String(w.activity_name ?? "workout"), minutes: Math.round(Number(w.duration_minutes) || 0), metHours: fmt1(Number(w.met_hours) || 0), intensity: w.intensity_category ?? null, zone2Minutes: w.zone2_minutes != null ? Math.round(Number(w.zone2_minutes)) : null, effort: w.effort != null ? Number(w.effort) : null, effortSource: w.effort != null ? (w.effort_source ?? null) : null })) },
     fitness: latest ? { latestVo2max: fmt1(latest.v), method: methodLabel(latest.method), maximal: latest.max, changeWithinMethod: within == null ? null : fmt1(within), trend: trendWord || null, category: latest.category ?? null, testedOn: latest.measured_on, retest: crfDue ? `${dueWord(crfDue)} (${crfDue.why})` : null } : null,
-    labs: labRows.map((r) => ({ marker: r.label, latest: r.latest, labsRange: r.range, sinceLast: r.since, outsideRange: r.out, measuredOn: r.d, retest: r.retest })),
+    labs: labRows.map((r) => ({ marker: r.label, latest: r.latest, labsRange: r.range, sinceLast: r.since, outsideRange: r.out, measuredOn: r.d, ...(r.alert ? { alert: r.alert } : {}) })),
     body: { waist: wl ? { cm: wl.v, on: wl.d, waistToHeight: height ? (wl.v / height).toFixed(2) : null } : null, bodyFatPct: fat?.v ?? null, muscleMassPct: musc?.v ?? null, function: fnRows.map((f) => { const [word, ok] = f.judge(f.pt!.v); return { test: f.label, value: `${f.pt!.v} ${f.unit}`, verdict: word, withinCutoff: ok }; }), nextAssessment: bodyDue ? dueWord(bodyDue) : null },
     sleepHeart: heart ? {
       restingHeartRate: heart.rhr.latest != null ? { latest: heart.rhr.latest, on: heart.rhr.latestDay, ownMedian: heart.rhr.baseline, delta: heart.rhr.delta, status: heart.rhr.status, morningsAboveBandInARow: heart.rhr.run, absoluteLevel: heart.rhr.level } : null,
