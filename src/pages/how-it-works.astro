@@ -22,6 +22,23 @@ const crf = topicHref("crf");
 const heartHealth = topicHref("heart-health");
 const wearablesTopic = topicHref("wearables");
 
+// Average percent of heart rate reserve by activity, as the two studies
+// report it (Caballero 2019, PMID 31892255; Nakanishi 2018, PMID 30055617).
+// A null activity is the row that marks where Verve's 15% line falls; a dash
+// is a figure not taken from that paper (not a claim it was not measured). The
+// same figures, with their spreads, are in the app's
+// data/met-thresholds.json#backgroundMovement.gateEvidence.
+const BACKGROUND_HRR_ROWS: [string | null, string, string][] = [
+  ["Standing desk work", "10%", "—"],
+  ["Washing dishes", "12%", "—"],
+  [null, "", ""],
+  ["Vacuuming", "18%", "—"],
+  ["Slow walking", "22%", "19%"],
+  ["Normal walking", "26%", "23%"],
+  ["Brisk walking", "37%", "34%"],
+  ["Climbing stairs", "54%", "51%"],
+];
+
 const sections = [
   { id: "tabs", label: "The four tabs" },
   { id: "guide", label: "The Guide" },
@@ -196,10 +213,40 @@ const gates: [string, string, string][] = [
            links here (6 Nov 2026). -->
       <div id="background-movement" class="scroll-mt-24 flex max-w-[820px] flex-col gap-3 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-6">
         <span class="font-mono text-[11px] tracking-[0.1em] text-accent-light">BACKGROUND MOVEMENT</span>
-        <p class="text-[14.5px] leading-[1.6] text-text-secondary">Background movement is the moving you do outside logged sessions: the commute, errands, stairs. Verve reads it from heart rate shared through the day. A five-minute stretch counts when heart rate is above a quarter of your heart rate reserve and the same five minutes carry steps, up to 90 minutes a day. Its moderate and vigorous minutes join the weekly climb. None of it counts toward the weekly dose.</p>
-        <p class="text-[14.5px] leading-[1.6] text-text-secondary"><span class="font-semibold text-text-primary">What fills it.</span> A wearable that shares heart rate between sessions, not only inside them. The row in the table says which do. One that shares heart rate inside sessions only leaves it empty, and Verve estimates nothing in its place.</p>
+        <p class="text-[14.5px] leading-[1.6] text-text-secondary">Background movement is the moving you do outside logged sessions: the commute, errands, stairs. Verve reads it from heart rate shared through the day. A stretch counts when heart rate is at or above 15% of your heart rate reserve and the same five minutes hold at least 200 steps. There is no daily limit. Its moderate and vigorous minutes join the weekly climb. None of it counts toward the weekly dose.</p>
+        <p class="text-[14.5px] leading-[1.6] text-text-secondary"><span class="font-semibold text-text-primary">What fills it.</span> A wearable that shares heart rate between sessions, not only inside them, with steps fine enough to place in five-minute windows. The row in the table says which do. On an iPhone, the phone's own step count serves when it is carried. A wearable that shares heart rate inside sessions only leaves the row empty, and so does a day whose only steps arrive as one block. Verve estimates nothing in its place.</p>
         <p class="text-[14.5px] leading-[1.6] text-text-secondary"><span class="font-semibold text-text-primary">When to look.</span> The next day. A day is counted once it is complete, so today's figure is never there today. Yesterday is counted again each time the app opens during the following day, which lets a ring or watch that synced late catch up. After that the figure is fixed. Open the wearable's own app first, then Verve.</p>
-        <p class="text-[14.5px] leading-[1.6] text-text-tertiary">The gate is Verve's own, not a published threshold. It is set to leave out standing still and a raised pulse at a desk. It also leaves out most slow walking and housework, so the figure is a floor on your unlogged movement, not the whole of it.</p>
+        <p class="text-[14.5px] leading-[1.6] text-text-secondary"><span class="font-semibold text-text-primary">Why 15%.</span> Two studies measured how much of their heart rate reserve adults used in everyday activities. Standing tasks sat near 10%, slow walking near 20%. The line is drawn between them.</p>
+        <div class="overflow-x-auto rounded-xl border border-white/10 bg-black/20">
+          <table class="w-full min-w-[420px] text-[12.5px]">
+            <thead>
+              <tr class="text-left font-mono text-[10.5px] uppercase tracking-[0.1em] text-text-tertiary">
+                <th class="px-3 py-2.5 font-semibold">Activity</th>
+                <th class="px-3 py-2.5 text-right font-semibold">Caballero 2019</th>
+                <th class="px-3 py-2.5 text-right font-semibold">Nakanishi 2018</th>
+              </tr>
+            </thead>
+            <tbody>
+              {BACKGROUND_HRR_ROWS.map(([activity, a, b]) => (
+                activity === null ? (
+                  <tr class="border-t border-accent/40 bg-accent/[0.08] text-accent-light">
+                    <td class="px-3 py-2 font-semibold" colspan="3">Verve's line: 15% of heart rate reserve</td>
+                  </tr>
+                ) : (
+                  <tr class="border-t border-white/[0.07] text-text-secondary">
+                    <td class="px-3 py-2 font-semibold text-text-primary">{activity}</td>
+                    <td class="px-3 py-2 text-right font-mono">{a}</td>
+                    <td class="px-3 py-2 text-right font-mono">{b}</td>
+                  </tr>
+                )
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p class="text-[13px] leading-[1.6] text-text-tertiary">Average percent of heart rate reserve during each activity. <a href="https://pubmed.ncbi.nlm.nih.gov/31892255/" class="font-semibold text-accent-light hover:text-text-primary">Caballero and colleagues, 2019</a>: 40 adults, 20 activities. <a href="https://pubmed.ncbi.nlm.nih.gov/30055617/" class="font-semibold text-accent-light hover:text-text-primary">Nakanishi and colleagues, 2018</a>: 42 adults. Both measured heart rate with a chest sensor. A dash is a figure not drawn from that study.</p>
+        <p class="text-[14.5px] leading-[1.6] text-text-secondary"><span class="font-semibold text-text-primary">Why 200 steps.</span> Heart rate rises with coffee, stress and a hard meeting, so heart rate alone cannot say you moved. The same five minutes must also hold 200 steps, an average of 40 a minute. <a href="https://pubmed.ncbi.nlm.nih.gov/21708187/" class="font-semibold text-accent-light hover:text-text-primary">A study of 3,744 adults wearing activity monitors</a> sorted every minute into cadence bands; 40 a minute is where its third band begins, above the bands of 1 to 19 and 20 to 39 steps. A raised pulse at a desk takes no steps, so it does not count.</p>
+        <p class="text-[14.5px] leading-[1.6] text-text-secondary"><span class="font-semibold text-text-primary">On Android.</span> The same rule, the same numbers. Verve reads Health Connect, so the figure needs the wearable's own app to write two things there: heart rate between sessions, and steps in records of an hour or less. A Pixel Watch, a Fitbit or a Galaxy Watch writes steps by the minute, which is enough. A phone with no wearable has no heart rate, and Samsung Health on the phone alone writes one step record for the whole day, which cannot be placed in any five minutes: both leave the row empty. Health Connect lets an app read back to 30 days before you first gave it access, further if you allow its history permission.</p>
+        <p class="text-[14.5px] leading-[1.6] text-text-tertiary">The rule is Verve's own. It is informed by these measurements, which were taken during supervised tasks with a chest sensor, not by a wearable on the wrist in daily life, so read the figure as an estimate. Housework that takes few steps is still left out.</p>
       </div>
     </section>
 
