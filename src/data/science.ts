@@ -65,10 +65,10 @@ export const CRF_SECTION: Citation[] = [
     isCommentary: true,
   },
   {
-    title: "Nakanishi et al 2021",
+    title: "Caballero et al 2019",
     summary:
-      "Validates heart rate reserve (%HRR) + demographics for estimating MET intensity during free-living daily activity from wrist-worn wearables. Basis of Verve's Background Activity passive estimation.",
-    url: "https://pubmed.ncbi.nlm.nih.gov/?term=nakanishi+metabolic+equivalent+heart+rate+reserve+wearable",
+      "Forty adults did 20 daily activities, from desk work to stairs, wearing a chest heart rate sensor while their expired gas was measured. Percent heart rate reserve predicted METs to within 17.3% per activity on average. Verve uses this model to cost movement outside logged sessions. The study tested no wrist wearable, and deciding which minutes count as movement is Verve's own rule, not the paper's.",
+    url: "https://pubmed.ncbi.nlm.nih.gov/31892255/",
     color: "#5b21b6",
   },
 ];
