@@ -292,7 +292,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
     section: "Heart",
     label: "hs-CRP",
     purpose: "Low-grade inflammation in blood vessels",
-    note: "Values above 10 mg/L usually reflect acute infection or inflammation rather than chronic cardiovascular risk — the AHA/CDC statement advises discarding the result and re-testing once well.",
+    note: "Values above 10 mg/L usually reflect a passing infection or inflammation, not long-term heart risk. Verve does not read a value this high as a heart marker.",
     units: ["mg/L"],
     howTo: [
       "Ask for high-sensitivity CRP, not the ordinary CRP.",
@@ -303,7 +303,7 @@ export const BODY_MARKERS: BodyMarkerExplainer[] = [
       "Low: < 1",
       "Average: 1–3",
       "High: > 3",
-      "Re-test: ≥ 10",
+      "Not a heart reading: ≥ 10",
     ],
     citation: "AHA/CDC Scientific Statement on markers of inflammation and cardiovascular disease (Pearson TA et al, Circulation 2003;107:499-511). Relative cardiovascular risk bands: <1.0 mg/L low, 1.0-3.0 mg/L average, >3.0 mg/L high.",
     detail: [],

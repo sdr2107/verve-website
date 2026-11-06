@@ -11,6 +11,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { esc, fmtDay } from "../derive/format";
+import { dueLineOf } from "../derive/reads";
 
 export type ReadsContext = {
   personId: string;
@@ -145,7 +146,7 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
         <h2 class="mt-2 text-[34px] leading-tight text-text-primary sm:text-[40px]" style="${serif}">${esc(titleOf(r))}</h2>
         <p class="mt-4 text-[19px] leading-[1.6] text-[#dfe5ee]" style="${serif}">${esc(String(sm.lead ?? ""))}</p>
         ${convo ? `<div class="mt-6 font-mono text-[11px] font-semibold tracking-[0.14em] text-text-tertiary">WORTH A CONVERSATION</div><div class="mt-2.5 flex flex-col gap-2.5">${convo}</div>` : ""}
-        ${sm.due ? `<div class="mt-5 font-mono text-[11px] font-semibold tracking-[0.14em] text-text-tertiary">DUE</div><p class="mt-1.5 text-[14.5px] text-text-secondary">${esc(String(sm.due))}</p>` : ""}
+        ${dueLineOf(sm.due, r.created_at) ? `<div class="mt-5 font-mono text-[11px] font-semibold tracking-[0.14em] text-text-tertiary">DUE</div><p class="mt-1.5 text-[14.5px] text-text-secondary">${esc(dueLineOf(sm.due, r.created_at))}</p>` : ""}
         ${sm.notShared ? `<p class="mt-3 text-[13px] text-text-tertiary">${esc(String(sm.notShared))}</p>` : ""}
         <p class="mt-5 text-[12.5px] leading-relaxed text-text-muted">Every number is from this page · wellness information, not a diagnosis${sm.dropped ? ` · ${sm.dropped} sentence${sm.dropped === 1 ? "" : "s"} with a number not on the page ${sm.dropped === 1 ? "was" : "were"} dropped` : ""}.</p>
         ${state === "error" ? `<p class="mt-3 text-[13px] text-danger">${esc(error)}</p>` : ""}
@@ -244,7 +245,7 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
       .k{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#6b6b80}.lead{font-family:Georgia,'Times New Roman',serif;font-size:19px;line-height:1.6}p{line-height:1.55}.foot{margin-top:32px;font-size:12px;color:#6b6b80;border-top:1px solid #ddd;padding-top:12px}</style></head>
       <body><div class="k">✦ The Guide's read · ${esc(long(r.created_at))}${ctx!.self ? "" : ` · ${esc(ctx!.personName)}`}</div><h1>${esc(titleOf(r))}</h1>
       <p class="lead">${esc(String(sm.lead ?? ""))}</p>${items ? `<div class="k" style="margin-top:22px">Worth a conversation</div>${items}` : ""}
-      ${sm.due ? `<div class="k" style="margin-top:18px">Due</div><p>${esc(String(sm.due))}</p>` : ""}${r.note ? `<div class="k" style="margin-top:18px">My note</div><p>${esc(r.note)}</p>` : ""}
+      ${dueLineOf(sm.due, r.created_at) ? `<div class="k" style="margin-top:18px">Due</div><p>${esc(dueLineOf(sm.due, r.created_at))}</p>` : ""}${r.note ? `<div class="k" style="margin-top:18px">My note</div><p>${esc(r.note)}</p>` : ""}
       <div class="foot">Written by Verve from the numbers on the My health page. Wellness information, not a diagnosis. verve-app.health</div>
       <script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script></body></html>`);
     w.document.close();
@@ -255,7 +256,7 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
     const sm = r.summary ?? {};
     const { error: e } = await supabase.from("messages").insert({
       grant_id: grantId, person_id: ctx!.personId, sender_id: ctx!.userId, sender_role: ctx!.self ? "person" : "viewer", sender_label: ctx!.myLabel,
-      kind: "read", body: titleOf(r), payload: { read_id: r.id, title: titleOf(r), lead: sm.lead ?? "", conversations: sm.conversations ?? [], due: sm.due ?? "", on: day(r.created_at) },
+      kind: "read", body: titleOf(r), payload: { read_id: r.id, title: titleOf(r), lead: sm.lead ?? "", conversations: sm.conversations ?? [], due: dueLineOf(sm.due, r.created_at), on: day(r.created_at) },
     });
     const msgEl = tab.querySelector("[data-r=msg]") as HTMLElement | null;
     if (e) { if (msgEl) msgEl.textContent = `Not shared: ${e.message}`; return; }
