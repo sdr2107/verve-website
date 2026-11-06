@@ -14,12 +14,20 @@
  * heart rate BETWEEN sessions and steps. It follows the heart-rate row above
  * it; Oura's one-minute heart rate and its write-on-sync were read on Oura's
  * support page that day. How-it-works carries the note on when to look.
+ *
+ * From the 15% rule (6 Nov 2026) the figure also needs steps that can be
+ * placed in five-minute windows, and a day without them has no figure, so
+ * the row says where each device's steps come from. The Android cells
+ * follow the Steps row below (both watches write steps by the minute to
+ * Health Connect). How finely Oura and Garmin write steps was not checked,
+ * and the cells say so; on an iPhone the phone's own step samples are a few
+ * minutes long and count when it is carried.
  */
 export const WEARABLE_ROWS: [string, string, string, string, string, string, string, string][] = [
   ["Workouts, with heart rate inside the session", "Yes", "Yes: started sessions, both stores", "Yes, both stores", "Yes, both stores", "Yes, both stores", "Yes", "Zone 2, the band split, heart rate recovery and the weekly dose all start here"],
   ["What the workout's energy figure holds", "Above rest: Verve adds the resting MET", "Rest included: read as it is", "Above rest, as the store defines the field", "Above rest, as the store defines the field", "Health Connect: total calories only, so the Compendium value stands in; Apple Health: not confirmed", "Not listed; the Compendium value stands in", "The session's MET, so its class and its MET-minutes"],
   ["Heart rate through the day and asleep", "Yes", "No: inside started sessions only", "Yes, one-minute heart rate", "Yes, all day", "Yes", "Yes", "Sleeping heart rate on the Sleep page; the Vitals card"],
-  ["Enough for background movement: heart rate between sessions, with steps", "Yes, written through the day", "No: nothing between sessions", "Yes, once the ring has synced to its app", "Yes, once the watch has synced; how fine is not published", "Yes, through Health Connect", "Yes, through Health Connect", "Movement outside logged sessions, counted once the day is complete: look the next day"],
+  ["Enough for background movement: heart rate between sessions, with steps in short stretches", "Yes, written through the day", "No: nothing between sessions, and steps as one block", "Heart rate yes, once the ring has synced to its app; how fine its steps are is not confirmed", "Heart rate yes, once the watch has synced; how fine its steps are is not confirmed", "Yes on Android, through Health Connect: heart rate through the day, steps by the minute", "Yes on Android, through Health Connect: heart rate through the day, steps by the minute", "Movement outside logged sessions, counted once the day is complete: look the next day"],
   ["Resting heart rate", "Yes", "Yes", "Yes, the night's", "Not listed", "Yes", "Not listed", "Against your own last 30 nights"],
   ["Night HRV", "Yes, SDNN", "No: kept in the WHOOP app", "Health Connect yes (rMSSD); not in its Apple Health list", "No", "Health Connect yes; Apple Health not confirmed", "Not listed", "Your own baseline, one writer at a time; SDNN and rMSSD never mixed"],
   ["Sleep: duration, bedtime, wakes", "Yes", "Yes: one asleep block with its wakes", "Yes", "Yes", "Yes", "Yes", "Timing, regularity, efficiency"],
