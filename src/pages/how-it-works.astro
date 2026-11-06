@@ -191,6 +191,16 @@ const gates: [string, string, string][] = [
           </tbody>
         </table>
       </div>
+
+      <!-- Background movement: what fills it and when to look. The app's row
+           links here (6 Nov 2026). -->
+      <div id="background-movement" class="scroll-mt-24 flex max-w-[820px] flex-col gap-3 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-6">
+        <span class="font-mono text-[11px] tracking-[0.1em] text-accent-light">BACKGROUND MOVEMENT</span>
+        <p class="text-[14.5px] leading-[1.6] text-text-secondary">Background movement is the moving you do outside logged sessions: the commute, errands, stairs. Verve reads it from heart rate shared through the day. A five-minute stretch counts when heart rate is above a quarter of your heart rate reserve and the same five minutes carry steps, up to 90 minutes a day. Its moderate and vigorous minutes join the weekly climb. None of it counts toward the weekly dose.</p>
+        <p class="text-[14.5px] leading-[1.6] text-text-secondary"><span class="font-semibold text-text-primary">What fills it.</span> A wearable that shares heart rate between sessions, not only inside them. The row in the table says which do. One that shares heart rate inside sessions only leaves it empty, and Verve estimates nothing in its place.</p>
+        <p class="text-[14.5px] leading-[1.6] text-text-secondary"><span class="font-semibold text-text-primary">When to look.</span> The next day. A day is counted once it is complete, so today's figure is never there today. Yesterday is counted again each time the app opens during the following day, which lets a ring or watch that synced late catch up. After that the figure is fixed. Open the wearable's own app first, then Verve.</p>
+        <p class="text-[14.5px] leading-[1.6] text-text-tertiary">The gate is Verve's own, not a published threshold. It is set to leave out standing still and a raised pulse at a desk. It also leaves out most slow walking and housework, so the figure is a floor on your unlogged movement, not the whole of it.</p>
+      </div>
     </section>
 
     <section class="flex flex-col gap-4 rounded-[20px] border border-accent/40 bg-accent/[0.08] p-7">
