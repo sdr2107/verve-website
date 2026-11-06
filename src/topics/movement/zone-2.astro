@@ -59,3 +59,36 @@ import {
 <div class="mt-4 grid gap-4 sm:grid-cols-2">
   {ZONE2_HR_SECTION.map((c) => <CitationCard {...c} />)}
 </div>
+
+<h3 id="the-three-zones" class="scroll-mt-8 vrv-anchor mt-10 pt-2 text-lg font-semibold text-text-primary">Zone 1 and Zone 3: either side of the band</h3>
+<p class="mt-3 text-sm leading-relaxed text-text-secondary">
+  Verve draws one band, Zone 2, and names what falls either side of it. Zone 1 is every minute
+  of a logged session below the band: under 40% of your heart-rate reserve. Zone 3 is every
+  minute above it: over 60%. If you entered a test, the two cuts are your test's two heart
+  rates instead. The three sum to the session, so no minute is left unexplained.
+</p>
+<p class="mt-3 text-sm leading-relaxed text-text-secondary">
+  The three rows count logged aerobic sessions only. What you do outside a session has its own
+  row, Background movement, and is never folded into the zones.
+  <a href="/how-it-works#background-movement" class="font-semibold text-accent-light hover:text-text-primary">How background movement is read &rarr;</a>
+</p>
+<p class="mt-3 text-sm leading-relaxed text-text-secondary">
+  <strong class="text-text-primary">Why Zone 1 has no target.</strong> The
+  <a href="https://pubmed.ncbi.nlm.nih.gov/33239350/" class="font-semibold text-accent-light hover:text-text-primary">WHO 2020 guidelines</a>
+  set their weekly amounts in moderate and vigorous minutes: 150 to 300 moderate, or 75 to 150
+  vigorous. They also say that some activity is better than none, and they set no weekly
+  amount for lighter movement. So Verve reports your Zone 1 minutes and grades nothing by them.
+</p>
+<p class="mt-3 text-sm leading-relaxed text-text-secondary">
+  <strong class="text-text-primary">What a Zone 3 minute counts for.</strong> In the same
+  guidelines the vigorous amounts are half the moderate ones: a harder minute stands for more.
+  Verve's weekly dose does this without a rule of thumb. It multiplies each minute by its METs,
+  so a Zone 3 minute adds more than a Zone 2 minute, by as much as it was harder.
+</p>
+<p class="mt-3 text-sm leading-relaxed text-text-secondary">
+  <strong class="text-text-primary">Not the laboratory's three zones.</strong> Endurance
+  research often uses three zones cut at the two thresholds a lactate or breathing test finds
+  (<a href="https://pubmed.ncbi.nlm.nih.gov/20861519/" class="font-semibold text-accent-light hover:text-text-primary">Seiler, 2010</a>).
+  Verve's three are cut around its Zone 2 band by heart-rate reserve, unless you enter a test.
+  The names match and the cuts do not, so minutes in one scheme are not minutes in the other.
+</p>
