@@ -88,7 +88,7 @@ export const GET: APIRoute = () => {
   for (const m of BODY_MARKERS) {
     entries.push({
       k: "marker", t: m.label, s: "Body marker", u: `/science/body/body-phenotyping#${m.slug}`, d: m.purpose, h: [],
-      x: [m.note, ...m.bands, ...m.howTo, m.citation, m.retest?.interval ?? ""].join(" "),
+      x: [m.note, ...m.bands, ...m.howTo, m.citation].join(" "),
     });
   }
 

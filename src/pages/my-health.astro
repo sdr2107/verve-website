@@ -637,7 +637,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       </div>
 
       <div id="tab-labs" class="mt-6 hidden">
-        <p class="mb-5 max-w-3xl text-[13.5px] leading-relaxed text-text-secondary"><span class="font-semibold text-text-primary">This page:</span> the values. Every marker, its band, its history and when it is next due; the Body card's number comes from here.</p>
+        <p class="mb-5 max-w-3xl text-[13.5px] leading-relaxed text-text-secondary"><span class="font-semibold text-text-primary">This page:</span> the values. Every marker, its band and its history; the Body card's number comes from here.</p>
         <!-- a view (src/my-health/views/Labs): the rail, the section, the charts -->
         <div id="labsroot"></div>
         <!-- the next step in the chain: picture, what moved, values, paper -->
@@ -902,7 +902,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   import { PLANS_ENFORCED, PLANS_OPEN, AI_SUMMARY_OPEN, entitlements, planOf, type PlanKey } from "../data/plans";
   import type { MyHealthDocument } from "../my-health/document";
   import { esc, fmtDay, dayOf, dayWord, monthOf, monthYearOf, addDays, daysBack, daysBetween, localDay, mondayOf, todayStr, fmt1, round0, signed, fmtHM, fmtSleepMin, ordinal, medianOf, quartilesOf, byDate, kicker, plural } from "../my-health/derive/format";
-  import { LABELS, CHART_MARKERS, type ChartMarker, APP_KEY_BY_NAME, squash, appKeyFor, chartKeyFor, type Pt, markerPointsFrom, hasPoints, inRange, rangeLabel, rangeText, RETEST, CRF_RETEST, BODY_RETEST, METHOD_LABEL, MAXIMAL, methodLabel, type Due, dueFor, dueWord, dueTone, type LabRow, labRowsFrom, bodyDueFrom, eventsFrom } from "../my-health/derive/markers";
+  import { LABELS, CHART_MARKERS, type ChartMarker, APP_KEY_BY_NAME, squash, appKeyFor, chartKeyFor, type Pt, markerPointsFrom, hasPoints, inRange, rangeLabel, rangeText, CRF_RETEST, BODY_RETEST, METHOD_LABEL, MAXIMAL, methodLabel, type Due, dueWord, dueTone, type LabRow, labRowsFrom, bodyDueFrom, eventsFrom } from "../my-health/derive/markers";
   import { weeksFrom, crfFromSync, bodyFromSync, mergeBy, isWorkout, actsByDay, activitySummary, fitnessSummary } from "../my-health/derive/activity";
   import { HRV_MIN_NIGHTS, sleepHeartSummary, sleepHeartSummaryRaw } from "../my-health/derive/heart";
   import { type SecKey, type Rng, type Pt2, type Marker, type Drawn, SEC_META, SEC_ORDER, RANGE_LABEL, SHELVES, ownBand, weightSeries, sppbSeries, drawnFor, chartSvg, alongsideHtml, workoutsListHtml } from "../my-health/derive/lenses";
@@ -2260,7 +2260,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       const fit = fitnessSummary(crfP, today);
       const act = activitySummary(weeksP, actsP, goal, today, thisMonday);
       const bodyDue = bodyDueFrom(by, today);
-      const dues = [...labRows.map((r) => r.due), fit.due, bodyDue].filter((d): d is Due => !!d).sort((x, y) => x.days - y.days);
+      const dues = [fit.due, bodyDue].filter((d): d is Due => !!d).sort((x, y) => x.days - y.days);
       return { p, act, fit, labRows, outRows: labRows.filter((r) => r.out), unchecked: appP.filter((r: any) => r.review_status === "unchecked").length,
         dues, events: eventsFrom(labsP, labRows, fit, act, today), latestLabDay: labRows.map((r) => r.d).sort().pop() ?? "" };
     });

@@ -1,7 +1,7 @@
 /**
  * The 22 markers the app tracks (ApoA1 joined ApoB on 2026-10-27), read from a person's rows: the columns,
  * the names a report may use for them, every reading of each by chart key,
- * the lab's own range on each reading, and when each is next due. Pure.
+ * and the lab's own range on each reading. Pure.
  */
 import { canonName } from "../../lib/canon.js";
 import { addDays, daysBetween, esc, fmt1, fmtDay, localDay, monthOf, monthYearOf, ordinal, signed } from "./format.ts";
@@ -172,20 +172,13 @@ export function rangeLabel(v: { ref_low?: number | null; ref_high?: number | nul
 export const rangeText = (pt: Pt | null) => !pt ? "" : pt.lo != null && pt.hi != null ? `${pt.lo} to ${pt.hi}` : pt.hi != null ? `below ${pt.hi}` : pt.lo != null ? `above ${pt.lo}` : "";
 
 /**
- * The cited retest cadences, in days, from the app's own threshold table:
- * one figure while the latest reading is in range, a shorter one once it
- * is outside. The lipid panel shares one draw and one interval.
+ * No retest date for a lab marker. Until 6 Nov 2026 a table here turned each
+ * marker's latest reading into a due date from a cited cadence. Verve is a
+ * wellness product: when to test a lab again is a clinician's call, so the
+ * table and the dates are gone, here and in the app. The two reminders that
+ * remain are the app's own, about its own tests: the fitness test and the
+ * body assessment.
  */
-export const RETEST: Record<string, { ok: number; out: number; text: string; source: string }> = {
-  glucose_mgdl:       { ok: 1095, out: 365,  text: "every 3 years · yearly from 100 mg/dL",            source: "ADA Standards of Care 2026" },
-  hba1c_pct:          { ok: 1095, out: 365,  text: "every 3 years · yearly from 5.7%",                 source: "ADA Standards of Care 2026" },
-  bp:                 { ok: 365,  out: 91,   text: "yearly under 120/80 · 3 to 6 months once above",   source: "AHA/ACC 2017" },
-  triglycerides_mgdl: { ok: 1461, out: 1461, text: "every 4 to 6 years · one draw for the panel",       source: "AHA · USPSTF" },
-  hdl_mgdl:           { ok: 1461, out: 1461, text: "every 4 to 6 years · one draw for the panel",       source: "AHA · USPSTF" },
-  apo_b_mgdl:         { ok: 1461, out: 1461, text: "every 4 to 6 years · one draw for the panel",       source: "AHA · USPSTF" },
-  ldl_mgdl:           { ok: 1461, out: 1461, text: "every 4 to 6 years · one draw for the panel",       source: "AHA · USPSTF" },
-  alm_kg:             { ok: 182,  out: 182,  text: "every 6 months",                                   source: "Verve's own cadence, anchored to EWGSOP2" },
-};
 export const CRF_RETEST = { due: 56, overdue: 112 };          // the app's own reminder: eight weeks, overdue at sixteen
 export const BODY_RETEST = 182;                               // a body assessment every six months, the app's cadence
 export const METHOD_LABEL: Record<string, string> = { cpet: "CPET", "treadmill-test": "treadmill test", "bruce-protocol": "Bruce protocol", "cooper-run": "Cooper run", "1.5-mile-run": "1.5-mile run", "six-minute-walk": "six-minute walk", "one-mile-walk": "one-mile walk" };
@@ -193,20 +186,11 @@ export const MAXIMAL = new Set(["cpet", "treadmill-test", "bruce-protocol", "coo
 export const methodLabel = (m: unknown) => METHOD_LABEL[String(m ?? "")] ?? String(m ?? "").replace(/-/g, " ");
 
 export type Due = { what: string; on: string; days: number; why: string };
-/** When a marker is next due, from its latest reading and whether that reading sits in the lab's range. */
-export function dueFor(key: string, pts: Pt[], today = new Date().toLocaleDateString("en-CA")): Due | null {
-  const r = RETEST[key]; if (!r || !pts.length) return null;
-  const last = pts[pts.length - 1];
-  const ranged = [...pts].reverse().find((p) => p.lo != null || p.hi != null) ?? null;
-  const out = ranged ? inRange({ value: last.v, ref_low: ranged.lo, ref_high: ranged.hi }) === false : false;
-  const on = addDays(last.d, out ? r.out : r.ok);
-  return { what: CHART_MARKERS.find((m) => m.key === key)?.label ?? key, on, days: daysBetween(today, on), why: r.text };
-}
 export const dueWord = (d: Due) => d.days < 0 ? `overdue ${Math.abs(d.days) < 14 ? `${Math.abs(d.days)} days` : `${Math.round(Math.abs(d.days) / 7)} weeks`}` : d.days === 0 ? "due today" : d.days < 45 ? `due ${fmtDay(d.on)}` : `due ${monthYearOf(d.on)}`;
 export const dueTone = (d: Due) => d.days < 0 ? "text-danger" : d.days <= 30 ? "text-warning" : "text-text-secondary";
 
-export type LabRow = { key: string; label: string; latest: string; tone: string; range: string; since: string; sinceTone: string; retest: string; retestTone: string; out: boolean; d: string; due: Due | null; noFollow: number | null };
-/** Labs: one row per marker on file, against the lab's own range, with the change since last and the cited cadence. */
+export type LabRow = { key: string; label: string; latest: string; tone: string; range: string; since: string; sinceTone: string; /** A line that must not be missed: a blood pressure at crisis level. */ alert: string | null; out: boolean; d: string; noFollow: number | null };
+/** Labs: one row per marker on file, against the lab's own range, with the change since last. */
 export function labRowsFrom(by: Map<string, Pt[]>, today: string): LabRow[] {
   const rows: LabRow[] = [];
   for (const m of CHART_MARKERS) {
@@ -217,14 +201,12 @@ export function labRowsFrom(by: Map<string, Pt[]>, today: string): LabRow[] {
       const bp = restingBPOf(S, D);
       if (!bp) continue;
       const out = bp.crisis || bp.sbp >= 120 || bp.dbp >= 80;
-      const due: Due = { what: "Blood pressure", on: addDays(bp.d, out ? RETEST.bp.out : RETEST.bp.ok), days: 0, why: RETEST.bp.text };
-      due.days = daysBetween(today, due.on);
       const latest = bp.crisis ? `${bp.sbp}/${bp.dbp} mmHg, a crisis-level reading on ${fmtDay(bp.d)}`
         : bp.basis === "average" ? `${bp.sbp}/${bp.dbp} mmHg, the ${bp.days}-day average of ${bp.n} readings to ${fmtDay(bp.d)}`
         : `${bp.sbp}/${bp.dbp} mmHg, a single reading on ${fmtDay(bp.d)}`;
       rows.push({ key: "bp", label: "Blood pressure", latest, tone: bp.crisis ? "text-danger" : out ? "text-warning" : "text-text-primary", range: "under 120/80 (crisis 180/120 or above)",
         since: bp.prev ? `${signed(bp.sbp - bp.prev.sbp, 0)}/${signed(bp.dbp - bp.prev.dbp, 0)} against the ${bp.days ?? 30} days before` : "no earlier average", sinceTone: out ? "text-warning" : "text-text-secondary",
-        retest: bp.crisis ? "a reading at crisis level is acted on now, not averaged: see a doctor today" : `${dueWord(due)} · ${due.why}`, retestTone: bp.crisis ? "text-danger" : dueTone(due), out, d: bp.d, due, noFollow: null });
+        alert: bp.crisis ? "a reading at crisis level is acted on now, not averaged: see a doctor today" : null, out, d: bp.d, noFollow: null });
       continue;
     }
     const pts = by.get(m.key) ?? [];
@@ -232,10 +214,9 @@ export function labRowsFrom(by: Map<string, Pt[]>, today: string): LabRow[] {
     const last = pts[pts.length - 1], prev = pts[pts.length - 2] ?? null;
     const ranged = [...pts].reverse().find((x) => x.lo != null || x.hi != null) ?? null;
     const out = ranged ? inRange({ value: last.v, ref_low: ranged.lo, ref_high: ranged.hi }) === false : false;
-    const due = dueFor(m.key, pts, today);
     const months = Math.floor(daysBetween(last.d, today) / 30);
     const noFollow = out && months >= 3 ? months : null;
-    rows.push({ key: m.key, label: m.label, latest: `${last.v}${last.unit ? ` ${last.unit}` : ""}`, tone: out ? "text-warning" : "text-text-primary", range: ranged ? rangeText(ranged) : "no range on file", since: prev ? `${signed(last.v - prev.v, Number.isInteger(last.v) && Number.isInteger(prev.v) ? 0 : 1)} since ${monthOf(prev.d)}` : "measured once", sinceTone: out ? "text-warning" : prev && ranged && inRange({ value: prev.v, ref_low: ranged.lo, ref_high: ranged.hi }) === false ? "text-success-light" : "text-text-secondary", retest: noFollow ? `outside range, no follow-up in ${noFollow} months` : due ? `${dueWord(due)} · ${due.why}` : "—", retestTone: noFollow ? "text-warning" : due ? dueTone(due) : "text-text-muted", out, d: last.d, due, noFollow });
+    rows.push({ key: m.key, label: m.label, latest: `${last.v}${last.unit ? ` ${last.unit}` : ""}`, tone: out ? "text-warning" : "text-text-primary", range: ranged ? rangeText(ranged) : "no range on file", since: prev ? `${signed(last.v - prev.v, Number.isInteger(last.v) && Number.isInteger(prev.v) ? 0 : 1)} since ${monthOf(prev.d)}` : "measured once", sinceTone: out ? "text-warning" : prev && ranged && inRange({ value: prev.v, ref_low: ranged.lo, ref_high: ranged.hi }) === false ? "text-success-light" : "text-text-secondary", alert: null, out, d: last.d, noFollow });
   }
   rows.sort((x, y) => Number(y.out) - Number(x.out) || y.d.localeCompare(x.d));
   return rows;
