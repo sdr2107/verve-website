@@ -10,6 +10,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { esc, fmtDay } from "../derive/format";
+import { dueLineOf } from "../derive/reads";
 
 export type Thread = { id: string; label: string; status: string };
 export type MessagesContext = {
@@ -95,7 +96,7 @@ export function mountMessages(root: HTMLElement, supabase: SupabaseClient, onUnr
       return `<div class="${mine ? "ml-auto" : ""} w-full max-w-xl rounded-2xl border border-violet-400/45 p-4" style="background:linear-gradient(160deg,rgba(129,140,248,.12),rgba(255,255,255,.02))">
         <div class="font-mono text-[10.5px] font-semibold tracking-wider text-accent-light">✦ THE GUIDE'S READ · ${esc(day(p.on ?? m.created_at))}</div>
         <div class="mt-1 text-[18px] text-text-primary" style="font-family:'Newsreader',Georgia,serif">${esc(String(p.title ?? m.body ?? ""))}</div>
-        <p class="mt-1.5 text-[14px] leading-relaxed text-text-secondary">${esc(String(p.lead ?? ""))}</p>${items}${p.due ? `<p class="mt-2 text-[12.5px] text-text-tertiary">Due: ${esc(String(p.due))}</p>` : ""}${meta}</div>`;
+        <p class="mt-1.5 text-[14px] leading-relaxed text-text-secondary">${esc(String(p.lead ?? ""))}</p>${items}${dueLineOf(p.due, p.on ?? m.created_at) ? `<p class="mt-2 text-[12.5px] text-text-tertiary">Due: ${esc(dueLineOf(p.due, p.on ?? m.created_at))}</p>` : ""}${meta}</div>`;
     }
     if (m.kind === "test") {
       const p = m.payload ?? {};

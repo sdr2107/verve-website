@@ -149,3 +149,42 @@ test("sleepHeartSummaryRaw: efficiency is asleep ÷ the in-bed window the app se
   const bare = sleepHeartSummaryRaw([{ day: "2026-10-29", sleep_minutes: 400 }], "2026-10-29");
   assert.equal(bare.sleep.last.efficiency, null);
 });
+
+// ── a stored read's Due sentence ──────────────────────────────────────
+import { dueLineOf, DUE_LINE_FROM } from "../src/my-health/derive/reads.ts";
+
+test("a read written before the cut-off does not show its Due sentence; a later one does", () => {
+  const due = "The lipid panel is due in March 2027. The fitness test is two weeks overdue.";
+  assert.equal(DUE_LINE_FROM, "2026-11-07");
+  // Written while the working still carried lab timing: hidden, whatever it says.
+  assert.equal(dueLineOf(due, "2026-10-28T09:12:00Z"), "");
+  assert.equal(dueLineOf(due, "2026-11-06T23:59:59Z"), "");
+  assert.equal(dueLineOf(due, "2026-11-06"), "");
+  // Written after: it can only speak of the app's own reminders, so it shows.
+  assert.equal(dueLineOf("The fitness test is due on 14 Nov.", "2026-11-07T00:00:01Z"), "The fitness test is due on 14 Nov.");
+  assert.equal(dueLineOf("  The fitness test is due.  ", "2026-12-01"), "The fitness test is due.");
+  // Nothing to show, or no date to judge it by: nothing.
+  assert.equal(dueLineOf("", "2026-12-01"), "");
+  assert.equal(dueLineOf(null, "2026-12-01"), "");
+  assert.equal(dueLineOf(due, null), "");
+  assert.equal(dueLineOf(due, undefined), "");
+});
+
+test("a lab row carries no retest date; a blood pressure at crisis level keeps its line as an alert", () => {
+  const pt = (d, v, extra = {}) => ({ d, v, unit: "mg/dL", lo: null, hi: 150, ...extra });
+  const by = new Map([
+    ["triglycerides_mgdl", [pt("2026-06-01", 140), pt("2026-10-01", 170)]],
+    ["sbp", [{ d: "2026-10-05", v: 184, unit: "mmHg", n: 1, max: 184 }]],
+    ["dbp", [{ d: "2026-10-05", v: 96, unit: "mmHg", n: 1, max: 96 }]],
+  ]);
+  const rows = labRowsFrom(by, "2026-10-09");
+  for (const r of rows) {
+    assert.equal("due" in r, false);
+    assert.equal("retest" in r, false);
+  }
+  const tg = rows.find((r) => r.key === "triglycerides_mgdl");
+  assert.equal(tg.out, true);
+  assert.equal(tg.alert, null);
+  const bp = rows.find((r) => r.key === "bp");
+  assert.match(bp.alert, /crisis level/);
+});

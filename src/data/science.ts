@@ -517,7 +517,7 @@ export const HEART_HEALTH_SECTION: Citation[] = [
   {
     title: "hs-CRP — AHA/CDC Scientific Statement 2003",
     summary:
-      "Relative cardiovascular risk bands: <1.0 mg/L low, 1.0–3.0 mg/L average, >3.0 mg/L high. Values above 10 mg/L usually reflect acute infection or inflammation rather than chronic cardiovascular risk — re-test once well.",
+      "Relative cardiovascular risk bands: <1.0 mg/L low, 1.0–3.0 mg/L average, >3.0 mg/L high. Values above 10 mg/L usually reflect acute infection or inflammation rather than chronic cardiovascular risk, so Verve does not read them as a heart marker.",
     url: "https://pubmed.ncbi.nlm.nih.gov/12551878/",
     color: "#0891b2",
   },
