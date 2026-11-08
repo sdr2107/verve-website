@@ -440,13 +440,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         <!-- the message count rides on the Messages tab and the plan on the Account group (board 1): nothing pops in here -->
         <!-- over the plan's people: the next person is not added, and this says why -->
         <div id="planpeople" class="mt-3 hidden max-w-3xl flex-col gap-2 rounded-2xl border border-warning/50 bg-warning/[0.06] p-4"></div>
-        <!-- invitations waiting for you: someone asked you to look at their page -->
-        <div id="invites" class="mt-3 hidden max-w-3xl flex-col gap-3"></div>
-        <!-- people you asked to share their page with you: waiting until they decide -->
-        <p id="asked" class="mt-2 hidden max-w-3xl text-[12.5px] leading-relaxed text-text-tertiary"></p>
-        <!-- someone asks to see your page: nothing is shared until you say so -->
-        <div id="requests" class="mt-3 hidden max-w-3xl flex-col gap-3"></div>
-
+        <!-- invitations, requests and the people you asked live on Messages now (board 1): the strip holds only who you are and whose page this is -->
       </div>
 
       <!-- reading in progress: shown on every tab, since the read carries on
@@ -602,44 +596,34 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
            you look after gets the same page from their exports, and a
            client's page shows only what their scopes let you read. -->
       <div id="tab-depth" class="mt-6 hidden">
-        <p class="mb-5 max-w-3xl text-[13.5px] leading-relaxed text-text-secondary"><span class="font-semibold text-text-primary">This page:</span> why the week read the way the Overview said. The same four cards, with the working shown.</p>
-        <!-- "The Guide's read": a short reading of this page, written by Claude from the page's own working -->
-        <section id="dp-ai" class="mb-5 hidden flex-col gap-3 rounded-2xl border border-accent/50 bg-accent/[0.07] p-5"></section>
-        <!-- a view (src/my-health/views/Depth): the plan gate, the head, the four answers, the six chapters, what changed -->
+        <!-- the Guide has its own tab; this slot stays for the page's older loader and is never shown -->
+        <section id="dp-ai" class="hidden"></section>
+        <!-- a view (src/my-health/views/Depth): last week, the snapshot, the six chapters, the week's every number -->
         <div id="depthroot"></div>
-        <p class="mt-2 text-[12px] text-text-muted">Ranges are each lab's own. Cadences are the cited ones on the marker pages in the science section; the fitness-test and body-assessment cadences are the app's. None of it is a diagnosis.</p>
-        <!-- the next step in the chain: picture, what moved, values, paper -->
-        <button type="button" data-goto="body" class="mt-8 flex w-full max-w-3xl items-center justify-between gap-4 rounded-2xl border border-white/12 bg-white/[0.03] px-5 py-4 text-left transition-colors hover:border-white/25 hover:bg-white/[0.05]">
-          <span class="min-w-0"><span class="block font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary">NEXT</span><span class="mt-1 block text-[14.5px] font-bold text-text-primary">Body: the app's list, with the labs</span></span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </button>
+        <p class="t-caption mt-4 text-text-3">None of it is a diagnosis.</p>
       </div>
 
       <!-- ═══ BODY: the app's list, with Labs folded in (board 6; the list itself is stage 2) ═══ -->
       <div id="tab-body" class="mt-6 hidden">
-        <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <p class="t-small max-w-3xl text-text-2"><span class="font-semibold text-text">Body:</span> every marker, its band and its history, from the app and the reports.</p>
-          <button
-            id="addreport"
-            class="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/14 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-white/25"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-            Add a report
-          </button>
-        </div>
-        <!-- a view (src/my-health/views/Labs): the rail, the section, the charts -->
+        <!-- the picker's button lives on the Body view; this one keeps the page's wiring and is never seen -->
+        <button id="addreport" type="button" style="display:none" aria-hidden="true" tabindex="-1">Add a report</button>
+        <!-- a view (src/my-health/views/Body): the app's list in three groups, the reports on file -->
         <div id="bodyroot"></div>
-        <!-- the next step in the chain: picture, what moved, values, paper -->
-        <button type="button" data-goto="reports" class="mt-8 flex w-full max-w-3xl items-center justify-between gap-4 rounded-2xl border border-white/12 bg-white/[0.03] px-5 py-4 text-left transition-colors hover:border-white/25 hover:bg-white/[0.05]">
-          <span class="min-w-0"><span class="block font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary">NEXT</span><span class="mt-1 block text-[14.5px] font-bold text-text-primary">Reports: the paper every value came from</span></span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </button>
       </div>
 
       <!-- ═══ REPORTS ════════════════════════════════════════════════════ -->
       <!-- Messages: one thread per share (src/my-health/views/Messages.ts); the pane exists before any thread does -->
       <div id="tab-messages" class="mt-6 hidden max-w-3xl">
-        <p id="messagesempty" class="t-small max-w-xl text-text-3">Messages open once someone shares this page with a coach or a clinician, or a page is shared with you: one thread for each.</p>
+        <!-- what needs an answer from you: invitations to look at a page, requests to see yours, and the people you asked -->
+        <div id="messagesnotices" class="mb-5 flex flex-col gap-3">
+          <!-- invitations waiting for you: someone asked you to look at their page -->
+          <div id="invites" class="hidden flex-col gap-3"></div>
+          <!-- someone asks to see your page: nothing is shared until you say so -->
+          <div id="requests" class="hidden flex-col gap-3"></div>
+          <!-- people you asked to share their page with you: waiting until they decide -->
+          <p id="asked" class="t-caption hidden text-text-3"></p>
+        </div>
+        <p id="messagesempty" class="t-small max-w-xl text-text-3">Messages open once someone shares this page with a coach or a clinician, or a page is shared with you: one thread for each. Give access under Account to start one.</p>
         <div id="messagesroot" class="hidden"></div>
       </div>
       <!-- The Guide: its own tab (src/my-health/views/Reads.ts draws the read; the Overview keeps one line) -->
@@ -946,7 +930,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   import { effect } from "@preact/signals";
   import { doc as docSignal, person as personSignal, people as peopleSignal, firstName as firstNameSignal, section as sectionSignal, setSection as setSectionState, latestRead as latestReadSignal, readOf, activeTab as activeTabSignal, searchQuery as searchQuerySignal, depthLocked as depthLockedSignal, depthWorking as depthWorkingSignal, actions, openLabs, space as spaceSignal, isClient } from "../my-health/state";
   import { mountOverview } from "../my-health/views/Overview";
-  import { mountLabs } from "../my-health/views/Labs";
+  import { mountBody } from "../my-health/views/Body";
   import { mountDepth } from "../my-health/views/Depth";
   import { mountReports } from "../my-health/views/Reports";
   import { mountPeople } from "../my-health/views/People";
@@ -1406,13 +1390,22 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   // each coach or clinician it is shared with; a shared page has the one thread of that share. ─────────
   const UNREAD_KEY = "mh-unread";
   const messagesView = mountMessages($("messagesroot"), supabase as any, (n) => {
-    setTabCount("messages", n ? `${n} new` : "", "text-good");
+    unreadCount = n;
+    refreshMessagesBadge();
     try { localStorage.setItem(UNREAD_KEY, String(n)); } catch { /* private mode */ }
   });
   // the count from the last visit, on the tab from the first paint; corrected once the thread is read (board 9, rule 4)
   try { const n = Number(localStorage.getItem(UNREAD_KEY) || 0); if (n > 0) setTabCount("messages", `${n} new`, "text-good"); } catch { /* fine */ }
   let messagesShown = false;   // a thread exists: the tab is lit; otherwise it is dimmed, never absent
-  const showMessagesTab = (on: boolean) => { messagesShown = on; dim("messagestab", !on); show("messagesempty", !on); show("messagesroot", on); if (!on) setTabCount("messages", ""); };
+  let unreadCount = 0;
+  /** Invitations, requests and the asked line sit on Messages: they light the tab and count on its badge. */
+  const noticeCount = () => $("invites").children.length + $("requests").children.length + ($("asked").classList.contains("hidden") ? 0 : 1);
+  function refreshMessagesBadge() {
+    const n = unreadCount + noticeCount();
+    dim("messagestab", !(messagesShown || noticeCount() > 0));
+    setTabCount("messages", n ? `${n} new` : "", "text-good");
+  }
+  const showMessagesTab = (on: boolean) => { messagesShown = on; show("messagesempty", !on); show("messagesroot", on); refreshMessagesBadge(); };
   async function loadFeedback() {
     const p = person;
     showMessagesTab(false);
@@ -1750,6 +1743,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     show("asked", rows.length > 0);
     $("asked").innerHTML = rows.length ? "Asked to share their page with you: " + rows.map((r: any) =>
       `<span class="text-text-secondary">${esc(r.target_email)}</span> (waiting since ${esc(dayOf(r.created_at))}) <button type="button" data-unask="${r.id}" class="text-accent-light hover:text-danger">cancel</button>`).join(" · ") : "";
+    refreshMessagesBadge();
     $("asked").querySelectorAll("[data-unask]").forEach((b) => b.addEventListener("click", async () => {
       await supabase.from("share_requests").update({ status: "cancelled", answered_at: new Date().toISOString() }).eq("id", (b as HTMLElement).dataset.unask);
       invalidateDocument(); await loadAsked();
@@ -1761,6 +1755,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     if (!people.some((p) => !!p.id)) return;
     const rows = (await ensureDocument()).requests as any[];
     show("requests", rows.length > 0); $("requests").classList.toggle("flex", rows.length > 0);
+    if (!rows.length) $("requests").innerHTML = "";
     $("requests").innerHTML = rows.map((r: any) => `
       <form data-request="${r.id}" class="flex flex-col gap-2.5 rounded-2xl border border-accent/40 bg-accent/[0.06] px-4 py-3.5">
         <p class="text-[14px] text-text-primary"><strong>${esc(r.requester_name || r.requester_email)}</strong> asks to see your My health page.</p>
@@ -1777,6 +1772,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         </div>
         <p data-rmsg class="hidden text-[12.5px] text-danger"></p>
       </form>`).join("");
+    refreshMessagesBadge();
     const clearNames = () => supabase.auth.updateUser({ data: { pending_share_from: null, pending_share_person: null, pending_share_scopes: null, pending_share_request: null } }).then(() => {}, () => {});
     $("requests").querySelectorAll("form[data-request]").forEach((f) => {
       const id = (f as HTMLElement).dataset.request!;
@@ -1805,6 +1801,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     if (!people.some((p) => !!p.id)) return;   // no tables yet
     const rows = (await ensureDocument()).invites as any[];
     show("invites", rows.length > 0); $("invites").classList.toggle("flex", rows.length > 0);
+    if (!rows.length) $("invites").innerHTML = "";
     // "their own page" when the inviter shares themselves, else whose page it is
     const whose = (g: any) => g.person_name && g.person_name !== g.inviter_name ? `${g.person_name}'s page` : "their own page";
     $("invites").innerHTML = rows.map((g: any) => `
@@ -1816,6 +1813,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <button type="button" data-decline="${g.id}" class="min-h-10 rounded-xl border border-white/14 px-4 py-2 text-sm font-semibold text-text-secondary">Decline</button>
         </div>
       </div>`).join("");
+    refreshMessagesBadge();
     $("invites").querySelectorAll("[data-accept],[data-decline]").forEach((b) => b.addEventListener("click", async () => {
       const el = b as HTMLElement, accept = el.dataset.accept != null;
       const { error: e } = await supabase.rpc("respond_to_grant", { grant_id: el.dataset.accept ?? el.dataset.decline, accept });
@@ -2151,14 +2149,10 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   }
   /** In depth keeps a pointer: the read has its own place now (the ✦ tab). */
   function renderAiCard() {
-    const on = aiOpen && !!aiPersonId() && !depthLockedSignal.value;
-    show("dp-ai", on); $("dp-ai").classList.toggle("flex", on);
-    if (!on) return;
-    $("dp-ai").innerHTML = `<div class="flex flex-wrap items-center justify-between gap-3"><div><div class="text-[15px] font-extrabold text-text-primary">✦ The Guide's read</div>
-      <div class="text-[12.5px] text-text-tertiary">This page in a few calm sentences, filed by date, to compare, share and download.</div></div>
-      <button type="button" id="dp-ai-go" class="min-h-9 rounded-xl bg-accent px-3.5 text-[13px] font-bold text-canvas">Open the Guide's read →</button></div>`;
-    $("dp-ai-go")?.addEventListener("click", () => setTab("guide"));
+    // the Guide has its own tab and one line on the Overview (board 4): nothing is drawn on In depth
+    show("dp-ai", false);
   }
+
 
   // ── The Guide's read: the Overview band, the ✦ tab, the library (src/my-health/views/Reads.ts) ──
   let readShown = false;
@@ -2207,7 +2201,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     for (const r of data ?? []) if (!latest.has(r.person_id)) latest.set(r.person_id, r);
     const monday = mondayOf(new Date());
     const item = (r: any, who: string) => (r?.summary?.conversations ?? []).filter((c: any) => c.who === who).map((c: any) => esc(String(c.text))).join("<br>") || `<span class="text-text-muted">—</span>`;
-    el.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-3"><div><div class="font-mono text-[10.5px] font-semibold tracking-[0.14em] text-accent-light">✦ THE GUIDE'S READ · EACH CLIENT</div>
+    el.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-3"><div><div class="font-mono text-[10.5px] font-semibold tracking-[0.14em] text-accent-light">THE GUIDE · EACH CLIENT</div>
         <div class="mt-1 text-[12.5px] text-text-tertiary">Only what each client shares is read. Open a client for the full read and share it into their Messages.</div></div>
         <button type="button" id="readall" class="rounded-xl border border-violet-400/50 px-3.5 py-1.5 text-[13px] font-bold text-accent-light">Read every client's week</button></div>
       <div class="mt-3 overflow-x-auto"><table class="w-full min-w-[720px] text-[13px]"><thead><tr class="text-left font-mono text-[10px] tracking-wider text-text-tertiary"><th class="px-2 py-2">CLIENT</th><th class="px-2 py-2">DOCTOR</th><th class="px-2 py-2">COACH</th><th class="px-2 py-2">READ</th></tr></thead>
@@ -3963,7 +3957,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
 
   // the Overview's four frames, before the session is even checked: the page has its shape from the first paint
   mountOverview({ line: $("ovline"), pointer: $("guidepointer"), glance: $("ovglance"), old: $("ovold"), days: $("ovdays"), week: $("ovweek") });
-  mountLabs($("bodyroot"));
+  mountBody($("bodyroot"));
   mountDepth($("depthroot"));
   mountReports({ cards: $("repcards"), imports: $("appimportsroot"), years: $("yearsonfileroot") });
   mountPeople({ menu: $("people"), head: $("personhead"), tabhead: $("tabhead"), space: $("spaceswitch") });
@@ -3987,6 +3981,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   actions.tabCount = setTabCount;
   // The Reports view asks; the page, which owns the upload and review flows, does.
   actions.report = async (kind, name, extra) => {
+    if (kind === "pick") { pickReport(); return; }   // the Body view's "Add a lab report"
     const path = `${folder()}/${name}`;
     if (kind === "parse") { await parseReport(name); return; }
     if (kind === "view") { await viewPdf(path); return; }
