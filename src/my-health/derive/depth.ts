@@ -163,7 +163,7 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
   });
   let lastM = "";
   twelve.forEach((w, i) => { const mo = w.week_start.slice(0, 7); if (mo === lastM) return; lastM = mo; asvg += `<text x="${left + 6 + i * (bw + gap)}" y="134" fill="#94a3b8" font-size="10" font-family="${MONO}">${monthOf(w.week_start).toUpperCase()}</text>`; });
-  const sumK = (k: string) => recent.reduce((t, w) => t + (Number(w[k]) || 0), 0);
+  const sumK = (k: "light_min" | "moderate_min" | "vigorous_min") => recent.reduce((t, w) => t + (Number(w[k]) || 0), 0);
   const easyMin = sumK("light_min"), modMin = sumK("moderate_min"), vigMin = sumK("vigorous_min"), allMin = easyMin + modMin + vigMin;
   const pct = (v: number) => allMin ? Math.round((v / allMin) * 100) : 0;
   const hm = (m: number) => `${Math.floor(m / 60)}h ${String(Math.round(m % 60)).padStart(2, "0")}m`;

@@ -938,7 +938,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   import type { MyHealthDocument } from "../my-health/document";
   import { esc, fmtDay, dayOf, dayWord, monthOf, monthYearOf, addDays, daysBack, daysBetween, localDay, mondayOf, todayStr, fmt1, round0, signed, fmtHM, fmtSleepMin, ordinal, medianOf, quartilesOf, byDate, kicker, plural } from "../my-health/derive/format";
   import { LABELS, CHART_MARKERS, type ChartMarker, APP_KEY_BY_NAME, squash, appKeyFor, chartKeyFor, type Pt, markerPointsFrom, hasPoints, inRange, rangeLabel, rangeText, CRF_RETEST, BODY_RETEST, METHOD_LABEL, MAXIMAL, methodLabel, type Due, dueWord, dueTone, type LabRow, labRowsFrom, bodyDueFrom, eventsFrom } from "../my-health/derive/markers";
-  import { weeksFrom, crfFromSync, bodyFromSync, mergeBy, isWorkout, actsByDay, activitySummary, fitnessSummary } from "../my-health/derive/activity";
+  import { weeksFrom, mergeWeeks, crfFromSync, bodyFromSync, mergeBy, isWorkout, actsByDay, activitySummary, fitnessSummary } from "../my-health/derive/activity";
   import { HRV_MIN_NIGHTS, sleepHeartSummary, sleepHeartSummaryRaw } from "../my-health/derive/heart";
   import { type SecKey, type Rng, type Pt2, type Marker, type Drawn, SEC_META, SEC_ORDER, RANGE_LABEL, SHELVES, ownBand, weightSeries, sppbSeries, drawnFor, chartSvg, alongsideHtml, workoutsListHtml } from "../my-health/derive/lenses";
   import { derivePerson, type PersonData } from "../my-health/derive/person";
@@ -2272,11 +2272,12 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     const [labs, app, weeks, crf, body, acts, tests, profiles, asked] = await Promise.all([
       pageAll(() => supabase.from("web_labs").select("person_id, analyte, value, unit, ref_low, ref_high, ref_text, measured_on, created_at").in("person_id", ids).order("measured_on", { ascending: true })),
       accounts.length ? pageAll(() => supabase.from("lab_readings").select(LAB_COLS).in("user_id", accounts).is("deleted_at", null).order("measured_at", { ascending: true })) : none,
-      supabase.from("web_weeks").select("person_id, week_start, met_hours, minutes, vigorous_min, workouts").in("person_id", ids).order("week_start", { ascending: false }).limit(ids.length * 14 + 1),
+      supabase.from("web_weeks").select("person_id, week_start, met_hours, minutes, light_min, moderate_min, vigorous_min, workouts, source, dose_met_min, dose_goal_met_min, synced_at").in("person_id", ids).order("week_start", { ascending: false }).limit(ids.length * 14 + 1),
       supabase.from("web_crf").select("person_id, measured_on, vo2max, method").in("person_id", ids).order("measured_on", { ascending: true }).limit(ids.length * 10 + 1),
       supabase.from("web_body").select("person_id, measured_on, waist_cm").in("person_id", ids).order("measured_on", { ascending: true }).limit(ids.length * 60 + 1),
       // the app's own rows, for everyone with an account: twelve weeks of workouts, every fitness test, the goal
-      accounts.length ? pageAll(() => supabase.from("activities").select("user_id, timestamp, duration_minutes, met_hours, intensity_category, activity_name, source, zone2_minutes").in("user_id", accounts).is("deleted_at", null).neq("source", "passive-nakanishi").gte("timestamp", since).order("timestamp", { ascending: true })) : none,
+      // the dose needs met_minutes and activity_type; without them every row counted as nothing (fixed 8 Nov 2026)
+      accounts.length ? pageAll(() => supabase.from("activities").select("user_id, timestamp, duration_minutes, met_hours, met_minutes, intensity_category, activity_type, activity_name, source, zone2_minutes").in("user_id", accounts).is("deleted_at", null).neq("source", "passive-nakanishi").gte("timestamp", since).order("timestamp", { ascending: true })) : none,
       accounts.length ? supabase.from("crf_entries").select("user_id, timestamp, met_capacity, performance_category, estimation_method, vo2_max_estimate").in("user_id", accounts).is("deleted_at", null).order("timestamp", { ascending: true }).limit(accounts.length * 40 + 1) : none,
       accounts.length ? supabase.from("profiles").select("user_id, weekly_met_hours_goal").in("user_id", accounts) : none,
       supabase.from("share_requests").select("target_email, created_at").eq("requester_id", userId).eq("status", "requested").order("created_at", { ascending: true }),
@@ -2290,7 +2291,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       const appP = p.account_id ? (app.data ?? []).filter((r: any) => r.user_id === p.account_id) : [];
       const bodyP = (body.data ?? []).filter((r: any) => r.person_id === p.id);
       const actsP = p.account_id ? (acts.data ?? []).filter((x: any) => x.user_id === p.account_id) : [];
-      const weeksP = actsP.length ? weeksFrom(actsP) : (weeks.data ?? []).filter((r: any) => r.person_id === p.id);
+      // the app's week rows win; the browser counts only the weeks the app has not written (derive/activity mergeWeeks)
+      const weeksP = mergeWeeks((weeks.data ?? []).filter((r: any) => r.person_id === p.id), actsP);
       const testsP = p.account_id ? (tests.data ?? []).filter((t: any) => t.user_id === p.account_id) : [];
       const crfP = testsP.length ? crfFromSync(testsP) : (crf.data ?? []).filter((r: any) => r.person_id === p.id);
       const goal = (p.account_id && goalOf.get(p.account_id)) || 7.5;
@@ -2310,7 +2312,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     $("glancerows").innerHTML = lines.map((l) => {
       const ch = l.act.change;
       const chTone = ch == null ? "text-text-muted" : ch >= 0.05 ? "text-success-light" : ch <= -0.05 ? "text-danger" : "text-text-secondary";
-      const tw = l.act.thisWeek ? fmt1(Number(l.act.thisWeek.met_hours)) : l.act.weeks.length ? "0" : null;
+      const tw = l.act.thisWeek?.dose_met_min != null ? String(Math.round(l.act.thisWeek.dose_met_min)) : null;
       const fitTone = l.fit.trendWord === "rising" ? "text-success-light" : l.fit.trendWord === "falling" ? "text-danger" : "text-text-tertiary";
       const labText = l.labRows.length
         ? `${esc(fmtDay(l.latestLabDay))} · ${l.outRows.length ? `<span class="text-warning font-semibold">${esc(l.outRows[0].label)} outside</span>${l.outRows.length > 1 ? ` <span class="text-text-tertiary">+${l.outRows.length - 1}</span>` : ""}` : "all in range"}${l.unchecked ? ` <span class="rounded-md bg-white/[0.06] px-1.5 py-0.5 font-mono text-[9px] tracking-wider text-text-secondary">${l.unchecked} UNCHECKED</span>` : ""}`
@@ -2321,7 +2323,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         <td class="px-3 py-2.5 font-semibold text-text-primary">${l.p.self ? "You" : esc(l.p.name || "Unnamed")}</td>
         <td class="px-3 py-2.5 text-text-tertiary">${esc(l.p.self ? "you" : l.p.mine ? "you look after" : scopeList(l.p.scopes).toLowerCase() || "nothing yet")}</td>
         <td class="px-3 py-2.5 font-bold ${chTone}">${ch == null ? "—" : `${signed(ch * 100, 0)}%`}</td>
-        <td class="px-3 py-2.5">${tw == null ? `<span class="text-text-muted">—</span>` : `<span class="font-semibold ${tw === "0" ? "text-danger" : "text-met-hero"}">${tw}</span> <span class="text-text-tertiary">MET-h</span>`}</td>
+        <td class="px-3 py-2.5">${tw == null ? `<span class="text-text-muted">—</span> <span class="text-text-tertiary">no sessions</span>` : `<span class="font-mono font-semibold text-text-primary">${tw}</span> <span class="text-text-tertiary">MET-min</span>`}</td>
         <td class="px-3 py-2.5 text-text-secondary">${l.fit.latest ? `${fmt1(l.fit.latest.v)}${l.fit.trendWord ? ` <span class="${fitTone}">${l.fit.trendWord}</span>` : ""}` : "—"}</td>
         <td class="px-3 py-2.5 text-text-secondary">${labText}</td>
         <td class="px-3 py-2.5">${due ? `<span class="${dueTone(due)}">${esc(due.what)} · ${dueWord(due)}</span>` : `<span class="text-text-muted">—</span>`}</td>
