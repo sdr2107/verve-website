@@ -65,7 +65,7 @@ export function writerOf(signals: any[], today: string): string | null {
   return null;
 }
 /** "WHOOP via the phone's health store" */
-export const writerLine = (writer: string | null, store = "the phone's health store") => writer ? `${writer} via ${store}` : `Whatever you wear, via ${store}`;
+export const writerLine = (writer: string | null, store = "the phone's health store") => writer ? `${writer} via ${store}` : `Any wearable, via ${store}`;
 
 // ── the zones and background movement, from the day rows the app writes ──
 export type DayZones = { day: string; z1: number | null; z2: number | null; z3: number | null };
