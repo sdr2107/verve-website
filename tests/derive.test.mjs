@@ -290,3 +290,112 @@ test("the fitness tiers come from the app's table for the age and sex; the store
   assert.equal(tierWords(2), "Above average for your age and sex");
   assert.equal(tierRowFor(72, "female").age, "70+");
 });
+
+// ── stage 2 (8 Nov 2026): the Body list port, last week, the snapshot, the store's name ──
+import { BODY_DEFS } from "../src/data/body-list.ts";
+import { bodyListOf, judgeValue, rangeTrack, toAppUnit, bodyHeadline } from "../src/my-health/derive/body.ts";
+import { lastWeekOf, snapshotOf, weekFiguresOf, addMonths, kindOf } from "../src/my-health/derive/snapshot.ts";
+import { storeOf } from "../src/my-health/derive/activity.ts";
+import { derivePerson } from "../src/my-health/derive/person.ts";
+
+const emptyDoc = (over = {}) => ({ person: { id: "p", account_id: "u" }, labs: [], imaging: [], reports: [], files: [], weeks: [], web_crf: [], web_body: [], app_labs: [], activities: [], app_crf: [], waist: [], profile: { sex: "male", age: 50, height_cm: 175, weekly_met_hours_goal: 16.67 }, signals: [], weights: [], ai: { summary: null, consent: null }, ...over });
+
+test("the Body list is the app's 22 rows in the app's order, blood pressure left to Vitals", () => {
+  assert.equal(BODY_DEFS.length, 22);
+  assert.deepEqual(BODY_DEFS.slice(0, 3).map((d) => d.label), ["Fasting blood sugar", "HbA1c", "Triglycerides"]);
+  assert.ok(!BODY_DEFS.some((d) => d.key === "bp" || d.label === "Blood pressure"));
+  assert.deepEqual(BODY_DEFS.filter((d) => d.section === "heart").map((d) => d.label), ["ApoB", "LDL cholesterol", "Total cholesterol", "Remnant cholesterol", "Lp(a)", "hs-CRP"]);
+});
+
+test("a report in mmol/L is judged by the app's mg/dL bands and shown as printed", () => {
+  const doc = emptyDoc({ labs: [
+    { analyte: "LDL Cholesterol", value: 3.4, unit: "mmol/L", measured_on: "2026-10-12", report_path: "u/r.pdf", ref_low: null, ref_high: 3.0 },
+    { analyte: "HbA1c", value: 5.4, unit: "%", measured_on: "2026-10-12", report_path: "u/r.pdf" },
+  ] });
+  const list = bodyListOf(derivePerson(doc));
+  const ldl = list.sections[1].rows.find((r) => r.key === "ldl_mgdl");
+  assert.equal(ldl.value, "3.4"); assert.equal(ldl.unit, "mmol/L");
+  assert.equal(ldl.bandLabel, "Elevated", "3.4 mmol/L is 131 mg/dL, past the app's 129");
+  assert.equal(ldl.writer, "lab report");
+  assert.ok(ldl.track && ldl.track.position > 0.5);
+  const a1c = list.sections[0].rows.find((r) => r.key === "hba1c_pct");
+  assert.equal(a1c.bandLabel, "In range"); assert.equal(a1c.tone, "good");
+  assert.equal(list.watch, 1);
+  assert.equal(bodyHeadline(list), "One marker outside its range: LDL");
+  assert.equal(toAppUnit("triglycerides_mgdl", 1.1, "mmol/L").toFixed(0), "97");
+});
+
+test("Lp(a) is judged in its own unit and never to watch; hs-CRP at 10 is not a heart reading", () => {
+  const doc = emptyDoc({ app_labs: [{ measured_at: "2026-10-12T08:00:00Z", lpa_value: 32, lpa_unit: "nmol/L", hs_crp_mgl: 12 }] });
+  const list = bodyListOf(derivePerson(doc));
+  const lpa = list.sections[1].rows.find((r) => r.key === "lpa_value");
+  assert.equal(lpa.bandLabel, "Low"); assert.equal(lpa.once, true); assert.equal(lpa.watch, false);
+  const crp = list.sections[1].rows.find((r) => r.key === "hs_crp_mgl");
+  assert.equal(crp.bandLabel, "Not a heart reading"); assert.equal(crp.tone, "neutral"); assert.equal(crp.watch, false);
+});
+
+test("the track lays the bands on one line with the value on it", () => {
+  const t = rangeTrack(BODY_DEFS.find((d) => d.key === "waist_cm").bands({ sex: "male", age: 50, heightCm: 175, weightKg: 74, ethnicity: null }), 96);
+  assert.equal(t.segments.length, 2);
+  assert.ok(t.position > 0.5 && t.position < 1, "96 cm sits past the 94 cm cut for a man");
+  assert.equal(judgeValue(derivePerson(emptyDoc()), "waist_cm", 96, "cm").label, "Elevated");
+});
+
+test("last week is the app's week row where it wrote one, and the comparison names the moves", () => {
+  const monday = mondayOf(new Date("2026-11-08T12:00:00"));
+  const last = addDays(monday, -7), before = addDays(monday, -14);
+  const weeks = [
+    { week_start: last, source: "sync", synced_at: "2026-11-08T00:00:00Z", dose_met_min: 1120, dose_goal_met_min: 1000, workouts: 4, zone1_min: 120, zone2_min: 118, zone3_min: 44, strength_sessions: 1, background_min_avg: 46, met_hours: 20, minutes: 190 },
+    { week_start: before, source: "sync", synced_at: "2026-11-01T00:00:00Z", dose_met_min: 880, dose_goal_met_min: 1000, workouts: 3, zone1_min: 96, zone2_min: 88, zone3_min: 30, strength_sessions: 2, background_min_avg: 41, met_hours: 16, minutes: 150 },
+  ];
+  const signals = [0, 1, 2, 3, 4, 5, 6].map((i) => ({ day: addDays(last, i), sleep_minutes: 492, resting_hr: 52, hrv_night_ms: 48, steps: 8360, sedentary_minutes: 425, sri_30d: 84 }))
+    .concat([0, 1, 2, 3, 4, 5, 6].map((i) => ({ day: addDays(before, i), sleep_minutes: 474, resting_hr: 52, steps: 7900 })));
+  const acts = [{ timestamp: `${addDays(last, 4)}T07:00:00`, duration_minutes: 52, met_minutes: 600, intensity_category: "vigorous", activity_type: "aerobic", activity_name: "Run", source: "healthkit" },
+    { timestamp: `${addDays(last, 1)}T07:00:00`, duration_minutes: 42, met_minutes: 0, intensity_category: "moderate", activity_type: "strength", activity_name: "Strength", source: "healthkit" }];
+  const d = derivePerson(emptyDoc({ weeks, activities: acts, signals }));
+  const lw = lastWeekOf(d, "2026-11-08");
+  assert.equal(lw.week.basis, "app");
+  assert.equal(lw.tiles[0].figure, "1,120");
+  assert.equal(lw.tiles[2].figure, "118 · 44");
+  assert.equal(lw.tiles[3].figure, "8 h 12");
+  assert.ok(lw.counted.startsWith("Counted by the app's week-in-review"));
+  assert.ok(lw.compared.includes("dose up 240"), lw.compared);
+  assert.ok(lw.compared.includes("sleep up 18 minutes a night"), lw.compared);
+  assert.ok(lw.compared.includes("resting heart rate the same"), lw.compared);
+  assert.ok(lw.compared.includes("one fewer strength session"), lw.compared);
+  assert.equal(kindOf(acts[0]), "run");
+  const wf = weekFiguresOf(d, last, "2026-11-08");
+  assert.equal(wf.background, 46);
+});
+
+test("the snapshot pairs each marker's reading near the anchor with the latest, and a single reading shows no change", () => {
+  const today = "2026-11-08";
+  assert.equal(addMonths(today, -6), "2026-05-08");
+  const labs = [
+    { analyte: "LDL Cholesterol", value: 3.7, unit: "mmol/L", measured_on: "2026-04-14", report_path: "u/a.pdf" },
+    { analyte: "LDL Cholesterol", value: 3.4, unit: "mmol/L", measured_on: "2026-10-12", report_path: "u/b.pdf" },
+    { analyte: "HbA1c", value: 5.4, unit: "%", measured_on: "2026-10-12", report_path: "u/b.pdf" },
+  ];
+  const signals = Array.from({ length: 220 }, (_, i) => ({ day: addDays(today, -i), resting_hr: i > 150 ? 55 : 52 }));
+  const d = derivePerson(emptyDoc({ labs, signals, weights: [{ measured_on: "2026-05-05", weight_kg: 76.8, source: "health" }, { measured_on: "2026-11-07", weight_kg: 74.2, source: "health" }] }));
+  const s = snapshotOf(d, 6, today);
+  const blood = s.groups.find((g) => g.title.startsWith("Blood"));
+  assert.ok(blood.title.includes("14 April") && blood.title.includes("12 October"), blood.title);
+  const ldl = blood.rows.find((r) => r.label === "LDL");
+  assert.equal(ldl.then, "3.7"); assert.equal(ldl.now, "3.4"); assert.equal(ldl.change, "−0.3");
+  assert.equal(ldl.reads, "moving, still elevated");
+  const a1c = blood.rows.find((r) => r.label === "HbA1c");
+  assert.equal(a1c.change, "measured once"); assert.equal(a1c.then, "—");
+  const w = s.groups.find((g) => g.title === "Body").rows.find((r) => r.label === "Weight");
+  assert.equal(w.change, "−2.6"); assert.ok(w.reads.startsWith("down, about 0.1 kg a week"), w.reads);
+  const rhr = s.groups[0].rows.find((r) => r.label === "Resting heart rate");
+  assert.equal(rhr.then, "55"); assert.equal(rhr.now, "52"); assert.equal(rhr.reads, "your normal has moved down");
+  assert.ok(!s.groups.some((g) => g.rows.some((r) => /Lp\(a\)/.test(r.label))));
+});
+
+test("the store is named from the sessions' source: Apple Health, Health Connect, or neither", () => {
+  assert.equal(storeOf([{ timestamp: "2026-11-01T07:00:00Z", source: "healthkit" }], "2026-11-08"), "Apple Health");
+  assert.equal(storeOf([{ timestamp: "2026-11-01T07:00:00Z", source: "healthconnect" }], "2026-11-08"), "Health Connect");
+  assert.equal(storeOf([{ timestamp: "2026-11-01T07:00:00Z", source: "healthkit" }, { timestamp: "2026-11-02T07:00:00Z", source: "healthconnect" }], "2026-11-08"), "the phone's health store");
+  assert.equal(storeOf([{ timestamp: "2026-11-01T07:00:00Z", source: "manual" }], "2026-11-08"), "the phone's health store");
+});

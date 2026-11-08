@@ -69,6 +69,18 @@ export function dedupeSessions(acts: any[]): any[] {
 /** The store a session row came through, in words, for the writer line. */
 export const sourceWords = (source: unknown): string =>
   source === "healthkit" ? "Apple Health" : source === "healthconnect" ? "Health Connect" : source === "manual" ? "typed in Verve" : source === "hr-estimated" ? "estimated from heart rate" : String(source ?? "the app");
+/**
+ * The phone's health store, named from the sessions' own source column: the
+ * last 60 days of workouts came through Apple Health, or Health Connect, or
+ * both (a phone changed); with no device session the store is not named.
+ */
+export function storeOf(acts: any[], today = new Date().toLocaleDateString("en-CA")): string {
+  const from = addDays(today, -60);
+  const seen = new Set<string>();
+  for (const a of acts) { if (!a?.timestamp || localDay(a.timestamp) < from) continue; if (a.source === "healthkit") seen.add("Apple Health"); else if (a.source === "healthconnect") seen.add("Health Connect"); }
+  if (!seen.size) { for (const a of acts) { if (a?.source === "healthkit") seen.add("Apple Health"); else if (a?.source === "healthconnect") seen.add("Health Connect"); } }
+  return seen.size === 1 ? [...seen][0] : "the phone's health store";
+}
 
 // ── the week rows ────────────────────────────────────────────────────────
 /** One week as the page reads it, whoever counted it. */
