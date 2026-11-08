@@ -59,7 +59,8 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
   const tag = (who: string) => who === "coach"
     ? `<span class="rounded-full bg-success/15 px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider text-success-light">COACH</span>`
     : `<span class="rounded-full bg-danger/15 px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider text-danger">DOCTOR</span>`;
-  const serif = "font-family:'Newsreader',Georgia,serif";
+  // the read's prose is set in the page's own face since 8 Nov 2026 (one family for words, board 8)
+  const serif = "font-weight:600;letter-spacing:-0.015em";
 
   // ── the band on Overview ────────────────────────────────────────────
   function drawBand() {

@@ -95,7 +95,7 @@ export function mountMessages(root: HTMLElement, supabase: SupabaseClient, onUnr
       const items = (p.conversations ?? []).map((c: any) => `<div class="mt-2 flex items-start gap-2 text-[13.5px] text-text-primary"><span class="rounded-full ${c.who === "coach" ? "bg-success/15 text-success-light" : "bg-danger/15 text-danger"} px-2 py-0.5 font-mono text-[10px] font-bold tracking-wider">${c.who === "coach" ? "COACH" : "DOCTOR"}</span><span>${esc(String(c.text ?? ""))}</span></div>`).join("");
       return `<div class="${mine ? "ml-auto" : ""} w-full max-w-xl rounded-2xl border border-violet-400/45 p-4" style="background:linear-gradient(160deg,rgba(129,140,248,.12),rgba(255,255,255,.02))">
         <div class="font-mono text-[10.5px] font-semibold tracking-wider text-accent-light">✦ THE GUIDE'S READ · ${esc(day(p.on ?? m.created_at))}</div>
-        <div class="mt-1 text-[18px] text-text-primary" style="font-family:'Newsreader',Georgia,serif">${esc(String(p.title ?? m.body ?? ""))}</div>
+        <div class="mt-1 text-[18px] font-semibold text-text-primary">${esc(String(p.title ?? m.body ?? ""))}</div>
         <p class="mt-1.5 text-[14px] leading-relaxed text-text-secondary">${esc(String(p.lead ?? ""))}</p>${items}${dueLineOf(p.due, p.on ?? m.created_at) ? `<p class="mt-2 text-[12.5px] text-text-tertiary">Due: ${esc(dueLineOf(p.due, p.on ?? m.created_at))}</p>` : ""}${meta}</div>`;
     }
     if (m.kind === "test") {
