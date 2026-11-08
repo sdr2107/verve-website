@@ -21,7 +21,8 @@ import { render } from "preact";
 import { derived, person, section, setSection, openMarkerKey, openRange, openYear, focusTile, fitUnit, setFitUnit, latestRead, actions, CARD_KEYS, type CardKey } from "../state.ts";
 import { addDays, daysBetween, dayWord, esc, fmt1, fmtDay, fmtSleepMin, mondayOf, monthOf, plural, round0, todayStr } from "../derive/format.ts";
 import { labRowsFrom, methodLabel, MAXIMAL } from "../derive/markers.ts";
-import { activitySummary, actsByDay, fitnessSummary, doseReason } from "../derive/activity.ts";
+import { activitySummary, actsByDay, fitnessSummary, doseReason, storeOf } from "../derive/activity.ts";
+import { bodyHeadline, bodyListOf } from "../derive/body.ts";
 import { sleepHeartSummary } from "../derive/heart.ts";
 import { RANGE_LABEL, SHELVES, alongsideHtml, chartSvg, drawnFor, workoutsListHtml, type Marker, type Rng } from "../derive/lenses.ts";
 import { backgroundOf, dayBars, efficiencyOf, fmtHMin, fmtSigned1, inBedWindow, latestWith, meanOver, rowOn, stagesOf, weekZones, wristTemp, writerLine, writerOf } from "../derive/signals.ts";
@@ -72,7 +73,7 @@ function cardsOf(d: NonNullable<typeof derived.value>, self: boolean, unit: "met
   const fit = fitnessSummary(d.crf, today);
   const by = d.by;
   const writer = writerOf(d.signals, today);
-  const store = writerLine(writer);
+  const store = writerLine(writer, storeOf(d.acts, today));
   const cards: Card[] = [];
   const dayRow = (day: string) => rowOn(d.signals, day);
 
@@ -213,8 +214,10 @@ function cardsOf(d: NonNullable<typeof derived.value>, self: boolean, unit: "met
   }
   // ── Body: how many markers sit outside their range, which, and three rows ──
   {
-    const labRows = labRowsFrom(by, today).filter((r) => r.key !== "bp");
-    const out = labRows.filter((r) => r.out);
+    // the app's list and the app's bands (derive/body), so the figure here is the Body page's figure
+    const list = bodyListOf(d);
+    const labRows = list.sections.flatMap((s) => s.rows).filter((r) => r.value != null);
+    const out = list.outside;
     const remnant = [...d.labsShown].filter((l) => l.analyte === REMNANT_LABEL).sort((a, b) => String(a.measured_on).localeCompare(String(b.measured_on))).pop() ?? null;
     const ldl = (by.get("ldl_mgdl") ?? []).slice(-1)[0] ?? null;
     const weight = d.markerByKey("weight")?.series().slice(-1)[0] ?? null;
@@ -228,7 +231,7 @@ function cardsOf(d: NonNullable<typeof derived.value>, self: boolean, unit: "met
       key: "body", title: "Body", figure: labRows.length ? String(out.length) : DASH, unit: labRows.length ? `marker${out.length === 1 ? "" : "s"} outside range` : "nothing read yet",
       band: labRows.length ? (out.length ? { text: `${out.slice(0, 2).map((r) => r.label).join(" and ")}${out.length > 2 ? ` and ${out.length - 2} more` : ""} outside`, tone: "caution" } : { text: "All in range", tone: "good" }) : { text: "Drop a report on Reports", tone: "neutral" },
       rows, more: [], writer: latestLab ? `Lab report, ${fmtDay(latestLab)}` : "Typed, and from reports", markers: [],
-      heading: labRows.length ? (out.length ? `${out.length} marker${out.length === 1 ? "" : "s"} outside ${out.length === 1 ? "its" : "their"} range: ${out.map((r) => r.label).join(", ")}` : "Every marker read sits in its range") : "No marker read yet",
+      heading: bodyHeadline(list),
       eyebrow: `Body · ${latestLab ? `latest labs ${fmtDay(latestLab)}` : "the app's list"}`,
     });
   }
