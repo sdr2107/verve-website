@@ -14,7 +14,6 @@
 import { render } from "preact";
 import { useState } from "preact/hooks";
 import { derived, person, ovSection, openMarkerKey, openRange, openYear, focusTile, setSection } from "../state.ts";
-import { riseOnce } from "../motion.ts";
 import { addDays, daysBetween, dayWord, esc, fmt1, fmtSleepMin, mondayOf, plural, round0, todayStr } from "../derive/format.ts";
 import { bodyDueFrom, labRowsFrom, methodLabel, type Due } from "../derive/markers.ts";
 import { activitySummary, actsByDay, fitnessSummary } from "../derive/activity.ts";
@@ -291,7 +290,7 @@ export function Glance() {
   const d = derived.value;
   if (!d) return <>{GLANCE_FRAMES.map((l) => <Frame key={l} label={l} />)}</>;
   const { cards } = glanceOf(d, !!person.value?.self);
-  const rise = riseOnce("glance");
+  const rise = "";
   const sec = ovSection.value, mk = openMarkerKey.value;
   const open = (c: Glance) => { setSection(c.sec); if (c.marker) openMarkerKey.value = c.marker; };
   const isOn = (c: Glance) => sec !== "all" && sec === c.sec && (c.marker ? mk === c.marker : !["sleep", "rhr", "hrr"].includes(mk));
@@ -342,8 +341,8 @@ export function Section() {
   const [dimTo, setDimTo] = useState<string | null>(null);
   const sec = ovSection.value;
   const d = derived.value;
-  if (sec === "all") return null;
-  const meta = SEC_META[sec];
+  if (sec === "all" || !(sec in SEC_META)) return null;
+  const meta = SEC_META[sec as SecKey];
   const ms = d ? d.markers.filter((m) => m.section === sec) : [];
   const have = ms.filter((m) => m.series().length);
   // Nothing is open until a tile is tapped, except in a short section (six
@@ -354,7 +353,7 @@ export function Section() {
   const openKey = wanted || (ms.length <= 6 && ms.length ? (have[0] ?? ms[0]).key : "");
   const open = openKey ? ms.find((m) => m.key === openKey) ?? null : null;
   const outKeys = d ? new Set(labRowsFrom(d.by, todayStr()).filter((r) => r.out).map((r) => r.key)) : new Set<string>();
-  const rise = riseOnce(`tiles:${sec}`);
+  const rise = "";
   const focus = focusTile.value && open;
   const tap = (m: Marker) => {
     if (focusTile.value) { openMarkerKey.value = m.key; openRange.value = ""; openYear.value = null; return; }
@@ -487,10 +486,10 @@ function OpenMarker({ open, markers, acts, out }: { open: Marker; markers: Marke
 }
 
 /** Mount the three views into the page's containers, once. */
-export function mountOverview(els: { line: HTMLElement; glance: HTMLElement; section: HTMLElement; days?: HTMLElement; week?: HTMLElement }) {
+export function mountOverview(els: { line: HTMLElement; glance: HTMLElement; pointer?: HTMLElement; old?: HTMLElement; section?: HTMLElement; days?: HTMLElement; week?: HTMLElement }) {
   render(<GlanceLine />, els.line);
   render(<Glance />, els.glance);
-  render(<Section />, els.section);
+  if (els.section) render(<Section />, els.section);
   if (els.days) render(<DaysWithData />, els.days);
   if (els.week) render(<WeekTable />, els.week);
 }

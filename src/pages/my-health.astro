@@ -284,68 +284,71 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
            always were; from lg they are a column on the left that stays
            put while the page scrolls, so the page itself is only about the
            one person picked. -->
-      <aside class="pt-5 lg:sticky lg:top-6 lg:flex lg:min-h-[72vh] lg:w-[248px] lg:shrink-0 lg:flex-col lg:gap-6 lg:pt-8">
+      <aside class="pt-5 lg:sticky lg:top-6 lg:flex lg:min-h-[72vh] lg:w-[220px] lg:shrink-0 lg:flex-col lg:gap-5 lg:pt-8">
+        <!-- Everything here is in the markup from the first byte (board 9):
+             a slot with nothing behind it yet is dimmed, never absent, so the
+             sidebar you see at 0.0 s is the sidebar you see at 2.0 s. -->
         <!-- which account this is: the sign-in method and the address (Apple may hide it behind a relay) -->
-        <div id="whoami" class="hidden px-3">
-          <div class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary" id="whoamikind">Signed in</div>
-          <div class="mt-1 break-all text-[12.5px] leading-snug text-text-secondary" id="whoamiaddr"></div>
+        <div id="whoami" class="min-h-[40px] px-3" data-dim="1">
+          <div class="t-eyebrow" id="whoamikind">Signed in</div>
+          <div class="mt-1 break-all text-[12px] leading-snug text-text-2" id="whoamiaddr"></div>
         </div>
-        <div id="peoplewrap" class="hidden">
+        <div id="peoplewrap" class="min-h-[44px]" data-dim="1">
           <!-- two places on one sign-in: your own health, and your clients (only when someone shares with you) -->
-          <div id="spaceswitch" class="mb-4"></div>
-          <h3 class="mb-2 hidden px-3 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary lg:block">People</h3>
+          <div id="spaceswitch" class="mb-3"></div>
+          <h3 class="t-eyebrow mb-2 hidden px-3 lg:block">People</h3>
           <!-- one control: the name of whose page this is, with the menu under it -->
           <div id="people" class="relative"></div>
         </div>
-        <nav id="tabbar" aria-label="Views" class="mt-4 flex gap-1.5 rounded-2xl border border-white/10 bg-white/[0.03] p-1.5 sm:w-fit lg:mt-0 lg:w-auto lg:flex-col lg:gap-0.5 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0">
-          <h3 id="tabhead" class="mb-2 hidden px-3 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary lg:block">Your page</h3>
-          <button type="button" data-tab="overview"><span class="w-2.5 shrink-0 font-mono text-[10px] font-semibold text-text-muted">1</span><svg class="hidden shrink-0 lg:block" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg><span>Overview</span></button>
-          <button type="button" data-tab="read" id="readtab" class="hidden"><span class="w-2.5 shrink-0 font-mono text-[11px] font-semibold text-accent-light">✦</span><span class="text-accent-light">The Guide's read</span><span class="ml-auto rounded-md bg-amber-200/15 px-1.5 py-0.5 font-mono text-[9.5px] font-bold tracking-wider text-amber-200">PRO</span></button>
-          <!-- the four sections, nested under Overview in the column; the phone's copy is under the pills -->
-          <div data-ovsections class="mb-1 hidden flex-col gap-0.5 pl-3 lg:flex" style="display: none">
-            
-            <button type="button" data-section="fitness"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #f97316"></span>Fitness</button>
-            <button type="button" data-section="movement"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #34d399"></span>Movement</button>
-            <button type="button" data-section="heart"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #818cf8"></span>Sleep &amp; heart</button>
-            <button type="button" data-section="body"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #FBBF24"></span>Body</button>
+        <!-- the tabs, in the app's order, each with its sub-links; the sub-links of the
+             active tab show by the nav's data-active-tab alone, never by a loader -->
+        <nav id="tabbar" aria-label="Views" data-active-tab="overview" class="mt-4 flex flex-wrap gap-1 lg:mt-0 lg:flex-col lg:gap-0.5">
+          <h3 id="tabhead" class="t-eyebrow mb-2 hidden px-3 lg:block">Your page</h3>
+          <button type="button" class="mh-tab" data-tab="overview" aria-current="page"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg><span>Overview</span></button>
+          <div data-sub="overview" role="group" aria-label="overview sections">
+            <button type="button" class="mh-sub" data-tab-for="overview" data-section="fitness">Fitness</button>
+            <button type="button" class="mh-sub" data-tab-for="overview" data-section="vitals">Vitals</button>
+            <button type="button" class="mh-sub" data-tab-for="overview" data-section="sleep">Sleep</button>
+            <button type="button" class="mh-sub" data-tab-for="overview" data-section="exertion">Exertion</button>
+            <button type="button" class="mh-sub" data-tab-for="overview" data-section="movement">Movement</button>
+            <button type="button" class="mh-sub" data-tab-for="overview" data-section="body">Body</button>
           </div>
-          <button type="button" data-tab="depth"><span class="w-2.5 shrink-0 font-mono text-[10px] font-semibold text-text-muted">2</span><svg class="hidden shrink-0 lg:block" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>In depth</span></button>
-          <button type="button" data-tab="labs"><span class="w-2.5 shrink-0 font-mono text-[10px] font-semibold text-text-muted">3</span><svg class="hidden shrink-0 lg:block" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6l-5.5 9a2 2 0 0 0 1.7 3h11.6a2 2 0 0 0 1.7-3L14 9V3"/></svg><span>Labs</span><span data-count class="ml-auto hidden font-mono text-[10.5px] font-semibold text-text-tertiary lg:inline"></span></button>
-          <button type="button" data-tab="reports"><span class="w-2.5 shrink-0 font-mono text-[10px] font-semibold text-text-muted">4</span><svg class="hidden shrink-0 lg:block" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg><span>Reports</span><span data-count class="ml-auto hidden font-mono text-[10.5px] font-semibold text-text-tertiary lg:inline"></span></button>
-          <button type="button" data-tab="messages" id="messagestab" class="hidden"><span class="w-2.5 shrink-0 font-mono text-[10px] font-semibold text-text-muted">5</span><svg class="hidden shrink-0 lg:block" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span>Messages</span><span data-count class="ml-auto hidden font-mono text-[10.5px] font-semibold text-text-tertiary lg:inline"></span></button>
+          <button type="button" class="mh-tab" data-tab="guide" id="readtab" data-dim="1"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5V5.5M8 7h8M8 10.5h6"/></svg><span>The Guide</span></button>
+          <button type="button" class="mh-tab" data-tab="depth"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>In depth</span></button>
+          <div data-sub="depth" role="group" aria-label="depth sections">
+            <button type="button" class="mh-sub" data-tab-for="depth" data-section="lastweek">Last week</button>
+            <button type="button" class="mh-sub" data-tab-for="depth" data-section="snapshot">Snapshot</button>
+            <button type="button" class="mh-sub" data-tab-for="depth" data-section="fitness">Fitness</button>
+            <button type="button" class="mh-sub" data-tab-for="depth" data-section="vitals">Vitals</button>
+            <button type="button" class="mh-sub" data-tab-for="depth" data-section="sleep">Sleep</button>
+            <button type="button" class="mh-sub" data-tab-for="depth" data-section="exertion">Exertion</button>
+            <button type="button" class="mh-sub" data-tab-for="depth" data-section="movement">Movement</button>
+            <button type="button" class="mh-sub" data-tab-for="depth" data-section="everynumber">The week, every number</button>
+          </div>
+          <button type="button" class="mh-tab" data-tab="horizon" id="horizontab"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17h18"/><path d="M6 17a6 6 0 0 1 12 0"/><path d="M12 3v2M4.9 7.9l1.4 1.4M19.1 7.9l-1.4 1.4"/></svg><span>Horizon</span><span class="mh-badge">Pro</span></button>
+          <div data-sub="horizon" role="group" aria-label="horizon sections"></div>
+          <button type="button" class="mh-tab" data-tab="body"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6l-5.5 9a2 2 0 0 0 1.7 3h11.6a2 2 0 0 0 1.7-3L14 9V3"/></svg><span>Body</span><span data-count class="mh-count"></span></button>
+          <div data-sub="body" role="group" aria-label="body sections">
+            <button type="button" class="mh-sub" data-tab-for="body" data-section="metabolic">Metabolic</button>
+            <button type="button" class="mh-sub" data-tab-for="body" data-section="heart">Heart</button>
+            <button type="button" class="mh-sub" data-tab-for="body" data-section="muscle">Muscle</button>
+            <button type="button" class="mh-sub" data-tab-for="body" data-section="reports">Lab reports</button>
+          </div>
+          <button type="button" class="mh-tab" data-tab="reports"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg><span>Reports</span><span data-count class="mh-count"></span></button>
+          <button type="button" class="mh-tab" data-tab="messages" id="messagestab" data-dim="1"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span>Messages</span><span data-count class="mh-count"></span></button>
+          <h3 class="t-eyebrow mb-2 mt-5 hidden px-3 lg:block">Account</h3>
+          <!-- who can see this page: the entry opens the panel on the page -->
+          <div id="accesswrap" data-dim="1">
+            <button type="button" id="accessgo" class="mh-tab w-full"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span class="flex min-w-0 flex-col leading-snug"><span>Access</span><span id="accesssub" class="t-caption font-normal text-text-3"></span></span></button>
+          </div>
+          <!-- download what this page shows: the person's own data, or what a share lets you see -->
+          <div id="exportwrap" class="mh-tab cursor-default" data-dim="1">
+            <svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span id="exportlabel">Download</span>
+            <span class="ml-auto flex gap-1"><button type="button" id="exportcsv" class="mh-chip">CSV</button><button type="button" id="exportjson" class="mh-chip">JSON</button></span>
+          </div>
+          <a href="/plans" id="planwrap" class="mh-tab"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span>Plan</span><span id="planname" class="mh-count">Free</span></a>
         </nav>
-        <!-- the four sections under Overview: chips under the pills on a phone -->
-        <div data-ovsections class="mt-3 flex flex-wrap gap-1.5 lg:hidden" style="display: none">
-          
-            <button type="button" data-section="fitness"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #f97316"></span>Fitness</button>
-            <button type="button" data-section="movement"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #34d399"></span>Movement</button>
-            <button type="button" data-section="heart"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #818cf8"></span>Sleep &amp; heart</button>
-            <button type="button" data-section="body"><span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background: #FBBF24"></span>Body</button>
-        </div>
-        <!-- who can see this page: the entry here opens the panel on the page -->
-        <div id="accesswrap" class="hidden">
-          <button type="button" id="accessgophone" class="mt-3 flex min-h-9 items-center gap-1.5 text-[13px] font-semibold text-accent-light hover:text-text-primary lg:hidden">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Give access
-          </button>
-          <div class="hidden lg:block">
-            <h3 class="mb-2 hidden px-3 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary lg:block">Access</h3>
-            <button type="button" id="accessgo" class="flex w-full items-start gap-2.5 rounded-[10px] border-l-2 border-transparent px-3 py-2 text-left text-[13.5px] font-medium text-text-secondary transition-colors hover:bg-white/[0.04] hover:text-text-primary">
-              <svg class="mt-0.5 shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-              <span class="flex min-w-0 flex-col leading-snug"><span>Give access</span><span id="accesssub" class="text-[11.5px] font-normal text-text-tertiary"></span></span>
-            </button>
-          </div>
-        </div>
-        <!-- download what this page shows: the person's own data, or what a share lets you see -->
-        <div id="exportwrap" class="hidden">
-          <h3 class="mb-2 mt-4 hidden px-3 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary lg:block">Download</h3>
-          <div class="mt-3 flex items-center gap-2 px-0 lg:mt-0 lg:px-3">
-            <svg class="shrink-0 text-text-tertiary" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
-            <span id="exportlabel" class="text-[13px] font-medium text-text-secondary">My data</span>
-            <button type="button" id="exportcsv" class="rounded-md border border-white/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-text-secondary hover:text-text-primary">CSV</button>
-            <button type="button" id="exportjson" class="rounded-md border border-white/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-text-secondary hover:text-text-primary">JSON</button>
-          </div>
-        </div>
-        <p class="mt-auto hidden px-3 font-mono text-[10.5px] leading-relaxed text-text-muted lg:block">Drag a PDF anywhere on this page to add it.</p>
+        <p class="t-caption mt-auto hidden px-3 text-text-3 lg:block">Drag a PDF anywhere on this page to add it.</p>
       </aside>
 
       <!-- ═══ THE PAGE: one person ═══════════════════════════════════════ -->
@@ -355,8 +358,9 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
            profile the app greets you with, and the one way to add a report -->
       <div id="pagehead" class="flex flex-wrap items-end justify-between gap-4 pt-5 sm:pt-8">
         <div class="min-w-0">
+          <div id="oveyebrow" class="t-eyebrow mb-2 min-h-[14px]"></div>
           <div class="flex items-center gap-2.5">
-            <h1 id="greet" class="text-[28px] font-extrabold leading-[1.05] tracking-[-0.03em] text-text-primary sm:text-4xl"></h1>
+            <h1 id="greet" class="t-display min-h-[32px] text-text"></h1>
             <button type="button" id="namechange" aria-label="Change your name" title="Change your name" class="hidden text-text-muted transition-colors hover:text-text-primary">
               <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
             </button>
@@ -385,13 +389,6 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
             <span id="newsmsg" class="hidden basis-full text-[12.5px] leading-snug text-text-primary" role="status" aria-live="polite"></span>
           </div>
         </div>
-        <button
-          id="addreport"
-          class="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/14 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-white/25"
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-          Add a report
-        </button>
       </div>
 
       <!-- ═══ PEOPLE: whose page this is ═══════════════════════════════════
@@ -440,11 +437,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <textarea id="viewernote" rows="2" placeholder="Seen 7 Oct. Walk test 540 m. Retest in eight weeks."
             class="mt-1 w-full resize-none rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[14px] leading-relaxed text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"></textarea>
         </div>
-        <!-- new messages from a coach or clinician (or from the person): the way to the Messages tab -->
-        <button type="button" id="messagesnew" class="mt-3 hidden max-w-3xl rounded-2xl border border-success/50 bg-success/[0.06] px-4 py-3 text-left text-[14px] font-semibold text-text-primary"></button>
-
-        <!-- the plan this account holds, and the way to the plans page; only once plans are open -->
-        <p id="planline" class="mt-2 hidden text-[12px] text-text-tertiary"></p>
+        <!-- the message count rides on the Messages tab and the plan on the Account group (board 1): nothing pops in here -->
         <!-- over the plan's people: the next person is not added, and this says why -->
         <div id="planpeople" class="mt-3 hidden max-w-3xl flex-col gap-2 rounded-2xl border border-warning/50 bg-warning/[0.06] p-4"></div>
         <!-- invitations waiting for you: someone asked you to look at their page -->
@@ -546,14 +539,21 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         </section>
       </div>
 
-      <!-- ═══ OVERVIEW ═══════════════════════════════════════════════════ -->
-      <div id="tab-overview" class="mt-6 hidden">
-       <!-- the latest Guide's read, first on the page -->
-       <div id="readband" class="mb-6 hidden"></div>
-       <!-- All: the person at a glance -->
-       <div id="ovall">
+      <!-- ═══ OVERVIEW: the app's six cards ═══════════════════════════════
+           This week so far, in the app's order: Fitness, Vitals, Sleep,
+           Exertion, Movement, Body (canvas "My health, redesigned", boards
+           2, 3 and 12). One sentence of figures under the greeting and the
+           Guide's pointer, both of fixed height; then the cards, a view
+           (src/my-health/views/Overview). A card opens in place: the other
+           five shrink to a strip and the open one fills the width; the hash
+           carries the card. Every slot is in the markup with its height, so
+           nothing arrives after the first paint. -->
+      <div id="tab-overview" class="mt-5 hidden">
+        <p id="ovline" class="t-body min-h-[46px] max-w-3xl text-text-2"></p>
+        <div id="guidepointer" class="mt-4 h-[56px]"></div>
+        <div id="ovglance" class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"></div>
         <!-- values for the app that were read but never sent: one line, until it is done -->
-        <div id="tosend" class="mb-5 hidden flex-wrap items-center gap-3 rounded-2xl border border-accent/30 bg-accent/[0.06] px-4 py-3.5">
+        <div id="tosend" class="mt-4 hidden flex-wrap items-center gap-3 rounded-2xl border border-accent/30 bg-accent/[0.06] px-4 py-3.5">
           <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-accent/[0.16]">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg>
           </span>
@@ -561,7 +561,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <button id="tosendgo" class="min-h-10 rounded-full bg-accent px-4 py-2 text-[13px] font-semibold text-canvas transition-opacity hover:opacity-90">Review and send &rarr;</button>
         </div>
         <!-- nothing yet: the one call to action, since the drop zone lives on Reports -->
-        <div id="emptycard" class="hidden max-w-3xl rounded-2xl border border-dashed border-accent/40 bg-accent/[0.04] p-6">
+        <div id="emptycard" class="mt-4 hidden max-w-3xl rounded-2xl border border-dashed border-accent/40 bg-accent/[0.04] p-6">
           <p class="text-sm font-semibold text-text-primary">No reports yet</p>
           <p class="mt-1 text-[13px] leading-relaxed text-text-tertiary">
             Drop your first lab report and every value in it becomes a trend you keep. A PDF or a photo, several at once, or the JSON file your Verve app exports.
@@ -569,21 +569,12 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <button id="emptyadd" class="mt-4 min-h-11 rounded-xl bg-accent px-5 py-2.5 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Add a report</button>
         </div>
 
-        <!-- ═══ THE GLANCE: six cards, one figure each ═══════════════════════
-             One number, its unit in words, a sparkline and one sentence each;
-             a line under the greeting that says the week in a breath. The lab
-             values stay on Labs; the Body card carries the count and what is
-             due. A card opens its section IN PLACE, under the grid. -->
-        <div class="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <p id="ovline" class="min-h-[22px] text-[14px] leading-relaxed text-text-secondary"></p>
-          <!-- fourteen dots: which days the store held a night or a reading (a view) -->
-          <div id="ovdays"></div>
-        </div>
-        <!-- the four cards are a view (src/my-health/views/Overview): their frames are mounted
-             before any request leaves, so the page has its height from the first paint -->
-        <div id="ovglance" class="grid min-h-[220px] gap-[18px] sm:grid-cols-2 lg:grid-cols-3"></div>
-        <!-- the week as a table, and where the readings come from (a view, and one static strip) -->
-        <div id="ovweek" class="mt-[18px]"></div>
+        <!-- The 14-day dots, the week table and the sources strip left the Overview on
+             8 Nov 2026 (board 2): the table goes to In depth whole. Kept here behind
+             SHOW_OLD_OVERVIEW in the view, never deleted. -->
+        <div id="ovold" class="hidden">
+          <div id="ovdays" class="mt-4"></div>
+          <div id="ovweek" class="mt-[18px]"></div>
         <div class="mt-[18px] rounded-[20px] border border-white/10 bg-white/[0.03] p-5 sm:px-6">
           <div class="font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">Where the readings come from</div>
           <div class="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] sm:items-center">
@@ -598,20 +589,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <p class="mt-3 text-[12.5px] leading-relaxed text-text-secondary">Verve depends on the store, not on any wearable. What reaches this page is what your device's app chose to write there, and each card says who wrote it and what that writer leaves out, so a missing stage or a missing HRV is named, never guessed.</p>
         </div>
 
-        <p class="mt-7 font-mono text-[10.5px] text-text-muted lg:hidden">Drag a PDF anywhere on this page to add it.</p>
-       </div>
-
-       <!-- ═══ ONE SECTION: its markers as tiles, one of them open ═════════
-            Fitness, Movement, Sleep & heart or Body, picked by a card above
-            or in the sidebar; drawn under the cards, which stay.
-            A view (src/my-health/views/Overview) of the document; nothing
-            is fetched for it. -->
-       <div id="ovsection" class="hidden"></div>
-        <!-- the next step in the chain: picture, what moved, values, paper -->
-        <button type="button" data-goto="depth" class="mt-8 flex w-full max-w-3xl items-center justify-between gap-4 rounded-2xl border border-white/12 bg-white/[0.03] px-5 py-4 text-left transition-colors hover:border-white/25 hover:bg-white/[0.05]">
-          <span class="min-w-0"><span class="block font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary">NEXT · 2 OF 4</span><span class="mt-1 block text-[14.5px] font-bold text-text-primary">In depth: why the week read that way</span></span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </button>
+        </div>
+        <p class="t-caption mt-7 text-text-3 lg:hidden">Drag a PDF anywhere on this page to add it.</p>
       </div>
 
       <!-- ═══ LABS ═══════════════════════════════════════════════════════ -->
@@ -630,28 +609,53 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         <div id="depthroot"></div>
         <p class="mt-2 text-[12px] text-text-muted">Ranges are each lab's own. Cadences are the cited ones on the marker pages in the science section; the fitness-test and body-assessment cadences are the app's. None of it is a diagnosis.</p>
         <!-- the next step in the chain: picture, what moved, values, paper -->
-        <button type="button" data-goto="labs" class="mt-8 flex w-full max-w-3xl items-center justify-between gap-4 rounded-2xl border border-white/12 bg-white/[0.03] px-5 py-4 text-left transition-colors hover:border-white/25 hover:bg-white/[0.05]">
-          <span class="min-w-0"><span class="block font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary">NEXT · 3 OF 4</span><span class="mt-1 block text-[14.5px] font-bold text-text-primary">Labs: the values behind the Body card</span></span>
+        <button type="button" data-goto="body" class="mt-8 flex w-full max-w-3xl items-center justify-between gap-4 rounded-2xl border border-white/12 bg-white/[0.03] px-5 py-4 text-left transition-colors hover:border-white/25 hover:bg-white/[0.05]">
+          <span class="min-w-0"><span class="block font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary">NEXT</span><span class="mt-1 block text-[14.5px] font-bold text-text-primary">Body: the app's list, with the labs</span></span>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </button>
       </div>
 
-      <div id="tab-labs" class="mt-6 hidden">
-        <p class="mb-5 max-w-3xl text-[13.5px] leading-relaxed text-text-secondary"><span class="font-semibold text-text-primary">This page:</span> the values. Every marker, its band and its history; the Body card's number comes from here.</p>
+      <!-- ═══ BODY: the app's list, with Labs folded in (board 6; the list itself is stage 2) ═══ -->
+      <div id="tab-body" class="mt-6 hidden">
+        <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <p class="t-small max-w-3xl text-text-2"><span class="font-semibold text-text">Body:</span> every marker, its band and its history, from the app and the reports.</p>
+          <button
+            id="addreport"
+            class="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/14 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-white/25"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+            Add a report
+          </button>
+        </div>
         <!-- a view (src/my-health/views/Labs): the rail, the section, the charts -->
-        <div id="labsroot"></div>
+        <div id="bodyroot"></div>
         <!-- the next step in the chain: picture, what moved, values, paper -->
         <button type="button" data-goto="reports" class="mt-8 flex w-full max-w-3xl items-center justify-between gap-4 rounded-2xl border border-white/12 bg-white/[0.03] px-5 py-4 text-left transition-colors hover:border-white/25 hover:bg-white/[0.05]">
-          <span class="min-w-0"><span class="block font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary">NEXT · 4 OF 4</span><span class="mt-1 block text-[14.5px] font-bold text-text-primary">Reports: the paper every value came from</span></span>
+          <span class="min-w-0"><span class="block font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary">NEXT</span><span class="mt-1 block text-[14.5px] font-bold text-text-primary">Reports: the paper every value came from</span></span>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </button>
       </div>
 
       <!-- ═══ REPORTS ════════════════════════════════════════════════════ -->
-      <!-- Messages: one thread per share (src/my-health/views/Messages.ts) -->
-      <div id="tab-messages" class="mt-6 hidden max-w-3xl"></div>
-      <!-- The Guide's read, its own place (src/my-health/views/Reads.ts) -->
-      <div id="tab-read" class="mt-6 hidden max-w-6xl"></div>
+      <!-- Messages: one thread per share (src/my-health/views/Messages.ts); the pane exists before any thread does -->
+      <div id="tab-messages" class="mt-6 hidden max-w-3xl">
+        <p id="messagesempty" class="t-small max-w-xl text-text-3">Messages open once someone shares this page with a coach or a clinician, or a page is shared with you: one thread for each.</p>
+        <div id="messagesroot" class="hidden"></div>
+      </div>
+      <!-- The Guide: its own tab (src/my-health/views/Reads.ts draws the read; the Overview keeps one line) -->
+      <div id="tab-guide" class="mt-6 hidden max-w-6xl"></div>
+      <!-- Horizon: a date, the markers you want different by then, and the week that gets you there.
+           Pro on the website. The door is here from the first paint; the pages come with the Horizon build. -->
+      <div id="tab-horizon" class="mt-6 hidden">
+        <div id="horizonroot">
+          <div class="r-card max-w-2xl border border-border bg-card p-6">
+            <div class="t-eyebrow">Horizon · Pro</div>
+            <h2 class="t-heading mt-2 text-text">A date, the markers you want different by then, and the week that gets you there.</h2>
+            <p class="t-body mt-3 text-text-2">The Guide checks the pace every Monday and reads the month at its end; a coach sees all of it and writes the plan. Horizon is part of Pro on the website. Free keeps Overview, In depth, Body and the Guide's first read.</p>
+            <p class="t-small mt-4 text-text-3">Coming to this page. <a href="/plans" class="font-semibold text-accent-text hover:text-text">The plans &rarr;</a></p>
+          </div>
+        </div>
+      </div>
       <div id="tab-reports" class="mt-6 hidden">
         <p class="mb-5 max-w-3xl text-[13.5px] leading-relaxed text-text-secondary"><span class="font-semibold text-text-primary">This page:</span> the paper, and the years. The files every value came from, by year and month, and the history you brought in: the app's exports and workout CSVs. Every row stays on the Overview, however far back it reaches.</p>
         <!-- ── the archive first: a timeline, one card per original PDF, a year and a month at a time ── -->
@@ -751,7 +755,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
 
         <!-- the next step in the chain: picture, what moved, values, paper -->
         <button type="button" data-goto="overview" class="mt-8 flex w-full max-w-3xl items-center justify-between gap-4 rounded-2xl border border-white/12 bg-white/[0.03] px-5 py-4 text-left transition-colors hover:border-white/25 hover:bg-white/[0.05]">
-          <span class="min-w-0"><span class="block font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary">BACK TO 1 OF 4</span><span class="mt-1 block text-[14.5px] font-bold text-text-primary">Overview: the picture, in four cards</span></span>
+          <span class="min-w-0"><span class="block font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary">BACK</span><span class="mt-1 block text-[14.5px] font-bold text-text-primary">Overview: this week so far, in six cards</span></span>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </button>
       </div>
@@ -844,23 +848,54 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   /* Motion has one job here: to say what just changed and where to look.
      Six moments move; nothing else does. Every entry eases out and is under
      a third of a second, and all of it is off under reduced motion. */
-  @keyframes mh-rise { to { opacity: 1; transform: translateY(0); } }
   @keyframes mh-draw { to { stroke-dashoffset: 0; } }
   @keyframes mh-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes mh-veil { from { opacity: 0; } to { opacity: 1; } }
   @keyframes mh-frame { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
   @keyframes mh-pulse { 0%, 100% { background-color: transparent; } 40% { background-color: rgba(251, 191, 36, 0.22); } }
 
-  /* the page opens: the greeting fades up, tiles and cards rise in, staggered by --i */
-  .mh-rise { opacity: 0; transform: translateY(6px); animation: mh-rise 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; animation-delay: calc(var(--i, 0) * 60ms); }
+  /* Nothing rises or fades after load (board 9): the page paints once, with every slot in place. */
   /* a tile not tapped steps aside: it fades, blurs and shrinks before the page redraws without it */
   .mh-dim { opacity: 0 !important; filter: blur(3px); transform: scale(0.96); transition: opacity 0.2s ease, filter 0.2s ease, transform 0.2s ease; }
   @media (prefers-reduced-motion: reduce) { .mh-dim { transition: none; filter: none; transform: none; } }
   /* a section ring draws itself: --len is the arc, set where the ring is drawn */
   .mh-ring { stroke-dashoffset: var(--len, 0); animation: mh-draw 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards; animation-delay: calc(var(--i, 0) * 60ms + 0.2s); }
-  /* a tab switch, and a chart opening */
-  .mh-fade { animation: mh-fade 0.18s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  /* a chart opening on a tap, and a card opening in place: one short slide, nothing else */
   .mh-open { animation: mh-fade 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  @keyframes mh-slide { from { opacity: 0.6; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .mh-slide { animation: mh-slide 160ms ease-out both; }
+
+  /* a slot with nothing behind it yet: dimmed, in place, never absent */
+  [data-dim="1"] { opacity: 0.45; }
+
+  /* ── the sidebar: tabs, sub-links, the account group ── */
+  #tabbar .mh-tab { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 6px 12px; border-radius: 10px; font-size: 13.5px; font-weight: 500; color: var(--color-text-2); border-left: 2px solid transparent; white-space: nowrap; text-align: left; transition: color 0.12s, background-color 0.12s; }
+  #tabbar .mh-tab:hover { color: var(--color-text); background: rgba(255, 255, 255, 0.04); }
+  #tabbar .mh-tab[aria-current="page"] { color: var(--color-text); background: var(--color-alt); border-left-color: var(--color-accent); }
+  #tabbar .mh-ico { flex-shrink: 0; }
+  #tabbar .mh-badge { margin-left: auto; border-radius: 999px; border: 1px solid var(--color-accent-border); background: var(--color-accent-fill); padding: 1px 7px; font-family: var(--font-mono); font-size: 10px; font-weight: 500; color: var(--color-accent-text); }
+  #tabbar .mh-count { margin-left: auto; font-family: var(--font-mono); font-size: 11px; font-weight: 500; color: var(--color-text-3); }
+  #tabbar .mh-count:empty { display: none; }
+  #tabbar .mh-chip { border-radius: 999px; border: 1px solid var(--color-border); padding: 1px 8px; font-family: var(--font-mono); font-size: 10.5px; font-weight: 500; color: var(--color-text-2); }
+  #tabbar .mh-chip:hover { color: var(--color-text); border-color: var(--color-border-strong); }
+  #tabbar [data-sub] { display: none; flex-direction: column; gap: 1px; padding-left: 27px; margin: 2px 0 6px; }
+  #tabbar [data-sub]:empty { display: none !important; }
+  #tabbar[data-active-tab="overview"] [data-sub="overview"], #tabbar[data-active-tab="depth"] [data-sub="depth"],
+  #tabbar[data-active-tab="horizon"] [data-sub="horizon"], #tabbar[data-active-tab="body"] [data-sub="body"] { display: flex; }
+  #tabbar .mh-sub { display: flex; align-items: center; min-height: 28px; padding: 3px 10px; border-radius: 8px; font-size: 13px; color: var(--color-text-3); border-left: 2px solid transparent; text-align: left; white-space: nowrap; }
+  #tabbar .mh-sub:hover { color: var(--color-text); }
+  #tabbar .mh-sub[aria-current="page"] { color: var(--color-text); border-left-color: var(--color-accent); background: rgba(255, 255, 255, 0.03); }
+  @media (max-width: 1023.98px) {
+    #tabbar h3 { display: none; }
+    #tabbar .mh-tab { border-left: 0; border-bottom: 2px solid transparent; border-radius: 10px 10px 0 0; min-height: 34px; padding: 5px 10px; }
+    #tabbar .mh-tab[aria-current="page"] { background: transparent; border-bottom-color: var(--color-accent); }
+    #tabbar .mh-badge, #tabbar .mh-count { margin-left: 2px; }
+    #tabbar [data-sub] { order: 50; flex-direction: row; flex-wrap: wrap; flex-basis: 100%; padding-left: 0; gap: 6px; margin: 6px 0 2px; }
+    #tabbar .mh-sub { border: 1px solid var(--color-border); border-radius: 999px; padding: 4px 11px; min-height: 30px; }
+    #tabbar .mh-sub[aria-current="page"] { border-color: var(--color-accent-border); background: var(--color-accent-fill); }
+    #tabbar #accesswrap, #tabbar #exportwrap, #tabbar #planwrap { order: 60; }
+    #tabbar #exportwrap, #tabbar #planwrap, #tabbar #accesswrap .mh-tab { min-height: 30px; font-size: 12.5px; padding: 4px 8px; }
+  }
   /* a file dragged over the page */
   #veil.flex { animation: mh-veil 0.15s ease-out both; }
   #veil.flex > div { animation: mh-frame 0.18s cubic-bezier(0.2, 0.7, 0.2, 1) 0.05s both; }
@@ -889,7 +924,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   .mh-status.text-danger { border-color: rgba(248,113,113,0.30); background: rgba(248,113,113,0.06); }
 
   @media (prefers-reduced-motion: reduce) {
-    .mh-rise, .mh-ring, .mh-fade, .mh-open, #veil.flex, #veil.flex > div, .mh-pulse {
+    .mh-ring, .mh-open, .mh-slide, #veil.flex, #veil.flex > div, .mh-pulse {
       animation: none; opacity: 1; transform: none; stroke-dashoffset: 0;
     }
   }
@@ -909,7 +944,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   import { derivePerson, type PersonData } from "../my-health/derive/person";
   import { labsJudged, SECTIONS, SECTION_ORDER, searchTermsOf, landsAll, dateHay } from "../my-health/derive/labs";
   import { effect } from "@preact/signals";
-  import { doc as docSignal, person as personSignal, people as peopleSignal, firstName as firstNameSignal, ovSection as ovSectionSignal, setSection as setSectionState, activeTab as activeTabSignal, searchQuery as searchQuerySignal, depthLocked as depthLockedSignal, depthWorking as depthWorkingSignal, actions, openLabs, space as spaceSignal, isClient } from "../my-health/state";
+  import { doc as docSignal, person as personSignal, people as peopleSignal, firstName as firstNameSignal, section as sectionSignal, setSection as setSectionState, latestRead as latestReadSignal, readOf, activeTab as activeTabSignal, searchQuery as searchQuerySignal, depthLocked as depthLockedSignal, depthWorking as depthWorkingSignal, actions, openLabs, space as spaceSignal, isClient } from "../my-health/state";
   import { mountOverview } from "../my-health/views/Overview";
   import { mountLabs } from "../my-health/views/Labs";
   import { mountDepth } from "../my-health/views/Depth";
@@ -989,7 +1024,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
    */
   async function openDocument(personId: string): Promise<boolean> {
     docFor = personId;
-    const kept = userId ? await readDocument(userId, personId) : null;
+    const kept = userId ? await readDocument(userId, personId, true) : null;
     if (kept) { doc = kept; docPromise = Promise.resolve(kept); mark("cached"); return true; }
     doc = null;
     docPromise = fetchDocument(personId || null).then((d) => { if (docFor === personId) doc = d; return d; });
@@ -1021,6 +1056,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   // ── tiny DOM helpers ───────────────────────────────────────────────────
   const $ = (id: string) => document.getElementById(id)!;
   const show = (id: string, on: boolean) => $(id).classList.toggle("hidden", !on);
+  /** A slot with nothing behind it yet: dimmed in place, never removed (board 9). */
+  const dim = (id: string, on: boolean) => { $(id).dataset.dim = on ? "1" : "0"; };
   /** A status line: grey while something is happening, tinted when it went wrong. */
   const msg = (id: string, text: string, bad = false) => {
     const el = $(id);
@@ -1043,7 +1080,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     const relay = /@privaterelay\.appleid\.com$/i.test(email);
     $("whoamikind").textContent = `Signed in with ${kinds}`;
     $("whoamiaddr").textContent = relay ? `${email} (an address Apple made to hide your own)` : email;
-    show("whoami", !!email);
+    dim("whoami", !email);
   }
   /** The name on the account, and its first word for the greeting; "" when there is none. */
   let fullName = "";
@@ -1066,11 +1103,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     // when plans open, the plan joins the document.
     plan = "free";
     ent = entitlements(plan);
-    show("planline", PLANS_OPEN);
     show("whopays", PLANS_OPEN);
-    if (PLANS_OPEN) $("planline").innerHTML = plan === "free"
-      ? `Free plan · <a href="/plans" class="font-semibold text-accent-light hover:text-text-primary">see the plans</a>`
-      : `${esc(planOf(plan).name)} plan · <a href="/plans" class="font-semibold text-accent-light hover:text-text-primary">plans</a>`;
+    $("planname").textContent = plan === "free" ? "Free" : planOf(plan).name;
   }
   const lockCard = (title: string, body: string, cta = "See the plans") => `
     <div class="text-[17px] font-extrabold text-text-primary">${title}</div>
@@ -1173,8 +1207,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     show("addreport", w); show("drop", w); show("emptyadd", w);
     show("personnotewrap", w && !self && !!person?.id);
     show("viewernotewrap", !!person?.id && !person.mine && !person.self && grantIdBy.has(person.id));
-    show("accesswrap", w && !!person?.id); if (!(w && person?.id)) closeAccess();
-    show("exportwrap", !!person?.id);
+    dim("accesswrap", !(w && !!person?.id)); if (!(w && person?.id)) closeAccess();
+    dim("exportwrap", !person?.id);
     $("exportlabel").textContent = self ? "My data" : `${person?.name?.split(" ")[0] || "Their"} data`;
     show("namechange", self && !!firstName);
     if (!self) hideNameForm();
@@ -1184,7 +1218,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   /** The People control is a view (src/my-health/views/People); this keeps the page's chrome and feeds the signals. */
   function renderPeople() {
     const has = people.some((p) => !!p.id);   // the people table exists
-    show("peoplewrap", has); show("personwrap", has && activeTab !== "group");
+    dim("peoplewrap", !has); show("personwrap", has && activeTab !== "group");
     peopleSignal.value = people; firstNameSignal.value = firstName; personSignal.value = person;
     const p = person;
     show("personhead", !!p && !p.self); $("personhead").classList.toggle("flex", !!p && !p.self);
@@ -1370,14 +1404,15 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   });
   // ── Messages: one thread per share (src/my-health/views/Messages.ts). The person's page has a thread for
   // each coach or clinician it is shared with; a shared page has the one thread of that share. ─────────
-  const messagesView = mountMessages($("tab-messages"), supabase as any, (n) => {
-    setTabCount("messages", n ? `${n} new` : "", "text-success");
-    $("messagesnew").textContent = n ? `${n} new message${n === 1 ? "" : "s"} · open Messages →` : "";
-    show("messagesnew", n > 0 && activeTab !== "messages");
+  const UNREAD_KEY = "mh-unread";
+  const messagesView = mountMessages($("messagesroot"), supabase as any, (n) => {
+    setTabCount("messages", n ? `${n} new` : "", "text-good");
+    try { localStorage.setItem(UNREAD_KEY, String(n)); } catch { /* private mode */ }
   });
-  $("messagesnew").addEventListener("click", () => setTab("messages"));
-  let messagesShown = false;   // the tab shows only where there is a thread (setTab keeps it hidden otherwise)
-  const showMessagesTab = (on: boolean) => { messagesShown = on; show("messagestab", on); if (!on && activeTab === "messages") setTab("overview"); };
+  // the count from the last visit, on the tab from the first paint; corrected once the thread is read (board 9, rule 4)
+  try { const n = Number(localStorage.getItem(UNREAD_KEY) || 0); if (n > 0) setTabCount("messages", `${n} new`, "text-good"); } catch { /* fine */ }
+  let messagesShown = false;   // a thread exists: the tab is lit; otherwise it is dimmed, never absent
+  const showMessagesTab = (on: boolean) => { messagesShown = on; dim("messagestab", !on); show("messagesempty", !on); show("messagesroot", on); if (!on) setTabCount("messages", ""); };
   async function loadFeedback() {
     const p = person;
     showMessagesTab(false);
@@ -2111,6 +2146,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     const kept = d.ai.summary, consent = { summary_at: d.ai.consent };
     aiConsented = !!consent?.summary_at;
     if (kept?.summary) aiSummary = { summary: kept.summary, created_at: kept.created_at, model: kept.model ?? "" };
+    if (!latestReadSignal.value && kept?.summary) latestReadSignal.value = readOf({ created_at: kept.created_at, summary: kept.summary });
     renderAiCard();
   }
   /** In depth keeps a pointer: the read has its own place now (the ✦ tab). */
@@ -2121,12 +2157,13 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     $("dp-ai").innerHTML = `<div class="flex flex-wrap items-center justify-between gap-3"><div><div class="text-[15px] font-extrabold text-text-primary">✦ The Guide's read</div>
       <div class="text-[12.5px] text-text-tertiary">This page in a few calm sentences, filed by date, to compare, share and download.</div></div>
       <button type="button" id="dp-ai-go" class="min-h-9 rounded-xl bg-accent px-3.5 text-[13px] font-bold text-canvas">Open the Guide's read →</button></div>`;
-    $("dp-ai-go")?.addEventListener("click", () => setTab("read"));
+    $("dp-ai-go")?.addEventListener("click", () => setTab("guide"));
   }
 
   // ── The Guide's read: the Overview band, the ✦ tab, the library (src/my-health/views/Reads.ts) ──
   let readShown = false;
-  const readsView = mountReads($("readband"), $("tab-read"), supabase as any, (t) => setTab(t));
+  // the band the view used to draw at the top of Overview goes nowhere now: the Overview keeps one line of its own
+  const readsView = mountReads(document.createElement("div"), $("tab-guide"), supabase as any, (t) => setTab(t === "read" ? "guide" : t));
   async function callRead(body: Record<string, unknown>) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -2141,8 +2178,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   async function loadReadsFor() {
     const p = person;
     readShown = aiOpen && !!p?.id;
-    show("readtab", readShown); show("readband", readShown);
-    if (!readShown) { await readsView.load(null); if (activeTab === "read") setTab("overview"); return; }
+    dim("readtab", !readShown);
+    if (!readShown) { await readsView.load(null); latestReadSignal.value = null; return; }
     const d = await ensureDocument();
     if (person?.id !== p!.id) return;
     const gid = !p!.mine && !p!.self ? grantIdBy.get(p!.id) : undefined;
@@ -2153,6 +2190,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       personId: p!.id, personName: p!.self ? "" : (p!.name || ""), self: !!p!.self, userId, myLabel: p!.self ? (firstName || userEmail) : userEmail,
       consented: !!d.ai.consent, threads, working: () => depthWorkingSignal.value, call: callRead,
     });
+    // the Overview's one line about the Guide: the latest filed read, else the document's own copy of it
+    if (person?.id === p!.id) latestReadSignal.value = readOf(readsView.latest()) ?? readOf(d.ai.summary ? { created_at: d.ai.summary.created_at, summary: d.ai.summary.summary } : null);
   }
 
   /** Clients: each client's latest read, and a way to read every client's week. */
@@ -2176,7 +2215,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         <td class="px-2 py-2.5 text-danger">${r ? item(r, "doctor") : `<span class="text-text-muted">not read yet</span>`}</td><td class="px-2 py-2.5 text-success-light">${r ? item(r, "coach") : ""}</td>
         <td class="px-2 py-2.5 font-mono text-[11.5px] ${r && day0(r.created_at) >= monday ? "text-accent-light" : "text-text-tertiary"}">${r ? esc(fmtDay(day0(r.created_at))) : "—"}</td></tr>`; }).join("")}</tbody></table></div>
       <p id="readallmsg" class="mt-2 text-[12.5px] text-text-tertiary"></p>`;
-    el.querySelectorAll("[data-openread]").forEach((tr) => tr.addEventListener("click", async () => { await switchPerson((tr as HTMLElement).dataset.openread!); setTab("read"); }));
+    el.querySelectorAll("[data-openread]").forEach((tr) => tr.addEventListener("click", async () => { await switchPerson((tr as HTMLElement).dataset.openread!); setTab("guide"); }));
     $("readall").addEventListener("click", async () => {
       const todo = clients.filter((p) => { const r = latest.get(p.id); return !r || day0(r.created_at) < monday; });
       const say = (t: string) => { $("readallmsg").textContent = t; };
@@ -2331,53 +2370,50 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   $("mhsearchclear").addEventListener("click", () => { ($("mhsearch") as HTMLInputElement).value = ""; $("mhsearch").dispatchEvent(new Event("input")); $("mhsearch").focus(); });
 
   // ── tabs ───────────────────────────────────────────────────────────────
+  // Eight panes, one lit at a time. The sidebar's buttons carry their look
+  // in CSS by aria-current and the nav's data-active-tab, so a switch
+  // writes two attributes and nothing is rebuilt; the sub-links of the
+  // active tab show by that attribute alone (board 9, rule 5).
+  const TABS = ["group", "overview", "guide", "depth", "horizon", "body", "reports", "messages"];
+  /** The old hashes still land: the Guide's read, Labs, the Sleep & heart section. */
+  const TAB_ALIAS: Record<string, string> = { read: "guide", labs: "body", clients: "group" };
+  const SECTION_ALIAS: Record<string, string> = { heart: "vitals" };
   let activeTab = "overview";
+  const hashFor = (tab: string, sec: string) =>
+    tab === "group" ? (spaceSignal.value === "clients" ? "#clients" : "#group")
+    : (tab === "overview" || tab === "depth" || tab === "body") && sec !== "all" ? `#${tab}-${sec}` : `#${tab}`;
   function setTab(t: string) {
     if (marked.has("painted")) mark("interaction");
+    t = TAB_ALIAS[t] ?? t;
+    if (!TABS.includes(t)) t = "overview";
     // Everyone is a view of the account, not of a person: the greeting and
     // the person's own rows step aside, and no person is lit in the sidebar
-    // a group with no one in it is still a page: the coach's door lands there with the ask
     const switching = activeTab !== t;
     const wasGroup = activeTab === "group", group = t === "group";
     activeTab = t; activeTabSignal.value = t;
-    ["group", "overview", "labs", "reports", "depth", "messages", "read"].forEach((x) => show("tab-" + x, x === t));
+    TABS.forEach((x) => show("tab-" + x, x === t));
     if (t === "messages" && switching) void messagesView.refresh();
     show("pagehead", !group); show("personwrap", !group && people.some((x) => !!x.id));
-    show("mhsearchwrap", t === "labs" || t === "reports");
-    document.querySelectorAll<HTMLElement>("[data-ovsections]").forEach((el) => { el.style.display = t === "overview" ? "" : "none"; });
+    show("mhsearchwrap", t === "body" || t === "reports");
+    const bar = $("tabbar");
+    bar.dataset.activeTab = t;
+    bar.querySelectorAll<HTMLElement>("[data-tab]").forEach((b) => b.setAttribute("aria-current", b.dataset.tab === t ? "page" : "false"));
     if (group !== wasGroup && people.some((x) => !!x.id)) renderPeople();
-    if (switching) {
-      const el = $("tab-" + t);
-      el.classList.remove("mh-fade");
-      void el.offsetWidth;   // restart the animation
-      el.classList.add("mh-fade");
-    }
-    $("tabbar").querySelectorAll("[data-tab]").forEach((b) => {
-      const on = (b as HTMLElement).dataset.tab === t;
-      b.className = `flex min-h-9 flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors sm:flex-none lg:min-h-10 lg:w-full lg:justify-start lg:gap-2.5 lg:rounded-[10px] lg:border-l-2 lg:px-3 lg:py-2 lg:text-[13.5px] ${
-        on ? "bg-accent/20 text-text-primary lg:border-accent lg:bg-white/6" : "text-text-tertiary hover:text-text-primary lg:border-transparent lg:text-text-secondary lg:hover:bg-white/[0.04]"}${((b as HTMLElement).id === "messagestab" && !messagesShown) || ((b as HTMLElement).id === "readtab" && !readShown) ? " hidden" : ""}`;
-    });
-    history.replaceState(null, "", t === "overview" && ovSectionSignal.value !== "all" ? `#overview-${ovSectionSignal.value}` : t === "group" && spaceSignal.value === "clients" ? "#clients" : "#" + t);
+    history.replaceState(null, "", hashFor(t, sectionSignal.value));
   }
-  /** The small figure beside a tab in the sidebar: how many outside range, how many reports. */
-  function setTabCount(t: string, text: string, tone = "text-text-tertiary") {
+  /** The small figure beside a tab in the sidebar: how many outside range, how many new. */
+  function setTabCount(t: string, text: string, tone = "text-text-3") {
     const el = $("tabbar").querySelector(`[data-tab="${t}"] [data-count]`);
     if (!el) return;
     el.textContent = text;
-    el.className = `ml-auto hidden font-mono text-[10.5px] font-semibold lg:inline ${tone}`;
+    el.className = `mh-count ${tone}`;
   }
   $("accessgo").addEventListener("click", openAccess);
-  $("accessgophone").addEventListener("click", openAccess);
-  document.addEventListener("click", (e) => {
-  });
-  document.addEventListener("keydown", (e) => {
-    if (e.key !== "Escape") return;
-  });
   $("tabbar").querySelectorAll("[data-tab]").forEach((b) =>
     b.addEventListener("click", () => {
       const t = (b as HTMLElement).dataset.tab!;
-      // Overview is the glance; a section stays open only while its own row is lit
-      if (t === "overview") setSectionState("all");
+      // a tab's own button lands on its first page; a sub-link below it opens a section
+      setSectionState("all");
       setTab(t);
     }));
 
@@ -2452,8 +2488,11 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       appLink?.classList.add("hidden"); signinLink?.classList.add("hidden");
       show("signout", true); show("home", true); show("auth", false);
       const wanted = window.location.hash.replace("#", "") || (coachDoor ? "clients" : "");
-      if (wanted.startsWith("overview-") && SEC_ORDER.includes(wanted.slice(9) as SecKey)) setSectionState(wanted.slice(9) as SecKey);
-      setTab(["overview", "labs", "reports", "depth", "messages", "read"].includes(wanted) || wanted.startsWith("overview-") ? wanted.split("-")[0] : "overview");
+      // #overview-movement, #depth-sleep, #body-heart: the tab and its section; the old names still land
+      const [wantTab, ...rest] = wanted.split("-");
+      const wantSec = rest.join("-");
+      if (wantSec && ["overview", "depth", "body"].includes(TAB_ALIAS[wantTab] ?? wantTab)) setSectionState(SECTION_ALIAS[wantSec] ?? wantSec);
+      setTab(TABS.includes(TAB_ALIAS[wantTab] ?? wantTab) ? wantTab : "overview");
       // The first round trip, one for everything the page needs before it
       // can say whose page this is: the name, the people, the plan, the
       // role, and the one-time merge of other accounts under this email.
@@ -2482,7 +2521,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       fillOwnName();
       firstName = fullName.split(/\s+/)[0] ?? "";
       $("greet").textContent = greeting();
-      $("greet").closest(".flex.flex-wrap")!.classList.add("mh-rise");
+      $("oveyebrow").textContent = eyebrow();
       show("namechange", !!firstName);
       if (!firstName) askForName(guessNameFromEmail(userEmail));
       else hideNameForm();
@@ -2501,9 +2540,9 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     } else {
       firstName = "";
       people = []; person = null;
-      show("peoplewrap", false);
+      dim("peoplewrap", true);
       appLink?.classList.remove("hidden"); signinLink?.classList.add("hidden");
-      show("auth", true); show("home", false); show("signout", false); show("whoami", false);
+      show("auth", true); show("home", false); show("signout", false); dim("whoami", true);
       if (oauthError) msg("authmsg", `Apple sign-in did not finish: ${oauthError.replace(/\+/g, " ")}.`, true);
       if (door === "coach") {
         $("authkick").textContent = "Coach · the coach's door";
@@ -2571,6 +2610,11 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   }
 
   /** "Good evening, Sudeep", or just "Good evening" when no name is known. */
+  /** Over the greeting: the day, and that the Overview is this week so far. */
+  function eyebrow(): string {
+    const d = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+    return `${d} · this week so far`;
+  }
   function greeting(): string {
     if (person && !person.self) return person.name || "Unnamed";
     const hour = new Date().getHours();
@@ -3150,43 +3194,27 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   // sidebar's lit section and the hash.
   function renderGlance() {
     const { outside } = labsJudged(allLabs);
-    setTabCount("labs", outside ? `${outside} outside` : "", outside ? "text-warning" : "text-text-tertiary");
+    setTabCount("body", outside ? `${outside} outside` : "", outside ? "text-caution" : "text-text-3");
     show("emptycard", !allLabs.length && !allWeeks.length && !syncSignals.length);
     wireGoto();
   }
-  function renderSection() { /* the section is a view of ovSectionSignal; nothing to draw here */ }
+  // The section: one card open on the Overview, one chapter on In depth, one
+  // group on Body. The sub-links of the active tab are lit by aria-current;
+  // the hash carries the tab and the section.
   effect(() => {
-    const sec = ovSectionSignal.value;
-    // the glance stays; the section opens under it, and comes into view
-    show("ovall", true); show("ovsection", sec !== "all");
-    if (sec !== "all" && marked.has("painted")) requestAnimationFrame(() => $("ovsection").scrollIntoView({ behavior: "smooth", block: "start" }));
-    document.querySelectorAll<HTMLElement>("[data-section]").forEach((b) => {
-      const on = b.dataset.section === sec;
-      b.setAttribute("aria-current", on ? "page" : "false");
-      b.className = `flex min-h-8 items-center gap-2 rounded-full border px-3 py-1 text-[12.5px] font-semibold transition-colors lg:min-h-8 lg:w-full lg:rounded-lg lg:border-0 lg:border-l-2 lg:px-3 lg:py-1 lg:text-left lg:text-[13px] ${on
-        ? "border-accent/70 bg-accent/15 text-text-primary lg:border-accent lg:bg-white/6"
-        : "border-white/14 text-text-secondary hover:border-white/30 hover:text-text-primary lg:border-transparent lg:hover:bg-white/[0.04]"}`;
+    const sec = sectionSignal.value, tab = activeTabSignal.value;
+    document.querySelectorAll<HTMLElement>("#tabbar [data-section]").forEach((b) => {
+      b.setAttribute("aria-current", b.dataset.tabFor === tab && b.dataset.section === sec ? "page" : "false");
     });
-    if (activeTab === "overview" && marked.has("painted")) history.replaceState(null, "", sec === "all" ? "#overview" : `#overview-${sec}`);
+    if (marked.has("painted")) history.replaceState(null, "", hashFor(tab, sec));
   });
-  // The entrance animation plays the first time a list is drawn, never on a
-  // redraw: a tile that only changed its number must not rise again.
-  const risen = new Set<string>();
-  const riseOnce = (key: string) => risen.has(key) ? "" : (risen.add(key), "mh-rise");
-
-
-
-
-
-
-
-  function setSection(k: "all" | SecKey) {
+  function setSection(tab: string, k: string) {
     if (marked.has("painted")) mark("interaction");
+    if (activeTab !== tab) setTab(tab);
     setSectionState(k);
-    if (activeTab !== "overview") setTab("overview");
-    history.replaceState(null, "", k === "all" ? "#overview" : `#overview-${k}`);
+    history.replaceState(null, "", hashFor(tab, k));
   }
-  document.querySelectorAll<HTMLElement>("[data-section]").forEach((b) => b.addEventListener("click", () => setSection(b.dataset.section as "all" | SecKey)));
+  document.querySelectorAll<HTMLElement>("#tabbar [data-section]").forEach((b) => b.addEventListener("click", () => setSection(b.dataset.tabFor!, b.dataset.section!)));
 
   function renderOverview() {
     $("greet").textContent = greeting();
@@ -3216,7 +3244,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       el.dataset.wired = "1";
       el.addEventListener("click", () => {
         const t = el.dataset.goto!;
-        if (t === "overview") setSectionState("all");
+        setSectionState("all");
         setTab(t);
       });
     });
@@ -3451,11 +3479,6 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     }
 
     await refresh();
-    // the report just filed: its card rises into the timeline
-    if (last) {
-      const card = $("repcards").querySelector(`[data-view="${CSS.escape(last.path.split("/").pop()!)}"]`)?.closest("details > div > div");
-      card?.classList.add("mh-rise");
-    }
     // every lab report with something for the app gets its review, one after
     // another; an echo report's review shows when it was the last file
     const toReview = labsFiled.filter((r) => r.filed.appValues.some((v: any) => !r.filed.dupKeys.has(v.key)));
@@ -3937,8 +3960,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   });
 
   // the Overview's four frames, before the session is even checked: the page has its shape from the first paint
-  mountOverview({ line: $("ovline"), glance: $("ovglance"), section: $("ovsection"), days: $("ovdays"), week: $("ovweek") });
-  mountLabs($("labsroot"));
+  mountOverview({ line: $("ovline"), pointer: $("guidepointer"), glance: $("ovglance"), old: $("ovold"), days: $("ovdays"), week: $("ovweek") });
+  mountLabs($("bodyroot"));
   mountDepth($("depthroot"));
   mountReports({ cards: $("repcards"), imports: $("appimportsroot"), years: $("yearsonfileroot") });
   mountPeople({ menu: $("people"), head: $("personhead"), tabhead: $("tabhead"), space: $("spaceswitch") });
@@ -3983,7 +4006,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       await refresh();
     }
   };
-  actions.goTab = (t) => { if (t === "overview") setSectionState("all"); setTab(t); };
+  actions.goTab = (t) => { setSectionState("all"); setTab(t); };
   actions.searchNote = searchNote;
   boot();
   supabase.auth.onAuthStateChange((event) => {
