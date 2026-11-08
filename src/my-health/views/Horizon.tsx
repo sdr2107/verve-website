@@ -37,6 +37,8 @@ export type HorizonDeps = {
   goTab: (t: string) => void;
   /** The open horizons, for the sidebar's sub-links; called after every load. */
   onHorizons?: (list: { id: string; title: string; ends_on: string }[]) => void;
+  /** The backend is not in place for this project yet (tables missing, or the function answers 404): the page says so and the sidebar dims the door. */
+  onOff?: (off: boolean) => void;
 };
 export type HorizonHandle = { refresh: () => void; open: (hash: string) => void };
 
@@ -74,6 +76,18 @@ function ProCard({ goTab }: { goTab: (t: string) => void }) {
         <a href="/plans" class="inline-flex min-h-10 items-center rounded-[10px] bg-accent px-4 text-[13px] font-semibold text-canvas">See the plans</a>
         <button type="button" onClick={() => goTab("overview")} class="min-h-10 px-3 text-[13px] font-semibold text-text-2 hover:text-text">Not now</button>
       </div>
+    </Card>
+  );
+}
+
+/** The backend is not in place yet: the door and its words, not an error and not the Pro card. */
+function OffCard() {
+  return (
+    <Card>
+      <Eyebrow>Horizon · Pro</Eyebrow>
+      <div class="text-[18px] font-semibold text-text">A date, the markers you want different by then, and the week that gets you there.</div>
+      <p class="m-0 text-[15px] leading-relaxed text-text-2">The Guide checks the pace every Monday and reads the month at its end; a coach sees all of it and writes the plan. Any of the site's markers or the Body list can be a target: Verve does not set the number, it tells you the pace it implies.</p>
+      <Quiet>Horizon is not switched on for this account yet.</Quiet>
     </Card>
   );
 }
@@ -167,6 +181,7 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
   const person = deps.derived();
   const [list, setList] = useState<HorizonFull[] | null>(null);
   const [loadError, setLoadError] = useState("");
+  const [off, setOff] = useState(false);
   const [pro, setPro] = useState<"unknown" | "yes" | "no">("unknown");
   const [notice, setNotice] = useState("");
   const [consent, setConsent] = useState<null | (() => void)>(null);
@@ -178,15 +193,19 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
     if (!personId) { setList([]); return; }
     try {
       const hs = await listHorizons(deps.supabase, personId);
-      setList(hs); setLoadError("");
+      setList(hs); setLoadError(""); setOff(false); deps.onOff?.(false);
       if (hs.length) setPro("yes");
       deps.onHorizons?.(hs.map((h) => ({ id: h.id, title: h.title, ends_on: h.ends_on })));
-    } catch (e: any) { setLoadError(e?.message ?? "Could not read the horizons."); setList([]); }
+    } catch (e: any) {
+      if (e?.name === "HorizonOff") { setOff(true); setList([]); setLoadError(""); deps.onOff?.(true); deps.onHorizons?.([]); return; }
+      setLoadError(e?.message ?? "Could not read the horizons."); setList([]);
+    }
   }
   useEffect(() => { void load(); }, [personId, _tick]);
 
   /** What a failed write means for the page; returns true when it was handled by a card rather than a line. */
   function onApiError(error: ApiError, retry: () => void): boolean {
+    if (error === "not_switched_on") { setOff(true); deps.onOff?.(true); return true; }
     if (error === "pro_required") { setPro("no"); return true; }
     if (error === "consent_required") { setConsent(() => retry); return true; }
     setNotice(ERROR_WORDS[error]);
@@ -204,6 +223,7 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
 
   if (!personId) return <Quiet>Choose a person first.</Quiet>;
   if (list == null) return <div class="h-40 rounded-[16px] border border-border bg-card" aria-busy="true" />;
+  if (off) return <OffCard />;
   if (pro === "no") return <ProCard goTab={deps.goTab} />;
 
   const open = list.filter((h) => !h.closed_at);

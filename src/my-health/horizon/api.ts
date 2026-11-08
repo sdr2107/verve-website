@@ -12,6 +12,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../../lib/supabase.ts";
 import type { Cadence, CheckinInputs, MarkerKey, PlanRow } from "./derive.ts";
+import { mapError, isMissingRelation, HorizonOffError, type ApiError } from "./errors.ts";
+export { mapError, ERROR_WORDS, isMissingRelation, HorizonOffError, type ApiError } from "./errors.ts";
 
 export type HorizonKind = "date" | "months";
 export type PlanAuthor = "coach" | "guide" | "user";
@@ -30,33 +32,8 @@ export type PlanRecord = { horizon_id: string; rows: PlanRow[]; author: PlanAuth
 export type CheckinRow = { id: string; horizon_id: string; user_id: string; kind: CheckinKind; for_date: string; text: string; pace: CheckinInputs | null; model: string | null; created_at: string };
 export type HorizonFull = HorizonRow & { targets: TargetRow[]; plan: PlanRecord | null; checkins: CheckinRow[] };
 
-export type ApiError = "pro_required" | "consent_required" | "allowance" | "forbidden" | "horizon_closed" | "not_open" | "bad_request" | "offline" | "unknown";
 export type Result<T> = { ok: true; data: T } | { ok: false; error: ApiError; status: number; detail: string };
 
-/** What a status and body from the function mean, in the page's words. */
-export function mapError(status: number, out: any): ApiError {
-  const code = String(out?.error ?? "");
-  if (status === 402 || code === "pro_required") return "pro_required";
-  if (status === 412 || code === "consent_required") return "consent_required";
-  if (status === 429) return "allowance";
-  if (status === 403) return "forbidden";
-  if (status === 409 || code === "horizon_closed") return "horizon_closed";
-  if (status === 503 || code === "horizon_not_open") return "not_open";
-  if (status === 400) return "bad_request";
-  if (status === 0) return "offline";
-  return "unknown";
-}
-export const ERROR_WORDS: Record<ApiError, string> = {
-  pro_required: "Horizon is part of Pro on the website.",
-  consent_required: "Tick the consent box first: it says what is sent, and what is not.",
-  allowance: "Today's allowance of Guide writing is used up; try tomorrow.",
-  forbidden: "Only the person whose horizon this is can ask for a check-in.",
-  horizon_closed: "This horizon is closed. A final read is still possible.",
-  not_open: "The Guide is not available right now.",
-  bad_request: "Something in the horizon did not pass the writer's checks.",
-  offline: "Could not reach the writer. Try again in a moment.",
-  unknown: "Could not write it.",
-};
 
 async function callHorizon(sb: SupabaseClient, body: Record<string, unknown>): Promise<{ ok: boolean; status: number; out: any }> {
   try {
@@ -78,7 +55,8 @@ export async function listHorizons(sb: SupabaseClient, personId: string, include
   let q = sb.from("horizons").select("*").eq("person_id", personId).order("ends_on", { ascending: true });
   if (!includeClosed) q = q.is("closed_at", null);
   const { data: hs, error } = await q;
-  if (error || !hs?.length) return [];
+  if (error) { if (isMissingRelation(error)) throw new HorizonOffError(); throw new Error(error.message); }
+  if (!hs?.length) return [];
   const ids = hs.map((h: any) => h.id);
   const [t, p, c] = await Promise.all([
     sb.from("horizon_targets").select("*").in("horizon_id", ids).order("created_at", { ascending: true }),
