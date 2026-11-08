@@ -1,0 +1,148 @@
+/**
+ * Horizon's rows and its writer. Reads and the small writes go straight to
+ * the tables under row-level security (the owner reads and writes their
+ * horizon; a coach with the activity grant reads it all and writes the
+ * plan). Starting a horizon and writing a check-in go through the edge
+ * function `horizon` (METTracker/supabase/functions/horizon), which holds
+ * the Pro gate: Horizon has no free tier on the website.
+ *
+ * Tables: horizons, horizon_targets, horizon_plans, horizon_checkins
+ * (METTracker/supabase/migrations/20261109_horizon.sql).
+ */
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../../lib/supabase.ts";
+import type { Cadence, CheckinInputs, MarkerKey, PlanRow } from "./derive.ts";
+
+export type HorizonKind = "date" | "months";
+export type PlanAuthor = "coach" | "guide" | "user";
+export type CheckinKind = "week" | "month" | "final";
+
+export type HorizonRow = {
+  id: string; user_id: string; person_id: string; title: string; kind: HorizonKind; months: 3 | 6 | 12 | null;
+  starts_on: string; ends_on: string; checkin_monday: boolean; checkin_month: boolean; send_to_coach: boolean;
+  closed_at: string | null; created_at: string;
+};
+export type TargetRow = {
+  id: string; horizon_id: string; user_id: string; marker: MarkerKey; label: string; unit: string | null;
+  start_value: number | null; start_on: string | null; target_value: number; cadence: Cadence | null; created_at: string;
+};
+export type PlanRecord = { horizon_id: string; rows: PlanRow[]; author: PlanAuthor | null; updated_by: string | null; updated_at: string };
+export type CheckinRow = { id: string; horizon_id: string; user_id: string; kind: CheckinKind; for_date: string; text: string; pace: CheckinInputs | null; model: string | null; created_at: string };
+export type HorizonFull = HorizonRow & { targets: TargetRow[]; plan: PlanRecord | null; checkins: CheckinRow[] };
+
+export type ApiError = "pro_required" | "consent_required" | "allowance" | "forbidden" | "horizon_closed" | "not_open" | "bad_request" | "offline" | "unknown";
+export type Result<T> = { ok: true; data: T } | { ok: false; error: ApiError; status: number; detail: string };
+
+/** What a status and body from the function mean, in the page's words. */
+export function mapError(status: number, out: any): ApiError {
+  const code = String(out?.error ?? "");
+  if (status === 402 || code === "pro_required") return "pro_required";
+  if (status === 412 || code === "consent_required") return "consent_required";
+  if (status === 429) return "allowance";
+  if (status === 403) return "forbidden";
+  if (status === 409 || code === "horizon_closed") return "horizon_closed";
+  if (status === 503 || code === "horizon_not_open") return "not_open";
+  if (status === 400) return "bad_request";
+  if (status === 0) return "offline";
+  return "unknown";
+}
+export const ERROR_WORDS: Record<ApiError, string> = {
+  pro_required: "Horizon is part of Pro on the website.",
+  consent_required: "Tick the consent box first: it says what is sent, and what is not.",
+  allowance: "Today's allowance of Guide writing is used up; try tomorrow.",
+  forbidden: "Only the person whose horizon this is can ask for a check-in.",
+  horizon_closed: "This horizon is closed. A final read is still possible.",
+  not_open: "The Guide is not available right now.",
+  bad_request: "Something in the horizon did not pass the writer's checks.",
+  offline: "Could not reach the writer. Try again in a moment.",
+  unknown: "Could not write it.",
+};
+
+async function callHorizon(sb: SupabaseClient, body: Record<string, unknown>): Promise<{ ok: boolean; status: number; out: any }> {
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/horizon`, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${session?.access_token}`, apikey: SUPABASE_ANON_KEY },
+      body: JSON.stringify(body),
+    });
+    return { ok: resp.ok, status: resp.status, out: await resp.json().catch(() => ({})) };
+  } catch { return { ok: false, status: 0, out: {} }; }
+}
+const fail = <T,>(status: number, out: any): Result<T> => ({ ok: false, error: mapError(status, out), status, detail: String(out?.detail ?? out?.error ?? "") });
+
+// ── reads ──
+
+/** A person's horizons, open ones unless asked, with their targets, plan and check-ins (newest first). */
+export async function listHorizons(sb: SupabaseClient, personId: string, includeClosed = false): Promise<HorizonFull[]> {
+  let q = sb.from("horizons").select("*").eq("person_id", personId).order("ends_on", { ascending: true });
+  if (!includeClosed) q = q.is("closed_at", null);
+  const { data: hs, error } = await q;
+  if (error || !hs?.length) return [];
+  const ids = hs.map((h: any) => h.id);
+  const [t, p, c] = await Promise.all([
+    sb.from("horizon_targets").select("*").in("horizon_id", ids).order("created_at", { ascending: true }),
+    sb.from("horizon_plans").select("*").in("horizon_id", ids),
+    sb.from("horizon_checkins").select("*").in("horizon_id", ids).order("for_date", { ascending: false }),
+  ]);
+  return (hs as HorizonRow[]).map((h) => ({
+    ...h,
+    targets: ((t.data ?? []) as TargetRow[]).filter((x) => x.horizon_id === h.id),
+    plan: ((p.data ?? []) as PlanRecord[]).find((x) => x.horizon_id === h.id) ?? null,
+    checkins: ((c.data ?? []) as CheckinRow[]).filter((x) => x.horizon_id === h.id),
+  }));
+}
+
+// ── the function: start, check in ──
+
+export type StartTarget = { marker: MarkerKey; label: string; unit: string | null; start_value: number | null; start_on: string | null; target_value: number; cadence: Cadence };
+export type StartPayload = {
+  person_id: string; title: string; kind: HorizonKind;
+  /** Null on a dated horizon; the function rejects a number there. */
+  months: 3 | 6 | 12 | null;
+  starts_on: string; ends_on: string; targets: StartTarget[];
+  plan: { rows: PlanRow[]; author: PlanAuthor | null };
+  checkin_monday: boolean; checkin_month: boolean; send_to_coach: boolean;
+};
+export async function startHorizon(sb: SupabaseClient, payload: StartPayload): Promise<Result<{ id: string }>> {
+  const body = { action: "start", ...payload, months: payload.kind === "date" ? null : payload.months };
+  const { ok, status, out } = await callHorizon(sb, body);
+  return ok && out?.id ? { ok: true, data: { id: String(out.id) } } : fail(status, out);
+}
+
+export type CheckinPayload = { horizon_id: string; kind: CheckinKind; for_date: string; force?: boolean; inputs: CheckinInputs };
+export async function requestCheckin(sb: SupabaseClient, payload: CheckinPayload): Promise<Result<{ id: string; text: string; created_at: string }>> {
+  const { ok, status, out } = await callHorizon(sb, { action: "checkin", ...payload });
+  return ok && out?.text ? { ok: true, data: { id: String(out.id ?? ""), text: String(out.text), created_at: String(out.created_at ?? new Date().toISOString()) } } : fail(status, out);
+}
+
+/** The consent the Guide's writing needs (ai_consent.summary_at), the same row the Guide's read sets. */
+export async function grantConsent(sb: SupabaseClient, userId: string): Promise<string | null> {
+  const { error } = await sb.from("ai_consent").upsert({ user_id: userId, summary_at: new Date().toISOString() }, { onConflict: "user_id" });
+  return error ? error.message : null;
+}
+
+// ── the small writes, under row-level security ──
+
+/** The plan's rows; `updatedBy` must be the signed-in user's id (the policy checks it). The owner or the coach may write. */
+export async function savePlan(sb: SupabaseClient, horizonId: string, rows: PlanRow[], author: PlanAuthor, updatedBy: string): Promise<string | null> {
+  const { error } = await sb.from("horizon_plans").upsert({ horizon_id: horizonId, rows, author, updated_by: updatedBy, updated_at: new Date().toISOString() }, { onConflict: "horizon_id" });
+  return error ? error.message : null;
+}
+export async function updateHorizon(sb: SupabaseClient, id: string, patch: Partial<Pick<HorizonRow, "title" | "ends_on" | "checkin_monday" | "checkin_month" | "send_to_coach">>): Promise<string | null> {
+  const { error } = await sb.from("horizons").update(patch).eq("id", id);
+  return error ? error.message : null;
+}
+/** Stopping keeps every row; the readings stay and the horizon leaves the open list. */
+export async function stopHorizon(sb: SupabaseClient, id: string): Promise<string | null> {
+  const { error } = await sb.from("horizons").update({ closed_at: new Date().toISOString() }).eq("id", id);
+  return error ? error.message : null;
+}
+export async function addTarget(sb: SupabaseClient, t: Omit<TargetRow, "id" | "created_at">): Promise<Result<TargetRow>> {
+  const { data, error } = await sb.from("horizon_targets").insert(t).select("*").single();
+  return error || !data ? { ok: false, error: "unknown", status: 0, detail: error?.message ?? "" } : { ok: true, data: data as TargetRow };
+}
+export async function removeTarget(sb: SupabaseClient, id: string): Promise<string | null> {
+  const { error } = await sb.from("horizon_targets").delete().eq("id", id);
+  return error ? error.message : null;
+}
