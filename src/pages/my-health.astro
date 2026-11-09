@@ -631,14 +631,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       <!-- Horizon: a date, the markers you want different by then, and the week that gets you there.
            Pro on the website. The door is here from the first paint; the pages come with the Horizon build. -->
       <div id="tab-horizon" class="mt-6 hidden">
-        <div id="horizonroot">
-          <div class="r-card max-w-2xl border border-border bg-card p-6">
-            <div class="t-eyebrow">Horizon · Pro</div>
-            <h2 class="t-heading mt-2 text-text">A date, the markers you want different by then, and the week that gets you there.</h2>
-            <p class="t-body mt-3 text-text-2">The Guide checks the pace every Monday and reads the month at its end; a coach sees all of it and writes the plan. Horizon is part of Pro on the website. Free keeps Overview, In depth, Body and the Guide's first read.</p>
-            <p class="t-small mt-4 text-text-3">Coming to this page. <a href="/plans" class="font-semibold text-accent-text hover:text-text">The plans &rarr;</a></p>
-          </div>
-        </div>
+        <div id="horizonroot" class="min-h-40"></div>
       </div>
       <div id="tab-reports" class="mt-6 hidden">
         <p class="mb-5 max-w-3xl text-[13.5px] leading-relaxed text-text-secondary"><span class="font-semibold text-text-primary">This page:</span> the paper, and the years. The files every value came from, by year and month, and the history you brought in: the app's exports and workout CSVs. Every row stays on the Overview, however far back it reaches.</p>
@@ -928,10 +921,11 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   import { derivePerson, type PersonData } from "../my-health/derive/person";
   import { labsJudged, SECTIONS, SECTION_ORDER, searchTermsOf, landsAll, dateHay } from "../my-health/derive/labs";
   import { effect } from "@preact/signals";
-  import { doc as docSignal, person as personSignal, people as peopleSignal, firstName as firstNameSignal, section as sectionSignal, setSection as setSectionState, latestRead as latestReadSignal, readOf, activeTab as activeTabSignal, searchQuery as searchQuerySignal, depthLocked as depthLockedSignal, depthWorking as depthWorkingSignal, actions, openLabs, space as spaceSignal, isClient } from "../my-health/state";
+  import { derived as derivedSignal, doc as docSignal, person as personSignal, people as peopleSignal, firstName as firstNameSignal, section as sectionSignal, setSection as setSectionState, latestRead as latestReadSignal, readOf, activeTab as activeTabSignal, searchQuery as searchQuerySignal, depthLocked as depthLockedSignal, depthWorking as depthWorkingSignal, actions, openLabs, space as spaceSignal, isClient } from "../my-health/state";
   import { mountOverview } from "../my-health/views/Overview";
   import { mountBody } from "../my-health/views/Body";
   import { mountDepth } from "../my-health/views/Depth";
+  import { mountHorizon } from "../my-health/views/Horizon.tsx";
   import { mountReports } from "../my-health/views/Reports";
   import { mountPeople } from "../my-health/views/People";
   import { REPORT_EXT, pretty, stampOf, isPhotoName, unitFits, APP_KEYS, appBoundFor, isSent, reportAppState, pendingReports, uncheckedInApp, type AppBound } from "../my-health/derive/reports";
@@ -2389,6 +2383,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     activeTab = t; activeTabSignal.value = t;
     TABS.forEach((x) => show("tab-" + x, x === t));
     if (t === "messages" && switching) void messagesView.refresh();
+    if (t === "horizon" && switching) horizonView.refresh();
     show("pagehead", !group); show("personwrap", !group && people.some((x) => !!x.id));
     show("mhsearchwrap", t === "body" || t === "reports");
     const bar = $("tabbar");
@@ -2489,6 +2484,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       const wantSec = rest.join("-");
       if (wantSec && ["overview", "depth", "body"].includes(TAB_ALIAS[wantTab] ?? wantTab)) setSectionState(SECTION_ALIAS[wantSec] ?? wantSec);
       setTab(TABS.includes(TAB_ALIAS[wantTab] ?? wantTab) ? wantTab : "overview");
+      if ((TAB_ALIAS[wantTab] ?? wantTab) === "horizon" && wanted) openHorizon("#" + wanted);   // #horizon-<id> or #horizon-new lands on that page
       // The first round trip, one for everything the page needs before it
       // can say whose page this is: the name, the people, the plan, the
       // role, and the one-time merge of other accounts under this email.
@@ -2802,6 +2798,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     renderGlance();
     renderOverview();
     renderDepth();
+    horizonView.refresh();
     mark("painted");
   }
 
@@ -3959,6 +3956,37 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   mountOverview({ line: $("ovline"), pointer: $("guidepointer"), glance: $("ovglance"), old: $("ovold"), days: $("ovdays"), week: $("ovweek") });
   mountBody($("bodyroot"));
   mountDepth($("depthroot"));
+  // Horizon: the pages fill the pane; the sidebar's sub-links are the open horizons; the door dims until the backend is in place
+  const escH = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+  const horizonOwner = () => !!person && (person.self || person.mine);
+  let horizonOff = false;   // the tables are not there yet: no sub-links, the door dimmed
+  const horizonView = mountHorizon($("horizonroot"), {
+    supabase: supabase as any,
+    personId: () => person?.id ?? null,
+    userId: () => userId || null,
+    derived: () => derivedSignal.value,
+    isOwner: horizonOwner,
+    goTab: (t) => setTab(t),
+    onHorizons: (list) => drawHorizonSubLinks(list),
+    onOff: (off) => { horizonOff = off; dim("horizontab", off); if (off) drawHorizonSubLinks([]); },
+  });
+  function openHorizon(hash: string) {
+    setTab("horizon");
+    horizonView.open(hash);
+    history.replaceState(null, "", hash);
+    $("tabbar").querySelectorAll<HTMLElement>("[data-horizon]").forEach((b) => b.setAttribute("aria-current", `#horizon-${b.dataset.horizon}` === hash ? "page" : "false"));
+  }
+  function drawHorizonSubLinks(list: { id: string; title: string; ends_on: string }[]) {
+    const slot = $("tabbar").querySelector<HTMLElement>('[data-sub="horizon"]');
+    if (!slot) return;
+    if (horizonOff) { slot.innerHTML = ""; return; }
+    const short = (t: string) => t.split(",")[0].split(" ").slice(0, 2).join(" ");
+    const when = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    const rows = list.map((h) => `<button type="button" class="mh-sub" data-tab-for="horizon" data-horizon="${escH(h.id)}">${escH(short(h.title))} · ${escH(when(h.ends_on))}</button>`);
+    if (horizonOwner()) rows.push(`<button type="button" class="mh-sub" data-tab-for="horizon" data-horizon="new">${list.length ? "Set another" : "Set a horizon"}</button>`);
+    slot.innerHTML = rows.join("");
+    slot.querySelectorAll<HTMLElement>("[data-horizon]").forEach((b) => b.addEventListener("click", () => openHorizon(`#horizon-${b.dataset.horizon}`)));
+  }
   mountReports({ cards: $("repcards"), imports: $("appimportsroot"), years: $("yearsonfileroot") });
   mountPeople({ menu: $("people"), head: $("personhead"), tabhead: $("tabhead"), space: $("spaceswitch") });
   actions.person = (kind, id) => {
