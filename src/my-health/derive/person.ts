@@ -6,7 +6,7 @@
  * gives the same object, so nothing downstream recomputes for nothing.
  */
 import type { MyHealthDocument } from "../document.ts";
-import { bodyFromSync, crfFromSync, isWorkout, mergeBy, weeksFrom } from "./activity.ts";
+import { bodyFromSync, crfFromSync, isWorkout, mergeBy, mergeWeeks, type WeekRow } from "./activity.ts";
 import { markerPointsFrom, type Pt } from "./markers.ts";
 import { buildMarkers, type Marker } from "./lenses.ts";
 import { withLipidRatios } from "./lipids.ts";
@@ -21,7 +21,8 @@ export interface PersonData {
   imaging: any[];
   app: any[];
   exportRows: { weeks: any[]; crf: any[]; body: any[] };
-  weeks: any[];
+  /** The weeks as the page reads them: the app's row where it wrote one, the browser's count where not, an import's hours where neither (derive/activity mergeWeeks). */
+  weeks: WeekRow[];
   crf: any[];
   body: any[];
   acts: any[];
@@ -42,7 +43,7 @@ export function derivePerson(doc: MyHealthDocument): PersonData {
   const synced = !!doc.person?.account_id;
   const acts = synced ? doc.activities.filter(isWorkout) : [];
   const crf = mergeBy("measured_on", synced ? crfFromSync(doc.app_crf) : [], doc.web_crf);
-  const weeks = mergeBy("week_start", synced ? weeksFrom(acts) : [], doc.weeks);
+  const weeks = mergeWeeks(doc.weeks, synced ? acts : []);
   const body = mergeBy("measured_on", synced ? bodyFromSync(doc.waist) : [], doc.web_body);
   const profile = synced ? doc.profile : null;
   const signals = synced ? doc.signals : [];

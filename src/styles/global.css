@@ -1,70 +1,105 @@
 @import "tailwindcss";
-@import "@fontsource/hanken-grotesk/400.css";
-@import "@fontsource/hanken-grotesk/500.css";
-@import "@fontsource/hanken-grotesk/600.css";
-@import "@fontsource/hanken-grotesk/700.css";
-@import "@fontsource/hanken-grotesk/800.css";
-@import "@fontsource/newsreader/400.css";   /* the Guide's read: its prose and titles (26 Oct 2026) */
-@import "@fontsource/newsreader/500.css";
-@import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource-variable/inter";          /* words: one variable file, every weight the pages ask for */
+@import "@fontsource/jetbrains-mono/500.css";   /* figures, units, eyebrows */
 @import "@fontsource/jetbrains-mono/600.css";
 @import "@fontsource/jetbrains-mono/700.css";
 
 /*
- * Verve's web palette — carried over verbatim from lib/theme.ts's darkColors
- * (the app's flagship look: the splash screen, the app icon background, and
- * ScreenBackground.tsx's own comment all treat dark as the primary canvas,
- * light as the secondary). The website commits to dark only, deliberately —
- * matching the app's own hierarchy rather than hedging with both themes.
+ * One set of tokens: the app's, now the website's (8 November 2026, the
+ * canvas "My health, redesigned", board 8). The matte dark set the app took
+ * on 3 November: one canvas, one card, one alt surface, two borders, four
+ * greys for text, one accent, good, caution in gold, concern. Nothing is
+ * orange. Every small grey passes 4.5:1 on the card.
+ *
+ * The old names stay as aliases onto the new values, so the public pages
+ * re-skin without an edit: a visitor who signs in sees no change of house.
  */
 @theme {
-  --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
-  --color-canvas:     #0D0D1C; /* lib/theme.ts darkColors.screenBg */
-  --color-canvas-2:   #0c0c15; /* ScreenBackground gradient midpoint */
-  --color-canvas-3:   #090910; /* ScreenBackground gradient base */
+  /* surfaces */
+  --color-canvas:        #0D0D15;
+  --color-card:          #15151F;
+  --color-alt:           #1B1B27;
+  --color-border:        #262636;
+  --color-border-strong: #32324A;
 
-  --color-text-primary:   #f1f5f9;
-  --color-text-secondary: #94a3b8;
-  --color-text-tertiary:  #64748b;
-  --color-text-muted:     #475569;
+  /* text */
+  --color-text:   #F2F2F7;
+  --color-text-2: #A9A9B8;
+  --color-text-3: #8B8BA0;   /* eyebrows, small labels: the smallest grey allowed on a card */
+  --color-text-4: #55556A;   /* 24 px and up only */
 
-  --color-accent:       #818cf8; /* darkColors.accent */
-  --color-accent-light: #a5b4fc; /* darkColors.accentText */
-  --color-glow:         #8B7CF0; /* ScreenBackground.tsx AccentGlow color */
+  /* accent */
+  --color-accent:        #A9ABF7;
+  --color-accent-text:   #C7C9FF;
+  --color-accent-fill:   #1E1E3A;
+  --color-accent-border: #4A4AA8;
 
-  --color-success: #34d399;
-  --color-warning: #FBBF24;
-  --color-danger:  #f87171;
+  /* meaning */
+  --color-good:    #34D399;
+  --color-caution: #D9A441;   /* muted gold, never orange */
+  --color-concern: #F87171;
 
-  /* theme.ts keeps a lighter green for text than the one it fills bars with.
-     The Body page's in-range figures use it: at 11-12px mono on this canvas
-     the solid #34d399 reads closer to the grey beside it than it should. */
-  --color-success-light: #6ee7b7; /* darkColors.successText */
+  /* the zones: zone 1 is neutral, zone 2 the app's green, zone 3 its darker fill with a lighter text on dark */
+  --color-z2:      #97C459;
+  --color-z3:      #3B6D11;
+  --color-z3-text: #5E9A2A;
 
-  --color-met-hero: #f97316; /* metHeroColor — the MET-hours hero number */
-  --color-cyan:     #06B6D4; /* "goal met" achievement colour, dashboard */
-  --color-violet:   #8B5CF6; /* "AHA optimal" achievement colour, dashboard */
+  /* ── aliases: the names the pages were written with, on the new values ── */
+  --color-canvas-2: #0D0D15;
+  --color-canvas-3: #0D0D15;
+  --color-text-primary:   #F2F2F7;
+  --color-text-secondary: #A9A9B8;
+  --color-text-tertiary:  #8B8BA0;
+  --color-text-muted:     #55556A;
+  --color-accent-light:   #C7C9FF;
+  --color-glow:           #A9ABF7;
+  --color-success:        #34D399;
+  --color-success-light:  #34D399;
+  --color-warning:        #D9A441;
+  --color-danger:         #F87171;
+  --color-met-hero:       #A9ABF7;   /* the MET hero number was orange; nothing is */
+  --color-cyan:           #A9ABF7;
+  --color-violet:         #A9ABF7;
 }
 
 body {
   background-color: var(--color-canvas);
-  color: var(--color-text-primary);
+  color: var(--color-text);
   font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";   /* Inter: the single-storey a and the open figures the app's build uses */
 }
 
-/* ScreenBackground.tsx's exact gradient: "178deg, #15151f 0%, #0c0c15 56%, #090910 100%" */
+/* The seven sizes and the two figure sizes (board 8). Inter for words,
+   JetBrains Mono for every figure, unit and eyebrow; words never carry a
+   number's weight. A utility on the same element still wins. */
+@layer components {
+  .t-display    { font-size: 28px; line-height: 1.15; font-weight: 600; letter-spacing: -0.02em; }
+  .t-heading    { font-size: 22px; line-height: 1.2;  font-weight: 600; letter-spacing: -0.015em; }
+  .t-title      { font-size: 18px; line-height: 1.25; font-weight: 600; letter-spacing: -0.01em; }
+  .t-body       { font-size: 15px; line-height: 1.5;  font-weight: 400; }
+  .t-read       { font-size: 16px; line-height: 1.65; font-weight: 400; max-width: 640px; }
+  .t-small      { font-size: 13px; line-height: 1.45; font-weight: 400; }
+  .t-caption    { font-size: 12px; line-height: 1.4;  font-weight: 400; }
+  .t-eyebrow    { font-family: var(--font-mono); font-size: 11px; line-height: 1.3; font-weight: 500; color: var(--color-text-3); }
+  .t-figure     { font-family: var(--font-mono); font-size: 28px; line-height: 1;   font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .t-figure-row { font-family: var(--font-mono); font-size: 15px; line-height: 1.2; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .t-unit       { font-family: var(--font-mono); font-size: 11px; line-height: 1.3; font-weight: 500; color: var(--color-text-3); }
+  /* the three radii, by name, so a card is always 16 and a button always 10 */
+  .r-card { border-radius: 16px; }
+  .r-btn  { border-radius: 10px; }
+  .r-chip { border-radius: 999px; }
+}
+
+/* The canvas is matte: one colour, no gradient. The class stays on every page's body. */
 .vrv-canvas {
-  background: linear-gradient(178deg, #15151f 0%, var(--color-canvas-2) 56%, var(--color-canvas-3) 100%);
+  background: var(--color-canvas);
 }
 
-/* AccentGlow — the indigo top glow from the app's hero cards, centred above
-   the fold so the light source feels off-screen, exactly as in the app.
-   The glow is 56rem wide, so on a phone it reaches past both edges; the
-   host clips it on the x axis, which unlike overflow: hidden does not make
-   the host a scroll container. Without this, My health scrolled sideways
-   on a phone. */
+/* The soft light above the fold on the public pages, kept faint: the
+   host clips it on the x axis so a phone never scrolls sideways. */
 .vrv-glow {
   overflow-x: clip;
 }
@@ -78,13 +113,12 @@ body {
   width: 56rem;
   height: 56rem;
   border-radius: 9999px;
-  background: radial-gradient(circle, rgba(139, 124, 240, 0.16) 0%, rgba(139, 124, 240, 0) 68%);
+  background: radial-gradient(circle, rgba(169, 171, 247, 0.09) 0%, rgba(169, 171, 247, 0) 68%);
   pointer-events: none;
 }
 
-/* A password field masks its characters with the font's bullet, and the
-   page's font draws a small square that is hard to see. The system font
-   draws round dots, spaced so each keystroke is visible. Once the eye
+/* A password field masks its characters with the font's bullet; the system
+   font draws round dots, spaced so each keystroke is visible. Once the eye
    button shows the text, the field is type=text and the page font returns. */
 input[type="password"] {
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -93,7 +127,7 @@ input[type="password"] {
 
 /* A search hit's matched word: the accent at low alpha, the text as it was. */
 mark {
-  background: rgba(129, 140, 248, 0.22);
+  background: rgba(169, 171, 247, 0.22);
   color: inherit;
   border-radius: 3px;
   padding: 0 1px;
@@ -105,10 +139,9 @@ button:not(:disabled) {
   cursor: pointer;
 }
 
-/* A block that rises into place as the page paints: six pixels up, a third
-   of a second, each sibling a beat after the last by --i. The same easing
-   My health's cards use. Nothing moves for a reader who asked for less
-   motion: the block is simply there. */
+/* A block that rises into place as a public page paints: six pixels up, a
+   third of a second, each sibling a beat after the last by --i. My health
+   does not use it: there, nothing moves after load (board 9). */
 @keyframes vrv-rise { to { opacity: 1; transform: translateY(0); } }
 .vrv-rise {
   opacity: 0;
@@ -121,11 +154,9 @@ button:not(:disabled) {
 }
 
 /* Where a search hit, or any link with a hash, lands: the heading is lit
-   for a moment so the eye finds it, then the light fades. The rule
-   applies only to headings that carry the class, so an id used for
-   anything else stays as it was. */
+   for a moment so the eye finds it, then the light fades. */
 @keyframes vrv-target {
-  0%   { background-color: rgba(129, 140, 248, 0.22); box-shadow: 0 0 0 8px rgba(129, 140, 248, 0.22); }
+  0%   { background-color: rgba(169, 171, 247, 0.22); box-shadow: 0 0 0 8px rgba(169, 171, 247, 0.22); }
   100% { background-color: transparent; box-shadow: 0 0 0 8px transparent; }
 }
 .vrv-anchor:target {
@@ -133,5 +164,5 @@ button:not(:disabled) {
   animation: vrv-target 1.8s ease-out 0.15s both;
 }
 @media (prefers-reduced-motion: reduce) {
-  .vrv-anchor:target { animation: none; background-color: rgba(129, 140, 248, 0.14); }
+  .vrv-anchor:target { animation: none; background-color: rgba(169, 171, 247, 0.14); }
 }

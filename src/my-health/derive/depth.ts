@@ -163,7 +163,7 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
   });
   let lastM = "";
   twelve.forEach((w, i) => { const mo = w.week_start.slice(0, 7); if (mo === lastM) return; lastM = mo; asvg += `<text x="${left + 6 + i * (bw + gap)}" y="134" fill="#94a3b8" font-size="10" font-family="${MONO}">${monthOf(w.week_start).toUpperCase()}</text>`; });
-  const sumK = (k: string) => recent.reduce((t, w) => t + (Number(w[k]) || 0), 0);
+  const sumK = (k: "light_min" | "moderate_min" | "vigorous_min") => recent.reduce((t, w) => t + (Number(w[k]) || 0), 0);
   const easyMin = sumK("light_min"), modMin = sumK("moderate_min"), vigMin = sumK("vigorous_min"), allMin = easyMin + modMin + vigMin;
   const pct = (v: number) => allMin ? Math.round((v / allMin) * 100) : 0;
   const hm = (m: number) => `${Math.floor(m / 60)}h ${String(Math.round(m % 60)).padStart(2, "0")}m`;
@@ -360,7 +360,7 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
     [],
     `<div class="grid gap-3.5 sm:grid-cols-3">
       <div class="rounded-2xl border ${outRows.length ? "border-warning/40" : "border-white/10"} bg-white/[0.03] p-4">${kicker(outRows.length ? "OUTSIDE RANGE" : "LABS", outRows.length ? "text-warning" : "text-text-tertiary")}
-        ${outRows.length ? `<div class="mt-2 flex flex-col gap-2">${outRows.slice(0, 3).map((r) => `<div><div class="text-[14px] font-bold text-text-primary">${esc(r.label)} <span class="font-mono text-warning">${esc(r.latest)}</span></div><div class="text-[12px] text-text-tertiary">lab's range ${esc(r.range)} · ${esc(fmtDay(r.d))}${r.noFollow != null ? ` · no follow-up in ${r.noFollow} months` : ""}</div></div>`).join("")}${outRows.length > 3 ? `<button type="button" data-goto="labs" class="text-left text-[12px] font-semibold text-accent-light hover:text-text-primary">and ${outRows.length - 3} more, in Labs &rarr;</button>` : ""}</div>`
+        ${outRows.length ? `<div class="mt-2 flex flex-col gap-2">${outRows.slice(0, 3).map((r) => `<div><div class="text-[14px] font-bold text-text-primary">${esc(r.label)} <span class="font-mono text-warning">${esc(r.latest)}</span></div><div class="text-[12px] text-text-tertiary">lab's range ${esc(r.range)} · ${esc(fmtDay(r.d))}${r.noFollow != null ? ` · no follow-up in ${r.noFollow} months` : ""}</div></div>`).join("")}${outRows.length > 3 ? `<button type="button" data-goto="body" class="text-left text-[12px] font-semibold text-accent-light hover:text-text-primary">and ${outRows.length - 3} more, on Body &rarr;</button>` : ""}</div>`
         : `<div class="mt-2 text-[14px] font-bold text-text-primary">${labRows.length ? `${labRows.length} marker${labRows.length === 1 ? "" : "s"}, all in range` : "Nothing on file"}</div><div class="text-[12px] text-text-tertiary">${labRows.length ? `latest ${esc(fmtDay(labRows[0].d))}` : "drop a report on the Reports tab"}</div>`}
       </div>
       <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4">${kicker("BODY")}

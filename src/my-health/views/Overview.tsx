@@ -1,216 +1,600 @@
 /**
- * The Overview's glance and its four sections, as views of the document
- * (step 3). Three mounts: the line under the greeting, the six cards,
- * and one section with its tiles and the open marker, drawn UNDER the
- * cards rather than in their place since 24 October 2026. Each reads the
- * signals in ../state and the derived person; a fresh document or a tap
- * re-renders only the nodes whose values changed, and the entrance
- * animation plays once per session (../motion).
+ * The Overview: the app's six cards, this week so far, as views of the
+ * document (canvas "My health, redesigned", 8 Nov 2026, boards 2, 3 and 12).
  *
- * What Verve reads, the charts and the sessions list are still HTML
- * strings from the derive layer, set as innerHTML: the words and the
- * drawings are the same as before, only the frame around them diffs.
+ *   line      one sentence of figures under the greeting, fixed height
+ *   pointer   the Guide's one line: when it read the week, how much it raised
+ *   cards     Fitness · Vitals · Sleep · Exertion · Movement · Body, in the
+ *             app's order; each a title, one figure in mono with its unit,
+ *             the band in words, three to five rows, the writer line
+ *   opened    a card opens IN PLACE: the other five shrink to a strip that
+ *             stays put, the open one fills the width with its chapter rows,
+ *             its markers as tiles and the chart of one of them. The hash
+ *             carries the card (#overview-movement).
+ *
+ * Every figure comes from the derive layer: the app's week row where it
+ * wrote one, the app's day rows, the app's helpers' rules. A row with
+ * nothing reads a dash and a short reason, never a zero. Nothing animates
+ * after load; a card opening slides once, 160 ms.
  */
 import { render } from "preact";
-import { useState } from "preact/hooks";
-import { derived, person, ovSection, openMarkerKey, openRange, openYear, focusTile, setSection } from "../state.ts";
-import { riseOnce } from "../motion.ts";
-import { addDays, daysBetween, dayWord, esc, fmt1, fmtSleepMin, mondayOf, plural, round0, todayStr } from "../derive/format.ts";
-import { bodyDueFrom, labRowsFrom, methodLabel, type Due } from "../derive/markers.ts";
-import { activitySummary, actsByDay, fitnessSummary } from "../derive/activity.ts";
+import { derived, person, section, setSection, openMarkerKey, openRange, openYear, focusTile, fitUnit, setFitUnit, latestRead, actions, CARD_KEYS, type CardKey } from "../state.ts";
+import { addDays, daysBetween, dayWord, esc, fmt1, fmtDay, fmtSleepMin, mondayOf, monthOf, plural, round0, todayStr } from "../derive/format.ts";
+import { labRowsFrom, methodLabel, MAXIMAL } from "../derive/markers.ts";
+import { activitySummary, actsByDay, fitnessSummary, doseReason, storeOf } from "../derive/activity.ts";
+import { bodyHeadline, bodyListOf } from "../derive/body.ts";
 import { sleepHeartSummary } from "../derive/heart.ts";
-import { labsJudged } from "../derive/labs.ts";
-import { SEC_META, SEC_ORDER, RANGE_LABEL, SHELVES, alongsideHtml, chartSvg, drawnFor, workoutsListHtml, type Marker, type Rng, type SecKey } from "../derive/lenses.ts";
+import { RANGE_LABEL, SHELVES, alongsideHtml, chartSvg, drawnFor, workoutsListHtml, type Marker, type Rng } from "../derive/lenses.ts";
+import { backgroundOf, dayBars, efficiencyOf, fmtHMin, fmtSigned1, inBedWindow, latestWith, meanOver, rowOn, stagesOf, weekZones, wristTemp, writerLine, writerOf } from "../derive/signals.ts";
+import { VO2_CAVEAT, metsOfTest, tierIndexFromCategory, tierIndexOf, tierRangeWords, tierRowFor, tierShort, tierWords, vo2OfTest } from "../derive/fitness.ts";
+import { REMNANT_LABEL } from "../derive/lipids.ts";
 
-// ── the glance: six cards, one figure each, a sparkline with your normal, a chip, a writer ──
-//
-// Rebuilt 30 October 2026 from the canvas "Overview: your normal, the week,
-// any wearable". Every card has the same seven parts: the name and its
-// section dot; one figure, its unit in words and when; the sparkline with
-// the person's own normal drawn through it as a labelled dashed line, the
-// newest bar full; a chip with the change in the reading's own unit (never
-// a percent), grey until a line is crossed; the span under the bars; one
-// sentence a person would say; and who wrote the reading, to which store,
-// and what that writer leaves out. The last line is what makes the page
-// wearable-agnostic without pretending every wearable writes the same
-// things: the elected day writer (daily_signals.steps_source), the HRV
-// writer, and whether the night carried stages.
+/** The 14-day dots, the week table and the sources strip: off the Overview since 8 Nov 2026; the table goes to In depth in stage 2. */
+export const SHOW_OLD_OVERVIEW = false;
 
-type Tone = "grey" | "good" | "warn" | "danger";
-type Glance = {
-  key: string; sec: SecKey; marker?: string; label: string; color: string;
-  value: string; beside: string; line: string; spark: number[];
-  /** The person's own normal, drawn through the bars. */
-  norm?: { value: number; label: string } | null;
-  /** The change, in the reading's own unit; its tone colours the figure and the newest bar too. */
-  chip: { text: string; tone: Tone };
-  /** Under the bars: first and last. */
-  span: [string, string];
-  /** Who wrote it, to which store, and what that writer leaves out. */
+type Tone = "neutral" | "good" | "caution" | "concern";
+type Row = { label: string; value: string; unit?: string; note?: string; tone?: Tone };
+type Card = {
+  key: CardKey; title: string;
+  figure: string; unit: string;
+  band: { text: string; tone: Tone };
+  rows: Row[];
+  /** The rows the opened card adds under the card's own. */
+  more: Row[];
   writer: string;
+  /** The lenses this card opens to, in order. */
+  markers: string[];
+  /** The open card's heading and its eyebrow. */
+  heading: string; eyebrow: string;
+  /** Movement: the week against the goal, 0 to 1. */
+  progress?: number | null;
 };
+const TONE_TEXT: Record<Tone, string> = { neutral: "text-text-2", good: "text-good", caution: "text-caution", concern: "text-concern" };
+const CARD_TITLE: Record<CardKey, string> = { fitness: "Fitness", vitals: "Vitals", sleep: "Sleep", exertion: "Exertion", movement: "Movement", body: "Body" };
+const CARD_MARKERS: Record<CardKey, string[]> = {
+  fitness: ["mets", "vo2"],
+  vitals: ["rhr", "hrv", "breathing", "spo2", "wrist_temp", "bp"],
+  sleep: ["sleep", "sri", "bedtime_sd", "wakes", "deep", "rem"],
+  exertion: ["sessions", "hrr", "pal", "sitting", "standing", "vig", "active_kcal", "resting_kcal"],
+  movement: ["dose", "z2", "z3", "z1", "strength", "background", "steps", "cadence", "distance", "met"],
+  body: [],
+};
+const DASH = "—";
+const sentence = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const longDay = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+const dayMonth = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long" });
 
-const TONE: Record<Tone, string> = { grey: "", good: "#34d399", warn: "#FBBF24", danger: "#f87171" };
-const signed = (n: number, unit: string) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(Math.round(n))}${unit}`;
-const shortDay = (d: string) => new Date(d + "T00:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short" }).toUpperCase();
-
-/** The day's elected writer, as the app names it; the newest in the window, else the store's own merge. */
-function dayWriter(signals: any[], today: string): string | null {
-  for (let i = signals.length - 1; i >= 0; i--) { const r = signals[i]; if (r?.steps_source && String(r.day) > addDays(today, -14)) return String(r.steps_source); }
-  return null;
-}
-
-/** The six cards and the line under the greeting, from the derived person. */
-function glanceOf(d: NonNullable<typeof derived.value>, self: boolean): { cards: Glance[]; line: string } {
-  const today = todayStr(), thisMonday = mondayOf(new Date());
-  const you = self ? "your" : "their";
+/** The six cards, their opened rows and the line under the greeting, from the derived person. */
+function cardsOf(d: NonNullable<typeof derived.value>, self: boolean, unit: "mets" | "vo2"): { cards: Card[]; line: string } {
+  const today = todayStr(), monday = mondayOf(new Date());
+  const you = self ? "your" : "their", your = self ? "Your" : "Their";
   const heart = sleepHeartSummary(d.signals, today);
-  const goal = d.goal;
-  const act = d.weeks.length || d.acts.length ? activitySummary(d.weeks, d.acts, goal, today, thisMonday) : null;
+  const act = d.weeks.length || d.acts.length ? activitySummary(d.weeks, d.acts, d.goal, today, monday) : null;
   const fit = fitnessSummary(d.crf, today);
   const by = d.by;
-  // The app's own two reminders only: a lab marker has no retest date (derive/markers.ts).
-  const dues = [fit.due, bodyDueFrom(by, today)]
-    .filter((x): x is Due => !!x).sort((x, y) => x.days - y.days);
-  const { outside, judged } = labsJudged(d.labs);
-  const series = (key: string) => d.markers.find((m) => m.key === key)?.series() ?? [];
-  const tail = (key: string, n: number) => series(key).slice(-n);
-  const spanOf = (pts: { d: string }[], right = "TODAY"): [string, string] => pts.length ? [shortDay(pts[0].d), pts[pts.length - 1].d === today ? right : shortDay(pts[pts.length - 1].d)] : ["", ""];
-  const writer = dayWriter(d.signals, today);
-  const who = writer ? esc(writer) : "Your wearable";
-  const store = "the phone's health store";
-  const cards: Glance[] = [];
-  // fitness: the latest test, in METs, and when the next is due
-  { const l = fit.latest;
-    const mets = l ? (l.met_capacity != null ? Number(l.met_capacity) : l.v / 3.5) : null;
-    const ago = l ? daysBetween(l.measured_on, today) : 0;
-    const dueLine = fit.due ? (fit.due.days < 0 ? ` A retest is ${plural(-fit.due.days, "day")} overdue.` : fit.due.days === 0 ? " A retest is due today." : ` Next test in ${plural(fit.due.days, "day")}.`) : "";
-    const pts = tail("mets", 10);
-    const prev = fit.prevSame ? (fit.prevSame.met_capacity != null ? Number(fit.prevSame.met_capacity) : fit.prevSame.v / 3.5) : null;
-    cards.push({ key: "fitness", sec: "fitness", label: "Fitness", color: SEC_META.fitness.dot, value: mets != null ? fmt1(mets) : "—",
-      beside: l ? "METs" : "no test on file", spark: pts.map((x) => x.v),
-      norm: prev != null ? { value: prev, label: `last test ${fmt1(prev)}` } : null,
-      chip: { text: fit.trendWord || (l ? "first test" : "—"), tone: fit.trendWord === "rising" ? "good" : fit.trendWord === "falling" ? "warn" : "grey" },
-      span: pts.length ? [shortDay(pts[0].d), `${shortDay(pts[pts.length - 1].d)} · ${plural(pts.length, "TEST").toUpperCase()}`] : ["", ""],
-      line: l ? `By the ${esc(methodLabel(l.method))}, ${ago === 0 ? "today" : `${plural(ago, "day")} ago`}.${dueLine}` : "The app offers a test in six to twelve minutes.",
-      writer: "<b>Verve's own test</b> · no wearable needed" }); }
-  // movement: the week against the goal, a bar a day, the week before as the chip
-  { const tw = act?.thisWeek ? Number(act.thisWeek.dose_met_min) : 0, n = act?.thisWeek ? Number(act.thisWeek.workouts) : 0, gd = act?.goalDose ?? Math.round(goal * 60);
-    const byDay = actsByDay(d.acts);
-    const z2 = [...byDay].filter(([x]) => x >= thisMonday).reduce((t, [, r]) => t + r.z2, 0);
-    const lastRow = act?.weeks.find((w: any) => String(w.week_start) === addDays(thisMonday, -7));
-    const steps = heart?.steps.avg;
-    const days = Array.from({ length: 7 }, (_, i) => addDays(thisMonday, i)).filter((x) => x <= today);
-    const spark = days.map((x) => byDay.get(x)?.dose ?? 0);
-    const lastDose = lastRow ? Number(lastRow.dose_met_min) : null;
-    cards.push({ key: "movement", sec: "movement", label: "Movement", color: SEC_META.movement.dot, value: act ? round0(tw) : "—",
-      beside: act ? `of ${gd.toLocaleString()} MET-minutes this week` : "nothing from the app yet", spark,
-      norm: act ? { value: gd / 7, label: `goal ${gd.toLocaleString()} a week` } : null,
-      chip: { text: lastDose != null ? `${signed(tw - lastDose, "")} vs last week` : act ? "first week" : "—", tone: "grey" },
-      span: ["MON", today < addDays(thisMonday, 6) ? `${new Date(today + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" }).toUpperCase()} · ${7 - days.length} TO GO` : "SUN"],
-      line: act ? `${n === 0 ? "No workout yet this week" : plural(n, "workout")}${z2 ? `, ${round0(z2)} min in Zone 2` : ""}${steps ? `, ${steps.toLocaleString()} steps a day` : ""}.${lastDose != null ? ` Last week ended at ${round0(lastDose)}.` : ""}` : "Cloud sync in the app fills this in.",
-      writer: act ? `<b>${who}</b> → ${store} · workouts and heart rate` : "<b>Any wearable</b> that writes workouts to the phone's health store" }); }
-  // sleep: last night against the person's own usual, the night's writer and whether it staged
-  { const sl = heart?.sleep.last ?? null, usual = heart?.sleep.usual ?? null;
-    const pts = tail("sleep", 14);
-    const staged = sl ? d.signals.find((r) => String(r.day) === sl.day)?.sleep_staged : null;
-    const dd = sl && usual != null ? sl.min - usual : null;
-    const line = sl ? (usual != null ? (Math.abs(dd!) < 20 ? `About ${you} usual of ${fmtSleepMin(usual)}.` : `${fmtSleepMin(Math.abs(dd!))} ${dd! < 0 ? "under" : "over"} ${you} usual of ${fmtSleepMin(usual)}.`) : sl.band === "short" ? "Under seven hours. A usual comes after seven nights." : "A usual comes after seven nights.") : "Whatever you wear writes its nights to the phone's health store; the app syncs them here.";
-    cards.push({ key: "sleep", sec: "heart", marker: "sleep", label: "Sleep", color: "#a5b4fc", value: sl ? fmtSleepMin(sl.min) : "—",
-      beside: sl ? (sl.day === today ? "last night" : `night of ${esc(dayWord(sl.day))}`) : "nothing from a wearable yet", spark: pts.map((x) => x.v),
-      norm: usual != null ? { value: usual, label: `usual ${fmtSleepMin(usual)}` } : null,
-      chip: { text: dd != null ? `${signed(dd, " min")}` : sl ? "first nights" : "—", tone: sl?.band === "short" ? "warn" : "grey" },
-      span: pts.length ? [shortDay(pts[0].d), `${pts[pts.length - 1].d === today ? "TODAY" : shortDay(pts[pts.length - 1].d)} · ${pts.length} OF 14 NIGHTS`] : ["", ""],
-      line,
-      writer: sl ? `<b>${who}</b> → ${store} · ${staged ? "asleep intervals with stages" : "asleep intervals, no stages from this writer"}` : "<b>Any wearable</b> worn to bed that writes to the phone's health store" }); }
-  // resting heart rate: this morning against the median of the 30 before
-  { const r = heart?.rhr;
-    const pts = tail("rhr", 14);
-    const tone: Tone = r?.status === "stronglyElevated" ? "danger" : r?.status === "elevated" ? "warn" : "grey";
-    const line = r?.latest != null ? (r.baseline != null
-      ? ((r.status === "elevated" || r.status === "stronglyElevated") && r.delta ? `${Math.abs(r.delta)} above ${you} own normal of ${r.baseline}${r.run > 1 ? `, ${r.run} mornings running` : ""}. Amber from +5, rose from +10.` : r.delta === 0 ? `At ${you} own normal of ${r.baseline}. Amber from +5, rose from +10.` : `${Math.abs(r.delta!)} ${r.delta! > 0 ? "above" : "under"} ${you} own normal of ${r.baseline}. Amber from +5, rose from +10.`)
-      : `A normal needs 14 mornings; ${r.priors} so far.`) : "Whatever you wear writes one resting figure a morning to the phone's health store.";
-    cards.push({ key: "rhr", sec: "heart", marker: "rhr", label: "Resting heart rate", color: SEC_META.heart.dot, value: r?.latest != null ? String(r.latest) : "—",
-      beside: r?.latest != null ? (r.latestDay === today ? "bpm this morning" : `bpm, ${esc(dayWord(r.latestDay!))}`) : "nothing from a wearable yet", spark: pts.map((x) => x.v),
-      norm: r?.baseline != null ? { value: r.baseline, label: `normal ${r.baseline}` } : null,
-      chip: { text: r?.delta != null ? signed(r.delta, " bpm") : r?.latest != null ? `${r.priors} of 14 mornings` : "—", tone },
-      span: spanOf(pts), line,
-      writer: r?.latest != null ? `<b>${who}</b> → ${store} · one figure a morning` : "<b>Any wearable</b> worn overnight that writes a resting rate" }); }
-  // recovery: the drop after the last workout, against the own median and the one cited line
-  { const h = heart?.hrr;
-    const pts = tail("hrr", 7);
-    const src = h?.latestDay ? d.signals.find((r) => String(r.day) === h.latestDay)?.hrr_source : null;
-    const under = h?.latest != null && h.latest <= 12;
-    cards.push({ key: "hrr", sec: "heart", marker: "hrr", label: "Recovery", color: "#22C55E", value: h?.latest != null ? `↓${h.latest}` : "—",
-      beside: h?.latest != null ? `bpm after the last workout${h.latestDay && h.latestDay !== today ? `, ${esc(dayWord(h.latestDay))}` : ""}` : "nothing after a workout yet", spark: pts.map((x) => x.v),
-      norm: h?.median != null ? { value: h.median, label: `median ${h.median}` } : null,
-      chip: { text: under ? "under the line" : h?.median != null && h?.latest != null ? (Math.abs(h.latest - h.median) < 3 ? "steady" : signed(h.latest - h.median, " vs median")) : h?.latest != null ? "first readings" : "—", tone: under ? "danger" : "grey" },
-      span: pts.length ? [plural(pts.length, "WORKOUT").toUpperCase(), "THE LINE IS 12"] : ["", ""],
-      line: h?.latest != null ? `${h.median != null ? `${you.charAt(0).toUpperCase()}${you.slice(1)} own 30-day median is ${h.median}. ` : ""}The line is 12 (Cole 1999).` : "A wearable records one after a workout that ends above the Zone 2 floor.",
-      writer: h?.latest != null ? (src === "derived" ? `<b>Derived by Verve</b> from ${who === "Your wearable" ? "the wearable's" : `${who}'s`} heart rate after each workout` : src === "apple" ? `<b>${who}</b> → ${store} · its own reading after each workout` : `<b>${who}</b> and <b>Verve</b> · the wearable's own readings, and ones derived from its heart rate`) : "<b>Any wearable</b> that writes heart rate through and after a workout" }); }
-  // body: waist to height when both are known, the grip, the count, and what is due
-  { const waist = (by.get("waist_cm") ?? []).slice(-1)[0] ?? null, grip = (by.get("handgrip_kg") ?? []).slice(-1)[0] ?? null;
-    const height = Number(d.profile?.height_cm) || null;
-    const whr = waist && height ? waist.v / height : null;
-    const read = [...by.values()].filter((v) => v.length).length;
-    const due = dues[0] ?? null;
-    const dueText = due ? (due.days < 0 ? ` ${esc(due.what)} is ${plural(-due.days, "day")} overdue.` : due.days === 0 ? ` ${esc(due.what)} is due today.` : due.days <= 31 ? ` ${esc(due.what)} is due in ${plural(due.days, "day")}.` : "") : "";
-    const pts = whr != null && height ? (by.get("waist_cm") ?? []).slice(-8).map((p) => ({ d: p.d, v: p.v / height })) : grip ? (by.get("handgrip_kg") ?? []).slice(-8) : [];
-    cards.push({ key: "body", sec: "body", label: "Body", color: SEC_META.body.dot, value: whr != null ? whr.toFixed(2) : grip ? fmt1(grip.v) : read ? String(read) : "—",
-      beside: whr != null ? "waist to height" : grip ? "kg grip" : read ? "markers read" : "nothing read yet", spark: pts.map((x) => x.v),
-      norm: whr != null ? { value: 0.5, label: "line 0.5" } : null,
-      chip: due && due.days <= 31 ? { text: due.days < 0 ? `${esc(due.what)} overdue` : `${esc(due.what)} due`, tone: "warn" } : outside ? { text: `${outside} outside range`, tone: "warn" } : { text: judged ? "all in range" : read ? `${read} read` : "—", tone: "grey" },
-      span: pts.length ? [String(pts[0].d).slice(0, 4), `${shortDay(pts[pts.length - 1].d)} · ${plural(pts.length, "READING").toUpperCase()}`] : ["", ""],
-      line: `${read ? `${plural(read, "marker")} read${outside ? `, ${outside} outside ${outside === 1 ? "its" : "their"} range` : judged ? ", all in range" : ""}.` : "No marker read yet: drop a report on Reports."}${dueText}`,
-      writer: "<b>Typed, and from reports</b> · no wearable writes these" }); }
+  const writer = writerOf(d.signals, today);
+  const store = writerLine(writer, storeOf(d.acts, today));
+  const cards: Card[] = [];
+  const dayRow = (day: string) => rowOn(d.signals, day);
 
-  // the line under the greeting
+  // ── Fitness: one card, two units (board 12) ──
+  {
+    const l = fit.latest;
+    const mets = metsOfTest(l), vo2 = vo2OfTest(l);
+    const row = tierRowFor(d.profile?.age, d.profile?.sex);
+    const tier = l ? (tierIndexFromCategory(l.category) ?? (mets != null ? tierIndexOf(mets, row) : null)) : null;
+    const prevMets = metsOfTest(fit.prevSame), prevVo2 = vo2OfTest(fit.prevSame);
+    const change = unit === "mets" ? (mets != null && prevMets != null ? mets - prevMets : null) : (vo2 != null && prevVo2 != null ? vo2 - prevVo2 : null);
+    const method = l ? methodLabel(l.method) : "";
+    const rows: Row[] = [];
+    if (l) rows.push(unit === "mets" ? { label: "As VO₂max", value: vo2 != null ? fmt1(vo2) : DASH, unit: "mL/kg/min" } : { label: "As METs", value: mets != null ? fmt1(mets) : DASH, unit: "METs" });
+    if (l && fit.prevSame) rows.push({ label: `Change since ${monthOf(fit.prevSame.measured_on)}`, value: change == null ? DASH : fmtSigned1(change), unit: unit === "mets" ? "METs" : "mL/kg/min", tone: change != null && change > 0 ? "good" : "neutral" });
+    else if (l) rows.push({ label: "Change", value: DASH, note: "first test of its method" });
+    if (unit === "vo2" && l) rows.push({ label: "Estimate", value: "", note: VO2_CAVEAT });
+    cards.push({
+      key: "fitness", title: "Fitness",
+      figure: l ? (unit === "mets" ? (mets != null ? fmt1(mets) : DASH) : (vo2 != null ? fmt1(vo2) : DASH)) : DASH,
+      unit: l ? (unit === "mets" ? "METs" : "mL/kg/min") : "no test on file",
+      band: l ? { text: tier != null ? tierWords(tier, self) : "no tier for this test", tone: "neutral" } : { text: "The app offers a test in six to twelve minutes", tone: "neutral" },
+      rows, more: l ? [{ label: "Measured", value: fmtDay(l.measured_on), note: method }] : [],
+      writer: l ? (MAXIMAL.has(String(l.method)) || /walk/.test(String(l.method)) ? `Verve's own test · ${method}` : sentence(method)) : "Verve's own test · no wearable needed",
+      markers: CARD_MARKERS.fitness,
+      heading: l ? `${unit === "mets" ? `${fmt1(mets!)} METs` : `${fmt1(vo2!)} mL/kg/min`}${tier != null ? `, ${tierWords(tier, self).toLowerCase()}` : ""}` : "No fitness test on file",
+      eyebrow: `Fitness · ${l ? `last test ${fmtDay(l.measured_on)}` : "the app's test"}`,
+    });
+  }
+  // ── Vitals: resting heart rate, HRV, breathing, oxygen, wrist temperature, the cuff's 30-day mean ──
+  {
+    const r = heart?.rhr, hv = heart?.hrv;
+    const band = r?.latest == null ? { text: "Nothing from a wearable yet", tone: "neutral" as Tone }
+      : r.baseline == null ? { text: `A normal needs 14 mornings; ${r.priors} so far`, tone: "neutral" as Tone }
+      : r.status === "stronglyElevated" ? { text: `${r.delta} above ${you} usual`, tone: "concern" as Tone }
+      : r.status === "elevated" ? { text: `${r.delta} above ${you} usual`, tone: "caution" as Tone }
+      : r.status === "below" ? { text: `${Math.abs(r.delta!)} below ${you} usual`, tone: "neutral" as Tone }
+      : { text: `${your} usual`, tone: "neutral" as Tone };
+    const br = latestWith(d.signals, "breathing_rpm", today), ox = latestWith(d.signals, "spo2_pct", today);
+    const wt = wristTemp(d.signals, today);
+    const bpM = d.markerByKey("bp"), bpT = bpM?.tile ? bpM.tile() : null;
+    const rows: Row[] = [
+      { label: "HRV", value: hv?.latest != null ? String(hv.latest) : DASH, unit: hv?.latest != null ? "ms" : "", note: hv?.latest == null ? (hv?.absent ? "none from this writer" : "no nights yet") : hv.below ? "under your band" : "", tone: hv?.below ? "caution" : "neutral" },
+      { label: "Breathing", value: br ? fmt1(Number(br.breathing_rpm)) : DASH, unit: br ? "/min" : "", note: br ? "" : "not written by this wearable" },
+      { label: "Blood oxygen", value: ox ? round0(Number(ox.spo2_pct)) : DASH, unit: ox ? "%" : "", note: ox ? "" : "not written by this wearable" },
+      { label: "Wrist temperature", value: wt ? (wt.delta ? fmtSigned1(wt.value) : fmt1(wt.value)) : DASH, unit: wt ? "°C" : "", note: wt ? (wt.delta ? "" : "against your own nights after 7") : "not written by this wearable" },
+      { label: "Blood pressure, 30-day mean", value: bpT ? bpT.headline : DASH, unit: bpT ? "mmHg" : "", note: bpT ? (bpT.sub.startsWith("crisis") ? bpT.sub : "") : "no cuff readings", tone: bpT?.sub.startsWith("crisis") ? "concern" : "neutral" },
+    ];
+    cards.push({
+      key: "vitals", title: "Vitals", figure: r?.latest != null ? String(r.latest) : DASH, unit: r?.latest != null ? "bpm resting" : "no resting rate yet", band, rows,
+      more: [{ label: "Resting heart rate", value: r?.latest != null ? String(r.latest) : DASH, unit: "bpm", note: r?.latestDay ? (r.latestDay === today ? "this morning" : dayWord(r.latestDay)) : "" }],
+      writer: store, markers: CARD_MARKERS.vitals,
+      heading: r?.latest != null ? `${r.latest} bpm resting, ${band.text.toLowerCase()}` : "No resting heart rate yet",
+      eyebrow: `Vitals · ${r?.latestDay ? longDay(r.latestDay) : "the mornings"}`,
+    });
+  }
+  // ── Sleep: last night, the window, efficiency, regularity, the stages when the writer stages ──
+  {
+    const sl = heart?.sleep.last ?? null, usual = heart?.sleep.usual ?? null;
+    const row = sl ? dayRow(sl.day) : null;
+    const dd = sl && usual != null ? sl.min - usual : null;
+    const band: Card["band"] = !sl ? { text: "Nothing from a wearable yet", tone: "neutral" }
+      : usual == null ? { text: "A usual comes after seven nights", tone: "neutral" }
+      : Math.abs(dd!) < 20 ? { text: `Usual for ${self ? "you" : "them"}`, tone: "neutral" }
+      : dd! < 0 ? { text: `${fmtSleepMin(Math.abs(dd!))} under ${you} usual`, tone: sl.band === "short" ? "caution" : "neutral" }
+      : { text: `${fmtSleepMin(dd!)} over ${you} usual`, tone: "neutral" };
+    const eff = row ? efficiencyOf(row) : null, win = row ? inBedWindow(row) : null, st = row ? stagesOf(row) : null;
+    const sri = latestWith(d.signals, "sri_30d", today);
+    const rows: Row[] = [
+      { label: "In bed", value: win ?? DASH, note: win ? "" : "no window from this writer" },
+      { label: "Efficiency", value: eff != null ? String(eff) : DASH, unit: eff != null ? "%" : "", note: eff == null ? "needs the in-bed window" : eff < 85 ? "under the 85 % mark" : "", tone: eff != null && eff < 85 ? "caution" : "neutral" },
+      { label: "Regularity, 30 days", value: sri ? round0(Number(sri.sri_30d)) : DASH, note: sri ? "" : "needs 30 nights" },
+    ];
+    if (st) rows.push({ label: "Deep · REM", value: `${st.deep != null ? fmtHMin(st.deep) : DASH} · ${st.rem != null ? fmtHMin(st.rem) : DASH}`, note: "this writer stages" });
+    cards.push({
+      key: "sleep", title: "Sleep", figure: sl ? fmtHMin(sl.min) : DASH, unit: sl ? (sl.day === today ? "last night" : `night of ${dayWord(sl.day)}`) : "no night yet", band, rows,
+      more: [{ label: "Usual, 30 nights", value: usual != null ? fmtHMin(usual) : DASH }, { label: "Short nights, of 30", value: heart ? `${heart.sleep.shortNights} of ${heart.sleep.nights}` : DASH }],
+      writer: sl ? `${store} · ${st ? "stages from this writer" : "no stages from this writer"}` : store, markers: CARD_MARKERS.sleep,
+      heading: sl ? `${fmtHMin(sl.min)} last night, ${band.text.toLowerCase()}` : "No night on file",
+      eyebrow: `Sleep · ${sl ? longDay(sl.day) : "the nights"}`,
+    });
+  }
+  // ── Exertion: the week's sessions, the minute of recovery, the activity level, the sitting ──
+  {
+    const weekActs = [...actsByDay(d.acts)].filter(([x]) => x >= monday && x <= today);
+    const n = weekActs.reduce((t, [, r]) => t + r.n, 0);
+    const lastDay = act?.lastWorkoutDay ?? "";
+    const h = heart?.hrr;
+    const pal = latestWith(d.signals, "pal", today);
+    const sit = meanOver(d.signals, "sedentary_minutes", 7, today);
+    const lastAct = [...d.acts].filter((a) => a?.timestamp).sort((x, y) => String(x.timestamp).localeCompare(String(y.timestamp))).pop() ?? null;
+    const rows: Row[] = [
+      { label: "1-min recovery", value: h?.latest != null ? String(h.latest) : DASH, unit: h?.latest != null ? "bpm" : "", note: h?.latest == null ? "after a session that ends above the band" : h.latest <= 12 ? "at or under the line, 12" : "", tone: h?.latest != null && h.latest <= 12 ? "concern" : "neutral" },
+      { label: "Activity level", value: pal ? Number(pal.pal).toFixed(1) : DASH, unit: pal ? "PAL" : "", note: pal ? "" : "needs a week of energy data" },
+      { label: "Sitting, average day", value: sit != null ? fmtHMin(sit) : DASH, note: sit == null ? "no sedentary hours from the app yet" : sit >= 600 ? "a long day, past ten hours" : "", tone: sit != null && sit >= 600 ? "caution" : "neutral" },
+    ];
+    if (lastAct?.effort) rows.push({ label: "Last session's effort", value: sentence(String(lastAct.effort)), note: lastAct.effort_source === "apple" ? "the wearable's rating" : lastAct.effort_source === "manual" ? "yours" : "estimated" });
+    cards.push({
+      key: "exertion", title: "Exertion", figure: d.synced ? String(n) : DASH, unit: d.synced ? `session${n === 1 ? "" : "s"} this week` : "nothing from the app yet",
+      band: !d.synced ? { text: "Cloud sync in the app fills this in", tone: "neutral" } : n === 0 ? { text: lastDay ? `Last session ${dayWord(lastDay)}` : "No session on file", tone: "neutral" } : { text: `Last ${dayWord(lastDay)}${act?.perWeek ? ` · ${Math.round(act.perWeek)} a week ${you} usual` : ""}`, tone: "neutral" },
+      rows, more: [], writer: store, markers: CARD_MARKERS.exertion,
+      heading: d.synced ? `${plural(n, "session")} this week so far` : "No sessions from the app yet",
+      eyebrow: `Exertion · Monday ${dayMonth(monday)} to today`,
+    });
+  }
+  // ── Movement: the dose as the app wrote it, the zones, strength, background movement, steps ──
+  {
+    const tw = act?.thisWeek ?? null;
+    const dose = tw?.dose_met_min ?? null, goal = act?.goalDose ?? Math.round(d.goal * 60);
+    const reason = doseReason(tw, d.synced);
+    const zones = tw?.dose_basis === "app" && (tw.zone1_min != null || tw.zone2_min != null || tw.zone3_min != null)
+      ? { z1: tw.zone1_min, z2: tw.zone2_min, z3: tw.zone3_min } : (() => { const z = weekZones(d.signals, monday); return z ? { z1: z.z1, z2: z.z2, z3: z.z3 } : { z1: null, z2: tw?.zone2_min ?? null, z3: null }; })();
+    const strength = tw?.dose_basis === "app" ? tw.strength_sessions : (tw?.strength_sessions ?? null);
+    const bg = backgroundOf(d.signals, monday, today, writer);
+    const bgText = tw?.dose_basis === "app" && tw.background_min_avg != null ? { value: round0(tw.background_min_avg), unit: "min a day", note: "" } : bg.minutes != null ? { value: round0(bg.minutes), unit: "min a day", note: "" } : { value: DASH, unit: "", note: bg.words };
+    const steps = heart?.steps.avg ?? null;
+    const stepsWriter = latestWith(d.signals, "steps_source", today)?.steps_source ?? null;
+    const daysIn = Math.min(7, daysBetween(monday, today) + 1), toGo = 7 - daysIn;
+    const band: Card["band"] = dose == null ? { text: sentence(reason || "no sessions logged"), tone: "neutral" }
+      : dose >= goal ? { text: `Goal of ${goal.toLocaleString()} met`, tone: "good" }
+      : dose >= (goal * daysIn) / 7 ? { text: `On track for ${goal.toLocaleString()}`, tone: "neutral" }
+      : { text: `${(goal - dose).toLocaleString()} to go, ${toGo === 0 ? "the week is done" : plural(toGo, "day") + " left"}`, tone: "neutral" };
+    const rows: Row[] = [
+      { label: "Zone 2 · Zone 3", value: zones.z2 != null || zones.z3 != null ? `${zones.z2 != null ? round0(zones.z2) : DASH} · ${zones.z3 != null ? round0(zones.z3) : DASH}` : DASH, unit: zones.z2 != null || zones.z3 != null ? "min" : "", note: zones.z2 == null && zones.z3 == null ? "the app writes the zones on its next sync" : zones.z3 == null ? "zone 3 comes with the app's next sync" : "" },
+      { label: "Strength", value: strength != null ? String(strength) : DASH, unit: strength != null ? `session${strength === 1 ? "" : "s"}` : "", note: strength == null ? "none logged" : "" },
+      { label: "Background movement", value: bgText.value, unit: bgText.unit, note: bgText.note },
+      { label: "Steps", value: steps != null ? steps.toLocaleString() : DASH, unit: steps != null ? "a day" : "", note: steps == null ? "no steps in the store" : "" },
+    ];
+    const writers = tw?.dose_basis === "app" ? `counted by the app · ${plural(tw!.workouts, "session")}` : tw?.dose_basis === "browser" ? `${tw.writers.join(" + ")} · ${plural(tw.workouts, "session")}, one row each${d.synced ? " · the app writes this week on its next sync" : ""}` : d.synced ? "the app writes the week on its next sync" : "Any wearable that writes workouts to the phone's health store";
+    cards.push({
+      key: "movement", title: "Movement", figure: dose != null ? dose.toLocaleString() : DASH, unit: dose != null ? "MET-min this week" : (reason || "no sessions logged"), band, rows,
+      more: [{ label: "Weekly dose", value: dose != null ? dose.toLocaleString() : DASH, unit: dose != null ? "MET-min" : "", note: dose == null ? reason : tw?.dose_basis === "app" ? "the app's rule: logged sessions, moderate or vigorous, MET × minutes, one writer" : "counted here until the app writes the week" }],
+      writer: `${writers}${stepsWriter ? ` · steps: ${stepsWriter}` : ""}`, markers: CARD_MARKERS.movement,
+      heading: dose != null ? `${dose.toLocaleString()} MET-min of a ${goal.toLocaleString()} goal, with ${toGo === 0 ? "the week complete" : `${plural(toGo, "day")} to go`}` : `No sessions logged this week yet, of a ${goal.toLocaleString()} MET-min goal`,
+      eyebrow: `Movement · Monday ${dayMonth(monday)} to Sunday ${dayMonth(addDays(monday, 6))}`,
+      progress: dose != null && goal > 0 ? Math.min(1, dose / goal) : null,
+    });
+  }
+  // ── Body: how many markers sit outside their range, which, and three rows ──
+  {
+    // the app's list and the app's bands (derive/body), so the figure here is the Body page's figure
+    const list = bodyListOf(d);
+    const labRows = list.sections.flatMap((s) => s.rows).filter((r) => r.value != null);
+    const out = list.outside;
+    const remnant = [...d.labsShown].filter((l) => l.analyte === REMNANT_LABEL).sort((a, b) => String(a.measured_on).localeCompare(String(b.measured_on))).pop() ?? null;
+    const ldl = (by.get("ldl_mgdl") ?? []).slice(-1)[0] ?? null;
+    const weight = d.markerByKey("weight")?.series().slice(-1)[0] ?? null;
+    const latestLab = d.labs.map((l) => String(l.measured_on ?? "")).filter(Boolean).sort().pop() ?? "";
+    const rows: Row[] = [
+      { label: REMNANT_LABEL, value: remnant ? fmt1(Number(remnant.value)) : DASH, unit: remnant ? String(remnant.unit ?? "") : "", note: remnant ? "" : "needs total, LDL and HDL on one report" },
+      { label: "LDL", value: ldl ? fmt1(ldl.v) : DASH, unit: ldl?.unit ?? "", note: ldl ? "" : "no report yet" },
+      { label: "Weight", value: weight ? fmt1(weight.v) : DASH, unit: weight ? "kg" : "", note: weight ? "" : "no weighing yet" },
+    ];
+    cards.push({
+      key: "body", title: "Body", figure: labRows.length ? String(out.length) : DASH, unit: labRows.length ? `marker${out.length === 1 ? "" : "s"} outside range` : "nothing read yet",
+      band: labRows.length ? (out.length ? { text: `${out.slice(0, 2).map((r) => r.label).join(" and ")}${out.length > 2 ? ` and ${out.length - 2} more` : ""} outside`, tone: "caution" } : { text: "All in range", tone: "good" }) : { text: "Drop a report on Reports", tone: "neutral" },
+      rows, more: [], writer: latestLab ? `Lab report, ${fmtDay(latestLab)}` : "Typed, and from reports", markers: [],
+      heading: bodyHeadline(list),
+      eyebrow: `Body · ${latestLab ? `latest labs ${fmtDay(latestLab)}` : "the app's list"}`,
+    });
+  }
+
+  // the line under the greeting: fitness, the dose, last night
   const bits: string[] = [];
-  if (act?.thisWeek) { const tw = Number(act.thisWeek.dose_met_min), gd = act.goalDose; bits.push(tw >= gd ? "a week past the goal" : tw >= gd / 2 ? "halfway to the week's goal" : "a quiet week so far"); }
-  if (heart?.sleep.last && heart.sleep.usual != null) { const dd = heart.sleep.last.min - heart.sleep.usual; bits.push(Math.abs(dd) < 20 ? "sleep as usual" : dd < 0 ? "sleep a little short" : "sleep a little long"); }
-  if (outside) bits.push(`${plural(outside, "lab value")} outside range`);
-  if (dues[0] && dues[0].days <= 31) bits.push(dues[0].days < 0 ? `${dues[0].what.toLowerCase()} overdue` : "one retest due this month");
-  const line = bits.length ? `${bits[0].charAt(0).toUpperCase()}${bits[0].slice(1)}${bits.slice(1).map((x) => `, ${x}`).join("")}.` : "";
+  const fc = cards[0], mc = cards[4], sc = cards[2];
+  if (fit.latest) bits.push(`Fitness ${fc.figure} ${fc.unit}${fc.band.text.startsWith("no") ? "" : `, ${fc.band.text.toLowerCase()}`}`);
+  if (act?.thisWeek?.dose_met_min != null) bits.push(`${mc.figure} MET-min of movement this week across ${plural(act.thisWeek.workouts, "session")}`);
+  else if (d.synced) bits.push("no sessions logged this week yet");
+  if (heart?.sleep.last) bits.push(`${sc.figure} of sleep ${sc.unit}`);
+  const line = bits.length ? bits.map(sentence).join(". ") + "." : "";
   return { cards, line };
 }
 
-/** The last readings as bars, the newest full, the person's normal through them as a labelled dashed line. */
-function Spark({ values, color, norm, tone }: { values: number[]; color: string; norm?: { value: number; label: string } | null; tone: Tone }) {
-  if (values.length < 2) return <span class="block h-11" aria-hidden="true"></span>;
-  const all = norm ? [...values, norm.value] : values;
-  const hi = Math.max(...all), lo = Math.min(...all), range = hi - lo;
-  const y = (v: number) => (range > 0 ? 20 + Math.round(((v - lo) / range) * 76) : 60);
-  const last = values.length - 1;
+// ── the pieces ──────────────────────────────────────────────────────────
+
+export function GlanceLine() {
+  const d = derived.value;
+  const text = d ? cardsOf(d, !!person.value?.self, fitUnit.value).line : "";
+  return <>{text}</>;
+}
+
+/** The Guide's one line on the Overview: fixed height, filled from the latest read; a link to its tab. */
+export function GuidePointer() {
+  const r = latestRead.value;
+  const go = () => actions.goTab("guide");
   return (
-    <span class="relative block h-11" aria-hidden="true">
-      <span class="flex h-11 items-end gap-[3px]">
-        {values.map((v, i) => <span key={i} class="flex-1 rounded-t-[2px]" style={{ height: `${y(v)}%`, background: i === last && TONE[tone] ? TONE[tone] : color, opacity: i === last ? 1 : 0.5 }}></span>)}
+    <button type="button" onClick={go} class="r-card flex h-[56px] w-full items-center gap-4 border border-border bg-card px-5 text-left transition-colors hover:border-border-strong">
+      <span class="t-eyebrow shrink-0 text-accent-text">The Guide</span>
+      <span class="t-small min-w-0 flex-1 truncate text-text-2">
+        {r ? `Read your week on ${longDay(r.created_at.slice(0, 10))}.${r.count ? ` ${r.count === 1 ? "One thing" : `${r.count} things`} worth knowing.` : ""}` : "The Guide reads your week on Mondays."}
       </span>
-      {norm && <>
-        <span class="absolute left-0 right-0 border-t border-dashed border-text-secondary" style={{ bottom: `${y(norm.value)}%` }}></span>
-        <span class="absolute right-0 bg-canvas px-[3px] font-mono text-[9px] text-text-secondary" style={{ bottom: `${y(norm.value)}%`, transform: "translateY(55%)" }}>{norm.label}</span>
-      </>}
+      <span class="t-small shrink-0 font-semibold text-accent-text">{r ? "Read" : "Open"} &rarr;</span>
+    </button>
+  );
+}
+
+/** One row: the label left, the figure and its unit right; a note, when there is one, on its own line under them. */
+function RowLine({ r }: { r: Row }) {
+  return (
+    <span class="flex flex-col border-t border-border py-[7px] first:border-t-0">
+      <span class="flex items-baseline justify-between gap-3">
+        <span class="t-small text-text-2">{r.label}</span>
+        <span class="shrink-0 whitespace-nowrap text-right">
+          {r.value ? <span class={`t-figure-row ${r.tone ? TONE_TEXT[r.tone] : "text-text"}`}>{r.value}</span> : null}
+          {r.unit ? <span class="t-unit ml-1">{r.unit}</span> : null}
+        </span>
+      </span>
+      {r.note ? <span class="t-caption mt-0.5 text-right text-text-3">{r.note}</span> : null}
     </span>
   );
 }
 
-const GLANCE_FRAMES = ["Fitness", "Movement", "Sleep", "Resting heart rate", "Recovery", "Body"];
-function Frame({ label }: { label: string }) {
+function UnitSwitch() {
+  const u = fitUnit.value;
+  const cls = (on: boolean) => `r-chip px-2.5 py-[3px] font-mono text-[11px] font-medium transition-colors ${on ? "bg-accent-fill text-accent-text border border-accent-border" : "border border-transparent text-text-3 hover:text-text"}`;
   return (
-    <div class="flex min-h-[220px] flex-col gap-3.5 rounded-[20px] border border-white/10 bg-white/[0.03] p-6" aria-hidden="true">
-      <span class="font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">{label}</span>
-      <span class="mt-1 h-10 w-28 animate-pulse rounded-md bg-white/[0.05]"></span>
-      <span class="h-11 w-full animate-pulse rounded bg-white/[0.03]"></span>
-      <span class="h-3.5 w-3/4 animate-pulse rounded bg-white/[0.04]"></span>
+    <span class="flex items-center gap-1" role="group" aria-label="Unit" onClick={(e) => e.stopPropagation()}>
+      <button type="button" class={cls(u === "mets")} aria-pressed={u === "mets" ? "true" : "false"} onClick={() => setFitUnit("mets")}>METs</button>
+      <button type="button" class={cls(u === "vo2")} aria-pressed={u === "vo2" ? "true" : "false"} onClick={() => setFitUnit("vo2")}>VO₂max</button>
+    </span>
+  );
+}
+
+/** The five tiers for this age and sex, the person's own lit and marked "You". */
+function TierStrip({ d }: { d: NonNullable<typeof derived.value> }) {
+  const fit = fitnessSummary(d.crf, todayStr());
+  const l = fit.latest; if (!l) return null;
+  const row = tierRowFor(d.profile?.age, d.profile?.sex);
+  const mets = metsOfTest(l);
+  const idx = tierIndexFromCategory(l.category) ?? (mets != null ? tierIndexOf(mets, row) : null);
+  const ranges = tierRangeWords(row);
+  return (
+    <span class="mt-3 block">
+      <span class="grid grid-cols-5 gap-[3px]">
+        {ranges.map((rg, i) => <span key={i} class={`flex h-[6px] rounded-[2px] ${i === idx ? "bg-accent" : "bg-alt"}`} title={`${tierShort(i)} · ${rg} METs`}></span>)}
+      </span>
+      <span class="mt-1.5 grid grid-cols-5 gap-[3px]">
+        {ranges.map((_, i) => <span key={i} class={`t-caption truncate ${i === idx ? "font-semibold text-accent-text" : "text-text-3"}`}>{i === idx ? "You" : tierShort(i)}</span>)}
+      </span>
+      <span class="t-caption mt-1 block text-text-3">Tiers for {row.age} · {String(d.profile?.sex ?? "").toLowerCase() === "female" ? "women" : "men"} · the app's table</span>
+    </span>
+  );
+}
+
+function Progress({ v }: { v: number | null | undefined }) {
+  if (v == null) return null;
+  return <span class="mt-2 block h-[4px] w-full overflow-hidden rounded-full bg-alt"><span class="block h-full rounded-full bg-accent" style={{ width: `${Math.round(v * 100)}%` }}></span></span>;
+}
+
+function CardFace({ c, d, on, onOpen }: { c: Card; d: NonNullable<typeof derived.value>; on: boolean; onOpen: () => void }) {
+  return (
+    <div role="button" tabIndex={0} aria-expanded={on ? "true" : "false"} onClick={onOpen} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
+      class={`r-card flex min-h-[236px] cursor-pointer flex-col border bg-card p-5 text-left transition-colors ${on ? "border-border-strong" : "border-border hover:border-border-strong"}`}>
+      <span class="flex items-center justify-between gap-3">
+        <span class="t-title text-text">{c.title}</span>
+        {c.key === "fitness" ? <UnitSwitch /> : null}
+      </span>
+      <span class="mt-3 flex flex-wrap items-baseline gap-x-2">
+        <span class="t-figure text-text">{c.figure}</span>
+        <span class="t-unit">{c.unit}</span>
+      </span>
+      <span class={`t-small mt-1 ${TONE_TEXT[c.band.tone]}`}>{c.band.text}</span>
+      {c.key === "fitness" ? <TierStrip d={d} /> : null}
+      <Progress v={c.progress} />
+      <span class="mt-3 flex flex-col">{c.rows.map((r) => <RowLine key={r.label} r={r} />)}</span>
+      <span class="mt-auto flex items-baseline justify-between gap-3 pt-4">
+        <span class="t-caption min-w-0 text-text-3">{c.writer}</span>
+        <span class="t-caption shrink-0 font-semibold text-accent-text">Open</span>
+      </span>
     </div>
   );
 }
 
-export function GlanceLine() {
-  const d = derived.value;
-  const text = d ? glanceOf(d, !!person.value?.self).line : "";
-  return <>{text}</>;
+/** While a card is open the other five shrink to one row each and stay in place. */
+function StripCard({ c, onOpen }: { c: Card; onOpen: () => void }) {
+  return (
+    <button type="button" onClick={onOpen} class="r-card flex items-baseline justify-between gap-3 border border-border bg-card px-4 py-3 text-left transition-colors hover:border-border-strong">
+      <span class="t-small text-text-2">{c.title}</span>
+      <span class="min-w-0 text-right"><span class="t-figure-row text-text">{c.figure}</span> <span class="t-unit">{c.figure === DASH ? c.unit : c.unit.split(" ")[0]}</span></span>
+    </button>
+  );
 }
+
+const DAY_LETTERS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+/** The week's seven days: the day row's zone minutes stacked, or the sessions' minutes when the app has not sent the zones. */
+function WeekBars({ d }: { d: NonNullable<typeof derived.value> }) {
+  const bars = dayBars(d.signals, d.acts, mondayOf(new Date()), todayStr());
+  const max = Math.max(30, ...bars.map((b) => b.z1 + b.z2 + b.z3 + b.other));
+  const h = (v: number) => `${Math.round((v / max) * 100)}%`;
+  return (
+    <span class="block">
+      <span class="flex h-[88px] items-end gap-2">
+        {bars.map((b, i) => (
+          <span key={b.day} class="flex h-full flex-1 flex-col justify-end gap-[1px]" title={`${DAY_LETTERS[i]}: zone 1 ${b.z1}, zone 2 ${b.z2}, zone 3 ${b.z3}${b.other ? `, other ${b.other}` : ""} min`}>
+            {b.future ? <span class="block h-[2px] rounded-[1px] bg-alt"></span> : <>
+              <span class="block w-full rounded-t-[2px] bg-z3" style={{ height: h(b.z3) }}></span>
+              <span class="block w-full bg-z2" style={{ height: h(b.z2) }}></span>
+              <span class="block w-full bg-text-4" style={{ height: h(b.z1) }}></span>
+              <span class="block w-full rounded-b-[2px] bg-alt" style={{ height: h(b.other) }}></span>
+            </>}
+          </span>
+        ))}
+      </span>
+      <span class="mt-1.5 flex gap-2">{DAY_LETTERS.map((l) => <span key={l} class="t-caption flex-1 text-center text-text-3">{l}</span>)}</span>
+    </span>
+  );
+}
+
+/** The chapter rows of the opened Movement card (board 3). */
+function movementRows(d: NonNullable<typeof derived.value>, c: Card): Row[] {
+  const today = todayStr(), monday = mondayOf(new Date());
+  const act = activitySummary(d.weeks, d.acts, d.goal, today, monday);
+  const tw = act.thisWeek;
+  const z = tw?.dose_basis === "app" && tw.zone2_min != null ? { z1: tw.zone1_min, z2: tw.zone2_min, z3: tw.zone3_min } : (() => { const w = weekZones(d.signals, monday); return w ? { z1: w.z1, z2: w.z2, z3: w.z3 } : { z1: null as number | null, z2: tw?.zone2_min ?? null, z3: null as number | null }; })();
+  const cad = latestWith(d.signals, "cadence_spm", today);
+  const strength = tw?.strength_sessions ?? null;
+  const strengthDays = [...actsByDay(d.acts.filter((a) => a.activity_type === "strength"))].filter(([x]) => x >= monday).map(([x]) => dayWord(x));
+  const zoneNote = "the app's split of each logged session's heart rate";
+  return [
+    c.more[0],
+    { label: "Zone 1", value: z.z1 != null ? round0(z.z1) : DASH, unit: z.z1 != null ? "min" : "", note: z.z1 != null ? "easy: under 40 % of heart rate reserve, or under your tested band" : "comes with the app's next sync" },
+    { label: "Zone 2", value: z.z2 != null ? round0(z.z2) : DASH, unit: z.z2 != null ? "min" : "", note: z.z2 != null ? "40 to 60 % of heart rate reserve, or your tested band" : zoneNote },
+    { label: "Zone 3", value: z.z3 != null ? round0(z.z3) : DASH, unit: z.z3 != null ? "min" : "", note: z.z3 != null ? "hard: over 60 % of heart rate reserve, or over your tested band" : "comes with the app's next sync" },
+    { label: "Strength", value: strength != null ? String(strength) : DASH, unit: strength != null ? `session${strength === 1 ? "" : "s"}` : "", note: strengthDays.length ? strengthDays.join(" · ") : strength ? "" : "none logged this week" },
+    ...c.rows.filter((r) => r.label === "Background movement" || r.label === "Steps"),
+    { label: "Cadence", value: cad ? round0(Number(cad.cadence_spm)) : DASH, unit: cad ? "spm" : "", note: cad ? "the day's best thirty minutes" : "a phone in the pocket writes it" },
+  ];
+}
+
+function OpenCard({ c, d }: { c: Card; d: NonNullable<typeof derived.value> }) {
+  const today = todayStr();
+  const ms = c.key === "body" ? d.markers.filter((m) => m.section === "body" && m.key !== "bp") : c.markers.map((k) => d.markerByKey(k)).filter((m): m is Marker => !!m);
+  const have = ms.filter((m) => m.series().length);
+  const wanted = openMarkerKey.value && ms.some((m) => m.key === openMarkerKey.value) ? openMarkerKey.value : "";
+  const openKey = wanted || (ms.length && c.key !== "body" ? (have[0] ?? ms[0]).key : "");
+  const open = openKey ? ms.find((m) => m.key === openKey) ?? null : null;
+  const outKeys = new Set(labRowsFrom(d.by, today).filter((r) => r.out).map((r) => r.key));
+  const rows = c.key === "movement" ? movementRows(d, c) : [...c.more, ...c.rows];
+  const readAt = d.signals.length ? String(d.signals[d.signals.length - 1]?.day ?? "") : "";
+  const tap = (m: Marker) => { openMarkerKey.value = m.key; openRange.value = ""; openYear.value = null; focusTile.value = true; };
+  const tile = (m: Marker, i: number) => <Tile key={m.key} m={m} i={i} on={m.key === openKey} out={outKeys.has(m.key)} onTap={() => tap(m)} />;
+  return (
+    <div class="mh-slide r-card col-span-full border border-border-strong bg-card p-5 sm:p-6">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="t-eyebrow">{c.eyebrow}</div>
+          <h2 class="t-heading mt-1.5 text-text">{c.heading}</h2>
+        </div>
+        <div class="flex items-center gap-2">
+          {c.key === "fitness" ? <UnitSwitch /> : null}
+          <button type="button" onClick={() => { actions.goTab("depth"); setSection(c.key); }} class="r-btn min-h-9 border border-border px-3.5 text-[13px] font-semibold text-text-2 transition-colors hover:border-border-strong hover:text-text">In depth</button>
+          <button type="button" onClick={() => setSection("all")} class="r-btn min-h-9 border border-border px-3.5 text-[13px] font-semibold text-text-2 transition-colors hover:border-border-strong hover:text-text">Close</button>
+        </div>
+      </div>
+      <div class="mt-5 grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+        <div class="min-w-0">
+          {c.key === "movement" ? <><WeekBars d={d} /><p class="t-caption mt-2 text-text-3">Logged sessions only, moderate or vigorous, whole-session MET × minutes. One writer per session. The same rule the app uses.</p></> : null}
+          {c.key === "fitness" ? <><TierStrip d={d} />{fitUnit.value === "vo2" ? <p class="t-caption mt-2 text-text-3">{VO2_CAVEAT}</p> : null}</> : null}
+          <div class={`flex flex-col ${c.key === "movement" || c.key === "fitness" ? "mt-4" : ""}`}>{rows.filter(Boolean).map((r) => <RowLine key={r.label} r={r} />)}</div>
+          <p class="t-caption mt-3 text-text-3">{c.writer}{readAt ? ` · read ${readAt === today ? "today" : fmtDay(readAt)}` : ""}. A row with nothing to show reads a dash and the reason, never a zero.</p>
+        </div>
+        <div class="min-w-0">
+          {ms.length ? (
+            <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {c.key === "body"
+                ? SHELVES.map(([g, name]) => { const gm = ms.filter((m) => m.group === g); if (!gm.length) return null; return (<>
+                    <div key={`shelf:${g}`} class="col-span-full mt-2 flex items-baseline gap-2 first:mt-0"><span class="t-eyebrow">{name}</span><span class="t-caption text-text-3">{gm.filter((m) => m.series().length).length} of {gm.length} read</span></div>
+                    {gm.map((m) => tile(m, ms.indexOf(m)))}
+                  </>); })
+                : ms.map(tile)}
+            </div>
+          ) : null}
+        </div>
+      </div>
+      {open ? <div class="mt-5"><OpenMarker open={open} markers={d.markers} acts={d.acts} out={outKeys.has(open.key)} /></div> : null}
+    </div>
+  );
+}
+
+export function Glance() {
+  const d = derived.value;
+  if (!d) return <>{CARD_KEYS.map((k) => <Frame key={k} label={CARD_TITLE[k]} />)}</>;
+  const { cards } = cardsOf(d, !!person.value?.self, fitUnit.value);
+  const sec = section.value;
+  const openCard = cards.find((c) => c.key === sec) ?? null;
+  const openOf = (c: Card) => () => { if (section.value === c.key) setSection("all"); else setSection(c.key); };
+  if (openCard) {
+    return (
+      <>
+        <div class="col-span-full grid gap-2 sm:grid-cols-5">{cards.filter((c) => c.key !== openCard.key).map((c) => <StripCard key={c.key} c={c} onOpen={openOf(c)} />)}</div>
+        <OpenCard c={openCard} d={d} />
+      </>
+    );
+  }
+  return <>{cards.map((c) => <CardFace key={c.key} c={c} d={d} on={false} onOpen={openOf(c)} />)}</>;
+}
+
+function Frame({ label }: { label: string }) {
+  return (
+    <div class="r-card flex min-h-[236px] flex-col gap-3 border border-border bg-card p-5" aria-hidden="true">
+      <span class="t-title text-text">{label}</span>
+      <span class="mt-1 h-7 w-24 rounded-md bg-alt"></span>
+      <span class="h-3.5 w-2/5 rounded bg-alt"></span>
+      <span class="mt-2 flex flex-col gap-2"><span class="h-3 w-full rounded bg-alt"></span><span class="h-3 w-full rounded bg-alt"></span><span class="h-3 w-4/5 rounded bg-alt"></span></span>
+    </div>
+  );
+}
+
+// ── the tiles and the open marker: the app's lenses, drawn under the opened card ──
+
+function Tile({ m, i, on, out, onTap }: { m: Marker; i: number; on: boolean; out: boolean; onTap: () => void }) {
+  const pts = m.series(); const l = pts[pts.length - 1] ?? null;
+  const t = m.tile ? m.tile() : null;
+  if (t) out = t.out;
+  return (
+    <button type="button" style={{ "--i": i } as any} aria-current={on ? "true" : "false"} onClick={onTap}
+      class={`r-btn flex flex-col gap-1 border p-3 text-left transition-colors ${on ? "border-accent-border bg-accent-fill" : l ? "border-border bg-alt hover:border-border-strong" : "border-dashed border-border hover:border-border-strong"}`}>
+      <span class="t-caption text-text-2">{m.label}</span>
+      <span class={`t-figure-row ${l ? (out ? "text-caution" : "text-text") : "text-text-3"}`}>
+        {t ? t.headline : l ? (m.pointLabel ? m.pointLabel(l) : m.fmt(l.v)) : DASH}{l && m.unit ? <> <span class="t-unit">{m.unit}</span></> : null}
+      </span>
+      <span class="t-caption text-text-3">{t ? t.sub : l ? (l.d === todayStr() ? "today" : dayWord(l.d)) : "not read yet"}</span>
+    </button>
+  );
+}
+
+const Kicker = ({ text }: { text: string }) => <div class="t-eyebrow">{text}</div>;
+
+function OpenMarker({ open, markers, acts, out }: { open: Marker; markers: Marker[]; acts: any[]; out: boolean }) {
+  // the app's Over Time lenses, by the same names, drawing the same bars
+  const ranges: Rng[] = open.daily ? ["week", "4w", "months", "years"] : ["6m", "1y", "all"];
+  const range: Rng = openRange.value && ranges.includes(openRange.value as Rng) ? (openRange.value as Rng) : open.daily ? "week" : "1y";
+  const year = openYear.value;
+  const dr = drawnFor(open, range, year);
+  const years = [...new Set(open.series().map((p) => Number(p.d.slice(0, 4))))].sort((a, b) => b - a);
+  const yearMenu = (open.daily ? range === "years" : range === "all") && years.length;
+  const band = open.daily && range === "week" ? (open.band?.() ?? null) : null;
+  const pts = open.series();
+  const reads = [...open.reads(pts), ...(open.rangeReads?.(range, year) ?? [])];
+  const t = todayStr();
+  const monthAgg = (from: string, to: string) => { const xs = pts.filter((p) => p.d >= from && p.d <= to).map((p) => p.v); return xs.length ? { v: open.sum ? xs.reduce((a, b) => a + b, 0) : xs.reduce((a, b) => a + b, 0) / xs.length, n: xs.length } : null; };
+  const m30 = monthAgg(addDays(t, -29), t), y1 = monthAgg(addDays(t, -364), t), y2 = monthAgg(addDays(t, -729), addDays(t, -365));
+  const alongside = dr && open.daily && range === "week" ? alongsideHtml(markers, open, range, dr) : "";
+  const comp = open.companion ? markers.find((m) => m.key === open.companion) ?? null : null;
+  const compDr = comp ? drawnFor(comp, range, year) : null;
+  const compPts = comp ? comp.series() : [];
+  const compAgg = (from: string, to: string) => { const xs = compPts.filter((p) => p.d >= from && p.d <= to).map((p) => p.v); return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null; };
+  const c30 = comp ? compAgg(addDays(t, -29), t) : null, c1y = comp ? compAgg(addDays(t, -364), t) : null;
+  const seg = (on: boolean) => `r-btn min-h-8 px-3 text-[13px] font-semibold transition-colors ${on ? "bg-accent-fill text-accent-text" : "text-text-3 hover:text-text"}`;
+  return (
+    <>
+      <div class="r-card border border-border bg-alt p-5">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div class="min-w-0">
+            <h3 class="t-title text-text">{open.label}</h3>
+            <p class="t-caption mt-0.5 text-text-3">{open.sub}</p>
+          </div>
+          <div class="r-btn flex gap-1 border border-border p-1" role="group" aria-label="Range">
+            {ranges.map((r) => <button key={r} type="button" onClick={() => { openRange.value = r; openYear.value = null; }} class={seg(r === range)}>{r === "4w" && open.table ? "12 weeks" : RANGE_LABEL[r]}</button>)}
+          </div>
+          {yearMenu ? (
+            <label class="t-caption flex items-center gap-2 text-text-3">Year
+              <select value={year ?? ""} onChange={(e) => { openYear.value = Number((e.target as HTMLSelectElement).value) || null; }} class="r-btn min-h-8 border border-border bg-card px-2.5 text-[13px] font-semibold text-text focus:border-accent-border focus:outline-none">
+                <option value="">all</option>{years.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select></label>
+          ) : null}
+        </div>
+        {dr ? (
+          <>
+            <div class="mt-4 flex flex-wrap items-end justify-between gap-3">
+              <div class="flex flex-wrap items-baseline gap-x-8 gap-y-2">
+                <div class="flex items-baseline gap-2.5"><span class={`t-figure ${out ? "text-caution" : "text-text"}`}>{dr.headline}</span><span class="t-small text-text-2" dangerouslySetInnerHTML={{ __html: dr.caption }} /></div>
+                {comp && compDr && compDr.headline !== DASH ? (
+                  <div class="flex items-baseline gap-2"><span class="t-figure text-text-2">{compDr.headline}</span><span class="t-small text-text-2">{range === "week" ? `kcal active ${compPts.length && compPts[compPts.length - 1].d === t ? "today" : "on the latest day"}` : "kcal active a day"}</span></div>
+                ) : null}
+              </div>
+              <div class="t-caption flex flex-wrap gap-4 text-text-2">
+                {band ? <span><span class="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm border border-good/50 bg-good/20 align-[-1px]"></span>{band.why}</span> : null}
+                {range === "week" && open.goal?.() ? <span><span class="mr-1.5 inline-block h-0.5 w-3 bg-accent align-[3px]"></span>the week's running total, against the goal</span> : null}
+                {range === "week" && open.daily && open.lines?.()?.length ? open.lines().map((l) => <span key={l.value}><span class="mr-1.5 inline-block h-0.5 w-3 align-[3px]" style={`background:${l.color}`}></span>{open.fmt(l.value)} {l.label.toLowerCase()}</span>) : null}
+              </div>
+            </div>
+            <div class="mt-2 overflow-x-auto"><svg viewBox="0 0 820 200" class="block h-auto w-full min-w-[560px]" role="img" aria-label={`${open.label}, ${RANGE_LABEL[range].toLowerCase()} view`} dangerouslySetInnerHTML={{ __html: chartSvg(open, range, dr) }} /></div>
+            {dr.rows ? (
+              <div class="mt-3 border-t border-border">
+                {dr.rows.map((r) => (
+                  <div key={r.label} class="grid grid-cols-[1.3fr_0.8fr_1fr_auto] items-baseline gap-3 border-b border-border py-1.5 text-[12.5px] tabular-nums">
+                    <span class={r.total ? (r.current ? "font-semibold text-text" : "text-text-2") : "text-text-3"}>{r.label}</span>
+                    <span class={`text-right font-mono ${r.total ? "text-text" : "text-text-3"}`}>{r.total ? open.fmt(r.total) : DASH}</span>
+                    <span class="text-right text-text-3">{r.avg != null ? `${open.fmt(r.avg)} a day` : ""}</span>
+                    <span class="t-eyebrow w-12 text-right text-accent-text">{r.current ? "so far" : ""}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </>
+        ) : <p class="t-small mt-4 text-text-3">Nothing read yet for {open.label.toLowerCase()}.{open.section === "heart" || open.key === "steps" ? " The app sends it on every sync once the health store is on." : ""}</p>}
+        <div class="mt-4 grid gap-4 border-t border-border pt-4 lg:grid-cols-2">
+          <div>
+            <Kicker text="What Verve reads" />
+            <div class="t-small mt-2 flex flex-col gap-2 leading-relaxed text-text-2">{reads.map((r, i) => <p key={i} dangerouslySetInnerHTML={{ __html: r }} />)}</div>
+            <a href={open.science} class="t-caption mt-2.5 inline-block font-semibold text-accent-text hover:text-text">The science behind this &rarr;</a>
+          </div>
+          <div>
+            {dr && open.daily && range === "week"
+              ? <><Kicker text="Alongside · the same days" />{alongside ? <div class="mt-2" dangerouslySetInnerHTML={{ __html: alongside }} /> : <div class="mt-2"><p class="t-caption text-text-3">Nothing else read on these days yet.</p></div>}</>
+              : <><Kicker text="Source" /><p class="t-small mt-2 leading-relaxed text-text-2">{open.source}</p></>}
+          </div>
+        </div>
+      </div>
+      <div class="mt-3 grid gap-3 sm:grid-cols-3">
+        <div class="r-card border border-border bg-alt p-4"><Kicker text={open.daily ? "Last 30 days" : "Last year"} /><div class="t-figure-row mt-1.5 text-[20px] text-text">{open.daily ? (m30 ? open.fmt(m30.v) : DASH) : (y1 ? open.fmt(y1.v) : DASH)} <span class="t-unit">{open.daily ? (m30 ? `${open.unit}${open.sum ? "" : " a day"}` : "") : (y1 ? `${open.unit} average` : "")}</span></div><div class="t-caption mt-0.5 text-text-3">{open.daily ? (m30 ? `${m30.n} days read` : "nothing read") : (y1 ? `${y1.n} reading${y1.n === 1 ? "" : "s"}` : "no reading")}</div>{comp && c30 != null ? <div class="t-figure-row mt-1 text-text-2">{Math.round(c30)} <span class="t-unit">kcal active a day</span></div> : null}</div>
+        <div class="r-card border border-border bg-alt p-4"><Kicker text={open.daily ? "Last 12 months" : "The year before"} /><div class="t-figure-row mt-1.5 text-[20px] text-text">{open.daily ? (y1 ? open.fmt(y1.v) : DASH) : (y2 ? open.fmt(y2.v) : DASH)} <span class="t-unit">{open.daily ? (y1 ? `${open.unit}${open.sum ? " in all" : " a day"}` : "") : (y2 ? `${open.unit} average` : "")}</span></div><div class="t-caption mt-0.5 text-text-3">{open.daily ? (y1 && y2 ? `the year before: ${open.fmt(y2.v)}` : y1 ? `${y1.n} days read` : "nothing read") : (y2 ? `${y2.n} reading${y2.n === 1 ? "" : "s"}` : "no reading")}</div>{comp && c1y != null ? <div class="t-figure-row mt-1 text-text-2">{Math.round(c1y)} <span class="t-unit">kcal active a day</span></div> : null}</div>
+        <div class="r-card border border-border bg-alt p-4"><Kicker text="Source" /><div class="t-small mt-1.5 leading-relaxed text-text-2">{open.source}</div></div>
+      </div>
+      {open.key === "sessions" ? <div dangerouslySetInnerHTML={{ __html: workoutsListHtml(acts, range) }} /> : null}
+    </>
+  );
+}
+
+// ── the parts that left the Overview on 8 Nov 2026, kept behind SHOW_OLD_OVERVIEW ──
 
 /** Fourteen dots under the greeting: a day with a night or a resting rate is full, steps alone half, nothing empty. */
 export function DaysWithData() {
@@ -226,16 +610,16 @@ export function DaysWithData() {
   if (!d.signals.length) return null;
   return (
     <div class="flex flex-col items-start gap-2 sm:items-end">
-      <span class="font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">Days with data · last 14</span>
+      <span class="t-eyebrow">Days with data · last 14</span>
       <span class="flex gap-[5px]" role="img" aria-label={`Days with data in the last fourteen: ${nights} nights, ${mornings} mornings`}>
-        {days.map((x) => { const k = kind(byDay.get(x)); return <span key={x} title={`${dayWord(x)}: ${k === "full" ? "a night or a resting rate" : k === "part" ? "steps only" : "nothing in the store"}`} class="h-2.5 w-2.5 rounded-full" style={{ background: k === "full" ? "#818cf8" : k === "part" ? "rgba(129,140,248,0.45)" : "rgba(255,255,255,0.1)" }}></span>; })}
+        {days.map((x) => { const k = kind(byDay.get(x)); return <span key={x} title={`${dayWord(x)}: ${k === "full" ? "a night or a resting rate" : k === "part" ? "steps only" : "nothing in the store"}`} class={`h-2.5 w-2.5 rounded-full ${k === "full" ? "bg-accent" : k === "part" ? "bg-accent/45" : "bg-alt"}`}></span>; })}
       </span>
-      <span class="font-mono text-[10px] text-text-tertiary">{nights} nights · {mornings} mornings{writers.length ? ` · ${esc(writers.join(", "))}` : ""}</span>
+      <span class="t-caption text-text-3">{nights} nights · {mornings} mornings{writers.length ? ` · ${esc(writers.join(", "))}` : ""}</span>
     </div>
   );
 }
 
-/** Your week: Monday to Sunday across, the signals down, straight from the daily signals. */
+/** The week, every number: Monday to Sunday across, the signals down, straight from the daily signals. Moves to In depth in stage 2. */
 export function WeekTable() {
   const d = derived.value;
   if (!d || !d.signals.length) return null;
@@ -245,252 +629,54 @@ export function WeekTable() {
   const dose = actsByDay(d.acts);
   const heart = sleepHeartSummary(d.signals, today);
   const base = heart?.rhr.baseline ?? null;
-  type Row = { label: string; unit: string; of: (x: string) => number | null; fmt: (v: number) => string; tone: (v: number) => string };
-  const rows: Row[] = [
-    { label: "Sleep", unit: "h", of: (x) => byDay.get(x)?.sleep_minutes != null ? byDay.get(x).sleep_minutes / 60 : null, fmt: (v) => v.toFixed(1), tone: (v) => v < 7 ? "text-warning" : "" },
-    // the rest of the night, from the same rows since 2 Nov 2026: efficiency against the app's 85% mark, the breathing,
-    // the oxygen and the sleeping heart rate as read — a column the app has not pushed yet simply stays a dash
-    { label: "Sleep efficiency", unit: "%", of: (x) => { const r = byDay.get(x); return r?.sleep_minutes != null && r?.sleep_in_bed_min > 0 ? (100 * r.sleep_minutes) / r.sleep_in_bed_min : null; }, fmt: (v) => round0(v), tone: (v) => v < 85 ? "text-warning" : "" },
+  type R = { label: string; unit: string; of: (x: string) => number | null; fmt: (v: number) => string; tone: (v: number) => string };
+  const rows: R[] = [
+    { label: "Sleep", unit: "h", of: (x) => byDay.get(x)?.sleep_minutes != null ? byDay.get(x).sleep_minutes / 60 : null, fmt: (v) => v.toFixed(1), tone: (v) => v < 7 ? "text-caution" : "" },
+    { label: "Sleep efficiency", unit: "%", of: (x) => efficiencyOf(byDay.get(x)), fmt: (v) => round0(v), tone: (v) => v < 85 ? "text-caution" : "" },
     { label: "Sleeping heart rate", unit: "bpm", of: (x) => byDay.get(x)?.sleep_hr_bpm ?? null, fmt: (v) => round0(v), tone: () => "" },
     { label: "Breathing", unit: "/min", of: (x) => byDay.get(x)?.breathing_rpm ?? null, fmt: (v) => Number(v).toFixed(1), tone: () => "" },
     { label: "Blood oxygen", unit: "%", of: (x) => byDay.get(x)?.spo2_pct ?? null, fmt: (v) => round0(v), tone: () => "" },
-    { label: "Resting heart rate", unit: "bpm", of: (x) => byDay.get(x)?.resting_hr ?? null, fmt: (v) => round0(v), tone: (v) => base != null && v - base >= 10 ? "text-danger" : base != null && v - base >= 5 ? "text-warning" : "" },
-    { label: "Recovery", unit: "↓bpm", of: (x) => byDay.get(x)?.hrr_bpm ?? null, fmt: (v) => round0(v), tone: (v) => v <= 12 ? "text-danger" : "" },
+    { label: "Resting heart rate", unit: "bpm", of: (x) => byDay.get(x)?.resting_hr ?? null, fmt: (v) => round0(v), tone: (v) => base != null && v - base >= 10 ? "text-concern" : base != null && v - base >= 5 ? "text-caution" : "" },
+    { label: "Recovery", unit: "bpm", of: (x) => byDay.get(x)?.hrr_bpm ?? null, fmt: (v) => round0(v), tone: (v) => v <= 12 ? "text-concern" : "" },
     { label: "Dose", unit: "MET-min", of: (x) => x <= today ? (dose.get(x)?.dose ?? 0) : null, fmt: (v) => round0(v), tone: () => "" },
-    { label: "Sitting", unit: "h", of: (x) => byDay.get(x)?.sedentary_minutes != null ? byDay.get(x).sedentary_minutes / 60 : null, fmt: (v) => v.toFixed(1), tone: (v) => v >= 12 ? "text-danger" : v >= 10.6 ? "text-warning" : "" },
+    { label: "Sitting", unit: "h", of: (x) => byDay.get(x)?.sedentary_minutes != null ? byDay.get(x).sedentary_minutes / 60 : null, fmt: (v) => v.toFixed(1), tone: (v) => v >= 12 ? "text-concern" : v >= 10.6 ? "text-caution" : "" },
   ];
   const wd = (x: string) => new Date(x + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" });
   return (
-    <div class="rounded-[20px] border border-white/10 bg-white/[0.03] p-5 sm:px-6">
+    <div class="r-card border border-border bg-card p-5 sm:px-6">
       <div class="flex flex-wrap items-baseline justify-between gap-2">
-        <span class="text-lg font-extrabold tracking-[-0.02em] text-text-primary">Your week</span>
-        <span class="font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">{dayWord(mon)} – {dayWord(addDays(mon, 6))} · from the daily signals</span>
+        <span class="t-title text-text">The week, every number</span>
+        <span class="t-eyebrow">{dayWord(mon)} – {dayWord(addDays(mon, 6))} · from the daily signals</span>
       </div>
       <div class="mt-3 overflow-x-auto">
         <table class="w-full min-w-[520px] border-collapse">
           <thead><tr>
             <th class="w-[150px]"></th>
-            {days.map((x) => <th key={x} class={`pb-2 text-center font-mono text-[10px] font-semibold uppercase tracking-[0.1em] ${x === today ? "rounded-t-md bg-accent/[0.08] text-accent-light" : "text-text-tertiary"}`}>{wd(x)}</th>)}
+            {days.map((x) => <th key={x} class={`t-eyebrow pb-2 text-center ${x === today ? "rounded-t-md bg-accent-fill text-accent-text" : ""}`}>{wd(x)}</th>)}
           </tr></thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.label} class="border-t border-white/[0.06]">
-                <td class="py-2 pr-2 text-[13px] text-text-secondary">{r.label} <span class="font-mono text-[10px] text-text-muted">{r.unit}</span></td>
-                {days.map((x) => { const v = r.of(x); const future = x > today; return <td key={x} class={`py-2 text-center font-mono text-[13px] ${x === today ? "bg-accent/[0.08]" : ""} ${v == null ? "text-text-muted" : `font-semibold ${r.tone(v) || "text-text-primary"}`}`}>{future ? "·" : v == null ? "—" : r.fmt(v)}</td>; })}
+              <tr key={r.label} class="border-t border-border">
+                <td class="t-small py-2 pr-2 text-text-2">{r.label} <span class="t-unit">{r.unit}</span></td>
+                {days.map((x) => { const v = r.of(x); const future = x > today; return <td key={x} class={`py-2 text-center font-mono text-[13px] ${x === today ? "bg-accent-fill" : ""} ${v == null ? "text-text-3" : `font-semibold ${r.tone(v) || "text-text"}`}`}>{future ? "·" : v == null ? DASH : r.fmt(v)}</td>; })}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p class="mt-3 text-[11.5px] text-text-tertiary">A dash is a day the store holds nothing for; a dot is a day not yet here. Colour only where a line is crossed: sleep under 7 h, efficiency under 85%, a resting rate 5 over normal, a recovery under 12, sitting past 10.6 h. Breathing, oxygen and the sleeping rate are shown as read; the app judges them against your own 30 nights.</p>
+      <p class="t-caption mt-3 text-text-3">A dash is a day the store holds nothing for; a dot is a day not yet here. Colour only where a line is crossed.</p>
     </div>
   );
 }
 
-export function Glance() {
-  const d = derived.value;
-  if (!d) return <>{GLANCE_FRAMES.map((l) => <Frame key={l} label={l} />)}</>;
-  const { cards } = glanceOf(d, !!person.value?.self);
-  const rise = riseOnce("glance");
-  const sec = ovSection.value, mk = openMarkerKey.value;
-  const open = (c: Glance) => { setSection(c.sec); if (c.marker) openMarkerKey.value = c.marker; };
-  const isOn = (c: Glance) => sec !== "all" && sec === c.sec && (c.marker ? mk === c.marker : !["sleep", "rhr", "hrr"].includes(mk));
-  return (
-    <>
-      {cards.map((c, i) => {
-        const on = isOn(c);
-        const tc = TONE[c.chip.tone];
-        return (
-          <button key={c.key} type="button" style={{ "--i": i } as any} aria-expanded={on ? "true" : "false"} onClick={() => on ? setSection("all") : open(c)}
-            class={`${rise} flex min-h-[220px] flex-col gap-3 rounded-[20px] border p-5 text-left transition-colors sm:p-6 ${on ? "border-accent/60 bg-accent/[0.07]" : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]"}`}>
-            <span class="flex items-center gap-2"><span class="h-2 w-2 shrink-0 rounded-full" style={{ background: c.color }}></span><span class="font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">{c.label}</span>
-              <span class="ml-auto rounded-full border px-2 py-[3px] font-mono text-[10.5px] font-semibold" style={{ borderColor: tc ? tc + "99" : "rgba(255,255,255,0.12)", color: tc || "#94a3b8" }} dangerouslySetInnerHTML={{ __html: c.chip.text }} />
-              {on ? <span class="text-[12px] font-bold text-accent-light">▾</span> : null}</span>
-            <span class="flex flex-wrap items-baseline gap-x-2 gap-y-1"><span class="font-mono text-[40px] font-bold leading-none tracking-[-0.02em]" style={{ color: tc || c.color }}>{c.value}</span><span class="text-[14px] text-text-secondary" dangerouslySetInnerHTML={{ __html: c.beside }} /></span>
-            <Spark values={c.spark} color={c.color} norm={c.norm} tone={c.chip.tone} />
-            {c.span[0] || c.span[1] ? <span class="flex justify-between font-mono text-[9.5px] text-text-tertiary"><span>{c.span[0]}</span><span>{c.span[1]}</span></span> : null}
-            <span class="text-[14px] leading-[1.55] text-text-secondary" dangerouslySetInnerHTML={{ __html: c.line }} />
-            <span class="mt-auto text-[11.5px] leading-snug text-text-tertiary [&_b]:font-semibold [&_b]:text-text-secondary" dangerouslySetInnerHTML={{ __html: c.writer }} />
-          </button>
-        );
-      })}
-    </>
-  );
-}
-
-// ── one section: its markers as tiles, one of them open ──────────────────────
-
-function Tile({ m, i, on, out, rise, dim, onTap }: { m: Marker; i: number; on: boolean; out: boolean; rise: string; dim: boolean; onTap: () => void }) {
-  const pts = m.series(); const l = pts[pts.length - 1] ?? null;
-  const t = m.tile ? m.tile() : null;
-  if (t) out = t.out;
-  return (
-    <button type="button" style={{ "--i": i } as any} aria-current={on ? "true" : "false"} onClick={onTap}
-      class={`${rise}${dim ? " mh-dim" : ""} flex flex-col gap-1 rounded-2xl border p-3.5 text-left transition-colors ${on ? "border-accent/60 bg-accent/[0.08]" : l ? "border-white/8 bg-white/4 hover:border-white/16" : "border-dashed border-white/10 hover:border-white/20"}`}>
-      <span class="text-[12px] text-text-secondary">{m.label}</span>
-      <span class={`font-mono text-[20px] font-bold leading-none ${l ? (out ? "text-warning" : "text-text-primary") : "text-text-muted"}`}>
-        {t ? t.headline : l ? (m.pointLabel ? m.pointLabel(l) : m.fmt(l.v)) : "—"}{l && m.unit ? <> <span class="text-[10px] text-text-tertiary">{m.unit}</span></> : null}
-      </span>
-      <span class="text-[11.5px] leading-snug text-text-tertiary">{t ? t.sub : l ? (l.d === todayStr() ? "today" : dayWord(l.d)) : "not read yet"}</span>
-    </button>
-  );
-}
-
-const Kicker = ({ text }: { text: string }) => <div class="font-mono text-[10px] font-semibold tracking-[0.12em] text-text-tertiary">{text}</div>;
-
-export function Section() {
-  const [dimTo, setDimTo] = useState<string | null>(null);
-  const sec = ovSection.value;
-  const d = derived.value;
-  if (sec === "all") return null;
-  const meta = SEC_META[sec];
-  const ms = d ? d.markers.filter((m) => m.section === sec) : [];
-  const have = ms.filter((m) => m.series().length);
-  // Nothing is open until a tile is tapped, except in a short section (six
-  // tiles or fewer), which opens its first marker itself: the chart sits
-  // right under the grid and reads as part of it. Body, three shelves
-  // deep, waits for a tap. A marker of another section is not this one's.
-  const wanted = openMarkerKey.value && ms.some((m) => m.key === openMarkerKey.value) ? openMarkerKey.value : "";
-  const openKey = wanted || (ms.length <= 6 && ms.length ? (have[0] ?? ms[0]).key : "");
-  const open = openKey ? ms.find((m) => m.key === openKey) ?? null : null;
-  const outKeys = d ? new Set(labRowsFrom(d.by, todayStr()).filter((r) => r.out).map((r) => r.key)) : new Set<string>();
-  const rise = riseOnce(`tiles:${sec}`);
-  const focus = focusTile.value && open;
-  const tap = (m: Marker) => {
-    if (focusTile.value) { openMarkerKey.value = m.key; openRange.value = ""; openYear.value = null; return; }
-    // the others fade and blur, then the page redraws with this one alone and its marker right under it
-    setDimTo(m.key);
-    setTimeout(() => { openMarkerKey.value = m.key; openRange.value = ""; openYear.value = null; focusTile.value = true; setDimTo(null); }, 220);
-  };
-  const tile = (m: Marker, i: number) => <Tile key={m.key} m={m} i={i} on={m.key === openKey} out={outKeys.has(m.key)} rise={rise} dim={dimTo != null && dimTo !== m.key} onTap={() => tap(m)} />;
-
-  return (
-    <>
-      <div class="flex flex-wrap items-end justify-between gap-4">
-        <div class="min-w-0">
-          <div class="font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary">OVERVIEW · {meta.label.toUpperCase()} · {sec === "body" ? "FROM THE APP AND THE REPORTS" : "FROM THE APP"}</div>
-          <h2 class="mt-1.5 flex items-center gap-2.5 text-[24px] font-extrabold tracking-[-0.02em] text-text-primary"><span class="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: meta.dot }}></span><span>{meta.label}</span></h2>
-          <p class="mt-1.5 text-[13px] text-text-tertiary">{meta.blurb}</p>
-        </div>
-        <div class="flex items-center gap-4">
-          <a href={meta.science} class="text-[13px] font-medium text-accent-light hover:text-text-primary">The science behind these &rarr;</a>
-          <button type="button" onClick={() => setSection("all")} class="min-h-9 rounded-full border border-white/14 px-3.5 text-[12.5px] font-semibold text-text-secondary transition-colors hover:border-white/30 hover:text-text-primary">Close ▴</button>
-        </div>
-      </div>
-      <div class="mt-5 grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
-        {focus
-          ? <div class="col-span-full flex flex-wrap items-center gap-3">{tile(open!, 0)}<button type="button" onClick={() => { focusTile.value = false; openMarkerKey.value = ""; }} class="min-h-9 rounded-full border border-white/14 px-3.5 text-[12.5px] font-semibold text-text-secondary transition-colors hover:border-white/30 hover:text-text-primary">All markers</button></div>
-          : sec === "body"
-          ? SHELVES.map(([g, name]) => { const gm = ms.filter((m) => m.group === g); if (!gm.length) return null; const read = gm.filter((m) => m.series().length).length; return (
-              <>
-                <div key={`shelf:${g}`} class="col-span-full mt-2 flex items-baseline gap-2 first:mt-0"><span class="font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary">{name.toUpperCase()} · {gm.length}</span><span class="text-[11px] text-text-muted">{read} of {gm.length} read</span></div>
-                {gm.map((m) => tile(m, ms.indexOf(m)))}
-              </>); })
-          : ms.map(tile)}
-      </div>
-      <div class="mt-4">{open && d ? <OpenMarker open={open} markers={d.markers} acts={d.acts} out={outKeys.has(open.key)} /> : null}</div>
-    </>
-  );
-}
-
-function OpenMarker({ open, markers, acts, out }: { open: Marker; markers: Marker[]; acts: any[]; out: boolean }) {
-  // the app's Over Time lenses, by the same names, drawing the same bars
-  const ranges: Rng[] = open.daily ? ["week", "4w", "months", "years"] : ["6m", "1y", "all"];
-  const range: Rng = openRange.value && ranges.includes(openRange.value as Rng) ? (openRange.value as Rng) : open.daily ? "week" : "1y";
-  const year = openYear.value;
-  const dr = drawnFor(open, range, year);
-  // the years on file, newest first, for the year menu under Years and All
-  const years = [...new Set(open.series().map((p) => Number(p.d.slice(0, 4))))].sort((a, b) => b - a);
-  const yearMenu = (open.daily ? range === "years" : range === "all") && years.length;
-  const band = open.daily && range === "week" ? (open.band?.() ?? null) : null;
-  const pts = open.series();
-  const reads = [...open.reads(pts), ...(open.rangeReads?.(range, year) ?? [])];
-  const t = todayStr();
-  const monthAgg = (from: string, to: string) => { const xs = pts.filter((p) => p.d >= from && p.d <= to).map((p) => p.v); return xs.length ? { v: open.sum ? xs.reduce((a, b) => a + b, 0) : xs.reduce((a, b) => a + b, 0) / xs.length, n: xs.length } : null; };
-  const m30 = monthAgg(addDays(t, -29), t), y1 = monthAgg(addDays(t, -364), t), y2 = monthAgg(addDays(t, -729), addDays(t, -365));
-  const alongside = dr && open.daily && range === "week" ? alongsideHtml(markers, open, range, dr) : "";
-  // a companion marker's figure for the same range, beside this one's (activity level ↔ active energy)
-  const comp = open.companion ? markers.find((m) => m.key === open.companion) ?? null : null;
-  const compDr = comp ? drawnFor(comp, range, year) : null;
-  const compPts = comp ? comp.series() : [];
-  const compAgg = (from: string, to: string) => { const xs = compPts.filter((p) => p.d >= from && p.d <= to).map((p) => p.v); return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null; };
-  const c30 = comp ? compAgg(addDays(t, -29), t) : null, c1y = comp ? compAgg(addDays(t, -364), t) : null;
-  return (
-    <>
-      <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-        <div class="flex flex-wrap items-start justify-between gap-3">
-          <div class="min-w-0">
-            <h3 class="text-[20px] font-extrabold tracking-[-0.02em] text-text-primary">{open.label}</h3>
-            <p class="mt-0.5 text-[12.5px] text-text-tertiary">{open.sub}</p>
-          </div>
-          <div class="flex gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1" role="group" aria-label="Range">
-            {ranges.map((r) => <button key={r} type="button" onClick={() => { openRange.value = r; openYear.value = null; }} class={`min-h-8 rounded-lg px-3.5 text-[13px] font-semibold transition-colors ${r === range ? "bg-accent/20 text-text-primary" : "text-text-tertiary hover:text-text-primary"}`}>{r === "4w" && open.table ? "12 weeks" : RANGE_LABEL[r]}</button>)}
-          </div>
-          {yearMenu ? (
-            <label class="flex items-center gap-2 text-[12px] text-text-tertiary">Year
-              <select value={year ?? ""} onChange={(e) => { openYear.value = Number((e.target as HTMLSelectElement).value) || null; }} class="min-h-8 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 text-[13px] font-semibold text-text-primary focus:border-accent focus:outline-none">
-                <option value="">all</option>{years.map((y) => <option key={y} value={y}>{y}</option>)}
-              </select></label>
-          ) : null}
-        </div>
-        {dr ? (
-          <>
-            <div class="mt-4 flex flex-wrap items-end justify-between gap-3">
-              <div class="flex flex-wrap items-baseline gap-x-8 gap-y-2">
-                <div class="flex items-baseline gap-2.5"><span class={`font-mono text-[38px] font-bold leading-none ${out ? "text-warning" : "text-text-primary"}`}>{dr.headline}</span><span class="text-[13.5px] text-text-secondary" dangerouslySetInnerHTML={{ __html: dr.caption }} /></div>
-                {comp && compDr && compDr.headline !== "—" ? (
-                  <div class="flex items-baseline gap-2"><span class="font-mono text-[38px] font-bold leading-none" style={`color:${comp.color}`}>{compDr.headline}</span><span class="text-[13.5px] text-text-secondary">{range === "week" ? `kcal active ${compPts.length && compPts[compPts.length - 1].d === t ? "today" : "on the latest day"}` : "kcal active a day"}</span></div>
-                ) : null}
-              </div>
-              <div class="flex flex-wrap gap-4 text-[12px] text-text-secondary">
-                {band ? <span><span class="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm border border-success/50 bg-success/20 align-[-1px]"></span>{band.why}</span> : null}
-                {range === "week" && open.goal?.() ? <span><span class="mr-1.5 inline-block h-0.5 w-3 bg-accent-light align-[3px]"></span>the week's running total, against the goal</span> : null}
-                {range === "week" && open.daily && open.lines?.()?.length ? open.lines().map((l) => <span key={l.value}><span class="mr-1.5 inline-block h-0.5 w-3 align-[3px]" style={`background:${l.color}`}></span>{open.fmt(l.value)} {l.label.toLowerCase()}</span>) : null}
-              </div>
-            </div>
-            <div class="mt-2 overflow-x-auto"><svg viewBox="0 0 820 200" class="block h-auto w-full min-w-[560px]" role="img" aria-label={`${open.label}, ${RANGE_LABEL[range].toLowerCase()} view`} dangerouslySetInnerHTML={{ __html: chartSvg(open, range, dr) }} /></div>
-            {dr.rows ? (
-              <div class="mt-3 border-t border-white/[0.07]">
-                {dr.rows.map((r) => (
-                  <div key={r.label} class="grid grid-cols-[1.3fr_0.8fr_1fr_auto] items-baseline gap-3 border-b border-white/[0.07] py-1.5 text-[12.5px] tabular-nums">
-                    <span class={r.total ? (r.current ? "font-semibold text-text-primary" : "text-text-secondary") : "text-text-muted"}>{r.label}</span>
-                    <span class={`text-right font-mono ${r.total ? "text-text-primary" : "text-text-muted"}`}>{r.total ? open.fmt(r.total) : "—"}</span>
-                    <span class="text-right text-text-tertiary">{r.avg != null ? `${open.fmt(r.avg)} a day` : ""}</span>
-                    <span class="w-12 text-right font-mono text-[9.5px] tracking-[0.06em] text-accent-light">{r.current ? "SO FAR" : ""}</span>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </>
-        ) : <p class="mt-4 text-[13px] text-text-tertiary">Nothing read yet for {open.label.toLowerCase()}.{open.section === "heart" || open.key === "steps" ? " The app sends it on every sync once Apple Health is on." : ""}</p>}
-        <div class="mt-4 grid gap-4 border-t border-white/[0.07] pt-4 lg:grid-cols-2">
-          <div>
-            <Kicker text="WHAT VERVE READS" />
-            <div class="mt-2 flex flex-col gap-2 text-[13.5px] leading-relaxed text-text-secondary">{reads.map((r, i) => <p key={i} dangerouslySetInnerHTML={{ __html: r }} />)}</div>
-            <a href={open.science} class="mt-2.5 inline-block text-[12.5px] font-semibold text-accent-light hover:text-text-primary">The science behind this &rarr;</a>
-          </div>
-          <div>
-            {dr && open.daily && range === "week"
-              ? <><Kicker text="ALONGSIDE · THE SAME DAYS" />{alongside ? <div class="mt-2" dangerouslySetInnerHTML={{ __html: alongside }} /> : <div class="mt-2"><p class="text-[12.5px] text-text-tertiary">Nothing else read on these days yet.</p></div>}</>
-              : <><Kicker text="SOURCE" /><p class="mt-2 text-[13px] leading-relaxed text-text-secondary">{open.source}</p></>}
-          </div>
-        </div>
-      </div>
-      <div class="mt-3 grid gap-3 sm:grid-cols-3">
-        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4"><Kicker text={open.daily ? "LAST 30 DAYS" : "LAST YEAR"} /><div class="mt-1.5 font-mono text-[20px] font-bold text-text-primary">{open.daily ? (m30 ? open.fmt(m30.v) : "—") : (y1 ? open.fmt(y1.v) : "—")} <span class="text-[11px] font-semibold text-text-tertiary">{open.daily ? (m30 ? `${open.unit}${open.sum ? "" : " a day"}` : "") : (y1 ? `${open.unit} average` : "")}</span></div><div class="mt-0.5 text-[12px] text-text-tertiary">{open.daily ? (m30 ? `${m30.n} days read` : "nothing read") : (y1 ? `${y1.n} reading${y1.n === 1 ? "" : "s"}` : "no reading")}</div>{comp && c30 != null ? <div class="mt-1 font-mono text-[13px] font-semibold" style={`color:${comp.color}`}>{Math.round(c30)} <span class="text-[11px] text-text-tertiary">kcal active a day</span></div> : null}</div>
-        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4"><Kicker text={open.daily ? "LAST 12 MONTHS" : "THE YEAR BEFORE"} /><div class="mt-1.5 font-mono text-[20px] font-bold text-text-primary">{open.daily ? (y1 ? open.fmt(y1.v) : "—") : (y2 ? open.fmt(y2.v) : "—")} <span class="text-[11px] font-semibold text-text-tertiary">{open.daily ? (y1 ? `${open.unit}${open.sum ? " in all" : " a day"}` : "") : (y2 ? `${open.unit} average` : "")}</span></div><div class="mt-0.5 text-[12px] text-text-tertiary">{open.daily ? (y1 && y2 ? `the year before: ${open.fmt(y2.v)}` : y1 ? `${y1.n} days read` : "nothing read") : (y2 ? `${y2.n} reading${y2.n === 1 ? "" : "s"}` : "no reading")}</div>{comp && c1y != null ? <div class="mt-1 font-mono text-[13px] font-semibold" style={`color:${comp.color}`}>{Math.round(c1y)} <span class="text-[11px] text-text-tertiary">kcal active a day</span></div> : null}</div>
-        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4"><Kicker text="SOURCE" /><div class="mt-1.5 text-[13px] leading-relaxed text-text-secondary">{open.source}</div></div>
-      </div>
-      {open.key === "sessions" ? <div dangerouslySetInnerHTML={{ __html: workoutsListHtml(acts, range) }} /> : null}
-    </>
-  );
-}
-
-/** Mount the three views into the page's containers, once. */
-export function mountOverview(els: { line: HTMLElement; glance: HTMLElement; section: HTMLElement; days?: HTMLElement; week?: HTMLElement }) {
+/** Mount the views into the page's containers, once. */
+export function mountOverview(els: { line: HTMLElement; pointer?: HTMLElement; glance: HTMLElement; old?: HTMLElement; section?: HTMLElement; days?: HTMLElement; week?: HTMLElement }) {
   render(<GlanceLine />, els.line);
+  if (els.pointer) render(<GuidePointer />, els.pointer);
   render(<Glance />, els.glance);
-  render(<Section />, els.section);
-  if (els.days) render(<DaysWithData />, els.days);
-  if (els.week) render(<WeekTable />, els.week);
+  if (SHOW_OLD_OVERVIEW) {
+    els.old?.classList.remove("hidden");
+    if (els.days) render(<DaysWithData />, els.days);
+    if (els.week) render(<WeekTable />, els.week);
+  }
 }

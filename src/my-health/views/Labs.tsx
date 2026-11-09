@@ -57,7 +57,7 @@ export function Labs() {
   const matches = [...view.values()].reduce((t, m) => t + m.size, 0);
   // the search note lives in the bar above both Labs and Reports; this view owns it while Labs is open
   useEffect(() => {
-    if (activeTab.value !== "labs") return;
+    if (activeTab.value !== "body") return;
     actions.searchNote(terms.length && matches ? `${matches} marker${matches === 1 ? " matches" : "s match"}` : "");
   }, [query, matches, activeTab.value]);
 

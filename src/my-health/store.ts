@@ -46,11 +46,18 @@ function run<T>(mode: IDBTransactionMode, work: (store: IDBObjectStore) => IDBRe
   }));
 }
 
-/** The document kept for this person, or null when none, or none young enough. */
-export async function readDocument(userId: string, personId: string): Promise<MyHealthDocument | null> {
+/**
+ * The document kept for this person, or null when none, or none young enough.
+ * With `sameDay`, only a document saved today is returned: the page paints it
+ * and revalidates silently, replacing a figure only when it differs; an older
+ * one is not painted at all, so the figures never change under the reader's
+ * eyes (board 9, rule 2). The fresh one is waited for instead.
+ */
+export async function readDocument(userId: string, personId: string, sameDay = false): Promise<MyHealthDocument | null> {
   const row = await run<Row | undefined>("readonly", (s) => s.get(keyOf(userId, personId)) as IDBRequest<Row | undefined>);
   if (!row?.doc || typeof row.savedAt !== "number") return null;
   if (Date.now() - row.savedAt > MAX_AGE_MS) return null;
+  if (sameDay && new Date(row.savedAt).toLocaleDateString("en-CA") !== new Date().toLocaleDateString("en-CA")) return null;
   return row.doc;
 }
 
