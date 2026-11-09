@@ -100,7 +100,7 @@ export async function startHorizon(sb: SupabaseClient, payload: StartPayload): P
   return ok && out?.id ? { ok: true, data: { id: String(out.id) } } : fail(status, out);
 }
 
-export type CheckinPayload = { horizon_id: string; kind: CheckinKind; for_date: string; force?: boolean; /** the browser's zone, for a horizon that has none recorded yet */ timezone?: string | null; /** a fallback only: the function computes the figures itself */ inputs?: CheckinInputs };
+export type CheckinPayload = { horizon_id: string; kind: CheckinKind; for_date: string; force?: boolean; /** the browser's zone, for a horizon that has none recorded yet */ timezone?: string | null; /** the page's own figures, kept by the function only as a fallback for a document it cannot read; it computes them itself otherwise */ inputs?: CheckinInputs };
 export async function requestCheckin(sb: SupabaseClient, payload: CheckinPayload): Promise<Result<{ id: string; text: string; created_at: string }>> {
   const { ok, status, out } = await callHorizon(sb, { action: "checkin", ...payload });
   return ok && out?.text ? { ok: true, data: { id: String(out.id ?? ""), text: String(out.text), created_at: String(out.created_at ?? new Date().toISOString()) } } : fail(status, out);

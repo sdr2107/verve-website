@@ -18,7 +18,7 @@ import type { PersonData } from "../derive/person.ts";
 import { addDays, daysBetween, todayStr } from "../derive/format.ts";
 import {
   MARKERS, MARKER_BY_KEY, GROUP_LABEL, FIRST_MARKERS, type MarkerKey, type Target, type PlanRow, type PlanKind, type Tone,
-  latestOf, historyOf, weeklyHistory, pacesOf, impliedPace, adherenceOf, guideDraftPlan, roadOf, weekOf, daysToGo, nextCheckins,
+  latestOf, historyOf, weeklyHistory, pacesOf, impliedPace, adherenceOf, guideDraftPlan, roadOf, weekOf, daysToGo, nextCheckins, checkinInputs,
   fmtValue, addMonths, longDate, dayMonth, dayMonthLong, dayMonthYear, weekdayDayMonth, clockOf, round, numberWord,
 } from "../horizon/derive.ts";
 import {
@@ -299,8 +299,9 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   async function writeCheckin(kind: "week" | "month" | "final", forDate: string) {
     const go = async () => {
       setBusy("checkin"); setNotice("");
-      // the function computes the figures from the document, as it does on the hour; the zone goes along for a horizon without one
-      const res = await requestCheckin(deps.supabase, { horizon_id: h.id, kind, for_date: forDate, timezone: browserZone() });
+      // the function computes the figures from the document, as it does on the hour; the zone goes along for a horizon without
+      // one, and the page's own figures as the fallback the function keeps for a document it cannot read
+      const res = await requestCheckin(deps.supabase, { horizon_id: h.id, kind, for_date: forDate, timezone: browserZone(), inputs: person ? checkinInputs(h, targets, planRows, person, today) : undefined });
       setBusy("");
       if (!res.ok) { onError(res.error, () => void go()); return; }
       await reload();
