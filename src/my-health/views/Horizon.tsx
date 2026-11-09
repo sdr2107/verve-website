@@ -18,7 +18,7 @@ import type { PersonData } from "../derive/person.ts";
 import { addDays, daysBetween, todayStr } from "../derive/format.ts";
 import {
   MARKERS, MARKER_BY_KEY, GROUP_LABEL, FIRST_MARKERS, type MarkerKey, type Target, type PlanRow, type PlanKind, type Tone,
-  latestOf, historyOf, weeklyHistory, pacesOf, impliedPace, adherenceOf, guideDraftPlan, roadOf, weekOf, daysToGo, nextCheckins, checkinInputs,
+  latestOf, historyOf, weeklyHistory, pacesOf, impliedPace, adherenceOf, guideDraftPlan, roadOf, weekOf, daysToGo, nextCheckins,
   fmtValue, addMonths, longDate, dayMonth, dayMonthLong, dayMonthYear, weekdayDayMonth, clockOf, round, numberWord,
 } from "../horizon/derive.ts";
 import {
@@ -53,6 +53,9 @@ export function mountHorizon(root: HTMLElement, deps: HorizonDeps): HorizonHandl
     open: (hash: string) => { const h = hash.replace(/^#/, ""); route.value = h === "horizon" ? "" : h.replace(/^horizon-/, ""); },
   };
 }
+
+/** The browser's IANA zone, so the function reads Monday and the month's first where the person is. */
+const browserZone = (): string | null => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || null; } catch { return null; } };
 
 // ── small parts ──
 
@@ -279,13 +282,25 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   const firstOfMonth = today.slice(0, 7) + "-01";
   const missingMonth = owner && !closed && h.checkin_month && firstOfMonth > h.starts_on && today >= firstOfMonth && !h.checkins.some((c) => c.kind === "month" && c.for_date === firstOfMonth);
   const finalDue = owner && today >= h.ends_on && !h.checkins.some((c) => c.kind === "final");
+  // the Guide writes the Monday check-in itself in the morning (the hour's round); the button is for a Monday that has passed nine without it
+  const pastMondayNine = today > thisMonday || new Date().getHours() >= 9;
+  const asOfLine = (c: { pace: { as_of?: string | null } | null }) => c.pace && "as_of" in c.pace
+    ? (c.pace.as_of ? `Figures as of ${new Date(c.pace.as_of).toLocaleDateString("en-GB", { weekday: "long" })}, before the week's last sync.` : "Written before the app had synced the week.")
+    : null;
   const authorWords = h.plan?.author === "coach" ? "written by your coach" : h.plan?.author === "guide" ? "drafted by the Guide" : h.plan ? "written by you" : "";
 
+  // the horizon set before the zone column existed learns its zone on the owner's visit; the scheduled check-in needs it
+  useEffect(() => {
+    if (!owner || closed || h.timezone) return;
+    const tz = browserZone();
+    if (tz) void updateHorizon(deps.supabase, h.id, { timezone: tz }).then(() => { /* a column not there yet is not an error worth a line */ });
+  }, [h.id, h.timezone, owner, closed]);
+
   async function writeCheckin(kind: "week" | "month" | "final", forDate: string) {
-    if (!person) { setNotice("The page is still drawing its numbers; try again in a moment."); return; }
     const go = async () => {
       setBusy("checkin"); setNotice("");
-      const res = await requestCheckin(deps.supabase, { horizon_id: h.id, kind, for_date: forDate, inputs: checkinInputs(h, targets, planRows, person, today) });
+      // the function computes the figures from the document, as it does on the hour; the zone goes along for a horizon without one
+      const res = await requestCheckin(deps.supabase, { horizon_id: h.id, kind, for_date: forDate, timezone: browserZone() });
       setBusy("");
       if (!res.ok) { onError(res.error, () => void go()); return; }
       await reload();
@@ -356,7 +371,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
               onAdd={async (t) => { const uid = await userId(); if (!uid) return; const res = await addTarget(deps.supabase, { horizon_id: h.id, user_id: uid, ...t }); if (!res.ok) setNotice(res.detail || ERROR_WORDS.unknown); else { setAdding(false); await reload(); } }}
               onCancel={() => setAdding(false)} />
           : <div><button type="button" onClick={() => setAdding(true)} class="rounded-full border border-border px-3 py-1 text-[12px] text-text-2 hover:border-accent-border">Add a target</button></div>)}
-        <Quiet>Any of the site's 34 parameters or the Body list can be a target. Verve does not set the number; it tells you the pace it implies and whether the weeks are keeping it.</Quiet>
+        <Quiet>Any of the {MARKERS.length} markers on this page can be a target. Verve does not set the number; it tells you the pace it implies and whether the weeks are keeping it.</Quiet>
       </Card>
 
       <Card id="horizon-plan">
@@ -393,12 +408,16 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
         </div>
         {latest
           ? <p class="m-0 max-w-[640px] text-[16px] leading-[1.65] text-text">{latest.text}</p>
-          : <p class="m-0 text-[15px] text-text-2">{owner ? "No check-in yet. The first one is written on the first Monday after the horizon is set." : "No check-in yet."}</p>}
-        {(missingWeek || missingMonth || finalDue) && (
-          <div class="flex flex-wrap gap-2">
-            {missingWeek && <Button primary disabled={busy === "checkin"} onClick={() => void writeCheckin("week", thisMonday)}>{busy === "checkin" ? "Writing…" : "Write this week's check-in"}</Button>}
-            {missingMonth && <Button disabled={busy === "checkin"} onClick={() => void writeCheckin("month", firstOfMonth)}>Write the month's read</Button>}
-            {finalDue && <Button primary disabled={busy === "checkin"} onClick={() => void writeCheckin("final", h.ends_on)}>Read the whole road</Button>}
+          : <p class="m-0 text-[15px] text-text-2">{owner ? "No check-in yet. The first one arrives on the Monday morning after the horizon is set, once the app has synced the week." : "No check-in yet."}</p>}
+        {latest && asOfLine(latest) && <Quiet>{asOfLine(latest)}</Quiet>}
+        {((missingWeek && pastMondayNine) || missingMonth || finalDue) && (
+          <div class="flex flex-col gap-2">
+            <div class="flex flex-wrap gap-2">
+              {missingWeek && pastMondayNine && <Button primary disabled={busy === "checkin"} onClick={() => void writeCheckin("week", thisMonday)}>{busy === "checkin" ? "Writing…" : "Write it now"}</Button>}
+              {missingMonth && <Button disabled={busy === "checkin"} onClick={() => void writeCheckin("month", firstOfMonth)}>Write the month's read</Button>}
+              {finalDue && <Button primary disabled={busy === "checkin"} onClick={() => void writeCheckin("final", h.ends_on)}>Read the whole road</Button>}
+            </div>
+            {missingWeek && pastMondayNine && <Quiet>The Guide writes it on Monday morning once the app has synced the week; this writes it with what is there.</Quiet>}
           </div>
         )}
         {h.checkins.length > 1 && (
@@ -418,7 +437,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
             </div>
           ))}
         </div>
-        <Quiet>Every Monday: a short check-in against the targets{h.send_to_coach ? ", also sent to your coach in Messages" : ""}. Each month's end: a Guide read of the month on the horizon. On the date: a read of the whole road, and the choice to set the next horizon.</Quiet>
+        <Quiet>Every Monday morning, once the app has synced the week: a short check-in against the targets{h.send_to_coach ? ", also sent to your coach in Messages" : ""}. Each month's first day: a Guide read of the month on the horizon. On the date: a read of the whole road, and the choice to set the next horizon.</Quiet>
       </Card>
 
       {owner && (
@@ -536,6 +555,7 @@ function Setup({ deps, person, today, personId, hasOthers, nav, onStarted, onErr
         person_id: personId, title: name, kind: kind === "date" ? "date" : "months", months: kind === "date" ? null : kind, starts_on: today, ends_on: endsOn, targets,
         plan: { rows: planChoice === "guide" ? (planRows ?? guideRows) : [], author: planChoice === "guide" ? "guide" : null },
         checkin_monday: monday, checkin_month: month, send_to_coach: toCoach,
+        timezone: browserZone(),
       });
       setBusy(false);
       if (!res.ok) { if (!onError(res.error, () => void go())) setProblem(res.detail ? `${ERROR_WORDS[res.error]} ${res.detail}` : ERROR_WORDS[res.error]); return; }

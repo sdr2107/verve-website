@@ -237,3 +237,8 @@ test("history gives the readings a six-month comparison needs", () => {
   assert.equal(historyOf("dose", person, TODAY).length, 8, "complete weeks with a figure");
   assert.equal(historyOf("ldl", person, TODAY)[0].v, 143);
 });
+
+test("the markers a target can be set on are 36, the count the page names", () => {
+  assert.equal(MARKERS.length, 36);
+  assert.equal(new Set(MARKERS.map((m) => m.key)).size, 36);
+});
