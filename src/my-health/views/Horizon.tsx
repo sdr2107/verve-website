@@ -335,8 +335,8 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
     if (err) { setNotice(`Could not save the plan: ${err}`); return; }
     setEditingPlan(false); await reload();
   }
-  async function toggle(key: "checkin_monday" | "checkin_month" | "send_to_coach", value: boolean) {
-    const err = await updateHorizon(deps.supabase, h.id, { [key]: value } as Partial<Pick<HorizonFull, "checkin_monday" | "checkin_month" | "send_to_coach">>);
+  async function toggle(key: "checkin_monday" | "checkin_month" | "send_to_coach" | "email_checkin", value: boolean) {
+    const err = await updateHorizon(deps.supabase, h.id, { [key]: value } as Partial<Pick<HorizonFull, "checkin_monday" | "checkin_month" | "send_to_coach" | "email_checkin">>);
     if (err) setNotice(`Could not change that: ${err}`); else await reload();
   }
   async function stop() {
@@ -467,13 +467,16 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
         <Card>
           <H2>Check-ins and who sees them</H2>
           <div class="flex flex-col">
-            {([["checkin_monday", "Monday morning check-in against the targets"], ["checkin_month", "A Guide read at each month's end"], ["send_to_coach", "Send each check-in to my coach"]] as const).map(([key, label], i) => (
+            {([["checkin_monday", "Monday morning check-in against the targets"], ["checkin_month", "A Guide read at each month's end"], ["send_to_coach", "Send each check-in to my coach"],
+              // the email switch appears once the horizon's row carries it (the column arrives with the function that sends the email)
+              ...("email_checkin" in h ? [["email_checkin", "Email me each check-in"] as const] : [])] as const).map(([key, label], i) => (
               <label class={`flex items-center justify-between gap-3 py-3 text-[15px] text-text ${i ? "border-t border-border" : ""}`} key={key}>
                 <span>{label}</span>
-                <input type="checkbox" checked={h[key]} disabled={closed} onChange={(e) => void toggle(key, (e.currentTarget as HTMLInputElement).checked)} class="h-5 w-5 accent-[#A9ABF7]" />
+                <input type="checkbox" checked={!!h[key]} disabled={closed} onChange={(e) => void toggle(key, (e.currentTarget as HTMLInputElement).checked)} class="h-5 w-5 accent-[#A9ABF7]" />
               </label>
             ))}
           </div>
+          {"email_checkin" in h && <Quiet>The email carries the check-in's words and your figures. One click in any email turns it off.</Quiet>}
           <div class="flex flex-wrap items-center gap-3">
             {!closed && <Button onClick={() => void stop()}>Stop this horizon</Button>}
             <Quiet>Check-ins describe pace. They do not change the plan; your coach does, or you do. Stopping keeps the readings.</Quiet>
@@ -496,7 +499,7 @@ type Prefill = {
   kind: "date" | 3 | 6 | 12; title: string; date: string;
   markers: MarkerKey[]; /** Beside each marker: what the last road did to it. */ lastRoad: Record<string, string>;
   planRows: PlanRow[]; planAuthor: PlanAuthor | null;
-  monday: boolean; month: boolean; toCoach: boolean;
+  monday: boolean; month: boolean; toCoach: boolean; /** The email choice carries over; a horizon from before the email keeps the set-up's default, ticked. */ email: boolean;
   /** The complete weeks of the road just read. */ weeks: number;
 };
 
@@ -508,7 +511,7 @@ function prefillOf(h: HorizonFull, person: PersonData | null, today: string): Pr
     markers: targets.map((t) => t.marker).filter((k) => !!MARKER_BY_KEY[k]),
     lastRoad: person ? Object.fromEntries(targets.map((t) => [t.marker, lastRoadWords(t, h, person)])) : {},
     planRows: h.plan?.rows ?? [], planAuthor: h.plan?.author ?? null,
-    monday: h.checkin_monday, month: h.checkin_month, toCoach: h.send_to_coach,
+    monday: h.checkin_monday, month: h.checkin_month, toCoach: h.send_to_coach, email: h.email_checkin ?? true,
     weeks: Math.max(1, horizonMondays(h).length),
   };
 }
@@ -655,6 +658,7 @@ function Setup({ deps, person, today, personId, hasOthers, nav, prefill, onStart
   const [monday, setMonday] = useState(prefill?.monday ?? true);
   const [month, setMonth] = useState(prefill?.month ?? true);
   const [toCoach, setToCoach] = useState(prefill?.toCoach ?? false);
+  const [email, setEmail] = useState(prefill?.email ?? true);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
 
@@ -688,7 +692,7 @@ function Setup({ deps, person, today, personId, hasOthers, nav, prefill, onStart
         plan: planChoice === "guide" ? { rows: planRows ?? guideRows, author: "guide" }
           : planChoice === "carry" ? { rows: planRows ?? [], author: carryEdited ? "user" : (prefill?.planAuthor ?? "user") }
           : { rows: [], author: null },
-        checkin_monday: monday, checkin_month: month, send_to_coach: toCoach,
+        checkin_monday: monday, checkin_month: month, send_to_coach: toCoach, email_checkin: email,
         timezone: browserZone(),
       });
       setBusy(false);
@@ -789,13 +793,14 @@ function Setup({ deps, person, today, personId, hasOthers, nav, prefill, onStart
 
       <Step n={4} title="Check-ins">
         <div class="flex flex-col">
-          {([["Monday morning check-in against the targets", monday, setMonday], ["A Guide read at each month's end", month, setMonth], ["Send each check-in to my coach", toCoach, setToCoach]] as const).map(([label, on, set], i) => (
+          {([["Monday morning check-in against the targets", monday, setMonday], ["A Guide read at each month's end", month, setMonth], ["Send each check-in to my coach", toCoach, setToCoach], ["Email me each check-in", email, setEmail]] as const).map(([label, on, set], i) => (
             <label class={`flex items-center justify-between gap-3 py-3 text-[15px] text-text ${i ? "border-t border-border" : ""}`} key={label}>
               <span>{label}</span>
               <input type="checkbox" checked={on} onChange={(e) => (set as (v: boolean) => void)((e.currentTarget as HTMLInputElement).checked)} class="h-5 w-5 accent-[#A9ABF7]" />
             </label>
           ))}
         </div>
+        <Quiet>The email carries the check-in's words and your figures. One click in any email turns it off.</Quiet>
         <Quiet>Check-ins describe pace. They do not change the plan; your coach does, or you do.</Quiet>
       </Step>
 
