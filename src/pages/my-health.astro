@@ -925,6 +925,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   import { mountBody } from "../my-health/views/Body";
   import { mountDepth } from "../my-health/views/Depth";
   import { mountHorizon } from "../my-health/views/Horizon.tsx";
+  import { mountPlanSheet } from "../my-health/views/PlanSheet.tsx";
   import { mountReports } from "../my-health/views/Reports";
   import { mountPeople } from "../my-health/views/People";
   import { REPORT_EXT, pretty, stampOf, isPhotoName, unitFits, APP_KEYS, appBoundFor, isSent, reportAppState, pendingReports, uncheckedInApp, type AppBound } from "../my-health/derive/reports";
@@ -3975,6 +3976,16 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     slot.innerHTML = rows.join("");
     slot.querySelectorAll<HTMLElement>("[data-horizon]").forEach((b) => b.addEventListener("click", () => openHorizon(`#horizon-${b.dataset.horizon}`)));
   }
+  // the Plan row opens the sheet (board 07); a modified click still follows the link to the Plans page
+  const planRoot = document.createElement("div");
+  planRoot.id = "planroot";
+  document.body.appendChild(planRoot);
+  const planSheet = mountPlanSheet(planRoot);
+  $("planwrap").addEventListener("click", (e) => {
+    const m = e as MouseEvent;
+    if (m.metaKey || m.ctrlKey || m.shiftKey || m.altKey || m.button !== 0) return;
+    e.preventDefault(); planSheet.open();
+  });
   mountReports({ cards: $("repcards"), imports: $("appimportsroot"), years: $("yearsonfileroot") });
   mountPeople({ menu: $("people"), head: $("personhead"), tabhead: $("tabhead"), space: $("spaceswitch") });
   actions.person = (kind, id) => {
