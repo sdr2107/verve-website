@@ -130,3 +130,24 @@ export function extraText(p: Plan, c: Currency): string {
   const e = p.extra[c];
   return e == null ? "price to be set" : fmt(e, c);
 }
+
+// ── the Plan sheet on My health (canvas "What brings people back", board 07): one Pro, two tills ──
+
+/** A plan can be bought once any of its prices is set; until then every surface prints "price to be set" and offers no checkout. */
+export const isPriced = (p: Plan): boolean => p.monthly.inr != null || p.monthly.usd != null;
+/** The website's two tills: cards and the wallets (Stripe, priced in $), UPI and Indian cards (Razorpay, priced in ₹). A till whose currency has no price yet carries null and cannot be pressed. */
+export interface Till { key: "card" | "upi"; label: string; currency: Currency; price: string | null }
+export function tillsOf(p: Plan, period: Period): Till[] {
+  const price = (c: Currency) => (p.monthly[c] == null ? null : priceText(p, period, c));
+  return [
+    { key: "card", label: "Pay by card · Apple Pay · Google Pay", currency: "usd", price: price("usd") },
+    { key: "upi", label: "UPI or an Indian card", currency: "inr", price: price("inr") },
+  ];
+}
+/** What Pro adds on the website, as the sheet lists it. Each line is something the page already holds behind Pro. */
+export const PRO_ON_THE_WEB: { lead: string; rest: string }[] = [
+  { lead: "Horizon.", rest: "A date, the targets, the plan, the Guide's check-in each Monday." },
+  { lead: "The Guide, every period.", rest: "Weeks, months and years read in prose; the free plan keeps the first read." },
+  { lead: "The month read.", rest: "On the first of each month, the month on your horizon, read once." },
+];
+

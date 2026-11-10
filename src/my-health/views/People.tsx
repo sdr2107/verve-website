@@ -1,14 +1,15 @@
 /**
  * The People control as a view: one button with whose page this is, and
  * under it the menu of everyone, the group, and the ways to add someone or
- * give access; beside the greeting, the line that says what you may do
- * here. Reads the people, the person, the tab and the first name from
+ * give access; under the greeting, one line that says whose page this is
+ * and who else sees it (a sentence, never a stamp on the person). Reads the people, the person, the tab and the first name from
  * ../state; every action is asked of the page, which owns the forms.
  */
 import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
-import { people, person, activeTab, firstName, actions, space, isClient, type PersonLite } from "../state.ts";
+import { people, person, activeTab, firstName, actions, space, isClient, doc, myRole, type PersonLite } from "../state.ts";
 import { scopeList } from "../derive/scopes.ts";
+import { ownerLine, viewerLine, careLine, roleChip } from "../derive/pageline.ts";
 
 const PeopleIcon = () => (
   <span class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-white/8 text-text-secondary"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0" /><circle cx="17" cy="9" r="2.5" /><path d="M15.5 14.5a5 5 0 0 1 6 5" /></svg></span>
@@ -51,6 +52,7 @@ export function PersonMenu() {
           <button key={p.id || "self"} type="button" role="menuitem" aria-current={on ? "true" : "false"} onClick={pick(() => actions.person("switch", p.id))} class={itemClass(on)}>
             <span class={`flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${p.self ? "bg-accent/25 text-accent-light" : "bg-white/8 text-text-secondary"}`}>{initialOf(p)}</span>
             <span class="min-w-0 flex-1"><span class="block truncate font-semibold">{nameOf(p)}</span><span class="block truncate text-[11.5px] text-text-tertiary">{hintOf(p)}</span></span>
+            {p.self && roleChip(myRole.value) ? <span class="inline-flex h-5 shrink-0 items-center rounded-full border border-accent-border bg-accent-fill px-2 font-mono text-[10px] font-semibold tracking-[0.04em] text-accent-text">{roleChip(myRole.value)}</span> : null}
             {on ? <svg class="shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg> : null}
           </button>); })}
         <span class="mx-2 my-1 h-px bg-white/[0.08]" aria-hidden="true"></span>
@@ -77,22 +79,30 @@ export function SpaceSwitch() {
   );
 }
 
-/** The line under the greeting on someone else's page: whose it is, and what you may do. */
+/**
+ * The line under the greeting (board 08): whose page this is and who else sees it. On your own page, who it is
+ * shared with and the way to Access; on a page shared with you, whose it is, since when and what the share covers;
+ * on a page you keep for someone, that you look after it. A sentence in mono, never a stamp beside the name.
+ */
 export function PersonHead() {
-  const p = person.value;
-  if (!p || p.self) return null;
+  const p = person.value, d = doc.value;
+  if (!p) return null;
+  const line = "font-mono text-[12px] font-medium tracking-[0.02em] text-text-3";
+  if (p.self) {
+    // the document in hand has to be this person's before its shares are read
+    const own = d && (d.person?.id ?? "") === p.id ? ownerLine(d.sharing ?? [], d.sharing_pros ?? []) : null;
+    if (!own) return null;
+    return <span class={line}>{own.lead} <span class="text-text-2">{own.who}</span> · <button type="button" onClick={() => actions.person("access")} class="font-mono text-accent-text hover:text-text">Access</button></span>;
+  }
+  const words = p.mine ? careLine(p.name, p.born_year) : viewerLine(p.name, p.since, p.scopes);
   return (
     <>
       {isClient(p) ? <button type="button" onClick={() => actions.person("everyone")} class="text-[13px] font-semibold text-accent-light hover:text-text-primary">← All clients</button> : null}
-      <span class="font-mono text-[10px] font-semibold tracking-[0.14em] text-accent-light">
-        {p.mine ? `YOU LOOK AFTER${p.born_year ? ` · BORN ${p.born_year}` : ""}` : `SHARES WITH YOU · ${p.scopes.map((x) => x.toUpperCase()).join(" · ") || "NOTHING YET"} · YOU CAN LOOK, NOT CHANGE`}
-      </span>
-      <span class="flex items-center gap-3 text-[13px] font-medium">
-        {p.mine ? <>
-          <button type="button" onClick={() => actions.person("edit")} class="text-accent-light hover:text-text-primary">Edit details</button>
-          <button type="button" onClick={() => actions.person("remove")} class="text-text-tertiary hover:text-danger">Remove person</button>
-        </> : null}
-      </span>
+      <span class={line}><span class="text-text-2">{words.whose}</span> · {words.rest}</span>
+      {p.mine ? <span class="flex items-center gap-3 text-[13px] font-medium">
+        <button type="button" onClick={() => actions.person("edit")} class="text-accent-light hover:text-text-primary">Edit details</button>
+        <button type="button" onClick={() => actions.person("remove")} class="text-text-tertiary hover:text-danger">Remove person</button>
+      </span> : null}
     </>
   );
 }

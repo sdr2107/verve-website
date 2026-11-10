@@ -5,18 +5,23 @@
  * newsletter_unsubscribe with the anon key, which marks the row and
  * returns the address, and says done. No sign-in, no email, no second
  * step. A missing or unknown token says so and points at the Start page.
+ *
+ * The same page turns off a horizon's check-in email: that link carries the
+ * horizon's own token (?h=...), the page calls horizon_email_off with the
+ * anon key, and says done. Check-ins go on appearing on the person's page;
+ * only the email stops. The switch on the horizon page turns it back on.
  */
 import Layout from "../layouts/Layout.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import Footer from "../components/Footer.astro";
 ---
 
-<Layout title="Unsubscribe — Verve" description="One click, and no more letters." cardType="summary">
+<Layout title="Unsubscribe — Verve" description="One click, and no more letters or check-in emails." cardType="summary">
   <SiteHeader />
   <main class="mx-auto flex w-full max-w-[720px] flex-col gap-5 px-4 pb-24 pt-16 sm:px-6">
     <h1 id="title" class="text-[34px] font-extrabold leading-[1.05] tracking-[-0.03em] text-text-primary sm:text-[40px]">One moment.</h1>
     <p id="body" class="text-[17px] leading-relaxed text-text-secondary">Taking your address off the list.</p>
-    <a href="/start" class="mt-2 inline-flex min-h-11 items-center self-start rounded-xl border border-white/20 px-5 font-semibold text-text-primary transition-colors hover:border-white/35">Back to Start here</a>
+    <a id="back" href="/start" class="mt-2 inline-flex min-h-11 items-center self-start rounded-xl border border-white/20 px-5 font-semibold text-text-primary transition-colors hover:border-white/35">Back to Start here</a>
   </main>
   <Footer />
 </Layout>
@@ -25,7 +30,27 @@ import Footer from "../components/Footer.astro";
   import { supabase } from "../lib/supabase";
   const title = document.getElementById("title")!, body = document.getElementById("body")!;
   const token = new URLSearchParams(location.search).get("t") ?? "";
-  (async () => {
+  // a horizon's check-in email: its own token, its own function; the newsletter's path below is untouched
+  const horizonToken = new URLSearchParams(location.search).get("h") ?? "";
+  if (horizonToken) (async () => {
+    const back = document.getElementById("back") as HTMLAnchorElement;
+    back.href = "/my-health/#horizon"; back.textContent = "Open your horizon";
+    body.textContent = "Turning the check-in email off.";
+    const { data, error } = await supabase.rpc("horizon_email_off", { token: horizonToken });
+    if (error) {
+      title.textContent = "Not done yet.";
+      body.textContent = "The email could not be turned off just now. The same switch is on your horizon page, under Check-ins and who sees them.";
+      return;
+    }
+    if (data !== true) {
+      title.textContent = "That link is not one of ours.";
+      body.textContent = "Nothing was changed. The switch for the email is on your horizon page, under Check-ins and who sees them.";
+      return;
+    }
+    title.textContent = "Done. No more check-in emails.";
+    body.textContent = "The check-in email is off for this horizon. Check-ins still appear on your page.";
+  })();
+  else (async () => {
     if (!token) { title.textContent = "No link to act on."; body.textContent = "Open the Unsubscribe button in one of the letters; it carries the link that does this."; return; }
     const { data, error } = await supabase.rpc("newsletter_unsubscribe", { token });
     const email = Array.isArray(data) && data[0]?.email ? String(data[0].email) : "";

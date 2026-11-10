@@ -6,6 +6,7 @@ import { addDays } from "../src/my-health/derive/format.ts";
 import {
   MARKERS, MARKER_BY_KEY, latestOf, historyOf, paceOf, pacesOf, impliedPace, amountWords, fmtValue,
   adherenceOf, guideDraftPlan, weekOf, daysToGo, roadOf, nextCheckins, checkinInputs, weekFigures, weeklyHistory, dedupeSessions, addMonths, clockOf,
+  landedLine, reachedTarget, upTo, horizonMondays, horizonWeeks, outcomeOf, outcomesOf, lastRoadWords, nextSpan,
 } from "../src/my-health/horizon/derive.ts";
 
 const TODAY = "2026-11-08";                      // a Sunday; the last complete week is 26 October
@@ -245,4 +246,82 @@ test("history gives the readings a six-month comparison needs", () => {
 test("the markers a target can be set on are 36, the count the page names", () => {
   assert.equal(MARKERS.length, 36);
   assert.equal(new Set(MARKERS.map((m) => m.key)).size, 36);
+});
+
+test("a blood target says which report it is read from once one newer than the start lands (board 04)", () => {
+  const ldl = latestOf("ldl", person, TODAY);
+  // set in April on April's report; October's report has landed since
+  const after = paceOf(tgt("ldl", 143, 100, { start_on: "2026-04-14" }), H, ldl, TODAY);
+  assert.equal(after.source, "from the report of 12 October");
+  assert.equal(after.nowText, "131.0"); assert.ok(!/next in|retest|test again/i.test(after.pace_word), "no retest wording");
+  // set on October's report itself: nothing newer, so the row waits and names no source
+  const waiting = paceOf(tgt("ldl", 131, 100, { start_on: "2026-10-12" }), H, ldl, TODAY);
+  assert.equal(waiting.source, null); assert.equal(waiting.pace_word, "October's report");
+  // reached, by the measured value only
+  const reached = paceOf(tgt("ldl", 143, 135, { start_on: "2026-04-14" }), H, ldl, TODAY);
+  assert.equal(reached.pace_word, "Reached"); assert.equal(reached.source, "from the report of 12 October");
+  // a marker that is not blood never carries a source
+  assert.equal(paceOf(tgt("mets", 8.6, 9.6), H, read(8.9), TODAY).source, null);
+});
+
+test("a landed report writes one line: what it said, what it said before, and whether the target is reached", () => {
+  const landed = { marker: "ldl", label: "LDL", value: 92, unit: "mg/dL", on: "2026-12-03", previous: 118 };
+  assert.equal(landedLine(landed), "A report landed: LDL 92, from 118.");
+  assert.equal(landedLine(landed, { start_value: 118, target_value: 100 }), "A report landed: LDL 92, from 118. The target of 100 is reached; the horizon keeps it as a floor to hold.");
+  assert.equal(landedLine({ ...landed, value: 109 }, { start_value: 118, target_value: 100 }), "A report landed: LDL 109, from 118.");
+  assert.equal(landedLine({ ...landed, previous: null }), "A report landed: LDL 92.");
+  assert.equal(landedLine({ marker: "hba1c", label: "HbA1c", value: 5.4, unit: "%", on: "2026-12-03", previous: 5.7 }, { start_value: 5.7, target_value: 5.5 }), "A report landed: HbA1c 5.4, from 5.7. The target of 5.5 is reached; the horizon keeps it as a floor to hold.");
+  // a target with no start reads its direction from the reading before
+  assert.ok(landedLine(landed, { start_value: null, target_value: 100 }).includes("is reached"));
+  assert.equal(reachedTarget({ start_value: 49, target_value: 150 }, 152), true); assert.equal(reachedTarget({ start_value: 49, target_value: 150 }, 120), false);
+  assert.ok(!/retest|test again|next test/i.test(landedLine(landed, { start_value: 118, target_value: 100 })));
+});
+
+
+// ── the whole road (board 06) ──
+const DONE = { starts_on: "2026-09-14", ends_on: "2026-11-08", title: "8 weeks" };   // a Monday to a Sunday: eight complete weeks, 14 Sep to 2 Nov
+
+test("a horizon's complete weeks run from its first Monday to the last week that ends by its date", () => {
+  assert.equal(horizonMondays(DONE).length, 8);
+  assert.equal(horizonMondays(DONE)[0], "2026-09-14"); assert.equal(horizonMondays(DONE)[7], "2026-11-02");
+  assert.equal(horizonMondays({ starts_on: "2026-11-09", ends_on: "2027-02-09" }).length, 13, "9 November to 9 February is thirteen complete weeks");
+  assert.equal(horizonMondays({ starts_on: "2026-09-16", ends_on: "2026-11-08" })[0], "2026-09-21", "set on a Wednesday, the first complete week starts the Monday after");
+  assert.equal(horizonWeeks(person, "dose", DONE).map((w) => w.v).join(","), "1040,880,1040,880,1040,880,1040,814");
+});
+
+test("the document as it stood on a day keeps only what was on file by then", () => {
+  const then = upTo(person, "2026-10-01");
+  assert.equal(latestOf("mets", then, "2026-10-02").value, 8.4, "November's test is not on file yet");
+  assert.equal(latestOf("dose", then, "2026-10-02").value, 880, "the week of 21 September, the last complete one");
+  assert.equal(latestOf("ldl", then, "2026-10-02").value, 143);
+  assert.equal(latestOf("mets", person, TODAY).value, 8.9, "the person in hand is not changed");
+});
+
+test("an outcome is the pace rule read on the date: weeks met, the week a number was reached, or short by the gap", () => {
+  const dose = outcomeOf(tgt("dose", 1040, 1000, { start_on: "2026-09-13" }), DONE, person);
+  assert.equal(dose.word, "Met in 4 of 8 weeks"); assert.equal(dose.tone, "caution"); assert.equal(dose.endText, "814");
+  assert.equal(outcomeOf(tgt("dose", 1040, 800, { start_on: "2026-09-13" }), DONE, person).word, "Met in 8 of 8 weeks");
+  const held = outcomeOf(tgt("zone2_week", 90, 96, { start_on: "2026-09-13" }), DONE, person);
+  assert.equal(held.word, "Reached in week 1"); assert.equal(held.tone, "good"); assert.equal(held.endText, "96");
+  const lost = outcomeOf(tgt("zone2_week", 90, 100, { start_on: "2026-09-13" }), DONE, person);
+  assert.equal(lost.word, "Reached in week 1, not held"); assert.equal(lost.tone, "caution");
+  assert.equal(outcomeOf(tgt("zone2_week", 90, 150, { start_on: "2026-09-13" }), DONE, person).word, "54 minutes short");
+  const mets = outcomeOf(tgt("mets", 8.4, 9.5, { start_on: "2026-05-08" }), DONE, person);
+  assert.equal(mets.word, "0.6 METs short"); assert.equal(mets.startText, "8.4"); assert.equal(mets.endText, "8.9"); assert.equal(mets.targetText, "9.5");
+  assert.equal(outcomeOf(tgt("mets", 8.4, 8.9, { start_on: "2026-05-08" }), DONE, person).word, "Reached");
+  assert.equal(outcomeOf(tgt("ldl", 131, 100, { start_on: "2026-10-12" }), DONE, person).word, "No report since the start");
+  assert.equal(outcomeOf(tgt("ldl", 143, 100, { start_on: "2026-04-14" }), DONE, person).word, "31 mg/dL short");
+  assert.equal(outcomeOf(tgt("grip", null, 40), DONE, person).word, "No reading");
+  assert.equal(outcomesOf([tgt("mets", 8.4, 9.5), tgt("dose", 1040, 1000)], DONE, person).length, 2);
+  for (const o of outcomesOf([tgt("mets", 8.4, 9.5, { start_on: "2026-05-08" }), tgt("dose", 1040, 1000), tgt("zone2_week", 90, 150)], DONE, person)) assert.ok(!/behind/.test(o.word), "the road is over: short, not behind");
+});
+
+test("the next horizon opens on the same span, and each row carries what the last road did", () => {
+  assert.equal(lastRoadWords(tgt("mets", 8.4, 9.5, { start_on: "2026-05-08" }), DONE, person), "+0.5 METs in 8 weeks");
+  assert.equal(lastRoadWords(tgt("dose", 1040, 1000), DONE, person), "1,000 held in 4 of 8");
+  assert.equal(lastRoadWords(tgt("zone2_week", 90, 150), DONE, person), "90 → 96 in 8 weeks");
+  assert.equal(lastRoadWords(tgt("weight", 75.4, 74.0), DONE, person), "−1.2 kg in 8 weeks");
+  assert.equal(lastRoadWords(tgt("grip", null, 40), DONE, person), "No reading to compare");
+  assert.deepEqual(nextSpan({ starts_on: "2026-11-09", ends_on: "2027-02-09", title: "3 months", months: 3 }, "2027-02-09"), { kind: 3, title: "", date: "" });
+  assert.deepEqual(nextSpan({ starts_on: "2026-09-01", ends_on: "2027-04-18", title: "Boston Marathon", months: null }, "2027-04-18"), { kind: "date", title: "Boston Marathon", date: addDays("2027-04-18", 229) });
 });

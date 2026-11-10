@@ -8,6 +8,9 @@
  *
  * Tables: horizons, horizon_targets, horizon_plans, horizon_checkins
  * (METTracker/supabase/migrations/20261109_horizon.sql, 20261110_horizon_cron.sql).
+ * The check-in's email (canvas "What brings people back", board 01) is the
+ * function's: the page only keeps the switch, horizons.email_checkin, and the
+ * one-click way out is /unsubscribe/?h=<token> (the RPC horizon_email_off).
  *
  * The figures a check-in is written from are computed by the function, from the
  * document, with this site's own arithmetic vendored there: one source, whether
@@ -17,7 +20,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../../lib/supabase.ts";
-import type { Cadence, CheckinInputs, MarkerKey, PlanRow } from "./derive.ts";
+import type { Cadence, CheckinInputs, Landed, MarkerKey, PlanRow } from "./derive.ts";
 import { mapError, isMissingRelation, HorizonOffError, type ApiError } from "./errors.ts";
 export { mapError, ERROR_WORDS, isMissingRelation, HorizonOffError, type ApiError } from "./errors.ts";
 
@@ -31,6 +34,8 @@ export type HorizonRow = {
   closed_at: string | null; created_at: string;
   /** The IANA zone the horizon was set in; the scheduled check-in reads Monday in it. Absent before 20261110_horizon_cron.sql; the page fills it on the owner's next visit. */
   timezone?: string | null;
+  /** The Guide's check-in also goes to the person's inbox, from the same round that writes it. Absent before 20261111 (the column); the page shows the switch only when the row carries it. */
+  email_checkin?: boolean;
 };
 export type TargetRow = {
   id: string; horizon_id: string; user_id: string; marker: MarkerKey; label: string; unit: string | null;
@@ -38,7 +43,9 @@ export type TargetRow = {
 };
 export type PlanRecord = { horizon_id: string; rows: PlanRow[]; author: PlanAuthor | null; updated_by: string | null; updated_at: string };
 /** What the function stored beside the text: the inputs it wrote from, and where and when they were read. `as_of` is set when a Monday check-in was written before the app had synced the week (the synced_at the figures are from, or null when there was no row). */
-export type CheckinPace = CheckinInputs & { as_of?: string | null; tz?: string; today?: string; computed?: "server" | "browser"; dropped?: number };
+export type CheckinPace = CheckinInputs & { as_of?: string | null; tz?: string; today?: string; computed?: "server" | "browser"; dropped?: number;
+  /** Blood readings that arrived since the last check-in (a report was filed): the page says so above the check-in. */
+  landed?: Landed[] };
 export type CheckinRow = { id: string; horizon_id: string; user_id: string; kind: CheckinKind; for_date: string; text: string; pace: CheckinPace | null; model: string | null; created_at: string };
 export type HorizonFull = HorizonRow & { targets: TargetRow[]; plan: PlanRecord | null; checkins: CheckinRow[] };
 
@@ -93,6 +100,8 @@ export type StartPayload = {
   checkin_monday: boolean; checkin_month: boolean; send_to_coach: boolean;
   /** The browser's zone (Intl), so the scheduled check-in reads the person's Monday. */
   timezone?: string | null;
+  /** Email each check-in to the person; ticked by default in the set-up, theirs to untick. */
+  email_checkin?: boolean;
 };
 export async function startHorizon(sb: SupabaseClient, payload: StartPayload): Promise<Result<{ id: string }>> {
   const body = { action: "start", ...payload, months: payload.kind === "date" ? null : payload.months };
@@ -119,7 +128,7 @@ export async function savePlan(sb: SupabaseClient, horizonId: string, rows: Plan
   const { error } = await sb.from("horizon_plans").upsert({ horizon_id: horizonId, rows, author, updated_by: updatedBy, updated_at: new Date().toISOString() }, { onConflict: "horizon_id" });
   return error ? error.message : null;
 }
-export async function updateHorizon(sb: SupabaseClient, id: string, patch: Partial<Pick<HorizonRow, "title" | "ends_on" | "checkin_monday" | "checkin_month" | "send_to_coach" | "timezone">>): Promise<string | null> {
+export async function updateHorizon(sb: SupabaseClient, id: string, patch: Partial<Pick<HorizonRow, "title" | "ends_on" | "checkin_monday" | "checkin_month" | "send_to_coach" | "timezone" | "email_checkin">>): Promise<string | null> {
   const { error } = await sb.from("horizons").update(patch).eq("id", id);
   return error ? error.message : null;
 }
