@@ -534,6 +534,104 @@ export function nextCheckins(h: HorizonLike, today: string) {
   return { thisMonday, nextMonday, monthReview: monthReview < h.ends_on ? monthReview : null };
 }
 
+// ── the whole road (board 06): what each target came to, and the next horizon prefilled from it ──
+
+const day10 = (x: unknown) => String(x ?? "").slice(0, 10);
+/** The person's rows on or before a day: what the document held on the date a horizon ended. */
+export function upTo(person: Person, day: string): Person {
+  const by = new Map<string, Pt[]>();
+  for (const [k, pts] of person.by) by.set(k, pts.filter((p) => p.d <= day));
+  return {
+    ...person,
+    doc: { ...person.doc, weeks: (person.doc.weeks ?? []).filter((w) => day10(w?.week_start) <= day), app_labs: (person.doc.app_labs ?? []).filter((r) => day10(r?.measured_at) <= day) },
+    acts: person.acts.filter((a) => a?.timestamp && localDay(a.timestamp) <= day),
+    signals: person.signals.filter((s) => day10(s?.day) <= day),
+    crf: person.crf.filter((c) => day10(c?.measured_on) <= day),
+    weights: person.weights.filter((w) => day10(w?.measured_on) <= day),
+    by,
+    labsShown: (person.labsShown ?? []).filter((r) => day10(r?.measured_on) <= day),
+  };
+}
+/** The Mondays of the complete weeks inside a horizon: from the first Monday on or after its start to the last week that ends by its date. */
+export function horizonMondays(h: HorizonLike): string[] {
+  const out: string[] = [];
+  let m = mondayOf(new Date(h.starts_on + "T00:00:00"));
+  if (m < h.starts_on) m = addDays(m, 7);
+  for (; addDays(m, 6) <= h.ends_on; m = addDays(m, 7)) out.push(m);
+  return out;
+}
+/** A weekly marker over every complete week of a horizon, oldest first; a week with no sessions and no row is null. */
+export function horizonWeeks(person: Person, key: MarkerKey, h: HorizonLike): { week_start: string; v: number | null }[] {
+  return horizonMondays(h).map((m) => ({ week_start: m, v: weeklyValue(weekFigures(person, m), key) }));
+}
+
+export type Outcome = { marker: MarkerKey; label: string; how: string; unit: string; startText: string; endText: string; targetText: string; word: string; tone: Tone };
+/**
+ * What a target came to on the date, by the same pace rule read at the end of the line: a standing weekly figure is
+ * the weeks of the whole road that met it; a weekly marker names the week it first reached its number (and says so if
+ * it did not hold); everything else is reached, nearly there, or short by the gap in the marker's own words.
+ */
+export function outcomeOf(target: Target, h: HorizonLike, person: Person): Outcome {
+  const def = MARKER_BY_KEY[target.marker] ?? ({ key: target.marker, label: target.label, unit: target.unit ?? "", decimals: 1, kind: "measured", cadence: "monthly", group: "body", how: "" } as MarkerDef);
+  const then = upTo(person, h.ends_on);
+  const end = latestOf(target.marker, then, addDays(h.ends_on, 1));
+  const p = paceOf(target, h, end, h.ends_on);
+  const base = { marker: target.marker, label: p.label, how: def.how, unit: p.unit, startText: p.startText, endText: end?.display ?? fmtValue(def, end?.value), targetText: p.targetText };
+  const goal = target.target_value;
+  if (def.standing) {
+    const read = horizonWeeks(then, target.marker, h).filter((w) => w.v != null);
+    if (!read.length) return { ...base, word: "No complete week", tone: "neutral" };
+    const met = read.filter((w) => w.v! >= goal).length;
+    return { ...base, word: `Met in ${met} of ${read.length} week${read.length === 1 ? "" : "s"}`, tone: met === read.length ? "good" : "caution" };
+  }
+  if (def.kind === "weekly") {
+    const first = horizonWeeks(then, target.marker, h).find((w) => w.v != null && reachedTarget(target, w.v));
+    if (first) {
+      const week = weekOf(h, addDays(first.week_start, 6)).week;
+      const held = end != null && reachedTarget(target, end.value);
+      return { ...base, word: held ? `Reached in week ${week}` : `Reached in week ${week}, not held`, tone: held ? "good" : "caution" };
+    }
+  }
+  const w = p.pace_word;
+  if (w === "Reached" || w === "Nearly there" || w === "Already there") return { ...base, word: w, tone: "good" };
+  if (w === "No reading yet") return { ...base, word: "No reading", tone: "neutral" };
+  if (w === "No starting value") return { ...base, word: w, tone: "neutral" };
+  if (def.kind === "blood" && end && target.start_on && end.on <= target.start_on) return { ...base, word: "No report since the start", tone: "neutral" };
+  if (w === "Not yet moving") return { ...base, word: "Did not move", tone: "caution" };
+  if (w === "Slightly behind") return { ...base, word: "Just short", tone: "caution" };
+  if (/ behind$/.test(w)) return { ...base, word: w.replace(/ behind$/, " short"), tone: "caution" };
+  return { ...base, word: w, tone: p.tone };
+}
+export const outcomesOf = (targets: Target[], h: HorizonLike, person: Person): Outcome[] => targets.map((t) => outcomeOf(t, h, person));
+
+const trimZeros = (s: string) => (s.includes(".") ? s.replace(/0+$/, "").replace(/\.$/, "") : s);
+/** What the last road did to a marker, beside its row on the next horizon's set-up: "+0.55 METs in 13 weeks", "49 → 152 in 13 weeks", "1,000 held in 11 of 13". */
+export function lastRoadWords(target: Target, h: HorizonLike, person: Person): string {
+  const def = MARKER_BY_KEY[target.marker];
+  if (!def) return "";
+  const then = upTo(person, h.ends_on);
+  const weeks = Math.max(1, horizonMondays(h).length);
+  const span = `in ${weeks} week${weeks === 1 ? "" : "s"}`;
+  if (def.standing) {
+    const read = horizonWeeks(then, target.marker, h).filter((w) => w.v != null);
+    return read.length ? `${fmtValue(def, target.target_value)} held in ${read.filter((w) => w.v! >= target.target_value).length} of ${read.length}` : "No complete week on the last road";
+  }
+  const end = latestOf(target.marker, then, addDays(h.ends_on, 1));
+  const start = target.start_value;
+  if (start == null || end == null) return "No reading to compare";
+  if (def.kind === "weekly") return `${fmtValue(def, start)} → ${fmtValue(def, end.value)} ${span}`;
+  const delta = end.value - start;
+  if (round(Math.abs(delta), def.decimals + 1) === 0) return `Did not move ${span}`;
+  const amount = def.hm ? hm(Math.abs(delta)) : `${trimZeros(round(Math.abs(delta), def.decimals + 1).toFixed(def.decimals + 1))}${end.unit ?? def.unit ? ` ${end.unit ?? def.unit}` : ""}`;
+  return `${delta > 0 ? "+" : "−"}${amount} ${span}`;
+}
+
+/** The span the next horizon opens on: the same months, or for a dated one the same number of days from today under the same name. */
+export function nextSpan(h: HorizonLike & { months?: number | null }, today: string): { kind: "date" | 3 | 6 | 12; title: string; date: string } {
+  if (h.months === 3 || h.months === 6 || h.months === 12) return { kind: h.months, title: "", date: "" };
+  return { kind: "date", title: h.title ?? "", date: addDays(today, Math.max(7, daysBetween(h.starts_on, h.ends_on))) };
+}
+
 // ── the figures the check-in is written from ──
 
 export type CheckinInputs = {

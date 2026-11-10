@@ -1,8 +1,10 @@
 /**
  * Horizon (Pro on the website): a date, the markers you want different by
  * then, the week that gets you there, and the Guide's check-ins. One mount,
- * `mountHorizon(root, deps)`, draws the horizon in view (canvas board 14)
- * or the four-step set-up (board 15). The arithmetic is ../horizon/derive;
+ * `mountHorizon(root, deps)`, draws the horizon in view (canvas board 14),
+ * the four-step set-up (board 15), or, for a horizon whose date has come,
+ * the read of the whole road with the next horizon prefilled beneath it
+ * (canvas "What brings people back", board 06). The arithmetic is ../horizon/derive;
  * the rows and the writer are ../horizon/api. A coach sees everything
  * read-only except the plan, which is theirs to write.
  *
@@ -19,6 +21,7 @@ import { addDays, daysBetween, todayStr } from "../derive/format.ts";
 import {
   MARKERS, MARKER_BY_KEY, GROUP_LABEL, FIRST_MARKERS, type MarkerKey, type Target, type PlanRow, type PlanKind, type Tone,
   latestOf, historyOf, weeklyHistory, pacesOf, impliedPace, adherenceOf, guideDraftPlan, roadOf, weekOf, daysToGo, nextCheckins, checkinInputs, landedLine,
+  outcomesOf, lastRoadWords, nextSpan, horizonMondays,
   fmtValue, addMonths, longDate, dayMonth, dayMonthLong, dayMonthYear, weekdayDayMonth, clockOf, round, numberWord,
 } from "../horizon/derive.ts";
 import {
@@ -35,8 +38,8 @@ export type HorizonDeps = {
   derived: () => PersonData | null;
   isOwner: () => boolean;
   goTab: (t: string) => void;
-  /** The open horizons, for the sidebar's sub-links; called after every load. */
-  onHorizons?: (list: { id: string; title: string; ends_on: string }[]) => void;
+  /** The open horizons and the ones read to their date ("done"), for the sidebar's sub-links; called after every load. */
+  onHorizons?: (list: { id: string; title: string; ends_on: string; done?: boolean }[]) => void;
   /** The backend is not in place for this project yet (tables missing, or the function answers 404): the page says so and the sidebar dims the door. */
   onOff?: (off: boolean) => void;
 };
@@ -120,6 +123,10 @@ function Track({ progress, elapsed, tone }: { progress: number; elapsed: number;
 }
 
 const shortTitle = (t: string) => t.split(",")[0].split(" ").slice(0, 2).join(" ");
+/** Read to its date: closed, with the read of the whole road on file. A horizon the person stopped has no such read and leaves the page. */
+const isDone = (h: HorizonFull) => !!h.closed_at && h.checkins.some((c) => c.kind === "final");
+/** The horizons read to their date, newest first; the sidebar and the chips keep the last three. */
+const doneOf = (list: HorizonFull[]) => list.filter(isDone).sort((a, b) => b.ends_on.localeCompare(a.ends_on)).slice(0, 3);
 const toTarget = (t: { marker: string; label: string; unit: string | null; start_value: number | null; start_on: string | null; target_value: number; cadence: any; id?: string }): Target =>
   ({ id: t.id, marker: t.marker as MarkerKey, label: t.label, unit: t.unit, start_value: t.start_value != null ? Number(t.start_value) : null, start_on: t.start_on, target_value: Number(t.target_value), cadence: t.cadence ?? MARKER_BY_KEY[t.marker]?.cadence ?? "monthly" });
 
@@ -195,10 +202,11 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
   async function load() {
     if (!personId) { setList([]); return; }
     try {
-      const hs = await listHorizons(deps.supabase, personId);
+      // the closed ones come too: a horizon read to its date stays reachable, with the next one prefilled under it
+      const hs = await listHorizons(deps.supabase, personId, true);
       setList(hs); setLoadError(""); setOff(false); deps.onOff?.(false);
       if (hs.length) setPro("yes");
-      deps.onHorizons?.(hs.map((h) => ({ id: h.id, title: h.title, ends_on: h.ends_on })));
+      deps.onHorizons?.([...hs.filter((h) => !h.closed_at), ...doneOf(hs)].map((h) => ({ id: h.id, title: h.title, ends_on: h.ends_on, done: !!h.closed_at })));
     } catch (e: any) {
       if (e?.name === "HorizonOff") { setOff(true); setList([]); setLoadError(""); deps.onOff?.(true); deps.onHorizons?.([]); return; }
       setLoadError(e?.message ?? "Could not read the horizons."); setList([]);
@@ -230,16 +238,22 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
   if (pro === "no") return <ProCard goTab={deps.goTab} />;
 
   const open = list.filter((h) => !h.closed_at);
-  const current = r && r !== "new" ? list.find((h) => h.id === r) ?? null : open[0] ?? null;
+  const done = doneOf(list);
+  // no open horizon: the last one read to its date is the page, with the next one prefilled beneath it
+  const current = r && r !== "new" ? list.find((h) => h.id === r) ?? null : open[0] ?? done[0] ?? null;
   const showSetup = owner && (r === "new" || (!current && !open.length));
 
-  const nav = open.length || owner ? (
+  const nav = open.length || done.length || owner ? (
     <div class="flex flex-wrap gap-2" role="tablist" aria-label="Your horizons">
       {open.map((h) => (
         <button type="button" role="tab" aria-selected={!showSetup && current?.id === h.id} onClick={() => { route.value = h.id; history.replaceState(null, "", `#horizon-${h.id}`); }}
           class={`rounded-full border px-3 py-1 text-[12px] font-medium ${!showSetup && current?.id === h.id ? "border-accent-border bg-accent-fill text-accent-text" : "border-border text-text-2 hover:border-border-strong"}`}>{shortTitle(h.title)} · {dayMonth(h.ends_on)}</button>
       ))}
-      {owner && <button type="button" role="tab" aria-selected={showSetup} onClick={() => { route.value = "new"; history.replaceState(null, "", "#horizon-new"); }} class={`rounded-full border px-3 py-1 text-[12px] font-medium ${showSetup ? "border-accent-border bg-accent-fill text-accent-text" : "border-border text-text-2 hover:border-border-strong"}`}>{open.length ? "Set another" : "Set a horizon"}</button>}
+      {done.map((h) => (
+        <button type="button" role="tab" aria-selected={!showSetup && current?.id === h.id} onClick={() => { route.value = h.id; history.replaceState(null, "", `#horizon-${h.id}`); }}
+          class={`rounded-full border px-3 py-1 text-[12px] font-medium ${!showSetup && current?.id === h.id ? "border-accent-border bg-accent-fill text-accent-text" : "border-border text-text-3 hover:border-border-strong"}`}>{shortTitle(h.title)} · {dayMonth(h.ends_on)} · done</button>
+      ))}
+      {owner && <button type="button" role="tab" aria-selected={showSetup} onClick={() => { route.value = "new"; history.replaceState(null, "", "#horizon-new"); }} class={`rounded-full border px-3 py-1 text-[12px] font-medium ${showSetup ? "border-accent-border bg-accent-fill text-accent-text" : "border-border text-text-2 hover:border-border-strong"}`}>{open.length ? "Set another" : done.length ? "Set the next" : "Set a horizon"}</button>}
     </div>
   ) : null;
 
@@ -249,9 +263,13 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
       {loadError && <Quiet>{loadError}</Quiet>}
       {consent && <ConsentBox onAgree={() => void agreeConsent()} busy={busy === "consent"} />}
       {showSetup
-        ? <Setup deps={deps} person={person} today={today} personId={personId} hasOthers={open.length > 0} nav={nav}
+        ? <Setup deps={deps} person={person} today={today} personId={personId} hasOthers={open.length > 0 || done.length > 0} nav={nav}
+            prefill={!open.length && done[0] ? prefillOf(done[0], person, today) : undefined} key={!open.length && done[0] ? `next-${done[0].id}` : "new"}
             onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); }}
             onError={onApiError} onCancel={() => { route.value = ""; history.replaceState(null, "", "#horizon"); }} />
+        : current && isDone(current)
+          ? <FinalView deps={deps} h={current} person={person} today={today} owner={owner} nav={nav} personId={personId} hasOpen={open.length > 0}
+              onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); }} onError={onApiError} />
         : current
           ? <View deps={deps} h={current} person={person} today={today} owner={owner} nav={nav} busy={busy} setBusy={setBusy} onError={onApiError} setNotice={setNotice} reload={load} userId={userId} />
           : <Card>{nav}<div class="text-[18px] font-semibold text-text">No horizon set.</div><Quiet>{owner ? "A horizon is a date, the markers you want different by then, and the week that gets you there." : "Nothing to see here yet: this person has not set a horizon."}</Quiet></Card>}
@@ -471,6 +489,110 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   );
 }
 
+// ── board 06: the whole road, and the next horizon prefilled from it ──
+
+/** What the next horizon's set-up opens with: the last one's span, markers, plan and check-in choices; the numbers are left for the person. */
+type Prefill = {
+  kind: "date" | 3 | 6 | 12; title: string; date: string;
+  markers: MarkerKey[]; /** Beside each marker: what the last road did to it. */ lastRoad: Record<string, string>;
+  planRows: PlanRow[]; planAuthor: PlanAuthor | null;
+  monday: boolean; month: boolean; toCoach: boolean;
+  /** The complete weeks of the road just read. */ weeks: number;
+};
+
+/** The next horizon's opening state, from one read to its date. */
+function prefillOf(h: HorizonFull, person: PersonData | null, today: string): Prefill {
+  const targets = h.targets.map(toTarget);
+  return {
+    ...nextSpan(h, today),
+    markers: targets.map((t) => t.marker).filter((k) => !!MARKER_BY_KEY[k]),
+    lastRoad: person ? Object.fromEntries(targets.map((t) => [t.marker, lastRoadWords(t, h, person)])) : {},
+    planRows: h.plan?.rows ?? [], planAuthor: h.plan?.author ?? null,
+    monday: h.checkin_monday, month: h.checkin_month, toCoach: h.send_to_coach,
+    weeks: Math.max(1, horizonMondays(h).length),
+  };
+}
+
+function FinalView({ deps, h, person, today, owner, nav, personId, hasOpen, onStarted, onError }: {
+  deps: HorizonDeps; h: HorizonFull; person: PersonData | null; today: string; owner: boolean; nav: any; personId: string; hasOpen: boolean;
+  onStarted: (id: string) => Promise<void>; onError: (e: ApiError, retry: () => void) => boolean;
+}) {
+  // with another horizon already running, the next one waits behind a button
+  const [later, setLater] = useState(hasOpen);
+  const final = h.checkins.find((c) => c.kind === "final")!;
+  const targets = h.targets.map(toTarget);
+  const outcomes = useMemo(() => (person ? outcomesOf(targets, h, person) : []), [person, h]);
+  const weeksBehind = Math.max(1, horizonMondays(h).length);
+  const weekly = h.checkins.filter((c) => c.kind === "week").length, monthly = h.checkins.filter((c) => c.kind === "month").length;
+  const road = roadOf(h, today);
+  const earlier = h.checkins.filter((c) => c.kind !== "final");
+  const prefill: Prefill | null = useMemo(() => (owner ? prefillOf(h, person, today) : null), [h, person, today, owner]);
+
+  return (
+    <>
+      <header class="flex flex-wrap items-start justify-between gap-6">
+        <div class="flex max-w-[680px] flex-col gap-2">
+          <Eyebrow>Horizon · set {dayMonthYear(h.starts_on)} · the date</Eyebrow>
+          <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-[-0.01em] text-text">{longDate(h.ends_on)}</h1>
+          <p class="m-0 text-[15px] leading-relaxed text-text-2">{owner ? "The whole road, read once. Then the next horizon, prefilled from what moved; the numbers are yours to set." : "The whole road, read once."}</p>
+          <div class="mt-1">{nav}</div>
+        </div>
+        <div class="flex min-w-[180px] flex-col items-end gap-1 rounded-[16px] border border-border-strong bg-card px-5 py-4">
+          <span class="font-mono text-[28px] font-semibold leading-none text-text">{weeksBehind}</span>
+          <span class="font-mono text-[11px] font-medium text-text-3">{weeksBehind === 1 ? "week" : "weeks"} behind {owner ? "you" : "them"}</span>
+          <span class="text-[12px] text-text-2">{weekly} check-in{weekly === 1 ? "" : "s"} · {monthly} month read{monthly === 1 ? "" : "s"}</span>
+        </div>
+      </header>
+
+      <Card id="horizon-final">
+        <div class="flex flex-wrap items-baseline justify-between gap-3">
+          <H2>The Guide's read of the whole road</H2>
+          <span class="text-[12px] text-text-3">Written {dayMonthLong(new Date(final.created_at).toLocaleDateString("en-CA"))} · every number in it is in {owner ? "your" : "their"} data</span>
+        </div>
+        <div class="flex max-w-[680px] flex-col gap-3">
+          {final.text.split(/\n{2,}/).map((para, i) => <p class="m-0 text-[16px] leading-[1.65] text-text" key={i}>{para}</p>)}
+        </div>
+        <div class="flex flex-wrap items-end gap-1 overflow-x-auto pt-2" aria-label={`The road to ${dayMonth(h.ends_on)}`}>
+          {road.map((s, i) => (
+            <div class="flex min-w-[64px] flex-1 flex-col items-start gap-1" key={`${s.date}-${i}`}>
+              <div class="flex w-full items-center"><span class={`h-2.5 w-2.5 rounded-full ${s.state === "end" ? "bg-good" : "bg-accent-border"}`} />{i < road.length - 1 && <span class="h-px flex-1 bg-accent-border" />}</div>
+              <span class="font-mono text-[11px] text-text-2">{s.label}</span>
+              <span class="text-[11px] text-text-3">{s.state === "end" ? "the whole road" : s.sub}</span>
+            </div>
+          ))}
+        </div>
+        {!person && <Quiet>Reading the numbers…</Quiet>}
+        <div class="flex flex-col">
+          <div class="hidden grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,.8fr))_minmax(0,1.8fr)] gap-3 border-b border-border pb-2 font-mono text-[11px] text-text-3 md:grid">
+            <span>Marker</span><span class="text-right">{dayMonth(h.starts_on)}</span><span class="text-right">{dayMonth(h.ends_on)}</span><span class="text-right">Target</span><span>Outcome</span>
+          </div>
+          {outcomes.map((o) => (
+            <div class="grid grid-cols-3 items-center gap-x-3 gap-y-1 border-b border-border py-3 last:border-b-0 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,.8fr))_minmax(0,1.8fr)]" key={o.marker}>
+              <span class="col-span-3 flex flex-col md:col-span-1"><span class="text-[15px] text-text">{o.label}</span><span class="text-[12px] text-text-3">{o.how}</span></span>
+              <span class="font-mono text-[15px] font-semibold text-text-3 md:text-right">{o.startText}</span>
+              <span class="font-mono text-[15px] font-semibold text-text md:text-right">{o.endText}</span>
+              <span class="font-mono text-[15px] font-semibold text-accent-text md:text-right">{o.targetText}</span>
+              <span class={`col-span-3 text-[13px] font-medium md:col-span-1 ${TONE_TEXT[o.tone]}`}>{o.word}</span>
+            </div>
+          ))}
+        </div>
+        {earlier.length > 0 && (
+          <details class="text-[13px] text-text-2">
+            <summary class="cursor-pointer text-text-3">The road's check-ins · {earlier.length}</summary>
+            <div class="mt-3 flex flex-col gap-4">
+              {earlier.map((c) => <div key={c.id}><div class="font-mono text-[11px] text-text-3">{c.kind === "week" ? "Monday" : "Month read"} · {dayMonthYear(c.for_date)}</div><p class="m-0 mt-1 max-w-[640px] leading-relaxed">{c.text}</p></div>)}
+            </div>
+          </details>
+        )}
+      </Card>
+
+      {owner && prefill && (later
+        ? <div><Button onClick={() => setLater(false)}>Set the next horizon</Button></div>
+        : <Setup deps={deps} person={person} today={today} personId={personId} hasOthers={false} nav={null} prefill={prefill} onStarted={onStarted} onError={onError} onCancel={() => setLater(true)} />)}
+    </>
+  );
+}
+
 /** One more target on a running horizon: the marker, its reading now, the number, the pace it implies. */
 function AddTarget({ person, today, taken, weeks, onAdd, onCancel }: { person: PersonData; today: string; taken: MarkerKey[]; weeks: number; onAdd: (t: Omit<StartTarget, "cadence"> & { cadence: any }) => void; onCancel: () => void }) {
   const free = MARKERS.filter((m) => !taken.includes(m.key));
@@ -512,22 +634,27 @@ const Step = ({ n, title, children }: { n: number; title: string; children: any 
   <Card><div class="flex items-center gap-3"><span class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-accent-border bg-accent-fill font-mono text-[12px] font-semibold text-accent-text">{n}</span><H2>{title}</H2></div>{children}</Card>
 );
 
-function Setup({ deps, person, today, personId, hasOthers, nav, onStarted, onError, onCancel }: {
+function Setup({ deps, person, today, personId, hasOthers, nav, prefill, onStarted, onError, onCancel }: {
   deps: HorizonDeps; person: PersonData | null; today: string; personId: string; hasOthers: boolean; nav: any;
+  /** The next horizon after one read to its date: the same span, markers, plan and check-in choices, the numbers left empty. */
+  prefill?: Prefill;
   onStarted: (id: string) => Promise<void>; onError: (e: ApiError, retry: () => void) => boolean; onCancel: () => void;
 }) {
-  const [kind, setKind] = useState<"date" | 3 | 6 | 12>("date");
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState("");
-  const [drafts, setDrafts] = useState<Record<string, Draft>>({});
-  const [shown, setShown] = useState<MarkerKey[]>(FIRST_MARKERS);
+  const next = !!prefill;
+  const [kind, setKind] = useState<"date" | 3 | 6 | 12>(prefill?.kind ?? "date");
+  const [title, setTitle] = useState(prefill?.title ?? "");
+  const [date, setDate] = useState(prefill?.date ?? "");
+  const [drafts, setDrafts] = useState<Record<string, Draft>>(prefill ? Object.fromEntries(prefill.markers.map((k) => [k, { ticked: true, value: "" }])) : {});
+  const [shown, setShown] = useState<MarkerKey[]>(prefill?.markers.length ? prefill.markers : FIRST_MARKERS);
   const [allShown, setAllShown] = useState(false);
-  const [planChoice, setPlanChoice] = useState<"coach" | "guide">("coach");
-  const [planRows, setPlanRows] = useState<PlanRow[] | null>(null);
+  // "carry": the last horizon's plan, as it stands, until it is edited or a fresh draft is asked for
+  const [planChoice, setPlanChoice] = useState<"coach" | "guide" | "carry">(prefill?.planRows.length ? "carry" : "coach");
+  const [planRows, setPlanRows] = useState<PlanRow[] | null>(prefill?.planRows.length ? prefill.planRows : null);
+  const [carryEdited, setCarryEdited] = useState(false);
   const [editingDraft, setEditingDraft] = useState(false);
-  const [monday, setMonday] = useState(true);
-  const [month, setMonth] = useState(true);
-  const [toCoach, setToCoach] = useState(false);
+  const [monday, setMonday] = useState(prefill?.monday ?? true);
+  const [month, setMonth] = useState(prefill?.month ?? true);
+  const [toCoach, setToCoach] = useState(prefill?.toCoach ?? false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
 
@@ -558,7 +685,9 @@ function Setup({ deps, person, today, personId, hasOthers, nav, onStarted, onErr
       setBusy(true); setProblem("");
       const res = await startHorizon(deps.supabase, {
         person_id: personId, title: name, kind: kind === "date" ? "date" : "months", months: kind === "date" ? null : kind, starts_on: today, ends_on: endsOn, targets,
-        plan: { rows: planChoice === "guide" ? (planRows ?? guideRows) : [], author: planChoice === "guide" ? "guide" : null },
+        plan: planChoice === "guide" ? { rows: planRows ?? guideRows, author: "guide" }
+          : planChoice === "carry" ? { rows: planRows ?? [], author: carryEdited ? "user" : (prefill?.planAuthor ?? "user") }
+          : { rows: [], author: null },
         checkin_monday: monday, checkin_month: month, send_to_coach: toCoach,
         timezone: browserZone(),
       });
@@ -571,12 +700,18 @@ function Setup({ deps, person, today, personId, hasOthers, nav, onStarted, onErr
 
   return (
     <form class="flex max-w-[980px] flex-col gap-5" onSubmit={(e) => { e.preventDefault(); void start(); }}>
-      <header class="flex flex-col gap-2">
-        <Eyebrow>Horizon · new</Eyebrow>
-        <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-[-0.01em] text-text">Set a horizon</h1>
-        <p class="m-0 text-[15px] leading-relaxed text-text-2">Four steps. You choose the date and the numbers; Verve tells you the pace they imply, and then whether the weeks keep it.</p>
-        {hasOthers && <div class="mt-1">{nav}</div>}
-      </header>
+      {next
+        ? <header class="flex flex-col gap-1" id="horizon-next">
+            <h2 class="m-0 text-[22px] font-semibold leading-tight text-text">Set the next horizon</h2>
+            <p class="m-0 text-[15px] leading-relaxed text-text-2">Verve prefills what moved; you set the numbers.</p>
+            {hasOthers && <div class="mt-1">{nav}</div>}
+          </header>
+        : <header class="flex flex-col gap-2">
+            <Eyebrow>Horizon · new</Eyebrow>
+            <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-[-0.01em] text-text">Set a horizon</h1>
+            <p class="m-0 text-[15px] leading-relaxed text-text-2">Four steps. You choose the date and the numbers; Verve tells you the pace they imply, and then whether the weeks keep it.</p>
+            {hasOthers && <div class="mt-1">{nav}</div>}
+          </header>}
 
       <Step n={1} title="What is it for?">
         <div class="grid grid-cols-2 gap-2 md:grid-cols-4">
@@ -593,7 +728,9 @@ function Setup({ deps, person, today, personId, hasOthers, nav, onStarted, onErr
       </Step>
 
       <Step n={2} title="What should be different by then?">
-        <p class="m-0 text-[13px] leading-relaxed text-text-2">Tick a marker and set the number. Under each, the pace it implies from where you are today. Nothing here is a recommendation; it is arithmetic on your own readings.</p>
+        <p class="m-0 text-[13px] leading-relaxed text-text-2">{next
+          ? "The same markers, each starting from today's figure. Set the number; under each, what the last road did and the pace the new number implies. Nothing here is a recommendation; it is arithmetic on your own readings."
+          : "Tick a marker and set the number. Under each, the pace it implies from where you are today. Nothing here is a recommendation; it is arithmetic on your own readings."}</p>
         {!person && <Quiet>Reading your numbers…</Quiet>}
         <div class="flex flex-col">
           {rowsShown.map((k, i) => {
@@ -601,9 +738,10 @@ function Setup({ deps, person, today, personId, hasOthers, nav, onStarted, onErr
             const now = person ? latestOf(k, person, today) : null;
             const unit = now?.unit ?? def.unit;
             const n = Number(d.value);
+            const lastRoad = prefill?.lastRoad[k] ? `The last road: ${prefill.lastRoad[k]}.` : "";
             const note = d.ticked && d.value !== "" && Number.isFinite(n) && person
-              ? impliedPace(def, now, n, weeks, historyOf(k, person, today), today, def.standing ? weeklyHistory(person, k, today, 13) : undefined)
-              : d.ticked ? "Set the number." : def.how;
+              ? `${impliedPace(def, now, n, weeks, historyOf(k, person, today), today, def.standing ? weeklyHistory(person, k, today, 13) : undefined)}${lastRoad ? ` ${lastRoad}` : ""}`
+              : d.ticked ? `${lastRoad ? `${lastRoad} ` : ""}Set the number.` : def.how;
             return (
               <div class={`grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 py-3 md:grid-cols-[auto_minmax(0,1.6fr)_minmax(0,.7fr)_auto] ${i ? "border-t border-border" : ""}`} key={k}>
                 <input type="checkbox" checked={d.ticked} onChange={(e) => setDraft(k, { ticked: (e.currentTarget as HTMLInputElement).checked })} aria-label={def.label} class="h-5 w-5 accent-[#A9ABF7]" />
@@ -626,10 +764,21 @@ function Setup({ deps, person, today, personId, hasOthers, nav, onStarted, onErr
       </Step>
 
       <Step n={3} title="The week that gets you there">
-        <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
-          <Opt on={planChoice === "coach"} onPick={() => setPlanChoice("coach")} title="Ask my coach to write the plan" sub="Your coach sees the targets and the pace notes, writes the week in Messages, and can change it any time." />
-          <Opt on={planChoice === "guide"} onPick={() => setPlanChoice("guide")} title="Let the Guide draft one" sub="From your last eight weeks: how many sessions, how much in zone 2, strength, bedtime. You edit it before it starts." />
-        </div>
+        {planChoice === "carry"
+          ? (editingDraft
+            ? <PlanEditor rows={planRows ?? []} busy={false} onCancel={() => setEditingDraft(false)} onSave={(rows) => { setPlanRows(rows); setCarryEdited(true); setEditingDraft(false); }} />
+            : <div class="flex flex-col gap-2">
+                {(planRows ?? []).map((r, i) => <div class="text-[15px] text-text" key={i}>{r.label}</div>)}
+                <Quiet>The plan carries over as it stands; edit it or ask the Guide for a fresh draft from these {numberWord(prefill?.weeks ?? 0)} weeks.</Quiet>
+                <div class="flex flex-wrap gap-4">
+                  <button type="button" onClick={() => setEditingDraft(true)} class="text-[13px] font-semibold text-text-2 hover:text-text">Edit the plan</button>
+                  <button type="button" onClick={() => { setPlanRows(guideRows); setPlanChoice("guide"); }} class="text-[13px] font-semibold text-accent-text">Ask the Guide for a fresh draft</button>
+                </div>
+              </div>)
+          : <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
+              <Opt on={planChoice === "coach"} onPick={() => setPlanChoice("coach")} title="Ask my coach to write the plan" sub="Your coach sees the targets and the pace notes, writes the week in Messages, and can change it any time." />
+              <Opt on={planChoice === "guide"} onPick={() => setPlanChoice("guide")} title="Let the Guide draft one" sub="From your last eight weeks: how many sessions, how much in zone 2, strength, bedtime. You edit it before it starts." />
+            </div>}
         {planChoice === "guide" && (editingDraft
           ? <PlanEditor rows={planRows ?? guideRows} busy={false} onCancel={() => setEditingDraft(false)} onSave={(rows) => { setPlanRows(rows); setEditingDraft(false); }} />
           : <div class="flex flex-col gap-2">
@@ -652,8 +801,8 @@ function Setup({ deps, person, today, personId, hasOthers, nav, onStarted, onErr
 
       {problem && <div class="rounded-[10px] border border-caution/40 bg-alt px-4 py-3 text-[13px] text-caution">{problem}</div>}
       <div class="flex flex-wrap items-center gap-3">
-        <Button type="submit" primary disabled={busy}>{busy ? "Starting…" : "Start the horizon"}</Button>
-        <Button onClick={onCancel}>Cancel</Button>
+        <Button type="submit" primary disabled={busy}>{busy ? "Starting…" : next ? "Start the next horizon" : "Start the horizon"}</Button>
+        <Button onClick={onCancel}>{next ? "Not now" : "Cancel"}</Button>
         <span class="ml-auto text-[12px] text-text-3">Pro · stop it any time, the readings stay</span>
       </div>
     </form>

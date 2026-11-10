@@ -3963,14 +3963,15 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     history.replaceState(null, "", hash);
     $("tabbar").querySelectorAll<HTMLElement>("[data-horizon]").forEach((b) => b.setAttribute("aria-current", `#horizon-${b.dataset.horizon}` === hash ? "page" : "false"));
   }
-  function drawHorizonSubLinks(list: { id: string; title: string; ends_on: string }[]) {
+  function drawHorizonSubLinks(list: { id: string; title: string; ends_on: string; done?: boolean }[]) {
     const slot = $("tabbar").querySelector<HTMLElement>('[data-sub="horizon"]');
     if (!slot) return;
     if (horizonOff) { slot.innerHTML = ""; return; }
     const short = (t: string) => t.split(",")[0].split(" ").slice(0, 2).join(" ");
     const when = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-    const rows = list.map((h) => `<button type="button" class="mh-sub" data-tab-for="horizon" data-horizon="${escH(h.id)}">${escH(short(h.title))} · ${escH(when(h.ends_on))}</button>`);
-    if (horizonOwner()) rows.push(`<button type="button" class="mh-sub" data-tab-for="horizon" data-horizon="new">${list.length ? "Set another" : "Set a horizon"}</button>`);
+    // a horizon read to its date stays in the list, marked done; the next one is set from its page
+    const rows = list.map((h) => `<button type="button" class="mh-sub" data-tab-for="horizon" data-horizon="${escH(h.id)}">${escH(short(h.title))} · ${escH(when(h.ends_on))}${h.done ? " · done" : ""}</button>`);
+    if (horizonOwner()) rows.push(`<button type="button" class="mh-sub" data-tab-for="horizon" data-horizon="new">${list.some((h) => !h.done) ? "Set another" : list.length ? "Set the next" : "Set a horizon"}</button>`);
     slot.innerHTML = rows.join("");
     slot.querySelectorAll<HTMLElement>("[data-horizon]").forEach((b) => b.addEventListener("click", () => openHorizon(`#horizon-${b.dataset.horizon}`)));
   }
