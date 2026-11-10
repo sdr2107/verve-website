@@ -333,7 +333,9 @@ export function paceOf(target: Target, horizon: HorizonLike, now: Reading | null
   if (def.standing) {
     const read = (weekly ?? []).slice(-4).filter((w) => w.v != null);
     if (!read.length) return { ...base, expected_today, progress, pace_word: "No complete week yet", tone: "neutral" };
-    const met = read.filter((w) => (dir > 0 ? w.v! >= goal : w.v! <= goal)).length;
+    // A standing figure is a floor whatever the start was: a dose target set below this week's figure still reads
+    // "hold at least this", so the weeks AT OR ABOVE it are the ones met, never the weeks under it.
+    const met = read.filter((w) => w.v! >= goal).length;
     return { ...base, expected_today, progress: met / read.length, pace_word: `Met in ${met} of the last ${read.length} week${read.length === 1 ? "" : "s"}`, tone: met === read.length ? "good" : "caution" };
   }
   if (cur == null) return { ...base, expected_today, progress, pace_word: "No reading yet", tone: "neutral" };

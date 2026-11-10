@@ -130,6 +130,10 @@ test("a standing weekly figure reads as the weeks that met it", () => {
   const p = paceOf(tgt("dose", 820, 1000), H, read(814), TODAY, weekly);
   assert.equal(p.pace_word, "Met in 2 of the last 4 weeks"); assert.equal(p.tone, "caution");
   assert.equal(paceOf(tgt("dose", 820, 1000), H, read(814), TODAY, []).pace_word, "No complete week yet");
+  // a floor set BELOW the latest week is still a floor: the weeks at or above it are met, not the weeks under it
+  const under = [{ week_start: "2026-10-05", v: 1040 }, { week_start: "2026-10-12", v: 880 }, { week_start: "2026-10-19", v: 1120 }, { week_start: "2026-10-26", v: 1132 }];
+  const floor = paceOf(tgt("dose", 1132, 1000), H, read(1132), TODAY, under);
+  assert.equal(floor.pace_word, "Met in 3 of the last 4 weeks"); assert.equal(floor.tone, "caution");
 });
 
 test("a blood marker is known when you measure", () => {
@@ -236,4 +240,9 @@ test("history gives the readings a six-month comparison needs", () => {
   assert.equal(historyOf("weight", person, TODAY).length, 9);
   assert.equal(historyOf("dose", person, TODAY).length, 8, "complete weeks with a figure");
   assert.equal(historyOf("ldl", person, TODAY)[0].v, 143);
+});
+
+test("the markers a target can be set on are 36, the count the page names", () => {
+  assert.equal(MARKERS.length, 36);
+  assert.equal(new Set(MARKERS.map((m) => m.key)).size, 36);
 });
