@@ -6,6 +6,7 @@ import { addDays } from "../src/my-health/derive/format.ts";
 import {
   MARKERS, MARKER_BY_KEY, latestOf, historyOf, paceOf, pacesOf, impliedPace, amountWords, fmtValue,
   adherenceOf, guideDraftPlan, weekOf, daysToGo, roadOf, nextCheckins, checkinInputs, weekFigures, weeklyHistory, dedupeSessions, addMonths, clockOf,
+  landedLine, reachedTarget,
 } from "../src/my-health/horizon/derive.ts";
 
 const TODAY = "2026-11-08";                      // a Sunday; the last complete week is 26 October
@@ -245,4 +246,33 @@ test("history gives the readings a six-month comparison needs", () => {
 test("the markers a target can be set on are 36, the count the page names", () => {
   assert.equal(MARKERS.length, 36);
   assert.equal(new Set(MARKERS.map((m) => m.key)).size, 36);
+});
+
+test("a blood target says which report it is read from once one newer than the start lands (board 04)", () => {
+  const ldl = latestOf("ldl", person, TODAY);
+  // set in April on April's report; October's report has landed since
+  const after = paceOf(tgt("ldl", 143, 100, { start_on: "2026-04-14" }), H, ldl, TODAY);
+  assert.equal(after.source, "from the report of 12 October");
+  assert.equal(after.nowText, "131.0"); assert.ok(!/next in|retest|test again/i.test(after.pace_word), "no retest wording");
+  // set on October's report itself: nothing newer, so the row waits and names no source
+  const waiting = paceOf(tgt("ldl", 131, 100, { start_on: "2026-10-12" }), H, ldl, TODAY);
+  assert.equal(waiting.source, null); assert.equal(waiting.pace_word, "October's report");
+  // reached, by the measured value only
+  const reached = paceOf(tgt("ldl", 143, 135, { start_on: "2026-04-14" }), H, ldl, TODAY);
+  assert.equal(reached.pace_word, "Reached"); assert.equal(reached.source, "from the report of 12 October");
+  // a marker that is not blood never carries a source
+  assert.equal(paceOf(tgt("mets", 8.6, 9.6), H, read(8.9), TODAY).source, null);
+});
+
+test("a landed report writes one line: what it said, what it said before, and whether the target is reached", () => {
+  const landed = { marker: "ldl", label: "LDL", value: 92, unit: "mg/dL", on: "2026-12-03", previous: 118 };
+  assert.equal(landedLine(landed), "A report landed: LDL 92, from 118.");
+  assert.equal(landedLine(landed, { start_value: 118, target_value: 100 }), "A report landed: LDL 92, from 118. The target of 100 is reached; the horizon keeps it as a floor to hold.");
+  assert.equal(landedLine({ ...landed, value: 109 }, { start_value: 118, target_value: 100 }), "A report landed: LDL 109, from 118.");
+  assert.equal(landedLine({ ...landed, previous: null }), "A report landed: LDL 92.");
+  assert.equal(landedLine({ marker: "hba1c", label: "HbA1c", value: 5.4, unit: "%", on: "2026-12-03", previous: 5.7 }, { start_value: 5.7, target_value: 5.5 }), "A report landed: HbA1c 5.4, from 5.7. The target of 5.5 is reached; the horizon keeps it as a floor to hold.");
+  // a target with no start reads its direction from the reading before
+  assert.ok(landedLine(landed, { start_value: null, target_value: 100 }).includes("is reached"));
+  assert.equal(reachedTarget({ start_value: 49, target_value: 150 }, 152), true); assert.equal(reachedTarget({ start_value: 49, target_value: 150 }, 120), false);
+  assert.ok(!/retest|test again|next test/i.test(landedLine(landed, { start_value: 118, target_value: 100 })));
 });

@@ -18,7 +18,7 @@ import type { PersonData } from "../derive/person.ts";
 import { addDays, daysBetween, todayStr } from "../derive/format.ts";
 import {
   MARKERS, MARKER_BY_KEY, GROUP_LABEL, FIRST_MARKERS, type MarkerKey, type Target, type PlanRow, type PlanKind, type Tone,
-  latestOf, historyOf, weeklyHistory, pacesOf, impliedPace, adherenceOf, guideDraftPlan, roadOf, weekOf, daysToGo, nextCheckins, checkinInputs,
+  latestOf, historyOf, weeklyHistory, pacesOf, impliedPace, adherenceOf, guideDraftPlan, roadOf, weekOf, daysToGo, nextCheckins, checkinInputs, landedLine,
   fmtValue, addMonths, longDate, dayMonth, dayMonthLong, dayMonthYear, weekdayDayMonth, clockOf, round, numberWord,
 } from "../horizon/derive.ts";
 import {
@@ -355,7 +355,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
           </div>
           {paces.map((p) => (
             <div class="grid grid-cols-2 items-center gap-x-3 gap-y-1 border-b border-border py-3 last:border-b-0 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,.8fr))_minmax(0,1.6fr)_minmax(0,1.6fr)]" key={p.marker}>
-              <span class="col-span-2 flex flex-col md:col-span-1"><span class="text-[15px] text-text">{p.label}</span><span class="text-[12px] text-text-3">{MARKER_BY_KEY[p.marker]?.how ?? ""}</span></span>
+              <span class="col-span-2 flex flex-col md:col-span-1"><span class="text-[15px] text-text">{p.label}</span><span class="text-[12px] text-text-3">{MARKER_BY_KEY[p.marker]?.how ?? ""}{p.source ? ` · ${p.source}` : ""}</span></span>
               <span class="font-mono text-[15px] font-semibold text-text-3 md:text-right">{p.startText}</span>
               <span class="font-mono text-[15px] font-semibold text-text md:text-right">{p.nowText}{p.unit && p.now != null ? <span class="ml-1 font-mono text-[11px] font-medium text-text-3">{p.unit}</span> : null}</span>
               <span class="font-mono text-[15px] font-semibold text-accent-text md:text-right">{p.targetText}</span>
@@ -407,6 +407,10 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
           <H2>The Guide's check-in{latest ? ` · ${weekdayDayMonth(latest.for_date)}` : ""}</H2>
           {!closed && <span class="text-[12px] text-text-3">Next: Monday {dayMonthLong(next.nextMonday)}{next.monthReview ? ` · month review ${dayMonthLong(next.monthReview)}` : ""}</span>}
         </div>
+        {/* a report filed since the last check-in: what it said, above the words that mention it (board 04) */}
+        {(latest?.pace?.landed ?? []).map((l) => (
+          <p class="m-0 max-w-[640px] rounded-[10px] border border-border-strong bg-alt px-4 py-3 text-[13px] leading-relaxed text-text-2" key={`${l.marker}-${l.on}`}>{landedLine(l, targets.find((t) => t.marker === l.marker))}</p>
+        ))}
         {latest
           ? <p class="m-0 max-w-[640px] text-[16px] leading-[1.65] text-text">{latest.text}</p>
           : <p class="m-0 text-[15px] text-text-2">{owner ? "No check-in yet. The first one arrives on the Monday morning after the horizon is set, once the app has synced the week." : "No check-in yet."}</p>}

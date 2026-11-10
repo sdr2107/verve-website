@@ -17,7 +17,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../../lib/supabase.ts";
-import type { Cadence, CheckinInputs, MarkerKey, PlanRow } from "./derive.ts";
+import type { Cadence, CheckinInputs, Landed, MarkerKey, PlanRow } from "./derive.ts";
 import { mapError, isMissingRelation, HorizonOffError, type ApiError } from "./errors.ts";
 export { mapError, ERROR_WORDS, isMissingRelation, HorizonOffError, type ApiError } from "./errors.ts";
 
@@ -38,7 +38,9 @@ export type TargetRow = {
 };
 export type PlanRecord = { horizon_id: string; rows: PlanRow[]; author: PlanAuthor | null; updated_by: string | null; updated_at: string };
 /** What the function stored beside the text: the inputs it wrote from, and where and when they were read. `as_of` is set when a Monday check-in was written before the app had synced the week (the synced_at the figures are from, or null when there was no row). */
-export type CheckinPace = CheckinInputs & { as_of?: string | null; tz?: string; today?: string; computed?: "server" | "browser"; dropped?: number };
+export type CheckinPace = CheckinInputs & { as_of?: string | null; tz?: string; today?: string; computed?: "server" | "browser"; dropped?: number;
+  /** Blood readings that arrived since the last check-in (a report was filed): the page says so above the check-in. */
+  landed?: Landed[] };
 export type CheckinRow = { id: string; horizon_id: string; user_id: string; kind: CheckinKind; for_date: string; text: string; pace: CheckinPace | null; model: string | null; created_at: string };
 export type HorizonFull = HorizonRow & { targets: TargetRow[]; plan: PlanRecord | null; checkins: CheckinRow[] };
 

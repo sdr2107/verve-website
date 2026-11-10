@@ -304,6 +304,8 @@ export type Pace = {
   progress: number; /** The share of the time that has passed (the track's tick, 0 to 1). */ elapsed: number;
   pace_word: string; tone: Tone; measured_on: string | null;
   /** The figures as words, for the table. */ startText: string; nowText: string; targetText: string;
+  /** Where a blood reading came from, once a report newer than the start has landed: "from the report of 3 December". Null for every other row. */
+  source?: string | null;
 };
 
 const monthName = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-GB", { month: "long" });
@@ -324,6 +326,8 @@ export function paceOf(target: Target, horizon: HorizonLike, now: Reading | null
   const base: Omit<Pace, "pace_word" | "tone" | "progress" | "expected_today"> = {
     marker: target.marker, label: target.label || def.label, unit, start, now: cur, target: goal, elapsed, measured_on: now?.on ?? null,
     startText: fmtValue(def, start), nowText: now?.display ?? fmtValue(def, cur), targetText: fmtValue(def, goal),
+    // a blood marker says which report it is read from once one newer than the start is on file (board 04)
+    source: def.kind === "blood" && now && target.start_on && now.on > target.start_on ? `from the report of ${dayMonthLong(now.on)}` : null,
   };
   const dir = start != null && goal < start ? -1 : 1;
   const needed = start != null ? Math.abs(goal - start) : null;
@@ -355,6 +359,29 @@ export function paceOf(target: Target, horizon: HorizonLike, now: Reading | null
   if (progress <= 0 && weeksIn >= 4) return { ...base, expected_today, progress, pace_word: "Not yet moving", tone: "caution" };
   const behind = round(Math.abs(gap) * needed, def.decimals);
   return { ...base, expected_today, progress, pace_word: behind > 0 ? `${cap(amountWords(def, behind))} behind` : "Slightly behind", tone: "caution" };
+}
+
+// ── a report lands (board 04): a when-measured target answers ──
+
+/** A blood reading that arrived since the last check-in, as the function notes it beside the check-in's figures. */
+export type Landed = { marker: string; label: string; value: number; unit: string | null; on: string; previous: number | null };
+/** A figure in a sentence: the marker's own precision, without a trailing ".0". */
+const plainValue = (def: MarkerDef | undefined, v: number) => (def ? fmtValue(def, v).replace(/\.0+$/, "") : String(round(v, 1)));
+/** Whether a reading has reached a target, read in the target's own direction: down for one set below its start, up otherwise. */
+export function reachedTarget(target: Pick<Target, "start_value" | "target_value">, value: number): boolean {
+  const down = target.start_value != null && target.target_value < target.start_value;
+  return down ? value <= target.target_value : value >= target.target_value;
+}
+/**
+ * The line a landed report writes on the horizon: what the report said and what it said before. "Reached" is said only
+ * of the measured value; a reached blood target stays as a floor to hold, and nothing here asks for another test.
+ */
+export function landedLine(l: Landed, target?: Pick<Target, "start_value" | "target_value"> | null): string {
+  const def = MARKER_BY_KEY[l.marker];
+  const lead = `A report landed: ${l.label} ${plainValue(def, l.value)}${l.previous != null ? `, from ${plainValue(def, l.previous)}` : ""}.`;
+  if (!target) return lead;
+  const t = target.start_value == null && l.previous != null ? { ...target, start_value: l.previous } : target;
+  return reachedTarget(t, l.value) ? `${lead} The target of ${plainValue(def, target.target_value)} is reached; the horizon keeps it as a floor to hold.` : lead;
 }
 
 /** Every target's pace, with the readings looked up in the person's document. */
