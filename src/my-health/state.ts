@@ -9,13 +9,17 @@ import type { MyHealthDocument } from "./document.ts";
 import { derivePerson } from "./derive/person.ts";
 import type { Rng } from "./derive/lenses.ts";
 
-export type PersonLite = { id: string; owner_id: string; account_id: string | null; name: string; born_year: number | null; mine: boolean; self: boolean; scopes: string[] };
+export type PersonLite = { id: string; owner_id: string; account_id: string | null; name: string; born_year: number | null; mine: boolean; self: boolean; scopes: string[];
+  /** A page shared with you: the day the share began (the grant's accepted_at), when the page could read it. */
+  since?: string | null };
 
 export const doc = signal<MyHealthDocument | null>(null);
 export const person = signal<PersonLite | null>(null);
 /** Everyone on the account: you first, then the people you look after, then those who share with you. */
 export const people = signal<PersonLite[]>([]);
 export const firstName = signal("");
+/** The vetted role on the signed-in account, if any. It is a fact about a person, so it sits beside their name in the People list and nowhere else. */
+export const myRole = signal<"coach" | "clinician" | null>(null);
 /** Two places on one sign-in (26 Oct 2026): "health" is your own page and the people you look after;
  *  "clients" is everyone who shares a page with you. The People menu and the group table show one at a time. */
 export const space = signal<"health" | "clients">("health");

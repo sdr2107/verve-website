@@ -419,8 +419,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <p id="personformnote" class="basis-full text-[12px] leading-relaxed text-text-tertiary"></p>
         </form>
         <!-- a view (src/my-health/views/People): whose page this is, and what you may do here -->
-        <div id="personhead" class="mt-3 hidden flex-wrap items-center gap-x-4 gap-y-1">
-        </div>
+        <div id="personhead" class="mt-3 hidden flex-wrap items-center gap-x-4 gap-y-1 empty:hidden"></div>
         <div id="personnotewrap" class="mt-3 hidden max-w-3xl">
           <label for="personnote" class="font-mono text-[10px] font-semibold tracking-wider text-text-tertiary">NOTE &middot; ONLY YOU SEE THIS</label>
           <textarea id="personnote" rows="2" placeholder="On metformin since June. Next HbA1c due December."
@@ -921,7 +920,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   import { derivePerson, type PersonData } from "../my-health/derive/person";
   import { labsJudged, SECTIONS, SECTION_ORDER, searchTermsOf, landsAll, dateHay } from "../my-health/derive/labs";
   import { effect } from "@preact/signals";
-  import { derived as derivedSignal, doc as docSignal, person as personSignal, people as peopleSignal, firstName as firstNameSignal, section as sectionSignal, setSection as setSectionState, latestRead as latestReadSignal, readOf, activeTab as activeTabSignal, searchQuery as searchQuerySignal, depthLocked as depthLockedSignal, depthWorking as depthWorkingSignal, actions, openLabs, space as spaceSignal, isClient } from "../my-health/state";
+  import { derived as derivedSignal, doc as docSignal, person as personSignal, people as peopleSignal, firstName as firstNameSignal, myRole as myRoleSignal, section as sectionSignal, setSection as setSectionState, latestRead as latestReadSignal, readOf, activeTab as activeTabSignal, searchQuery as searchQuerySignal, depthLocked as depthLockedSignal, depthWorking as depthWorkingSignal, actions, openLabs, space as spaceSignal, isClient } from "../my-health/state";
   import { mountOverview } from "../my-health/views/Overview";
   import { mountBody } from "../my-health/views/Body";
   import { mountDepth } from "../my-health/views/Depth";
@@ -1163,10 +1162,19 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     if (mine && !mine.name && fullName) { mine.name = fullName; supabase.from("people").update({ name: fullName }).eq("id", mine.id).then(() => {}); }
     const scopesBy = new Map<string, string[]>((grants ?? []).map((g: any) => [g.person_id, g.scopes ?? []]));
     grantIdBy = new Map<string, string>((grants ?? []).map((g: any) => [g.person_id, g.id]));
+    // the day each share to this account began, for the line under the greeting; a viewer may read their own grants
+    const sinceBy = new Map<string, string>();
+    if ((grants ?? []).length) {
+      try {
+        const { data: gs } = await supabase.from("grants").select("person_id, accepted_at, invited_at").in("id", (grants ?? []).map((g: any) => g.id));
+        (gs ?? []).forEach((g: any) => { const d = g.accepted_at ?? g.invited_at; if (d) sinceBy.set(g.person_id, String(d)); });
+      } catch { /* the line reads without the date */ }
+    }
     people = list.map((p) => ({
       ...p, name: p.name ?? "", born_year: p.born_year ?? null,
       mine: p.owner_id === userId, self: p.account_id === userId,
       scopes: p.owner_id === userId ? ALL_SCOPES : (scopesBy.get(p.id) ?? []),
+      since: p.owner_id === userId ? null : (sinceBy.get(p.id) ?? null),
     }));
     if (!people.some((p) => p.self)) people = [standIn(), ...people];
     // you first, then the people you look after, then those who share with you
@@ -1199,7 +1207,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     dim("peoplewrap", !has); show("personwrap", has && activeTab !== "group");
     peopleSignal.value = people; firstNameSignal.value = firstName; personSignal.value = person;
     const p = person;
-    show("personhead", !!p && !p.self); $("personhead").classList.toggle("flex", !!p && !p.self);
+    // under the greeting on every page: whose it is and who else sees it (the view says nothing when the page is only yours)
+    show("personhead", !!p); $("personhead").classList.toggle("flex", !!p);
   }
 
   async function switchPerson(id: string) {
@@ -1608,7 +1617,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     d.sharing_pros.forEach((x: any) => pros.set(x.email, { role: x.role, title: x.title }));
     const badge = (email: string) => {
       const x = pros.get(String(email).toLowerCase());
-      return x ? `<span class="rounded-md bg-accent/15 px-1.5 py-0.5 font-mono text-[9px] tracking-wider text-accent-light" title="${esc(x.title)}">VERIFIED ${esc(x.role.toUpperCase())}</span>` : "";
+      const word = x?.role === "coach" ? "Coach" : x?.role === "clinician" ? "Clinician" : "";
+      return word ? `<span class="inline-flex h-5 items-center rounded-full border border-accent-border bg-accent-fill px-2 font-mono text-[10px] font-semibold tracking-[0.04em] text-accent-text" title="Verified ${esc(x!.role)}${x!.title ? ` · ${esc(x!.title)}` : ""}">${word}</span>` : "";
     };
     const titleOf = (email: string) => pros.get(String(email).toLowerCase())?.title ?? "";
     $("accesssub").textContent = rows.length ? `${rows.length} ${rows.length === 1 ? "person" : "people"} can see this page` : "Only you, so far";
@@ -2517,7 +2527,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       show("namechange", !!firstName);
       if (!firstName) askForName(guessNameFromEmail(userEmail));
       else hideNameForm();
-      void showRoleChip();
+      showRoleChip();
       applyPersonMode();
       // the place follows whose page opened: a client's page is under Clients
       if (person && isClient(person)) spaceSignal.value = "clients";
@@ -2822,36 +2832,13 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   /** The vetted role on this account, if one has been entered: it names the group (Clients, Patients) and nothing more. */
   let myRole: "coach" | "clinician" | null = null;
   /**
-   * The label by the greeting, worked out, never chosen: a vetted row makes
-   * a coach or a clinician; an active share to a vetted coach makes a
-   * client of that coach; everyone else is an individual, which says
-   * nothing. It changes by itself when a share starts or stops.
+   * No label by the greeting (8 Nov 2026, board 08): a page is someone's, and the relationship is the sentence
+   * under the greeting (views/People PersonHead), with the name of the other side. A vetted role is a fact about
+   * a person, so it is a chip beside their name in the People list and in Access, never a stamp on a page's owner.
    */
-  async function showRoleChip() {
-    const greet = $("greet");
-    let chip = document.getElementById("rolechip");
-    if (!chip) {
-      chip = document.createElement("span");
-      chip.id = "rolechip";
-      chip.className = "hidden rounded-md px-1.5 py-0.5 font-mono text-[9.5px] tracking-wider";
-      greet.insertAdjacentElement("afterend", chip);
-    }
-    let text = "", tone = "";
-    if (myRole === "clinician") { text = "CLINICIAN · VERIFIED"; tone = "bg-accent/15 text-accent-light"; }
-    else if (myRole === "coach") { text = "COACH · VERIFIED"; tone = "bg-accent/15 text-accent-light"; }
-    else {
-      try {
-        const { data: gs } = await supabase.from("grants").select("viewer_email").eq("owner_id", userId).eq("status", "active");
-        const emails = [...new Set((gs ?? []).map((g: any) => String(g.viewer_email).toLowerCase()))];
-        if (emails.length) {
-          const { data: pros } = await supabase.from("professionals").select("email, role, title").in("email", emails).eq("role", "coach").limit(1);
-          const c = pros?.[0];
-          if (c) { text = `CLIENT OF ${String(c.title || c.email).split(/[,\s]+/)[0].toUpperCase()}`; tone = "bg-success/15 text-success-light"; }
-        }
-      } catch { /* the table may not exist yet */ }
-    }
-    chip.textContent = text;
-    chip.className = `${text ? "" : "hidden "}ml-2 rounded-md px-1.5 py-0.5 font-mono text-[9.5px] tracking-wider ${tone}`;
+  function showRoleChip() {
+    document.getElementById("rolechip")?.remove();
+    myRoleSignal.value = myRole;
   }
   async function loadMyRole(): Promise<"coach" | "clinician" | null> {
     try {
