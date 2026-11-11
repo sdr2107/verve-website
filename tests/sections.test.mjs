@@ -11,14 +11,15 @@ test("the Overview is its six cards until one section is named", () => {
   assert.deepEqual([...CARD_KEYS], ["fitness", "vitals", "sleep", "exertion", "movement", "body"]);
 });
 
-test("In depth and Body have no page of their own: they open on their first section", () => {
-  assert.equal(sectionFor("depth", "all"), "lastweek");
-  assert.equal(sectionFor("depth", "sleep"), "sleep");
-  assert.equal(sectionFor("depth", "body"), "lastweek", "Body is a card on the Overview, not a chapter of In depth");
+test("In depth and Body have no page of their own: In depth opens on one year, Body on its first section", () => {
+  assert.equal(sectionFor("depth", "all"), "1y");
+  assert.equal(sectionFor("depth", "6m"), "6m");
+  assert.equal(sectionFor("depth", "sleep"), "1y", "an address from before In depth went by time lands on one year");
+  assert.equal(sectionFor("depth", "body"), "1y", "Body is a card on the Overview, not a window of In depth");
   assert.equal(sectionFor("body", "all"), "metabolic");
   assert.equal(sectionFor("body", "reports"), "reports");
   assert.equal(sectionFor("body", "fitness"), "metabolic");
-  assert.equal(DEPTH_KEYS.length, 8); assert.equal(BODY_KEYS.length, 4);
+  assert.deepEqual([...DEPTH_KEYS], ["1m", "3m", "6m", "1y", "3y"]); assert.equal(BODY_KEYS.length, 4);
 });
 
 test("a tab with no sections holds none", () => {

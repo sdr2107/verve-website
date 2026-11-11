@@ -99,9 +99,12 @@ export const FEATURE_ROWS: { section: string; rows: { label: string; cells: [boo
     { label: "A CSV of workouts, imported", cells: [false, true, true, true] },
     { label: "Every year of history kept", cells: ["what sync brings", true, true, "every client's"] },
   ] },
+  // the four parts of My health, in the story's order (data/story.ts), then what a plan adds across people
   { section: "Your numbers", rows: [
-    { label: "Overview, Labs, Reports", cells: [true, true, true, true] },
-    { label: "In depth on yourself", cells: [false, true, true, true] },
+    { label: "Overview: where you are today, with Body and Reports", cells: [true, true, true, true] },
+    { label: "In depth: how you got here, one month to three years", cells: [false, true, true, true] },
+    { label: "The Guide: what stands out", cells: ["the first read", "every read", "every read", "every read"] },
+    { label: "Horizon: where you are going, with a check-in each Monday", cells: [false, true, true, true] },
     { label: "In depth on everyone you see", cells: [false, false, true, true] },
     { label: "The group, ranked by movement", cells: [false, false, true, true] },
     { label: "This week and retest due, across everyone", cells: [false, false, true, true] },

@@ -361,6 +361,32 @@ export function paceOf(target: Target, horizon: HorizonLike, now: Reading | null
   return { ...base, expected_today, progress, pace_word: behind > 0 ? `${cap(amountWords(def, behind))} behind` : "Slightly behind", tone: "caution" };
 }
 
+/** A target's row (horizon_targets) as the arithmetic reads it. */
+export const toTarget = (t: { marker: string; label: string; unit: string | null; start_value: number | null; start_on: string | null; target_value: number; cadence: any; id?: string }): Target =>
+  ({ id: t.id, marker: t.marker as MarkerKey, label: t.label, unit: t.unit, start_value: t.start_value != null ? Number(t.start_value) : null, start_on: t.start_on, target_value: Number(t.target_value), cadence: t.cadence ?? MARKER_BY_KEY[t.marker]?.cadence ?? "monthly" });
+
+/** The Overview card a marker's target shows on: blood and the body's measures sit on Body. */
+const CARD_OF_GROUP: Record<MarkerGroup, string> = { fitness: "fitness", movement: "movement", sleep: "sleep", vitals: "vitals", body: "body", blood: "body" };
+/**
+ * Horizon to Overview (canvas "Verve, one story in four parts", board 07): the one line a card carries when a marker
+ * on it is a target, so today and the aim are read together. "On your horizon: 9.5 by 9 February · on pace". The
+ * card's own headline marker needs no name; any other is named. A card with several targets shows the first and counts the rest.
+ */
+export function horizonLinesByCard(h: HorizonLike, targets: Target[], person: Person, today: string, self = true): Record<string, string> {
+  const by: Record<string, string[]> = {};
+  for (const p of pacesOf(targets, h, person, today)) {
+    const def = MARKER_BY_KEY[p.marker];
+    if (!def) continue;
+    const named = p.marker === "mets" || p.marker === "dose" ? "" : `${def.label} `;
+    // the pace's words run on inside the line; a month's name keeps its capital ("October's report")
+    const pace = /^(January|February|March|April|May|June|July|August|September|October|November|December)\b/.test(p.pace_word) ? p.pace_word : p.pace_word.charAt(0).toLowerCase() + p.pace_word.slice(1);
+    const line = def.standing ? `${named}at least ${p.targetText} a week · ${pace.replace(/ weeks?$/, "")}`
+      : `${named}${p.targetText}${named && p.unit ? ` ${p.unit}` : ""} by ${dayMonthLong(h.ends_on)} · ${pace}`;
+    (by[CARD_OF_GROUP[def.group]] ??= []).push(line);
+  }
+  return Object.fromEntries(Object.entries(by).map(([card, ls]) => [card, `On ${self ? "your" : "their"} horizon: ${ls[0]}${ls.length > 1 ? `, and ${ls.length - 1} more` : ""}`]));
+}
+
 // ── a report lands (board 04): a when-measured target answers ──
 
 /** A blood reading that arrived since the last check-in, as the function notes it beside the check-in's figures. */

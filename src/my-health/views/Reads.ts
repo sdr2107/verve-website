@@ -1,12 +1,22 @@
 /**
- * The Guide, its own tab (canvas "My health, redesigned", board 4; the read
- * itself since 26 Oct 2026, docs/design/guides-read/README.md).
+ * The Guide, its own tab: what stands out? (canvas "Verve, one story in four
+ * parts", board 05, 11 Nov 2026; the tab since "My health, redesigned",
+ * board 4; the read itself since 26 Oct 2026, docs/design/guides-read/README.md).
  *
- *   the read     eyebrow with the day it was read and the week it covers, the
- *                title, the lead, the things worth a conversation, the footer
- *   the aside    what the Guide read: the week's figures as the app counts
- *                them; earlier reads; the allowance, true to the server
+ *   the read     who wrote it and when; how many things stand out; then each
+ *                thing: one line, a sentence or two, the figures it rests on
+ *                (the page's own, counted as they stood on the day of the
+ *                read, never the model's), the study behind it from a fixed
+ *                shelf of Science pages, and two doors: into time on In
+ *                depth, or onto Horizon as a draft target
+ *   the aside    what the Guide read; what it will not do; earlier reads;
+ *                the allowance, true to the server
+ *   a window     In depth's head can ask for a read of the window in view
+ *                (state.guideAsk): the same form, the same function
  *   premium      shown when the function answers pro_required
+ *
+ * It describes. It does not advise, name a condition, say why a figure
+ * moved, or use a number that is not on the page.
  *
  * Rows: public.web_reads (the viewer's own). Writing: the depth-summary
  * function, through the page's call(). The Overview keeps one line of its
@@ -14,17 +24,23 @@
  * Plain DOM, like the page.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { effect } from "@preact/signals";
 import { addDays, esc, fmtDay, mondayOf, round0, todayStr } from "../derive/format";
 import { dueLineOf } from "../derive/reads";
-import { derived } from "../state.ts";
+import { derived, guideAsk, horizons, openOverTime, setGuideDraft } from "../state.ts";
 import { weekFiguresOf } from "../derive/snapshot.ts";
 import { fmtHMin } from "../derive/signals.ts";
 import { restingBPOf } from "../derive/markers.ts";
+import { LANE_FOR, WINDOWS, DEFAULT_WINDOW, isWindowKey, timelineOf, usualSwingForGuide, type WindowKey } from "../derive/timeline.ts";
+import { MARKER_BY_KEY, latestOf, upTo, fmtValue, type MarkerKey } from "../horizon/derive.ts";
+import { MARKER_KEYS, WILL_NOT, markerOf, standOut } from "../derive/guideLines.ts";
 
 export type ReadsContext = {
   personId: string;
   personName: string;      // "" on your own page
   self: boolean;
+  /** The page is theirs to set a horizon on: their own, or someone they look after. */
+  owner: boolean;
   userId: string;
   myLabel: string;
   consented: boolean;
@@ -50,6 +66,8 @@ const LEARN: [RegExp, string, string][] = [
   [/waist|weight|body fat|muscle/i, "/science", "what body measurements show"],
 ];
 const learnFor = (t: string) => LEARN.find(([re]) => re.test(t)) ?? null;
+/** The window a read covers, when it read one; null for a read of the week. */
+const windowOf = (r: { summary?: any } | null): WindowKey | null => { const w = String(r?.summary?.window ?? ""); return isWindowKey(w) ? w : null; };
 const day = (iso: string) => String(iso).slice(0, 10);
 const longDay = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
 const dayMonth = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long" });
@@ -69,6 +87,8 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
   let open: Read | null = null;
   let state: "idle" | "writing" | "premium" | "error" = "idle";
   let error = "";
+  /** A window In depth asked the Guide to read; held until it is written, so a consent box ticked in between does not lose it. */
+  let pendingAsk: { window: WindowKey; working: Record<string, unknown> } | null = null;
 
   // the band on Overview is the page's own one line now (board 2): nothing is drawn here
   function drawBand() { band.innerHTML = ""; }
@@ -78,16 +98,27 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
   }
   const writeLabel = () => {
     if (state === "writing") return "Writing…";
+    if (pendingAsk) return `Read ${WINDOWS[pendingAsk.window].name.toLowerCase()}`;
     const monday = mondayOf(new Date());
     const thisWeek = reads.some((r) => day(r.created_at) >= monday);
     return reads.length ? (thisWeek ? "Write a new read" : "Read this week") : "Write my first read";
   };
   const errorLine = () => state === "error" ? `<p class="t-small mt-3 text-concern">${esc(error)}</p>` : "";
 
-  /** What the Guide read: the week the read covers, as the app counts it. */
+  /** The row a figure sits in, in the aside's list. */
+  const figureRow = (l: string, v: string, u: string) =>
+    `<div class="flex items-baseline justify-between gap-3 border-t border-border py-[7px] first:border-t-0"><span class="t-small text-text-2">${l}</span><span class="shrink-0 whitespace-nowrap"><span class="t-figure-row ${v === DASH ? "text-text-3" : "text-text"}">${v}</span>${u && v !== DASH ? `<span class="t-unit ml-1">${u}</span>` : ""}</span></div>`;
+  /** What the Guide read: the week the read covers, as the app counts it; or, for a read of a window, that window's own table. */
   function readRows(r: Read | null): string {
     const d = derived.value;
     if (!d) return "";
+    const win = windowOf(r);
+    if (r && win) {
+      const t = timelineOf(d, win, day(r.created_at));
+      const rows = t.rows.filter((x) => x.now !== DASH).slice(0, 9);
+      return card(`<div class="t-eyebrow">What the Guide read</div><div class="mt-2 flex flex-col">${rows.map((x) => figureRow(esc(x.label), esc(x.then !== DASH ? `${x.then} → ${x.now}` : x.now), esc(x.unit))).join("")}</div>
+        <p class="t-caption mt-2 text-text-3">${esc(WINDOWS[win].name)} on In depth, as it stood on ${esc(dayMonth(day(r.created_at)))}. Counted by the app and the page before the Guide saw them.</p>`);
+    }
     const monday = r ? weekCoveredBy(r) : addDays(mondayOf(new Date()), -7);
     const f = weekFiguresOf(d, monday, todayStr());
     const sunday = addDays(monday, 6);
@@ -103,16 +134,18 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
       ["Weight", f.weight != null ? String(Math.round(f.weight * 10) / 10) : DASH, f.weight != null ? "kg" : ""],
       ["Background movement", f.background != null ? round0(f.background) : DASH, f.background != null ? "min a day" : ""],
     ];
-    return card(`<div class="t-eyebrow">What the Guide read</div><div class="mt-2 flex flex-col">${rows.map(([l, v, u]) =>
-      `<div class="flex items-baseline justify-between gap-3 border-t border-border py-[7px] first:border-t-0"><span class="t-small text-text-2">${l}</span><span class="shrink-0 whitespace-nowrap"><span class="t-figure-row ${v === DASH ? "text-text-3" : "text-text"}">${v}</span>${u && v !== DASH ? `<span class="t-unit ml-1">${u}</span>` : ""}</span></div>`).join("")}</div>
-      <p class="t-caption mt-2 text-text-3">The week of ${esc(dayMonth(monday))}, counted the way the app counts it.</p>`);
+    return card(`<div class="t-eyebrow">What the Guide read</div><div class="mt-2 flex flex-col">${rows.map(([l, v, u]) => figureRow(l, v, u)).join("")}</div>
+      <p class="t-caption mt-2 text-text-3">The week of ${esc(dayMonth(monday))}, counted by the app and the page before the Guide saw them.</p>`);
   }
+  const notCard = () => card(`<div class="t-eyebrow">What it will not do</div><div class="mt-2 flex flex-col">${WILL_NOT.map((w) => `<div class="t-small border-t border-border py-[7px] text-text-2 first:border-t-0">${w}</div>`).join("")}</div>`);
+  /** What a read covers, in a few words: the week it read, or the window. */
+  const coverOf = (x: Read) => { const w = windowOf(x); return w ? WINDOWS[w].name : `Week of ${dayMonth(weekCoveredBy(x))}`; };
 
   function earlierReads(r: Read | null): string {
     const others = reads.filter((x) => x.id !== r?.id);
     if (!others.length) return "";
     return card(`<div class="t-eyebrow">Earlier reads</div><div class="mt-2 flex flex-col">${others.slice(0, 8).map((x) =>
-      `<button type="button" data-open="${x.id}" class="flex items-baseline justify-between gap-3 border-t border-border py-2 text-left first:border-t-0"><span class="t-small min-w-0 truncate text-text">Week of ${esc(dayMonth(weekCoveredBy(x)))}</span><span class="t-caption shrink-0 text-text-3">${esc(fmtDay(day(x.created_at)))}</span></button>`).join("")}</div>`);
+      `<button type="button" data-open="${x.id}" class="flex items-baseline justify-between gap-3 border-t border-border py-2 text-left first:border-t-0"><span class="t-small min-w-0 truncate text-text">${esc(coverOf(x))}</span><span class="t-caption shrink-0 text-text-3">${esc(fmtDay(day(x.created_at)))}</span></button>`).join("")}</div>`);
   }
 
   function allowanceCard(r: Read | null): string {
@@ -126,8 +159,8 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
   function firstRead(): string {
     return `<section class="r-card max-w-3xl border border-border bg-card p-6">
       <div class="t-eyebrow">The Guide</div>
-      <h2 class="t-display mt-2 text-text">${ctx!.self ? "Your week" : `${esc(ctx!.personName || "This person")}'s week`}, read on Mondays</h2>
-      <p class="t-read mt-3 text-text-2">A short read of the week that closed: the sessions, the dose, sleep, the morning readings and the body, counted the way the app counts them. The Guide describes; it does not prescribe. It can only say what this page already shows, and every read is filed here by date.</p>
+      <h2 class="t-display mt-2 text-text">What stands out in ${ctx!.self ? "your" : `${esc(ctx!.personName || "this person")}'s`} figures</h2>
+      <p class="t-read mt-3 text-text-2">A short read of the week that closed, on Mondays: at most three things, a sentence or two each, with the figures and the study behind every line. It is written by an AI model from the numbers on this page and nothing else. The Guide describes; it does not advise. Every read is filed here by date.</p>
       ${consentBox()}
       <div class="mt-5 flex flex-wrap items-center gap-3"><span class="w-full sm:w-auto">${btn("write", writeLabel(), true, state === "writing")}</span><span class="t-caption text-text-3">${ALLOWANCE_LINE}</span></div>
       ${errorLine()}</section>`;
@@ -142,26 +175,61 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
       <p class="t-caption mt-4 text-text-3">Only the numbers go to the AI, never your name, reports, notes or messages.</p></section>`;
   }
 
+  /** The figures a line rests on, from the page as it stood on the day of the read: where the marker stood, how it ran over the window, its usual swing. */
+  function figuresFor(marker: MarkerKey | null, r: Read): string {
+    const d = derived.value;
+    if (!marker || !d) return "";
+    const on = day(r.created_at), def = MARKER_BY_KEY[marker];
+    const chip = (where: string, fig: string) => `<span class="r-chip inline-flex min-h-6 items-center gap-1.5 border border-border bg-canvas px-2.5 py-0.5 text-[11.5px] text-text-2">${where} <b class="font-mono text-[11.5px] font-semibold text-text">${esc(fig)}</b></span>`;
+    const bits: string[] = [];
+    const now = latestOf(marker, upTo(d, on), on);
+    if (now) bits.push(chip("Overview", `${now.display ?? fmtValue(def, now.value)}${now.unit ?? def.unit ? ` ${now.unit ?? def.unit}` : ""}`));
+    const lane = LANE_FOR[marker];
+    const row = lane ? timelineOf(d, windowOf(r) ?? DEFAULT_WINDOW, on).rows.find((x) => x.key === lane) ?? null : null;
+    if (row && row.then !== DASH && row.now !== DASH) bits.push(chip("In depth", `${row.then} → ${row.now}`));
+    if (row?.range) bits.push(chip("Usual swing", row.range));
+    return bits.length ? `<div class="mt-3 flex flex-wrap gap-1.5">${bits.join("")}</div>` : "";
+  }
+  /** A line's foot: the study behind it, then its two doors, into time and onto Horizon. */
+  function doorsFor(c: any, marker: MarkerKey | null, r: Read): string {
+    const l = learnFor(`${c.topic ?? ""} ${c.headline ?? ""} ${c.text ?? ""}`);
+    const door = "min-h-8 font-semibold text-accent-text hover:text-text";
+    const onHorizon = !!marker && (horizons.value ?? []).some((h) => !h.closed_at && h.targets.some((t) => t.marker === marker));
+    const over = `<button type="button" data-over="${marker ? esc(LANE_FOR[marker] ?? "") : ""}" data-window="${windowOf(r) ?? DEFAULT_WINDOW}" class="${door}">See it over time &rarr;</button>`;
+    const target = !marker ? "" : onHorizon ? `<button type="button" data-onhorizon class="${door}">On ${ctx!.self ? "your" : "their"} horizon already &rarr;</button>`
+      : ctx!.owner ? `<button type="button" data-target="${esc(marker)}" data-on="${esc(day(r.created_at))}" class="${door}">Make it a target &rarr;</button>` : "";
+    return `<div class="t-small mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-border pt-2.5">
+      ${l ? `<a href="${l[1]}" class="t-caption mr-auto text-text-3 hover:text-text">Study: ${l[2]}</a>` : `<span class="mr-auto"></span>`}${over}${target}</div>`;
+  }
+
   function readPage(r: Read): string {
     const sm = r.summary ?? {};
-    const items = (Array.isArray(sm.conversations) ? sm.conversations : []).map((c: any) => {
-      const l = learnFor(`${c.topic ?? ""} ${c.text ?? ""}`);
-      const head = String(c.topic ?? "").trim();
-      return `<section class="mt-5"><h3 class="t-title text-text">${head ? esc(head.charAt(0).toUpperCase() + head.slice(1)) : c.who === "coach" ? "For your coach" : "For your doctor"}</h3><p class="t-read mt-1.5 text-text-2">${esc(String(c.text ?? ""))}</p>${l ? `<a href="${l[1]}" class="t-caption mt-1.5 inline-block font-semibold text-accent-text hover:text-text">Learn: ${l[2]} &rarr;</a>` : ""}</section>`;
+    const things: any[] = Array.isArray(sm.conversations) ? sm.conversations : [];
+    const win = windowOf(r);
+    const items = things.map((c: any) => {
+      const marker = markerOf(c);
+      const topic = String(c.topic ?? "").trim();
+      // a read from 11 Nov 2026 carries its own one-line heading; an older one is headed by its topic
+      const head = String(c.headline ?? "").trim() || (topic ? topic.charAt(0).toUpperCase() + topic.slice(1) : c.who === "coach" ? "For your coach" : "For your doctor");
+      return `<article class="r-card mt-3 border border-border bg-card p-5"><h3 class="t-title text-text">${esc(head)}</h3><p class="t-read mt-1.5 text-text-2">${esc(String(c.text ?? ""))}</p>${figuresFor(marker, r)}${doorsFor(c, marker, r)}</article>`;
     }).join("");
     const due = dueLineOf(sm.due, r.created_at);
+    const whose = ctx!.self ? "your" : "their";
+    const from = win ? `Read from ${esc(WINDOWS[win].name.toLowerCase())} on In depth, as it stood on ${esc(longDay(day(r.created_at)))}.`
+      : `Read from ${whose} Overview and the week of ${esc(dayMonth(weekCoveredBy(r)))}, counted the way the app counts it.`;
     return `<section class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
       <article class="min-w-0">
-        <div class="t-eyebrow">The Guide · read on ${esc(longDay(day(r.created_at)))} · the week of ${esc(dayMonth(weekCoveredBy(r)))}${ctx!.self ? "" : ` · ${esc(ctx!.personName)}`}</div>
-        <h2 class="t-display mt-2 text-text">${esc(titleOf(r))}</h2>
-        <p class="t-read mt-4 text-text">${esc(String(sm.lead ?? ""))}</p>
+        <div class="t-eyebrow">The Guide · read on ${esc(longDay(day(r.created_at)))} · written by an AI model from ${whose} own figures${ctx!.self ? "" : ` · ${esc(ctx!.personName)}`}</div>
+        <h2 class="t-display mt-2 text-text">${standOut(things.length)}</h2>
+        <p class="t-small mt-2 text-text-2">${from}</p>
+        ${sm.lead ? `<p class="t-read mt-4 text-text">${esc(String(sm.lead))}</p>` : ""}
         ${items}
         ${due ? `<section class="mt-5"><h3 class="t-title text-text">Due</h3><p class="t-read mt-1.5 text-text-2">${esc(due)}</p></section>` : ""}
         ${sm.notShared ? `<p class="t-small mt-4 text-text-3">${esc(String(sm.notShared))}</p>` : ""}
-        <p class="t-caption mt-6 max-w-2xl text-text-3">Written from ${ctx!.self ? "your" : "their"} own readings. The Guide describes; it does not prescribe. Figures are the week's, counted the way the app counts them.${sm.dropped ? ` ${sm.dropped} sentence${sm.dropped === 1 ? "" : "s"} with a number not on the page ${sm.dropped === 1 ? "was" : "were"} dropped.` : ""}</p>
+        <p class="t-caption mt-6 max-w-2xl text-text-3">The Guide describes; it does not advise. The figures under each line are the page's own, as they stood on the day of the read, and the study is one of the Science pages.${sm.dropped ? ` ${sm.dropped} sentence${sm.dropped === 1 ? "" : "s"} with a number not on the page ${sm.dropped === 1 ? "was" : "were"} dropped.` : ""}</p>
         ${errorLine()}
       </article>
-      <aside class="flex flex-col gap-3">${readRows(r)}${earlierReads(r)}${allowanceCard(r)}</aside></section>`;
+      <aside class="flex flex-col gap-3">${readRows(r)}${notCard()}${earlierReads(r)}${allowanceCard(r)}</aside></section>`;
   }
 
   function drawTab() {
@@ -181,14 +249,14 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
     const sm = r.summary ?? {};
     const w = window.open("", "_blank");
     if (!w) return;
-    const items = (sm.conversations ?? []).map((c: any) => `<h3>${esc(String(c.topic ?? (c.who === "coach" ? "For your coach" : "For your doctor")))}</h3><p>${esc(String(c.text ?? ""))}</p>`).join("");
+    const items = (sm.conversations ?? []).map((c: any) => `<h3>${esc(String(c.headline || c.topic || (c.who === "coach" ? "For your coach" : "For your doctor")))}</h3><p>${esc(String(c.text ?? ""))}</p>`).join("");
     const due = dueLineOf(sm.due, r.created_at);
     w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>The Guide · ${esc(day(r.created_at))}</title>
       <style>body{font-family:Inter,'Helvetica Neue',Arial,sans-serif;color:#111;max-width:680px;margin:48px auto;padding:0 24px}h1{font-weight:600;font-size:28px;letter-spacing:-.02em;margin:6px 0 14px}h3{font-size:16px;margin:18px 0 4px}
       .k{font-family:ui-monospace,monospace;font-size:11px;color:#6b6b80}.lead{font-size:17px;line-height:1.6}p{line-height:1.6}.foot{margin-top:32px;font-size:12px;color:#6b6b80;border-top:1px solid #ddd;padding-top:12px}</style></head>
-      <body><div class="k">The Guide · read on ${esc(longDay(day(r.created_at)))} · the week of ${esc(dayMonth(weekCoveredBy(r)))}${ctx!.self ? "" : ` · ${esc(ctx!.personName)}`}</div><h1>${esc(titleOf(r))}</h1>
+      <body><div class="k">The Guide · read on ${esc(longDay(day(r.created_at)))} · ${esc(coverOf(r).replace(/^Week/, "the week").replace(/^The /, "the "))}${ctx!.self ? "" : ` · ${esc(ctx!.personName)}`}</div><h1>${esc(titleOf(r))}</h1>
       <p class="lead">${esc(String(sm.lead ?? ""))}</p>${items}${due ? `<h3>Due</h3><p>${esc(due)}</p>` : ""}${r.note ? `<h3>My note</h3><p>${esc(r.note)}</p>` : ""}
-      <div class="foot">Written by Verve from the numbers on the My health page. Wellness information, not a diagnosis. verve-app.health</div>
+      <div class="foot">Written by an AI model from the numbers on the My health page. Wellness information, not a diagnosis and not advice. verve-app.health</div>
       <script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script></body></html>`);
     w.document.close();
     void supabase.from("web_reads").update({ downloaded_at: new Date().toISOString() }).eq("id", r.id).then(() => { r.downloaded_at = new Date().toISOString(); });
@@ -211,8 +279,11 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
 
   async function write() {
     if (!ctx) return;
-    const working = ctx.working();
-    if (!working) { state = "error"; error = "The page is still drawing its numbers; try again in a moment."; drawTab(); return; }
+    const ask = pendingAsk;
+    const base = ask?.working ?? ctx.working();
+    if (!base) { state = "error"; error = "The page is still drawing its numbers; try again in a moment."; drawTab(); return; }
+    // the keys a line may be tagged with, and how far two results can differ with nothing having changed: both fixed lists, sent with the figures
+    const working = { ...base, markerKeys: MARKER_KEYS, usualSwing: usualSwingForGuide() };
     if (!ctx.consented) {
       const box = tab.querySelector("[data-r=consent]") as HTMLInputElement | null;
       if (!box?.checked) { state = "error"; error = "Tick the box first: it says what is sent, and what is not."; goTab("guide"); drawTab(); return; }
@@ -221,18 +292,26 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
       ctx.consented = true;
     }
     state = "writing"; error = ""; goTab("guide"); drawTab();
-    const { ok, status, out } = await ctx.call({ person_id: ctx.personId, working, force: reads.length > 0 });
-    if (status === 402 || out?.error === "pro_required") { state = "premium"; drawTab(); return; }
+    const { ok, status, out } = await ctx.call({ person_id: ctx.personId, working, force: reads.length > 0, ...(ask ? { window: ask.window } : {}) });
+    if (status === 402 || out?.error === "pro_required") { pendingAsk = null; state = "premium"; drawTab(); return; }
     if (!ok || !out?.summary) {
       state = "error";
       error = out?.error === "summary_not_open" ? "The Guide is not switched on yet." : status === 429 ? "Today's allowance is used up; try tomorrow." : `Could not write it${out?.detail ? `: ${out.detail}` : out?.error ? `: ${out.error}` : ""}.`;
       drawTab(); return;
     }
-    state = "idle";
+    state = "idle"; pendingAsk = null;
     await loadReads();
     open = reads[0] ?? null;
     draw();
   }
+  // In depth's head asked for a read of the window in view: write it here, on this tab
+  effect(() => {
+    const a = guideAsk.value;
+    if (!a) return;
+    guideAsk.value = null;
+    pendingAsk = a;
+    if (ctx) void write(); else goTab("guide");
+  });
 
   async function loadReads() {
     if (!ctx) { reads = []; return; }
@@ -256,6 +335,11 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
       await supabase.from("web_reads").delete().eq("id", cur.id);
       await loadReads(); open = null; draw(); return;
     }
+    const over = t.closest("[data-over]") as HTMLElement | null;
+    if (over) { openOverTime(over.dataset.over ?? "", over.dataset.window); return; }
+    const target = t.closest("[data-target]") as HTMLElement | null;
+    if (target && ctx) { setGuideDraft({ personId: ctx.personId, marker: target.dataset.target!, readOn: target.dataset.on ?? todayStr() }); goTab("horizon"); return; }
+    if (t.closest("[data-onhorizon]")) { goTab("horizon"); return; }
     const o = t.closest("[data-open]") as HTMLElement | null;
     if (o) { open = reads.find((x) => x.id === o.dataset.open) ?? null; state = "idle"; drawTab(); window.scrollTo({ top: 0, behavior: "smooth" }); }
   };
@@ -263,6 +347,7 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
 
   return {
     async load(next: ReadsContext | null) {
+      if (next?.personId !== ctx?.personId) pendingAsk = null;   // a window asked for on one person's page is not read on another's
       ctx = next; open = null; state = "idle"; error = "";
       await loadReads();
       draw();

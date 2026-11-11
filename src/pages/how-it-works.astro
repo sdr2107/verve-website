@@ -18,6 +18,8 @@ import { WEARABLE_ROWS, WEARABLE_COLS, WEARABLE_COL_IDS } from "../data/wearable
 import { GET_APP_PATH } from "../data/site";
 import VideoSlot from "../components/VideoSlot.astro";
 import { videosInGroup } from "../data/videos";
+import { STORY, STORY_LINE } from "../data/story";
+import { ACCOUNT_PATH } from "../data/site";
 
 const weeklyVolume = topicHref("weekly-volume");
 const crf = topicHref("crf");
@@ -47,6 +49,7 @@ const productVideos = videosInGroup("how-verve-works");
 const sections = [
   { id: "watch", label: "Watch it" },
   { id: "tabs", label: "The four tabs" },
+  { id: "my-health", label: "My health, in four questions" },
   { id: "guide", label: "The Guide" },
   { id: "free-and-pro", label: "Free and Pro" },
   { id: "counting", label: "How Verve counts" },
@@ -120,6 +123,23 @@ const gates: [string, string, string][] = [
           </li>
         ))}
       </ul>
+    </section>
+
+    <!-- ── the website: My health, four pages that each answer one question, in this order ── -->
+    <section id="my-health" class="scroll-mt-24 flex flex-col gap-6">
+      <h2 class="text-[28px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[32px]">My health, in four questions</h2>
+      <p class="max-w-[820px] text-[15.5px] leading-[1.6] text-text-secondary">The app is for the day and the week. <a href={ACCOUNT_PATH} class="font-semibold text-accent-light underline-offset-4 hover:underline">My health</a>, on this site, is the longer read of the same figures: {STORY_LINE.charAt(0).toLowerCase() + STORY_LINE.slice(1)} Four pages, in the order a person asks. Each is whole alone; someone who only ever opens the first has a complete product.</p>
+      <ol class="grid list-none gap-4 p-0 sm:grid-cols-2">
+        {STORY.map((s, i) => (
+          <li class="flex flex-col gap-2.5 rounded-[18px] border border-ink/[0.08] bg-ink/[0.04] p-6">
+            <span class="font-mono text-[11px] tracking-[0.1em] text-accent-light">{i + 1} · {s.name.toUpperCase()}</span>
+            <p class="text-[18px] font-bold leading-[1.25] text-text-primary">{s.question}</p>
+            <p class="text-[14.5px] leading-[1.6] text-text-secondary">{s.more}</p>
+            <p class="font-mono text-[11px] tracking-[0.04em] text-text-tertiary">{s.plan}</p>
+          </li>
+        ))}
+      </ol>
+      <p class="max-w-[820px] text-[14px] leading-[1.6] text-text-tertiary">Four links join the pages. A section of the Overview opens its marker's own lane on In depth. A window of In depth can be handed to the Guide to read. A line the Guide wrote can go to Horizon as a draft, which becomes a target only when you set its number. A target shows on the Overview's card, beside today's figure.</p>
     </section>
 
     <!-- ── 2 · the Guide ── -->

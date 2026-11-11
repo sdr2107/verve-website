@@ -11,9 +11,15 @@
  *             web, refined", boards 03 and 04): pressed, the section is the
  *             page. The other five are not drawn; they are in the sidebar
  *             and one step away at the foot. Its rows, its markers as tiles
- *             with every chart closed until one is pressed, and one link to
- *             its chapter on In depth. The hash carries it
- *             (#overview-movement).
+ *             with every chart closed until one is pressed, and one link
+ *             into time: In depth at one year, with that marker's lane in
+ *             view. The hash carries it (#overview-movement).
+ *
+ * Where am I today? (canvas "Verve, one story in four parts", boards 03 and
+ * 07, 11 Nov 2026): the first of four questions. A card whose marker is a
+ * target carries one line for the horizon, so today and the aim are read
+ * together; a person who has no read from the Guide yet is shown the other
+ * three parts as doors, each with the question it answers.
  *
  * Every figure comes from the derive layer: the app's week row where it
  * wrote one, the app's day rows, the app's helpers' rules. A row with
@@ -21,7 +27,10 @@
  * after load; a section arriving slides once, 160 ms.
  */
 import { render } from "preact";
-import { derived, person, section, setSection, openMarkerKey, openRange, openYear, focusTile, fitUnit, setFitUnit, latestRead, actions, CARD_KEYS, type CardKey } from "../state.ts";
+import { derived, person, section, setSection, openMarkerKey, openRange, openYear, focusTile, fitUnit, setFitUnit, latestRead, horizons, openOverTime, actions, CARD_KEYS, type CardKey } from "../state.ts";
+import { horizonLinesByCard, toTarget } from "../horizon/derive.ts";
+import { LANE_FOR } from "../derive/timeline.ts";
+import { STORY } from "../../data/story.ts";
 import { addDays, daysBetween, dayWord, esc, fmt1, fmtDay, fmtSleepMin, mondayOf, monthOf, plural, round0, todayStr } from "../derive/format.ts";
 import { labRowsFrom, methodLabel, MAXIMAL } from "../derive/markers.ts";
 import { activitySummary, actsByDay, fitnessSummary, doseReason, storeOf } from "../derive/activity.ts";
@@ -267,7 +276,7 @@ export function GuidePointer() {
     <button type="button" onClick={go} class="r-card flex h-[56px] w-full items-center gap-4 border border-border bg-card px-5 text-left transition-colors hover:border-border-strong">
       <span class="t-eyebrow shrink-0 text-accent-text">The Guide</span>
       <span class="t-small min-w-0 flex-1 truncate text-text-2">
-        {r ? `Read your week on ${longDay(r.created_at.slice(0, 10))}.${r.count ? ` ${r.count === 1 ? "One thing" : `${r.count} things`} worth knowing.` : ""}` : "The Guide reads your week on Mondays."}
+        {r ? `Read on ${longDay(r.created_at.slice(0, 10))}.${r.count ? ` ${r.count === 1 ? "One thing stands" : `${["", "", "Two", "Three"][r.count] ?? r.count} things stand`} out.` : ""}` : "The Guide reads your week on Mondays, and says what stands out."}
       </span>
       <span class="t-small shrink-0 font-semibold text-accent-text">{r ? "Read" : "Open"} &rarr;</span>
     </button>
@@ -327,7 +336,7 @@ function Progress({ v }: { v: number | null | undefined }) {
   return <span class="mt-2 block h-[4px] w-full overflow-hidden rounded-full bg-alt"><span class="block h-full rounded-full bg-accent" style={{ width: `${Math.round(v * 100)}%` }}></span></span>;
 }
 
-function CardFace({ c, d, on, onOpen }: { c: Card; d: NonNullable<typeof derived.value>; on: boolean; onOpen: () => void }) {
+function CardFace({ c, d, on, onOpen, horizon }: { c: Card; d: NonNullable<typeof derived.value>; on: boolean; onOpen: () => void; /** The one line a card carries when a marker on it is a target. */ horizon?: string }) {
   return (
     <div role="button" tabIndex={0} aria-expanded={on ? "true" : "false"} onClick={onOpen} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
       class={`r-card flex min-h-[236px] cursor-pointer flex-col border bg-card p-5 text-left transition-colors ${on ? "border-border-strong" : "border-border hover:border-border-strong"}`}>
@@ -340,6 +349,7 @@ function CardFace({ c, d, on, onOpen }: { c: Card; d: NonNullable<typeof derived
         <span class="t-unit">{c.unit}</span>
       </span>
       <span class={`t-small mt-1 ${TONE_TEXT[c.band.tone]}`}>{c.band.text}</span>
+      {horizon ? <span class="r-btn mt-2 block border border-accent-border bg-accent-fill px-2.5 py-1.5 text-[12px] leading-snug text-accent-text">{horizon}</span> : null}
       {c.key === "fitness" ? <TierStrip d={d} /> : null}
       <Progress v={c.progress} />
       <span class="mt-3 flex flex-col">{c.rows.map((r) => <RowLine key={r.label} r={r} />)}</span>
@@ -397,18 +407,35 @@ function movementRows(d: NonNullable<typeof derived.value>, c: Card): Row[] {
   ];
 }
 
-/** What a section's chapter on In depth adds, in a few words: the one link each section carries to it. */
-const CHAPTER_ADDS: Record<CardKey, string> = {
-  fitness: "Twelve months of tests, with the band for your age",
-  vitals: "Resting heart rate over 28 nights, with your own normal",
-  sleep: "The last seven nights, bed to wake",
-  exertion: "Recovery after each session, over 8 weeks",
-  movement: "The weekly dose over four weeks, against the goal",
-  body: "Every marker, with where it sits in its range",
-};
+/** The running horizon's line for each card that holds one of its targets; empty when no horizon is open. */
+function horizonLines(d: NonNullable<typeof derived.value>, self: boolean): Record<string, string> {
+  const h = (horizons.value ?? []).find((x) => !x.closed_at);
+  if (!h || !h.targets.length) return {};
+  return horizonLinesByCard(h, h.targets.map(toTarget), d, todayStr(), self);
+}
+
+/** The other three parts of the story, as doors: shown under the cards to a person the Guide has not read for yet. */
+function StoryDoors() {
+  // the same four lines the landing page and the sign-in card read (data/story.ts); this page is the first of them
+  const doors = STORY.filter((s) => s.key !== "overview");
+  return (
+    <div class="col-span-full mt-2">
+      <div class="t-eyebrow">This page is where you are today. Three more follow from it.</div>
+      <div class="mt-2 grid gap-3 sm:grid-cols-3">
+        {doors.map((s) => (
+          <button key={s.key} type="button" onClick={() => actions.goTab(s.key)} class="r-card flex flex-col gap-1 border border-border bg-card p-4 text-left transition-colors hover:border-border-strong">
+            <span class="t-eyebrow text-accent-text">{s.name}</span>
+            <span class="t-title text-text">{s.question}</span>
+            <span class="t-small text-text-2">{s.line}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /** One section of the Overview, alone on the page. */
-function SectionPage({ c, d, cards }: { c: Card; d: NonNullable<typeof derived.value>; cards: Card[] }) {
+function SectionPage({ c, d, cards, horizon }: { c: Card; d: NonNullable<typeof derived.value>; cards: Card[]; horizon?: string }) {
   const today = todayStr();
   const ms = c.key === "body" ? d.markers.filter((m) => m.section === "body" && m.key !== "bp") : c.markers.map((k) => d.markerByKey(k)).filter((m): m is Marker => !!m);
   // every chart is closed until its tile is pressed; pressing the open one closes it
@@ -421,13 +448,13 @@ function SectionPage({ c, d, cards }: { c: Card; d: NonNullable<typeof derived.v
   const tile = (m: Marker, i: number) => <Tile key={m.key} m={m} i={i} on={m.key === openKey} out={outKeys.has(m.key)} onTap={() => tap(m)} />;
   const at = cards.findIndex((x) => x.key === c.key);
   const before = cards[at - 1] ?? null, after = cards[at + 1] ?? null;
-  const toChapter = () => { if (c.key === "body") actions.goTab("body"); else { actions.goTab("depth"); setSection(c.key); } };
   return (
     <div class="mh-slide col-span-full">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="min-w-0">
           <div class="t-eyebrow"><button type="button" onClick={() => setSection("all")} class="font-medium text-accent-text hover:text-text">Overview</button> <span aria-hidden="true">&rsaquo;</span> {c.eyebrow}</div>
           <h1 class="t-display mt-2 text-text">{c.heading}</h1>
+          {horizon ? <button type="button" onClick={() => actions.goTab("horizon")} class="r-btn mt-3 inline-flex min-h-8 items-center border border-accent-border bg-accent-fill px-3 text-left text-[13px] leading-snug text-accent-text transition-colors hover:border-accent">{horizon}</button> : null}
         </div>
         {c.key === "fitness" ? <UnitSwitch /> : null}
       </div>
@@ -456,8 +483,11 @@ function SectionPage({ c, d, cards }: { c: Card; d: NonNullable<typeof derived.v
           </div>
         </div>
         {open ? <div class="mt-5"><OpenMarker open={open} markers={d.markers} acts={d.acts} out={outKeys.has(open.key)} /></div> : null}
-        <p class="t-small mt-5 border-t border-border pt-4 text-text-2">
-          {CHAPTER_ADDS[c.key]}: <button type="button" onClick={toChapter} class="font-semibold text-accent-text hover:text-text">{c.key === "body" ? "Body" : <>In depth <span aria-hidden="true">&rsaquo;</span> {c.title}</>} &rarr;</button>
+        {/* Overview to In depth: the section's one link into time, at one year, with its marker's lane in view */}
+        <p class="t-small mt-5 flex flex-wrap items-baseline gap-x-6 gap-y-1 border-t border-border pt-4 text-text-2">
+          <button type="button" onClick={() => openOverTime(LANE_FOR[c.key] ?? "")} class="font-semibold text-accent-text hover:text-text">See {c.title} over the last year &rarr;</button>
+          {c.key === "body" ? <button type="button" onClick={() => actions.goTab("body")} class="font-semibold text-accent-text hover:text-text">Every marker, with where it sits in its range &rarr;</button> : null}
+          <span class="t-caption text-text-3">In depth, on one line of time with {person.value?.self ? "your" : "their"} other markers.</span>
         </p>
       </div>
       <Pager at={at + 1} of={cards.length}
@@ -470,10 +500,15 @@ function SectionPage({ c, d, cards }: { c: Card; d: NonNullable<typeof derived.v
 export function Glance() {
   const d = derived.value;
   if (!d) return <>{CARD_KEYS.map((k) => <Frame key={k} label={CARD_TITLE[k]} />)}</>;
-  const { cards } = cardsOf(d, !!person.value?.self, fitUnit.value);
+  const self = !!person.value?.self;
+  const { cards } = cardsOf(d, self, fitUnit.value);
+  const hz = horizonLines(d, self);
   const openCard = cards.find((c) => c.key === section.value) ?? null;
-  if (openCard) return <SectionPage c={openCard} d={d} cards={cards} />;
-  return <>{cards.map((c) => <CardFace key={c.key} c={c} d={d} on={false} onOpen={() => setSection(c.key)} />)}</>;
+  if (openCard) return <SectionPage c={openCard} d={d} cards={cards} horizon={hz[openCard.key]} />;
+  return <>
+    {cards.map((c) => <CardFace key={c.key} c={c} d={d} on={false} onOpen={() => setSection(c.key)} horizon={hz[c.key]} />)}
+    {self && !latestRead.value ? <StoryDoors /> : null}
+  </>;
 }
 
 function Frame({ label }: { label: string }) {

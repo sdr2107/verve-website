@@ -3,6 +3,7 @@ import Layout from "../layouts/Layout.astro";
 import Footer from "../components/Footer.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
+import { STORY } from "../data/story";
 ---
 
 <!--
@@ -96,35 +97,18 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           the app tracks to your phone on one tap, and keeps the rest charted
           here.
         </p>
-        <ul class="mt-1 hidden flex-col gap-3.5 lg:flex">
-          <li class="flex items-start gap-3.5">
-            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-accent/[0.14]">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14" /></svg>
-            </span>
-            <span>
-              <span class="block text-[15px] font-semibold text-text-primary">Drop a report</span>
-              <span class="block text-[13px] leading-relaxed text-text-tertiary">Any lab, any year. Imaging reports too.</span>
-            </span>
-          </li>
-          <li class="flex items-start gap-3.5">
-            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-success/[0.12]">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-good)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l4 4L19 7" /></svg>
-            </span>
-            <span>
-              <span class="block text-[15px] font-semibold text-text-primary">Every value read</span>
-              <span class="block text-[13px] leading-relaxed text-text-tertiary">Everything parsed is charted here; you check the app-bound values before they are sent.</span>
-            </span>
-          </li>
-          <li class="flex items-start gap-3.5">
-            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-warning/[0.12]">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-caution)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2" /><path d="M11 18h2" /></svg>
-            </span>
-            <span>
-              <span class="block text-[15px] font-semibold text-text-primary">The app&rsquo;s markers go to your phone</span>
-              <span class="block text-[13px] leading-relaxed text-text-tertiary">Everything else stays charted here, with its own history.</span>
-            </span>
-          </li>
-        </ul>
+        <!-- the four questions My health answers, in its own order (data/story.ts) -->
+        <ol class="mt-1 hidden list-none flex-col gap-3.5 p-0 lg:flex">
+          {STORY.map((s, i) => (
+            <li class="flex items-start gap-3.5">
+              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-accent/[0.14] font-mono text-[13px] font-semibold text-accent-text">{i + 1}</span>
+              <span>
+                <span class="block text-[15px] font-semibold text-text-primary">{s.question}</span>
+                <span class="block text-[13px] leading-relaxed text-text-tertiary">{s.name}. {s.line}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
         <p class="hidden text-[13px] text-text-tertiary lg:block">The login is the one you use in the app.</p>
       </div>
 
@@ -288,7 +272,9 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
            one person picked. From lg the column sits in its own box: a tinted
            panel with a line round it, the lit row a raised pill, the account
            at its foot (canvas "Verve on the web, refined", board 03). The
-           order is Overview, In depth, Horizon, the Guide. -->
+           order is the story's (canvas "Verve, one story in four parts",
+           11 Nov 2026): Overview, where am I today; In depth, how did I get
+           here; the Guide, what stands out; Horizon, where am I going. -->
       <aside id="mhside" data-nav="page" class="pt-5 lg:sticky lg:top-6 lg:mt-8 lg:flex lg:max-h-[calc(100vh-3rem)] lg:min-h-[72vh] lg:w-[248px] lg:shrink-0 lg:flex-col lg:gap-4 lg:overflow-y-auto lg:rounded-[16px] lg:border lg:border-border lg:bg-alt lg:p-3">
         <!-- Everything here is in the markup from the first byte (board 9):
              a slot with nothing behind it yet is dimmed, never absent, so the
@@ -314,19 +300,16 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
             <button type="button" class="mh-sub" data-tab-for="overview" data-section="body">Body</button>
           </div>
           <button type="button" class="mh-tab" data-tab="depth"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>In depth</span></button>
-          <div data-sub="depth" role="group" aria-label="depth sections">
-            <button type="button" class="mh-sub" data-tab-for="depth" data-section="lastweek">Last week</button>
-            <button type="button" class="mh-sub" data-tab-for="depth" data-section="snapshot">Snapshot</button>
-            <button type="button" class="mh-sub" data-tab-for="depth" data-section="fitness">Fitness</button>
-            <button type="button" class="mh-sub" data-tab-for="depth" data-section="vitals">Vitals</button>
-            <button type="button" class="mh-sub" data-tab-for="depth" data-section="sleep">Sleep</button>
-            <button type="button" class="mh-sub" data-tab-for="depth" data-section="exertion">Exertion</button>
-            <button type="button" class="mh-sub" data-tab-for="depth" data-section="movement">Movement</button>
-            <button type="button" class="mh-sub" data-tab-for="depth" data-section="everynumber">The week, every number</button>
+          <div data-sub="depth" role="group" aria-label="In depth, by window of time">
+            <button type="button" class="mh-sub" data-tab-for="depth" data-section="1m">1 month</button>
+            <button type="button" class="mh-sub" data-tab-for="depth" data-section="3m">3 months</button>
+            <button type="button" class="mh-sub" data-tab-for="depth" data-section="6m">6 months</button>
+            <button type="button" class="mh-sub" data-tab-for="depth" data-section="1y">1 year</button>
+            <button type="button" class="mh-sub" data-tab-for="depth" data-section="3y">3 years</button>
           </div>
+          <button type="button" class="mh-tab" data-tab="guide" id="readtab" data-dim="1"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5V5.5M8 7h8M8 10.5h6"/></svg><span>The Guide</span></button>
           <button type="button" class="mh-tab" data-tab="horizon" id="horizontab"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17h18"/><path d="M6 17a6 6 0 0 1 12 0"/><path d="M12 3v2M4.9 7.9l1.4 1.4M19.1 7.9l-1.4 1.4"/></svg><span>Horizon</span><span class="mh-badge">Pro</span></button>
           <div data-sub="horizon" role="group" aria-label="horizon sections"></div>
-          <button type="button" class="mh-tab" data-tab="guide" id="readtab" data-dim="1"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5V5.5M8 7h8M8 10.5h6"/></svg><span>The Guide</span></button>
           <h3 class="t-eyebrow mb-2 mt-5 hidden px-3 lg:block">Records</h3>
           <button type="button" class="mh-tab" data-tab="body"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6l-5.5 9a2 2 0 0 0 1.7 3h11.6a2 2 0 0 0 1.7-3L14 9V3"/></svg><span>Body</span><span data-count class="mh-count"></span></button>
           <div data-sub="body" role="group" aria-label="body sections">
@@ -548,7 +531,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
             <div class="rounded-2xl border border-ink/10 bg-ink/[0.03] p-4">
               <h3 class="text-[15px] font-extrabold text-text-primary">Retest due</h3>
               <div id="glancedue" class="mt-2 flex flex-col gap-1.5 text-[13px] leading-relaxed text-text-secondary"></div>
-              <p class="mt-2 text-[12px] text-text-3">Lab cadences are the cited ones on the marker pages. A person sees the same due dates on their own In depth tab.</p>
+              <p class="mt-2 text-[12px] text-text-3">The dates are the app's own reminders. Each person sees theirs in the app.</p>
             </div>
           </div>
           <p class="mt-2 text-[12px] text-text-3">Consent decides what you see: nothing here shows without the person's tick, and they can stop at any time.</p>
@@ -614,17 +597,17 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       </div>
 
       <!-- ═══ LABS ═══════════════════════════════════════════════════════ -->
-      <!-- ═══ IN DEPTH: one person, at the depth a coach wants ═══════════════
-           Four answers to "how is this person doing" as one strip, then six
-           chapters with the working: rhythm, load, sessions, fitness, sleep
-           and heart, labs and body and what is due. Every number
-           here is computed from rows the page already reads, so a person
-           you look after gets the same page from their exports, and a
-           client's page shows only what their scopes let you read. -->
+      <!-- ═══ IN DEPTH: how did I get here? ═══════════════════════════════════
+           One person across time (canvas "Verve, one story in four parts",
+           board 04): five windows, one month to three years, each marker in
+           its own lane on one line of time, and what moved and what held.
+           Every number here is computed from rows the page already reads,
+           so a person you look after gets the same page from their exports,
+           and a client's page shows only what their scopes let you read. -->
       <div id="tab-depth" class="mt-6 hidden">
         <!-- the Guide has its own tab; this slot stays for the page's older loader and is never shown -->
         <section id="dp-ai" class="hidden"></section>
-        <!-- a view (src/my-health/views/Depth): last week, the snapshot, the six chapters, the week's every number -->
+        <!-- a view (src/my-health/views/Depth): the window in view, its lanes, and the table under them -->
         <div id="depthroot"></div>
         <p class="t-caption mt-4 text-text-3">None of it is a diagnosis.</p>
       </div>
@@ -1322,6 +1305,11 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     if (!p) return;
     spaceSignal.value = isClient(p) ? "clients" : "health";
     if (p.id === person?.id) { if (activeTab === "group") setTab("overview"); closePersonForm(); closeAccess(); renderPeople(); return; }
+    // Three readers, one page, three ways through it (canvas "Verve, one story in four parts", board 10): the person
+    // lands on the Overview; a coach on the goal, when the person has set one; a clinician on the history. Only when
+    // the page is opened from the list or the Overview: a switch made from Reports stays on Reports.
+    const landing = isClient(p) && (activeTab === "group" || activeTab === "overview");
+    proLanding = landing && myRole === "coach" ? p.id : "";
     person = p;
     if (activeTab === "group") setTab("overview");
     syncSignals = []; syncActs = []; syncProfile = null; syncWeights = []; allWeeks = []; allCrf = []; allBody = [];   // the last person's, until loadActivity brings this one's
@@ -1333,8 +1321,12 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     if (!p.mine && p.id) supabase.rpc("note_grant_view", { person: p.id }).then(() => {}, () => {});   // they can see when you last looked
     const fromStore = await openDocument(id);
     await Promise.all([refresh(false), loadPersonNote(), loadSharing(), loadGlance(), loadAiSummary()]);
+    // a clinician reads history first: In depth at one year, when their plan opens In depth on the people they see
+    if (landing && myRole === "clinician" && person?.id === id && activeTab === "overview" && !depthLockedSignal.value) setTab("depth");
     if (fromStore) void revalidate(id);
   }
+  /** The client a coach has just opened, until that person's horizons are known: an open one is where the coach lands. */
+  let proLanding = "";
 
   // ── add, edit, remove someone you look after ──────────────────────────
   let editingPerson: Person | null = null;
@@ -2292,7 +2284,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     const threads = gid ? [{ id: gid, label: p!.name || "them" }]
       : (p!.self || p!.mine) ? (d.sharing ?? []).filter((g) => g.status === "active").map((g) => ({ id: g.id, label: pros.get(String(g.viewer_email).toLowerCase()) || g.viewer_email })) : [];
     await readsView.load({
-      personId: p!.id, personName: p!.self ? "" : (p!.name || ""), self: !!p!.self, userId, myLabel: p!.self ? (firstName || userEmail) : userEmail,
+      personId: p!.id, personName: p!.self ? "" : (p!.name || ""), self: !!p!.self, owner: !!(p!.self || p!.mine), userId, myLabel: p!.self ? (firstName || userEmail) : userEmail,
       consented: !!d.ai.consent, threads, working: () => depthWorkingSignal.value, call: callRead,
     });
     // the Overview's one line about the Guide: the latest filed read, else the document's own copy of it
@@ -4146,7 +4138,11 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     derived: () => derivedSignal.value,
     isOwner: horizonOwner,
     goTab: (t) => setTab(t),
-    onHorizons: (list) => drawHorizonSubLinks(list),
+    onHorizons: (list) => {
+      drawHorizonSubLinks(list);
+      // a coach starts from the goal: the client's open horizon, if the coach has not moved off the Overview meanwhile
+      if (proLanding && proLanding === person?.id) { proLanding = ""; if (activeTab === "overview" && list.some((h) => !h.done)) setTab("horizon"); }
+    },
     onOff: (off) => { horizonOff = off; dim("horizontab", off); if (off) drawHorizonSubLinks([]); },
   });
   function openHorizon(hash: string) {
