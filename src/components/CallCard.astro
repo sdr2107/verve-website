@@ -1,0 +1,29 @@
+---
+/**
+ * The free fifteen-minute call with the founder. One component, on the
+ * sheet's page and on /start, so the words are written once. Shown only
+ * once the Calendly address exists (data/site.ts).
+ */
+import { CALENDLY_URL } from "../data/site";
+---
+
+{CALENDLY_URL && (
+  <section id="call" class="scroll-mt-6 flex flex-wrap items-start gap-7 rounded-[20px] border border-ink/[0.08] bg-ink/[0.04] p-7 sm:p-8">
+    <img src="/sudeep.jpg" alt="Dr Sudeep Roplekar" width="120" height="120" loading="lazy" class="h-[120px] w-[120px] shrink-0 rounded-full border border-ink/[0.12] object-cover" />
+    <div class="flex min-w-[280px] flex-1 flex-col gap-3.5">
+      <div class="flex flex-col gap-3">
+        <h2 class="text-[26px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[28px]">Fifteen minutes with Dr Sudeep Roplekar. Free.</h2>
+        <p class="max-w-[720px] text-[15.5px] leading-relaxed text-text-secondary">I am a radiologist. I read scans all day, and most of what I see on them was years in the making. Around that job I built Verve on my own: an app that reads your fitness, movement, sleep, heart and blood against the thresholds the studies use, and a website that reads the lab reports a phone cannot. I tested it on myself first; my watch gave one fitness number and a twelve-minute run gave another, and the weekly letters began there.</p>
+        <p class="max-w-[720px] text-[15.5px] leading-relaxed text-text-secondary">On a call I can tell you what your number means, where the next row up is, and what a week that gets you there looks like. What I cannot do is treat you; that stays with your doctor.</p>
+        <p class="text-text-primary">Bring your number from the sheet. We talk through three things.</p>
+      </div>
+      <div class="grid gap-3.5 sm:grid-cols-3">
+        <div class="flex flex-col gap-1"><span class="font-mono text-[12px] text-accent-light">1</span><p class="font-bold text-text-primary">Who you are</p><p class="text-[14.5px] text-text-secondary">Your week, your health, what you want from the next few months.</p></div>
+        <div class="flex flex-col gap-1"><span class="font-mono text-[12px] text-accent-light">2</span><p class="font-bold text-text-primary">What your sheet says</p><p class="text-[14.5px] text-text-secondary">The row you landed in, what it means, and what the next row up would take.</p></div>
+        <div class="flex flex-col gap-1"><span class="font-mono text-[12px] text-accent-light">3</span><p class="font-bold text-text-primary">A training week you can keep</p><p class="text-[14.5px] text-text-secondary">Two or three things to build it around, and the first one to do this week.</p></div>
+      </div>
+      <p class="text-[13.5px] text-text-tertiary">Wellness, not medical advice. Nothing on the call replaces your doctor.</p>
+    </div>
+    <a href={CALENDLY_URL} target="_blank" rel="noopener" class="inline-flex min-h-12 items-center self-center rounded-xl bg-accent px-6 font-bold text-canvas transition-opacity hover:opacity-90">Pick a time</a>
+  </section>
+)}

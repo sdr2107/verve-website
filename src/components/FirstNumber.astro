@@ -1,0 +1,279 @@
+---
+/**
+ * Find your number — the tool on the landing page (11 November 2026, the
+ * canvas "Verve on the web, rethought", boards 01 and 03).
+ *
+ * A six-minute walk or a twelve-minute run, a distance, an age, a sex and,
+ * for the walk, a weight: out comes the fitness figure in METs and the tier
+ * it lands in for that age and sex, with the study named. Nothing is sent
+ * anywhere and no account is asked for: the sum is the printed sheet's own
+ * (src/data/first-number.ts) and the tables are the app's
+ * (src/data/fitness-tiers.ts), and both run on the page.
+ *
+ * The card paints complete without script, showing the sheet's worked
+ * example with a "Sample" chip. With script, "Show my number" replaces it
+ * with the visitor's own: the marker slides to its place and the figure
+ * counts up, both in 300 ms, and neither under prefers-reduced-motion.
+ *
+ * Only after a result of their own does "Keep it" appear: one box, empty
+ * until the person ticks it, and one button, which leaves the result in
+ * localStorage["verve-keep"] and goes to /my-health/?keep=1, where the
+ * sign-in is. What happens after sign-in is My health's.
+ */
+import { firstNumber, WALK_EXAMPLE, type FirstNumber } from "../data/first-number";
+import { tierFor, tierSourceShort, TIER_LABELS } from "../data/fitness-tiers";
+
+/** The scale every ladder is drawn on: zero to sixteen METs, so the axis never flatters. */
+const AXIS = 16;
+
+const sample = firstNumber({ test: "walk6", metres: WALK_EXAMPLE.metres, age: WALK_EXAMPLE.age, sex: WALK_EXAMPLE.sex, weightKg: WALK_EXAMPLE.weightKg }) as Extract<FirstNumber, { ok: true }>;
+const tier = tierFor(sample.sex, sample.age, sample.mets)!;
+const b = tier.row.bounds;
+const widths = [b[0], b[1] - b[0], b[2] - b[1], b[3] - b[2], AXIS - b[3]].map((w) => (w / AXIS) * 100);
+const at = (Math.min(sample.mets, AXIS) / AXIS) * 100;
+/** One hue, five steps of it: the tiers never lean on red against green. */
+const STEP = [16, 32, 54, 78, 100];
+const field = "min-h-11 w-full rounded-[10px] border border-border-strong bg-card px-3 font-mono text-[15px] text-text-primary focus:border-accent focus:outline-none";
+const seg = "min-h-10 flex-1 whitespace-nowrap rounded-[8px] px-1.5 text-[12.5px] font-semibold sm:text-[13.5px] text-text-secondary transition-colors aria-pressed:bg-card aria-pressed:text-text-primary aria-pressed:shadow-[0_1px_2px_var(--color-shade)]";
+---
+
+<section
+  id="find-your-number"
+  class="scroll-mt-6 flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 sm:p-6"
+  aria-labelledby="fn-title"
+  data-first-number
+  data-axis={AXIS}
+>
+  <div class="flex items-center justify-between">
+    <h2 id="fn-title" class="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-text-3">Your number</h2>
+    <span data-fn-chip class="inline-flex h-[22px] items-center rounded-full border border-border-strong bg-alt px-[9px] font-mono text-[10.5px] font-semibold uppercase tracking-[0.04em] text-text-2">Sample</span>
+  </div>
+
+  <form data-fn-form class="flex flex-col gap-2.5" novalidate>
+    <div class="flex gap-1 rounded-[10px] bg-alt p-1" role="group" aria-label="Which test">
+      <button type="button" class={seg} data-fn-test="walk6" aria-pressed="true">Six-minute walk</button>
+      <button type="button" class={seg} data-fn-test="run12" aria-pressed="false">Twelve-minute run</button>
+    </div>
+    <div class="grid grid-cols-3 gap-2.5" data-fn-fields>
+      <label class="flex flex-col gap-1 text-[12.5px] font-medium text-text-2">Distance, m
+        <input class={field} name="metres" type="text" inputmode="numeric" autocomplete="off" value={sample.metres} aria-describedby="fn-error" />
+      </label>
+      <label class="flex flex-col gap-1 text-[12.5px] font-medium text-text-2">Age
+        <input class={field} name="age" type="text" inputmode="numeric" autocomplete="off" value={sample.age} aria-describedby="fn-error" />
+      </label>
+      <label class="flex flex-col gap-1 text-[12.5px] font-medium text-text-2" data-fn-weight>Weight, kg
+        <input class={field} name="weight" type="text" inputmode="decimal" autocomplete="off" value={sample.weightKg} aria-describedby="fn-error" />
+      </label>
+    </div>
+    <div class="flex flex-wrap gap-2.5">
+      <div class="flex min-w-[150px] flex-1 gap-1 rounded-[10px] bg-alt p-1" role="group" aria-label="Sex">
+        <button type="button" class={seg} data-fn-sex="male" aria-pressed="true">Man</button>
+        <button type="button" class={seg} data-fn-sex="female" aria-pressed="false">Woman</button>
+      </div>
+      <button type="submit" class="inline-flex min-h-12 flex-1 items-center justify-center whitespace-nowrap rounded-full bg-accent px-5 text-[15px] font-semibold text-canvas transition-colors hover:bg-accent-text">Show my number</button>
+    </div>
+    <p class="text-[12.5px] text-text-3">Nothing is sent. The sum runs on this page.</p>
+    <noscript><p class="text-[12.5px] text-text-2">The sum needs this page&rsquo;s script. <a href="/sheet" class="font-semibold text-accent-text underline">The printed sheet</a> does it by hand.</p></noscript>
+  </form>
+
+  <div class="flex flex-col gap-3.5 border-t border-border pt-4" data-fn-result aria-live="polite">
+    <p data-fn-summary class="font-mono text-[12px] text-text-2">Six-minute walk &middot; {sample.metres} m &middot; a man of {sample.age}, {sample.weightKg} kg</p>
+    <div class="flex items-end justify-between gap-4">
+      <p class="flex items-baseline gap-2">
+        <span data-fn-mets class="font-mono text-[56px] font-semibold leading-[0.95] tracking-[-0.02em] text-text-primary sm:text-[64px]">{sample.mets.toFixed(1)}</span>
+        <span class="font-mono text-[15px] text-text-3">METs</span>
+      </p>
+      <p class="text-right">
+        <span data-fn-tier class="block text-[16px] font-semibold text-text-primary">{tier.label}</span>
+        <span data-fn-for class="block text-[13px] text-text-2">for a man of {sample.age}</span>
+      </p>
+    </div>
+
+    <p id="fn-error" data-fn-error role="alert" class="hidden rounded-[10px] border border-border-strong bg-alt px-3 py-2.5 text-[13.5px] leading-[1.45] text-text-primary"></p>
+
+    <div data-fn-ladder role="img" aria-label={`The five fitness tiers for men aged ${tier.row.age}, on a scale from 0 to ${AXIS} METs. This figure is in ${tier.label}.`} class="flex flex-col gap-1.5">
+      <div class="relative h-[18px]">
+        <span data-fn-here class="fn-slide absolute top-0 -translate-x-1/2 whitespace-nowrap font-mono text-[11px] font-semibold text-text-primary" style={`left: clamp(38px, ${at}%, calc(100% - 38px))`}>you are here</span>
+      </div>
+      <div class="relative">
+        <div class="flex h-3.5 overflow-hidden rounded-full" data-fn-bar>
+          {widths.map((w, i) => (
+            <span title={TIER_LABELS[i]} style={`width: ${w}%; background: color-mix(in srgb, var(--color-accent) ${STEP[i]}%, var(--color-card))`}></span>
+          ))}
+        </div>
+        <span data-fn-marker class="fn-slide absolute -top-1.5 h-[26px] w-0.5 -translate-x-1/2 rounded-full bg-text" style={`left: ${at}%`}></span>
+      </div>
+      <div class="flex justify-between font-mono text-[10.5px] text-text-3"><span>0</span><span>{AXIS} METs</span></div>
+      <div class="flex justify-between text-[11.5px] text-text-2" data-fn-names>
+        {TIER_LABELS.map((l, i) => <span class:list={[i === tier.index && "font-semibold text-text-primary"]}>{l}</span>)}
+      </div>
+    </div>
+
+    <p data-fn-next class="text-[14px] leading-[1.5] text-text-primary">{tier.next ? `${tier.next.label} starts at ${tier.next.from.toFixed(1)} METs. That is ${tier.next.away.toFixed(1)} away.` : ""}</p>
+    <p data-fn-notes class="font-mono text-[10.5px] leading-[1.6] text-text-3">
+      <span data-fn-working>{sample.working}</span><br />
+      <span data-fn-source>Walk: Hong et al. 2019 &middot; Tiers: {tierSourceShort(sample.age)}</span><br />
+      <span data-fn-limit>A field test, not a lab test.</span>
+    </p>
+
+    <div data-fn-keep class="hidden flex-col gap-3 rounded-[12px] border border-accent-border bg-accent-fill p-4">
+      <label class="flex min-h-11 items-start gap-2.5 pt-1.5 text-[14px] leading-[1.4] text-text-primary">
+        <input type="checkbox" data-fn-weekly class="mt-0.5 h-5 w-5 shrink-0 accent-[var(--color-accent)]" />
+        <span>Email me my week on Mondays</span>
+      </label>
+      <p class="text-[13px] leading-[1.5] text-accent-text">Next you sign in with your email; a six-digit code arrives. 14 days of Pro on the website, no card.</p>
+      <button type="button" data-fn-keep-go class="inline-flex min-h-12 items-center justify-center rounded-full bg-accent px-5 text-[15px] font-semibold text-canvas transition-colors hover:bg-accent-text">Keep it</button>
+      <p class="text-[12.5px] leading-[1.5] text-text-2">What is kept: the test, the distance, your age, sex and weight, and the result. Nothing else.</p>
+    </div>
+    <p class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13.5px]">
+      <a href="/sheet" class="inline-flex min-h-9 items-center font-semibold text-accent-text underline-offset-2 hover:underline">Print the sheet</a>
+      <span data-fn-hint class="text-text-3">Put in your own figures to keep a number.</span>
+    </p>
+  </div>
+</section>
+
+<style is:global>
+  /* The marker and its label slide to their place; nothing else in the card moves. */
+  .fn-slide { transition: left 300ms cubic-bezier(0.2, 0.7, 0.2, 1); }
+  @media (prefers-reduced-motion: reduce) { .fn-slide { transition: none; } }
+</style>
+
+<script>
+  import { firstNumber, type Sex, type Test } from "../data/first-number";
+  import { tierFor, tierSourceShort, TIER_LABELS } from "../data/fitness-tiers";
+
+  const STEP = [16, 32, 54, 78, 100];
+  const TEST_WORDS: Record<Test, string> = { walk6: "Six-minute walk", run12: "Twelve-minute run" };
+  const still = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function mount(card: HTMLElement) {
+    if (card.dataset.fnMounted) return;
+    card.dataset.fnMounted = "1";
+    const AXIS = Number(card.dataset.axis) || 16;
+    const q = <T extends HTMLElement>(sel: string) => card.querySelector(sel) as T;
+    const form = q<HTMLFormElement>("[data-fn-form]");
+    const inputs = { metres: form.elements.namedItem("metres") as HTMLInputElement, age: form.elements.namedItem("age") as HTMLInputElement, weight: form.elements.namedItem("weight") as HTMLInputElement };
+    const el = {
+      chip: q("[data-fn-chip]"), summary: q("[data-fn-summary]"), mets: q("[data-fn-mets]"), tier: q("[data-fn-tier]"), forWhom: q("[data-fn-for]"),
+      ladder: q("[data-fn-ladder]"), here: q("[data-fn-here]"), bar: q("[data-fn-bar]"), marker: q("[data-fn-marker]"), names: q("[data-fn-names]"),
+      next: q("[data-fn-next]"), notes: q("[data-fn-notes]"), working: q("[data-fn-working]"), source: q("[data-fn-source]"), limit: q("[data-fn-limit]"),
+      keep: q("[data-fn-keep]"), weekly: q<HTMLInputElement>("[data-fn-weekly]"), go: q<HTMLButtonElement>("[data-fn-keep-go]"), hint: q("[data-fn-hint]"), error: q("[data-fn-error]"),
+      weightField: q("[data-fn-weight]"), fields: q("[data-fn-fields]"),
+    };
+    let test: Test = "walk6", sex: Sex = "male";
+    let kept: Record<string, unknown> | null = null;
+    let shown = Number(el.mets.textContent) || 0;
+    let frame = 0, guard = 0;
+
+    const num = (s: string) => { const n = Number(s.replace(/[,\s]/g, "")); return s.trim() === "" ? NaN : n; };
+    const press = (attr: string, value: string) => card.querySelectorAll<HTMLElement>(`[${attr}]`).forEach((b) => b.setAttribute("aria-pressed", String(b.getAttribute(attr) === value)));
+
+    function setTest(t: Test) {
+      test = t; press("data-fn-test", t);
+      const run = t === "run12";
+      el.weightField.classList.toggle("hidden", run);
+      el.fields.classList.toggle("grid-cols-3", !run); el.fields.classList.toggle("grid-cols-2", run);
+    }
+    card.querySelectorAll<HTMLElement>("[data-fn-test]").forEach((b) => b.addEventListener("click", () => setTest(b.dataset.fnTest as Test)));
+    card.querySelectorAll<HTMLElement>("[data-fn-sex]").forEach((b) => b.addEventListener("click", () => { sex = b.dataset.fnSex as Sex; press("data-fn-sex", sex); }));
+
+    /**
+     * The figure counts up to its value in 300 ms, in step with the marker; at once when motion is off or the
+     * page is not in view. A timer settles it on the real value whatever the frames do, so a tab that paints no
+     * frames can never be left showing the last person's number.
+     */
+    function count(to: number) {
+      cancelAnimationFrame(frame); clearTimeout(guard);
+      const settle = () => { cancelAnimationFrame(frame); clearTimeout(guard); shown = to; el.mets.textContent = to.toFixed(1); };
+      const from = shown, start = performance.now();
+      if (still() || from === to || document.visibilityState !== "visible") return settle();
+      guard = window.setTimeout(settle, 380);
+      const tick = (now: number) => {
+        const k = Math.min(1, (now - start) / 300), e = 1 - Math.pow(1 - k, 3);
+        shown = from + (to - from) * e;
+        el.mets.textContent = shown.toFixed(1);
+        if (k < 1) frame = requestAnimationFrame(tick); else settle();
+      };
+      frame = requestAnimationFrame(tick);
+    }
+
+    function refuse(reason: string) {
+      cancelAnimationFrame(frame); clearTimeout(guard);
+      shown = 0; kept = null;
+      el.chip.textContent = "No number";
+      el.mets.textContent = "—";
+      el.tier.textContent = ""; el.forWhom.textContent = "";
+      el.ladder.classList.add("hidden"); el.next.textContent = ""; el.next.classList.add("hidden");
+      el.notes.classList.add("hidden");
+      el.keep.classList.add("hidden"); el.keep.classList.remove("flex");
+      el.hint.textContent = "Put in your own figures to keep a number.";
+      el.error.textContent = reason; el.error.classList.remove("hidden");
+    }
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const input = { test, sex, metres: num(inputs.metres.value), age: num(inputs.age.value), weightKg: num(inputs.weight.value) };
+      const person = `a ${sex === "female" ? "woman" : "man"} of ${Number.isFinite(input.age) ? input.age : "—"}`;
+      el.summary.textContent = `${TEST_WORDS[test]} · ${Number.isFinite(input.metres) ? input.metres.toLocaleString("en-US") : "—"} m · ${person}${test === "walk6" && Number.isFinite(input.weightKg) ? `, ${input.weightKg} kg` : ""}`;
+      const r = firstNumber(input);
+      if (!r.ok) {
+        refuse(r.reason);
+        const bad = r.field === "weightKg" ? inputs.weight : r.field === "age" ? inputs.age : inputs.metres;
+        bad.setAttribute("aria-invalid", "true"); bad.focus();
+        return;
+      }
+      [inputs.metres, inputs.age, inputs.weight].forEach((i) => i.removeAttribute("aria-invalid"));
+      el.error.classList.add("hidden"); el.error.textContent = "";
+      el.next.classList.remove("hidden"); el.notes.classList.remove("hidden");
+      el.chip.textContent = "Yours";
+      count(r.mets);
+      const t = tierFor(r.sex, r.age, r.mets);
+      const who = `for ${person}`;
+      if (t) {
+        const b = t.row.bounds, widths = [b[0], b[1] - b[0], b[2] - b[1], b[3] - b[2], AXIS - b[3]];
+        el.bar.querySelectorAll<HTMLElement>("span").forEach((s, i) => { s.style.width = `${(widths[i] / AXIS) * 100}%`; s.style.background = `color-mix(in srgb, var(--color-accent) ${STEP[i]}%, var(--color-card))`; });
+        const at = (Math.min(r.mets, AXIS) / AXIS) * 100;
+        el.marker.style.left = `${at}%`; el.here.style.left = `clamp(38px, ${at}%, calc(100% - 38px))`;
+        el.ladder.classList.remove("hidden");
+        el.ladder.setAttribute("aria-label", `The five fitness tiers for ${r.sex === "female" ? "women" : "men"} aged ${t.row.age}, on a scale from 0 to ${AXIS} METs. This figure is in ${t.label}.`);
+        el.names.querySelectorAll("span").forEach((s, i) => { s.className = i === t.index ? "font-semibold text-text-primary" : ""; });
+        el.tier.textContent = t.label; el.forWhom.textContent = who;
+        el.next.textContent = t.next ? `${t.next.label} starts at ${t.next.from.toFixed(1)} METs. That is ${t.next.away.toFixed(1)} away.` : `${TIER_LABELS[4]} is the top tier in this table.`;
+      } else {
+        el.ladder.classList.add("hidden");
+        el.tier.textContent = "—"; el.forWhom.textContent = "the tier tables start at age 20";
+        el.next.textContent = "";
+      }
+      el.working.textContent = r.working;
+      el.source.textContent = `${r.test === "run12" ? "Run: Cooper, JAMA 1968" : "Walk: Hong et al. 2019"}${t ? ` · Tiers: ${tierSourceShort(r.age)}` : ""}`;
+      el.limit.textContent = r.over60 ? "A field test, not a lab test. Over 60 the app uses a line that also takes height (Šagát et al., 2023)." : "A field test, not a lab test.";
+      const d = new Date(), on = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      kept = { test: r.test, distance_m: r.metres, age: r.age, sex: r.sex, weight_kg: r.test === "walk6" ? r.weightKg : (Number.isFinite(input.weightKg) ? input.weightKg : null), mets: r.mets, vo2: r.vo2, tier: t ? t.label : null, on };
+      el.keep.classList.remove("hidden"); el.keep.classList.add("flex");
+      el.hint.textContent = "";
+    });
+
+    el.go.addEventListener("click", () => {
+      if (!kept) return;
+      try { localStorage.setItem("verve-keep", JSON.stringify({ ...kept, weekly: el.weekly.checked })); } catch { /* no storage: the sign-in still works, the number is not carried */ }
+      location.href = "/my-health/?keep=1";
+    });
+  }
+
+  const boot = () => document.querySelectorAll<HTMLElement>("[data-first-number]").forEach(mount);
+  boot();
+  document.addEventListener("astro:page-load", boot);
+
+  // "Find your number" anywhere on the page: go to the card and put the cursor in the first field.
+  document.addEventListener("click", (e) => {
+    const a = (e.target as HTMLElement | null)?.closest?.('a[href="#find-your-number"]');
+    if (!a) return;
+    const card = document.getElementById("find-your-number");
+    const first = card?.querySelector<HTMLInputElement>('input[name="metres"]');
+    if (!card || !first) return;
+    e.preventDefault();
+    card.scrollIntoView({ behavior: still() ? "auto" : "smooth", block: "center" });
+    first.focus({ preventScroll: true }); first.select();
+    history.replaceState(null, "", "#find-your-number");
+  });
+</script>

@@ -1,0 +1,36 @@
+---
+/**
+ * One store's download link.
+ *
+ * It shows the store's official badge when that file is in the repo at
+ * build time (src/assets/badges/app-store.svg,
+ * src/assets/badges/google-play.svg), and until then a plain bordered
+ * button carrying the store's own words. No badge artwork is drawn, traced
+ * or imitated here: dropping the official file into src/assets/badges/ is
+ * the whole change, and nothing in this component or its callers needs to
+ * be touched. The folder is read with a glob at build time, so a missing
+ * file is simply not there, never an error.
+ */
+interface Props {
+  store: "app-store" | "google-play";
+  href: string;
+}
+const { store, href } = Astro.props;
+
+const WORDS = { "app-store": "Download on the App Store", "google-play": "Get it on Google Play" } as const;
+const badges = import.meta.glob("../assets/badges/*.svg", { eager: true, query: "?url", import: "default" }) as Record<string, string>;
+const official: string | undefined = badges[`../assets/badges/${store}.svg`];
+---
+
+{official ? (
+  <a href={href} target="_blank" rel="noopener" class="inline-flex min-h-11 items-center rounded-[10px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+    <img src={official} alt={WORDS[store]} height="40" class="h-10 w-auto" loading="lazy" />
+  </a>
+) : (
+  <a
+    href={href}
+    target="_blank"
+    rel="noopener"
+    class="inline-flex min-h-11 items-center whitespace-nowrap rounded-[10px] border border-border-strong bg-card px-4 text-[14px] font-semibold text-text-primary transition-colors hover:border-accent-border hover:bg-alt focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+  >{WORDS[store]}</a>
+)}

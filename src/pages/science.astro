@@ -15,23 +15,16 @@
  * App Store release is needed to keep an old link working.
  */
 import Layout from "../layouts/Layout.astro";
-import VideoSlot from "../components/VideoSlot.astro";
 import Footer from "../components/Footer.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import CrfMapPreview from "../components/science/CrfMapPreview.astro";
 import { SUBJECTS, subjectCounts, topicsFor, COUNTS, ANCHOR_TARGET, topicHref } from "../data/scienceTopics";
-
-/** The three figures under the opening line. Counted, never typed. */
-const figures = [
-  { n: COUNTS.citations, label: "citations" },
-  { n: COUNTS.topics, label: "topics" },
-  { n: COUNTS.markers, label: "body markers" },
-];
+import { VIDEOS } from "../data/videos";
 
 ---
 
 <Layout
-  title="The Science Behind Verve"
+  title="Science · Verve"
   description="Every threshold in Verve, traced to its source. Four subjects — fitness, movement, sleep and heart, body — each opening with what the app shows you, then the studies behind it."
 >
   {/* ── Anchor forwarding. The app links to ten anchors that used to live on
@@ -69,77 +62,71 @@ const figures = [
   <SiteHeader current="science" />
 
   <!-- ── The opening ─────────────────────────────────────────────────── -->
-  <section class="relative px-6 pt-8 pb-16 sm:px-10">
-    <div class="mx-auto max-w-3xl text-center">
-      <span class="vrv-rise block font-mono text-xs font-semibold uppercase tracking-widest text-accent-light">
-        The evidence base
-      </span>
-      <h1 class="vrv-rise mt-4 text-4xl font-bold tracking-tight text-text-primary sm:text-5xl" style="--i: 1">
-        Every threshold, traced to its source.
-      </h1>
-      <p class="vrv-rise mx-auto mt-5 max-w-2xl text-base leading-relaxed text-text-secondary" style="--i: 2">
-        Verve is built so you come to know your own readings. Every number it
-        shows you is one a clinician would use, and every threshold names the
-        study it came from.
-      </p>
-
-      <!-- Search everything the section says. The index is one file built
-           from the same registry as the pages, fetched on first focus.
-           z-30 on the wrapper, not only on the results: .vrv-rise animates a
-           transform, so every risen block is a stacking context of its own
-           and the results' z-index could not climb out of this one — the
-           video card and the counts, risen later, painted over the hits. -->
-      <div class="vrv-rise relative z-30 mx-auto mt-8 max-w-xl text-left" style="--i: 3">
-        <label for="q" class="sr-only">Search the science</label>
-        <svg class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-        <input
-          id="q" type="search" autocomplete="off" spellcheck="false"
-          placeholder="Search a marker, a topic, a section, a study…"
-          aria-controls="results" aria-expanded="false"
-          class="w-full rounded-2xl border border-white/10 bg-white/[0.04] py-3.5 pl-11 pr-12 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent/60 focus:outline-none"
-        />
-        <kbd class="pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 rounded-md border border-white/10 px-1.5 py-0.5 font-mono text-[10px] text-text-muted sm:block" aria-hidden="true">/</kbd>
-        <div id="results" role="listbox" class="absolute left-0 right-0 top-full z-20 mt-2 hidden overflow-hidden rounded-2xl border border-white/10 bg-canvas-2 shadow-2xl shadow-black/40"></div>
+  <section class="relative px-6 pt-10 pb-14 sm:px-10">
+    <div class="mx-auto max-w-3xl">
+      <div class="text-center">
+        <span class="vrv-rise block font-mono text-xs font-semibold uppercase tracking-widest text-accent-light">
+          The evidence base
+        </span>
+        <h1 class="vrv-rise mt-4 text-4xl font-semibold tracking-tight text-text-primary sm:text-5xl" style="--i: 1">
+          Every threshold, traced to its source.
+        </h1>
+        <p class="vrv-rise mt-4 font-mono text-[12.5px] text-text-tertiary" style="--i: 2">
+          {COUNTS.citations} citations &middot; {COUNTS.topics} topics &middot; {COUNTS.markers} body markers &middot; <a href="/videos" class="font-semibold text-accent-text underline-offset-4 hover:underline">{VIDEOS.length} videos</a>
+        </p>
       </div>
 
-      <!-- the search, shown: twenty-four seconds, in place of a paragraph about it -->
-      <div class="vrv-rise mx-auto mt-8 max-w-xl text-left" style="--i: 3.5"><VideoSlot slugs={["science-search"]} /></div>
-
-      <dl class="vrv-rise mx-auto mt-8 flex items-center justify-center gap-6 sm:gap-10" style="--i: 4">
-        {figures.map((f, i) => (
-          <>
-            {i > 0 && <div class="h-10 w-px shrink-0 bg-white/10" aria-hidden="true"></div>}
-            <div>
-              <dt class="sr-only">{f.label}</dt>
-              <dd>
-                <span class="block font-mono text-3xl font-bold text-text-primary">{f.n}</span>
-                <span class="mt-0.5 block text-[13px] text-text-tertiary">{f.label}</span>
-              </dd>
-            </div>
-          </>
-        ))}
-      </dl>
+      <!-- One search across what the section says, what it measures against, and what it shows:
+           topics, thresholds and videos. The index is one file built from the same registries as the
+           pages, fetched on first focus. Four filters; the results sit in the page, not over it. -->
+      <div class="vrv-rise mx-auto mt-8 max-w-2xl text-left" style="--i: 3">
+        <div class="relative">
+          <label for="q" class="sr-only">Search the science</label>
+          <svg class="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-text-tertiary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <input
+            id="q" type="search" autocomplete="off" spellcheck="false"
+            placeholder="Search the science"
+            aria-controls="results"
+            class="min-h-12 w-full rounded-2xl border border-border-strong bg-card py-3 pl-11 pr-28 text-[15px] text-text-primary placeholder:text-text-3 focus:border-accent focus:outline-none"
+          />
+          <span id="count" class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 font-mono text-[11px] text-text-tertiary" aria-live="polite"></span>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-2" role="group" aria-label="Show">
+          {[["all", "All"], ["read", "Read"], ["watch", "Watch"], ["thresholds", "Thresholds"]].map(([key, label], i) => (
+            <button type="button" data-filter={key} aria-pressed={i === 0 ? "true" : "false"}
+              class="min-h-9 rounded-full border border-border-strong bg-card px-3.5 text-[13px] font-semibold text-text-secondary transition-colors hover:text-text-primary aria-pressed:border-accent-border aria-pressed:bg-accent-fill aria-pressed:text-accent-text">{label}</button>
+          ))}
+        </div>
+        <div id="results" class="mt-3 hidden overflow-hidden rounded-2xl border border-border bg-card"></div>
+        <p class="mt-3 text-[12.5px] leading-relaxed text-text-tertiary">
+          Topics and studies to read, the cut-points themselves, and {VIDEOS.length} short videos with captions and no sound. Nothing plays until you press it.
+        </p>
+      </div>
     </div>
   </section>
 
   {/* ── Search. Terms score against the title first, then the one-line
-       answer, the sub-headings and the prose; a hit links to the page and
-       shows the sentence it was found in. No library: the index is small
-       and the ranking is four lines. ───────────────────────────────────── */}
+       answer, the sub-headings and the prose; a hit links to where the
+       thing is read, measured or played, and a threshold shows its numbers
+       in the list. No library: the index is small and the ranking is four
+       lines. ─────────────────────────────────────────────────────────── */}
   <script is:inline>
     (function () {
       var q = document.getElementById("q");
       var box = document.getElementById("results");
+      var count = document.getElementById("count");
       if (!q || !box) return;
-      var index = null, loading = null;
-      var KIND = { topic: "Topic", section: "Section", subject: "Subject", marker: "Body marker", study: "Study" };
+      var index = null, loading = null, filter = "all";
+      var TAG = { topic: "Read", section: "Read", subject: "Read", study: "Read", marker: "Threshold", threshold: "Threshold", video: "Watch" };
+      var GROUP = { Read: "read", Threshold: "thresholds", Watch: "watch" };
+      var WHAT = { topic: "topic", section: "section", subject: "subject", study: "study", marker: "body marker", threshold: "table", video: "" };
 
       function load() {
-        if (index || loading) return loading;
+        if (index || loading) return loading || Promise.resolve(index);
         loading = fetch("/search-index.json").then(function (r) { return r.json(); }).then(function (j) { index = j; return j; });
         return loading;
       }
-      var esc = function (s) { return s.replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
+      var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
       var rx = function (s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); };
 
       function score(e, terms) {
@@ -158,67 +145,95 @@ const figures = [
           total += n;
         }
         if (hit < terms.length) return 0;      // every word must land somewhere
-        return total + (e.k === "topic" ? 3 : e.k === "section" || e.k === "marker" ? 2 : 0);
+        return total + (e.k === "topic" ? 3 : e.k === "section" || e.k === "marker" || e.k === "threshold" || e.k === "video" ? 2 : 0);
       }
 
-      function snippet(e, terms) {
-        var src = e.d && e.d.length ? e.d + " · " + (e.x || "") : (e.x || "");
-        var low = src.toLowerCase(), at = -1;
-        for (var i = 0; i < terms.length && at < 0; i++) at = low.indexOf(terms[i]);
-        var start = Math.max(0, at - 70), end = Math.min(src.length, (at < 0 ? 0 : at) + 110);
-        var out = (start > 0 ? "…" : "") + src.slice(start, end) + (end < src.length ? "…" : "");
-        out = esc(out);
+      function mark(text, terms) {
+        var out = esc(text);
         for (var j = 0; j < terms.length; j++) out = out.replace(new RegExp("(" + rx(esc(terms[j])) + ")", "ig"), "<mark>$1</mark>");
         return out;
       }
-
-      function render(list, query) {
-        if (!query) { box.classList.add("hidden"); box.innerHTML = ""; q.setAttribute("aria-expanded", "false"); return; }
-        if (!list.length) {
-          box.innerHTML = '<p class="px-4 py-3.5 text-[13px] text-text-tertiary">Nothing for “' + esc(query) + '”. Try a marker’s name, a topic, or an author.</p>';
-        } else {
-          box.innerHTML = list.map(function (e) {
-            return '<a href="' + esc(e.u) + '" role="option" class="block border-b border-white/[0.06] px-4 py-3 transition-colors last:border-b-0 hover:bg-white/[0.05]">' +
-              '<span class="flex items-center gap-2"><span class="text-sm font-semibold text-text-primary">' + esc(e.t) + '</span>' +
-              '<span class="rounded-md bg-white/[0.06] px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-text-secondary">' + KIND[e.k] + '</span>' +
-              '<span class="ml-auto shrink-0 text-[11px] text-text-tertiary">' + esc(e.s) + '</span></span>' +
-              '<span class="mt-1 block text-[12.5px] leading-relaxed text-text-tertiary">' + snippet(e, e._terms) + '</span></a>';
-          }).join("");
-        }
-        box.classList.remove("hidden");
-        q.setAttribute("aria-expanded", "true");
+      function snippet(e, terms) {
+        var src = e.d && e.d.length ? e.d : (e.x || "");
+        var low = src.toLowerCase(), at = -1;
+        for (var i = 0; i < terms.length && at < 0; i++) at = low.indexOf(terms[i]);
+        var start = Math.max(0, at - 70), end = Math.min(src.length, (at < 0 ? 0 : at) + 120);
+        return mark((start > 0 ? "\u2026" : "") + src.slice(start, end) + (end < src.length ? "\u2026" : ""), terms);
+      }
+      /** The one line under a hit: a threshold's own numbers, a video's place, else the sentence the words were found in. */
+      function line(e, terms) {
+        if (e.b) return mark(e.b, terms);
+        if (e.k === "video") return esc(e.s);
+        return snippet(e, terms);
+      }
+      function meta(e) {
+        if (e.k === "video") return esc(e.m || "");
+        if (e.k === "section" || e.k === "study") return esc(e.s);
+        return esc(e.s) + " \u00b7 " + WHAT[e.k];
       }
 
+      function render(list, total, query) {
+        if (!list) { box.classList.add("hidden"); box.innerHTML = ""; if (count) count.textContent = ""; return; }
+        if (count) count.textContent = total === 1 ? "1 result" : total + " results";
+        if (!list.length) {
+          box.innerHTML = '<p class="px-4 py-3.5 text-[13.5px] text-text-secondary">Nothing for \u201c' + esc(query) + '\u201d' + (filter === "all" ? "" : " under this filter") + '. Try a marker\u2019s name, a topic, or an author.</p>';
+        } else {
+          box.innerHTML = list.map(function (e) {
+            var terms = e._terms || [];
+            return '<a href="' + esc(e.u) + '" class="flex items-start gap-3.5 border-b border-border px-4 py-3.5 transition-colors last:border-b-0 hover:bg-alt">' +
+              '<span class="mt-0.5 w-[76px] shrink-0 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-text-tertiary">' + TAG[e.k] + '</span>' +
+              '<span class="min-w-0 flex-1"><span class="block text-[15px] font-semibold text-text-primary">' + mark(e.t, terms) + '</span>' +
+              '<span class="mt-0.5 block text-[13px] leading-[1.5] text-text-secondary">' + line(e, terms) + '</span></span>' +
+              '<span class="hidden shrink-0 pt-0.5 text-right font-mono text-[10.5px] text-text-tertiary sm:block">' + meta(e) + '</span></a>';
+          }).join("") + (total > list.length ? '<p class="border-t border-border px-4 py-3 text-[12.5px] text-text-tertiary">The first ' + list.length + ' of ' + total + '. Add a word to narrow it.' + (filter === "watch" ? ' <a href="/videos" class="font-semibold text-accent-text underline">All the videos</a>' : '') + '</p>' : "");
+        }
+        box.classList.remove("hidden");
+      }
+
+      var keep = function (e) { return filter === "all" || GROUP[TAG[e.k]] === filter; };
       var timer;
       function run() {
         var query = q.value.trim();
-        if (!query) return render([], "");
+        // no words: Watch and Thresholds list what they hold; All and Read wait for a word
+        if (!query && (filter === "all" || filter === "read")) return render(null);
         load().then(function (j) {
           var terms = query.toLowerCase().split(/\s+/).filter(Boolean);
           var hits = [];
           for (var i = 0; i < j.length; i++) {
-            var sc = score(j[i], terms);
-            if (sc > 0) { hits.push({ e: j[i], sc: sc }); }
+            if (!keep(j[i])) continue;
+            var sc = terms.length ? score(j[i], terms) : 1;
+            if (sc > 0) hits.push({ e: j[i], sc: sc });
           }
-          hits.sort(function (a, b) { return b.sc - a.sc; });
-          render(hits.slice(0, 8).map(function (h) { h.e._terms = terms; return h.e; }), query);
+          if (terms.length) hits.sort(function (a, b) { return b.sc - a.sc; });
+          render(hits.slice(0, 12).map(function (h) { h.e._terms = terms; return h.e; }), hits.length, query);
         });
       }
       q.addEventListener("focus", load);
       q.addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(run, 80); });
       q.addEventListener("keydown", function (e) {
-        if (e.key === "Escape") { q.value = ""; render([], ""); q.blur(); }
+        if (e.key === "Escape") { q.value = ""; run(); q.blur(); }
         if (e.key === "Enter") { var first = box.querySelector("a"); if (first) window.location.href = first.getAttribute("href"); }
+      });
+      var chips = document.querySelectorAll("[data-filter]");
+      for (var c = 0; c < chips.length; c++) chips[c].addEventListener("click", function () {
+        filter = this.getAttribute("data-filter");
+        for (var k = 0; k < chips.length; k++) chips[k].setAttribute("aria-pressed", String(chips[k] === this));
+        run();
       });
       document.addEventListener("keydown", function (e) {
         if (e.key === "/" && document.activeElement !== q && !/^(INPUT|TEXTAREA)$/.test(document.activeElement && document.activeElement.tagName)) { e.preventDefault(); q.focus(); }
       });
-      document.addEventListener("click", function (e) { if (!box.contains(e.target) && e.target !== q) box.classList.add("hidden"); });
-      q.addEventListener("focus", function () { if (q.value.trim()) run(); });
+      // a link that names a search: /science?q=zone+2 or /science?show=watch
+      try {
+        var params = new URLSearchParams(location.search), want = params.get("show");
+        if (want) for (var w = 0; w < chips.length; w++) if (chips[w].getAttribute("data-filter") === want) { filter = want; for (var z = 0; z < chips.length; z++) chips[z].setAttribute("aria-pressed", String(z === w)); }
+        if (params.get("q")) q.value = params.get("q");
+        if (want || params.get("q")) run();
+      } catch (e) { /* an old browser: the page still searches by hand */ }
     })();
   </script>
 
-  <!-- ── Start here: the map. Two columns, because the shape of the thing
+  <!-- ── The map first. Two columns, because the shape of the thing
        is the argument for opening it — 226 ideas is an abstraction until you
        see five branches off one node. ──────────────────────────────────── -->
   <section class="px-6 pb-20 sm:px-10">
@@ -229,7 +244,7 @@ const figures = [
       >
         <span class="flex flex-1 flex-col justify-center p-7 sm:p-9">
           <span class="font-mono text-xs font-semibold uppercase tracking-widest text-accent-light">
-            Start here
+            The map
           </span>
           <span class="mt-3 block text-xl font-bold tracking-tight text-text-primary sm:text-2xl">
             The whole of cardiorespiratory fitness, on one map
@@ -250,7 +265,7 @@ const figures = [
           </span>
         </span>
 
-        <span class="shrink-0 border-t border-white/8 bg-black/25 p-5 sm:p-6 lg:w-[420px] lg:border-l lg:border-t-0">
+        <span class="theme-dark shrink-0 border-t border-ink/8 bg-canvas p-5 sm:p-6 lg:w-[420px] lg:border-l lg:border-t-0">
           <CrfMapPreview />
           <span class="mt-3.5 flex items-center gap-2">
             <span class="h-[9px] w-[9px] rounded-sm border border-success/60 bg-success/35" aria-hidden="true"></span>
@@ -259,20 +274,18 @@ const figures = [
         </span>
       </a>
 
-      <!-- The free sheet: the page for the person who has no number yet.
-           One row under the map, so the reader with no app and no watch
-           has somewhere to begin before the index of topics. -->
-      <a
-        href="/sheet"
-        class="group mt-4 flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-6 transition-colors hover:border-white/20 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-7"
-      >
+      <!-- No number yet: the tool on the front page does the sum; the sheet is the same sum on paper. -->
+      <div class="mt-4 flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-7">
         <span class="flex flex-col gap-1.5">
           <span class="font-mono text-xs font-semibold uppercase tracking-widest text-accent-light">No number yet?</span>
-          <span class="text-lg font-bold tracking-tight text-text-primary sm:text-xl">Your first fitness number, a free sheet</span>
-          <span class="text-sm leading-relaxed text-text-secondary">Six minutes of walking or twelve of running, one line of arithmetic, and the same tier tables the app uses, with the study named. No app needed.</span>
+          <span class="text-lg font-semibold tracking-tight text-text-primary sm:text-xl">Find your first fitness number</span>
+          <span class="text-sm leading-relaxed text-text-secondary">Six minutes of walking or twelve of running, and the same tier tables the app uses, with the study named. No app needed.</span>
         </span>
-        <span class="shrink-0 rounded-full border border-white/14 px-5 py-2.5 text-sm font-semibold text-text-primary transition-colors group-hover:border-white/30">Open the sheet</span>
-      </a>
+        <span class="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2">
+          <a href="/#find-your-number" class="inline-flex min-h-11 items-center rounded-full bg-accent px-5 text-sm font-semibold text-canvas transition-colors hover:bg-accent-text">Find your number</a>
+          <a href="/sheet" class="inline-flex min-h-11 items-center text-sm font-semibold text-accent-text underline-offset-4 hover:underline">The printed sheet</a>
+        </span>
+      </div>
     </div>
   </section>
 
@@ -298,10 +311,10 @@ const figures = [
           const counts = subjectCounts(s.slug);
           const topics = topicsFor(s.slug);
           return (
-            <div class="vrv-rise flex flex-col rounded-2xl border border-white/10 bg-white/4 p-[18px] pb-3.5" style={`--i: ${si}`}>
+            <div class="vrv-rise flex flex-col rounded-2xl border border-ink/10 bg-ink/4 p-[18px] pb-3.5" style={`--i: ${si}`}>
               <a
                 href={`/science/${s.slug}`}
-                class="group flex items-center gap-2.5 border-b border-white/[0.07] pb-3 transition-colors"
+                class="group flex items-center gap-2.5 border-b border-ink/[0.07] pb-3 transition-colors"
               >
                 <span
                   class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px]"
@@ -329,7 +342,7 @@ const figures = [
                   <li>
                     <a
                       href={topicHref(t.slug)}
-                      class="flex gap-2.5 rounded-[10px] px-1.5 py-2 transition-colors hover:bg-white/[0.05]"
+                      class="flex gap-2.5 rounded-[10px] px-1.5 py-2 transition-colors hover:bg-ink/[0.05]"
                     >
                       <span class="w-3 shrink-0 pt-[3px] font-mono text-[10.5px] text-text-tertiary">{i + 1}</span>
                       <span class="min-w-0">
@@ -341,7 +354,7 @@ const figures = [
                 ))}
               </ol>
               {s.slug === "body" && (
-                <p class="mt-auto border-t border-white/[0.07] pt-3.5 text-xs leading-relaxed text-text-muted">
+                <p class="mt-auto border-t border-ink/[0.07] pt-3.5 text-xs leading-relaxed text-text-muted">
                   Inside Body phenotyping: the {COUNTS.markers} body markers, each with its bands and how to measure it.
                 </p>
               )}

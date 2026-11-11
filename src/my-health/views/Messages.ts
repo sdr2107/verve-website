@@ -66,7 +66,7 @@ export function mountMessages(root: HTMLElement, supabase: SupabaseClient, onUnr
       </div>
       <div class="relative" data-m="menuwrap">
         <button type="button" data-m="menu" aria-haspopup="menu" aria-expanded="false" aria-label="More" class="r-btn flex h-10 w-10 items-center justify-center border border-border text-text-2 transition-colors hover:border-border-strong hover:text-text">${ICON.more}</button>
-        <div data-m="menupanel" role="menu" class="r-card absolute right-0 top-full z-30 mt-2 hidden w-72 max-w-[calc(100vw-2rem)] flex-col border border-border-strong bg-card p-1.5 shadow-2xl shadow-black/50"></div>
+        <div data-m="menupanel" role="menu" class="r-card absolute right-0 top-full z-30 mt-2 hidden w-72 max-w-[calc(100vw-2rem)] flex-col border border-border-strong bg-card p-1.5 shadow-2xl shadow-shade"></div>
       </div>
     </div>
     <div class="mt-4 hidden" data-m="plan"></div>
@@ -181,7 +181,7 @@ export function mountMessages(root: HTMLElement, supabase: SupabaseClient, onUnr
     const item = (k: string, label: string, sub = "") => `<button type="button" role="menuitem" data-menu="${k}" class="r-btn flex w-full flex-col items-start px-3 py-2 text-left hover:bg-alt"><span class="t-small font-semibold text-text">${label}</span>${sub ? `<span class="t-caption text-text-3">${sub}</span>` : ""}</button>`;
     const w = planWeeks();
     const items: string[] = [];
-    if (ctx!.role === "person" && report && current) items.push(`<div class="px-3 py-2"><div class="t-small font-semibold text-text">Send the weekly report</div><div class="mt-1.5 flex flex-wrap items-center gap-2 text-[13px] text-text-2"><label class="flex items-center gap-1.5"><input type="checkbox" data-r="on" ${report.on ? "checked" : ""} class="h-4 w-4 accent-[#A9ABF7]" />${report.on ? "On" : "Off"}</label><select data-r="dow" class="r-btn border border-border bg-alt px-2 py-1 text-[13px] text-text">${DOW.map((d, i) => `<option value="${i}" ${i === report!.dow ? "selected" : ""}>${d}s</option>`).join("")}</select></div><div class="t-caption mt-1 text-text-3" data-r="msg">Last week's dose, minutes, strength days, steps, resting heart rate and any new test. No AI writes it.</div></div>`);
+    if (ctx!.role === "person" && report && current) items.push(`<div class="px-3 py-2"><div class="t-small font-semibold text-text">Send the weekly report</div><div class="mt-1.5 flex flex-wrap items-center gap-2 text-[13px] text-text-2"><label class="flex items-center gap-1.5"><input type="checkbox" data-r="on" ${report.on ? "checked" : ""} class="h-4 w-4 accent-accent" />${report.on ? "On" : "Off"}</label><select data-r="dow" class="r-btn border border-border bg-alt px-2 py-1 text-[13px] text-text">${DOW.map((d, i) => `<option value="${i}" ${i === report!.dow ? "selected" : ""}>${d}s</option>`).join("")}</select></div><div class="t-caption mt-1 text-text-3" data-r="msg">Last week's dose, minutes, strength days, steps, resting heart rate and any new test. No AI writes it.</div></div>`);
     items.push(item("plan", plan ? "The plan" : "Pin a plan", plan ? `updated ${fmtDay(day(plan.created_at ?? plan.starts_on))}${w ? ` · week ${w.wk} of ${w.weeks}` : ""}` : "a name, a start, the weeks"));
     items.push(item("txt", "Export this thread", "as text"));
     items.push(item("csv", "Export this thread", "as CSV"));

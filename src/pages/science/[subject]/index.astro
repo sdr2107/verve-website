@@ -94,7 +94,7 @@ const forward = Object.fromEntries(
           <li>
             <a
               href={topicHref(t.slug)}
-              class="flex min-h-11 items-center gap-3.5 rounded-[14px] border border-white/8 bg-white/4 px-4 py-4 transition-colors hover:border-white/16"
+              class="flex min-h-11 items-center gap-3.5 rounded-[14px] border border-ink/8 bg-ink/4 px-4 py-4 transition-colors hover:border-ink/16"
             >
               <span class="w-3.5 shrink-0 font-mono text-[11px] text-text-tertiary">{i + 1}</span>
               <span class="min-w-0 flex-1">
@@ -108,7 +108,7 @@ const forward = Object.fromEntries(
       </ol>
 
       {meta.aside && (
-        <div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-4 lg:hidden">
+        <div class="mt-6 rounded-2xl border border-ink/8 bg-ink/4 p-4 lg:hidden">
           <p class="text-xs leading-relaxed text-text-secondary">{meta.aside.text}</p>
           <a href={meta.aside.href} class="mt-2 block text-xs font-medium text-accent-light">{meta.aside.label} &rarr;</a>
         </div>

@@ -90,13 +90,13 @@ const resultCols = ["Date", "Walk or run", "Metres", "VO2max", "METs", "Tier"];
         <div class="card">
           <h2>If you ran twelve minutes</h2>
           <p class="eq mono">{RUN.lines[0]}<br />{RUN.lines[1]}</p>
-          <p class="sub">2,400 m: (2400 − 504.9) ÷ 44.73 = 42.4; 42.4 ÷ 3.5 = <strong>{RUN.exampleMets}</strong>.</p>
+          <p class="sub">{RUN.example.replace(RUN.exampleMets + ".", "")}<strong>{RUN.exampleMets}</strong>.</p>
           <p class="src">{RUN.source}</p>
         </div>
         <div class="card">
           <h2>If you walked six minutes</h2>
           <p class="eq mono">{WALK.lines[0]}<br />{WALK.lines[1]} · {WALK.lines[2]}</p>
-          <p class="sub">A man of 45, 80 kg, 600 m: 61.1 − 11.1 − 18 − 16 + 12 = 28.1; 28.1 ÷ 3.5 = <strong>{WALK.exampleMets}</strong>.</p>
+          <p class="sub">{WALK.example.replace(WALK.exampleMets + ".", "")}<strong>{WALK.exampleMets}</strong>.</p>
           <p class="src">{WALK.source}</p>
         </div>
       </div>
@@ -129,7 +129,7 @@ const resultCols = ["Date", "Walk or run", "Metres", "VO2max", "METs", "Tier"];
 
       <div class="foot">
         <p style="max-width: 520px">Written by Dr Sudeep Roplekar, radiologist, who built Verve to see his own numbers move against the thresholds the studies use. The app does this arithmetic for you and reads twenty other numbers the same way. The letters: roplekarsudeep.substack.com</p>
-        <p class="mono" style="font-size: 11px; color: #141413; white-space: nowrap">verve-app.health/start</p>
+        <p class="mono" style="font-size: 11px; color: #141413; white-space: nowrap">verve-app.health</p>
       </div>
     </div>
   </body>

@@ -74,7 +74,7 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
   function drawBand() { band.innerHTML = ""; }
 
   function consentBox() {
-    return ctx!.consented ? "" : `<label class="mt-3 flex items-start gap-2.5 text-[13px] leading-relaxed text-text-2"><input type="checkbox" data-r="consent" class="mt-0.5 h-4 w-4 shrink-0 accent-[#A9ABF7]" /><span>Send the numbers on this page to Anthropic's Claude to write it. Not ${ctx!.self ? "your" : "the"} name, not the reports, not the email, not messages. Deleted from their systems within 30 days; never used to train.</span></label>`;
+    return ctx!.consented ? "" : `<label class="mt-3 flex items-start gap-2.5 text-[13px] leading-relaxed text-text-2"><input type="checkbox" data-r="consent" class="mt-0.5 h-4 w-4 shrink-0 accent-accent" /><span>Send the numbers on this page to Anthropic's Claude to write it. Not ${ctx!.self ? "your" : "the"} name, not the reports, not the email, not messages. Deleted from their systems within 30 days; never used to train.</span></label>`;
   }
   const writeLabel = () => {
     if (state === "writing") return "Writing…";

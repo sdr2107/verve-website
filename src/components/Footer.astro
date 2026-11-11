@@ -1,113 +1,95 @@
 ---
 /**
- * Footer — shared across every page. Was previously duplicated inline in
- * index.astro and science.astro (already drifting: only one had a "Home"
- * link) — extracted here so a change only ever needs to happen once.
+ * Footer — shared across every page, My health included (11 November
+ * 2026, board 05; the accounts as icons and the app block, the same day,
+ * from the founder's reference: its structure, not its look).
  *
- * Two parts. Social: the five accounts under one heading, each a card with
- * its mark and its handle, the same five the header's Social opens; they
- * rise into place one after another as the footer scrolls into view. Then
- * the row the footer always had: the mark, the year, and the page links,
- * the same NAV the header prints, plus Home, the privacy policy and the
- * terms. Under it, the company: name, CIN and registered office, as the
- * Companies Act asks and as anyone verifying the site expects to find. All
- * addresses come from data/site.ts.
+ * Three rows. The name line, the page links (the bar's three, then the two
+ * addresses that left the bar: Videos, the free sheet), and "Get the app":
+ * the App Store link, and for Android the plain words until there is a
+ * listing. Then the accounts: five circles, each one account, the app's
+ * three first and the founder's two after, with one quiet line under them
+ * that writes the app's handle once and says whose the other two are. No
+ * brand colours: the glyphs take the page's text colour, in either theme.
+ * Then the company: name, CIN and registered office, as the Companies Act
+ * asks and as anyone verifying the site expects to find, with the privacy
+ * policy and the terms beside it. All addresses come from data/site.ts.
  */
 interface Props {
-  /** Show the "Home" link — omit on the homepage itself. */
+  /** Kept for the pages that pass it; the name at the left is the way home. */
   showHome?: boolean;
-  /** Show the "Science" link — omit on the Science page itself. */
+  /** Omit the Science link on the Science page itself. */
   showScience?: boolean;
 }
-const { showHome = true, showScience = true } = Astro.props;
+const { showScience = true } = Astro.props;
 
-import { NAV, SOCIAL, PRIVACY_URL, TERMS_URL, COMPANY } from "../data/site";
+import { FOOTER_LINKS, APP_SOCIAL, FOUNDER_SOCIAL, APP_HANDLE, APP_STORE_URL, PLAY_STORE_URL, PRIVACY_URL, TERMS_URL, COMPANY } from "../data/site";
 import SocialIcon from "./SocialIcon.astro";
+import StoreBadge from "./StoreBadge.astro";
+
+const links = FOOTER_LINKS.filter((l) => showScience || l.href !== "/science");
+/** The app's accounts are Verve's; X and Substack are the founder's own, and the label says so. */
+const accounts = [
+  ...APP_SOCIAL.map((s) => ({ ...s, name: `Verve on ${s.label}` })),
+  ...FOUNDER_SOCIAL.map((s) => ({ ...s, name: `The founder on ${s.label}` })),
+];
 ---
 
-<footer class="border-t border-white/7 px-6 py-12 sm:px-10">
-  <div class="mx-auto max-w-6xl">
-    <section class="vrv-social-footer" data-social-footer aria-labelledby="vrv-social-heading">
-      <h2 id="vrv-social-heading" class="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-text-tertiary">Social</h2>
-      <ul class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5" role="list">
-        {SOCIAL.map((s, i) => (
-          <li style={`--i: ${i}`} class="vrv-social-card">
+<footer class="border-t border-border bg-card px-6 py-10 sm:px-10">
+  <div class="mx-auto flex max-w-6xl flex-col gap-8">
+    <div class="flex flex-col gap-8 md:flex-row md:items-start md:justify-between md:gap-10">
+      <div class="flex shrink-0 flex-col gap-2">
+        <a href="/" class="flex min-h-11 items-center gap-2.5 self-start" aria-label="Verve, home">
+          <img src="/app-icon.png" alt="" width="28" height="28" class="h-7 w-7 rounded-lg" loading="lazy" />
+          <span class="text-[16px] font-semibold tracking-[-0.01em] text-text-primary">Verve</span>
+        </a>
+        <p class="whitespace-nowrap text-[13.5px] text-text-secondary">Evidence-based fitness tracking</p>
+      </div>
+
+      <nav class="flex flex-wrap gap-x-6 gap-y-1 text-[14px] text-text-secondary md:justify-center" aria-label="Pages">
+        {links.map((l) => (
+          <a href={l.href} class="inline-flex min-h-9 items-center whitespace-nowrap transition-colors hover:text-text-primary">{l.label}</a>
+        ))}
+      </nav>
+
+      <section class="flex shrink-0 flex-col gap-2.5" aria-labelledby="vrv-get-app">
+        <h2 id="vrv-get-app" class="text-[13.5px] font-semibold text-text-primary">Get the app</h2>
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <StoreBadge store="app-store" href={APP_STORE_URL} />
+          {PLAY_STORE_URL ? <StoreBadge store="google-play" href={PLAY_STORE_URL} /> : <span class="text-[13.5px] text-text-tertiary">Android &middot; soon</span>}
+        </div>
+      </section>
+    </div>
+
+    <div class="flex flex-col gap-2.5">
+      <ul class="flex flex-wrap gap-3" role="list">
+        {accounts.map((s) => (
+          <li>
             <a
               href={s.href}
               target="_blank"
-              rel="noopener noreferrer"
-              class="group flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.02] px-3 py-3 transition-colors hover:border-white/20 hover:bg-white/[0.05]"
+              rel="me noopener"
+              aria-label={s.name}
+              title={s.name}
+              class="flex h-10 w-10 items-center justify-center rounded-full border border-border-strong text-text transition-colors hover:border-accent-border hover:bg-alt focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
-              <span class="vrv-social-glyph flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-text-secondary transition-colors group-hover:text-text-primary">
-                <SocialIcon name={s.key} size={16} />
-              </span>
-              <span class="min-w-0">
-                <span class="block text-sm font-medium text-text-primary">{s.label}</span>
-                <span class="vrv-social-handle block truncate font-mono text-[10.5px] text-text-tertiary">{s.handle}</span>
-              </span>
+              <SocialIcon name={s.key} size={18} />
             </a>
           </li>
         ))}
       </ul>
-    </section>
-
-    <div class="mt-10 flex flex-col items-center gap-6 text-center sm:flex-row sm:justify-between sm:text-left">
-      <div class="flex items-center gap-2.5">
-        <img src="/app-icon.png" alt="" class="h-6 w-6 rounded-md" />
-        <span class="text-sm font-medium text-text-secondary">&copy; {new Date().getFullYear()} {COMPANY.name}</span>
-      </div>
-      <nav class="flex flex-wrap justify-center gap-6 text-sm text-text-secondary" aria-label="Pages">
-        {showHome && <a href="/" class="hover:text-text-primary">Home</a>}
-        {NAV.filter((l) => showScience || l.key !== "science").map((l) => (
-          <a href={l.href} class="hover:text-text-primary">{l.label}</a>
-        ))}
-        <a href={PRIVACY_URL} class="hover:text-text-primary">Privacy Policy</a>
-        <a href={TERMS_URL} class="hover:text-text-primary">Terms</a>
-      </nav>
+      <p class="text-[13px] text-text-secondary"><span class="font-mono text-[12px]">{APP_HANDLE}</span> &middot; the founder writes on X and Substack</p>
     </div>
-    <p class="mt-6 text-center text-xs leading-relaxed text-text-tertiary sm:text-left">
-      Verve is made by {COMPANY.name}, CIN {COMPANY.cin}. Registered office: {COMPANY.registeredOffice}.
-      <a href={`mailto:${COMPANY.email}`} class="hover:text-text-primary">{COMPANY.email}</a>
-    </p>
+
+    <div class="flex flex-col gap-3 border-t border-border pt-5 text-[12px] leading-relaxed text-text-tertiary md:flex-row md:items-start md:justify-between md:gap-10">
+      <p>
+        &copy; {new Date().getFullYear()} {COMPANY.name}, CIN {COMPANY.cin}. Registered office: {COMPANY.registeredOffice}.
+        {" "}<a href={`mailto:${COMPANY.email}`} class="whitespace-nowrap hover:text-text-primary">{COMPANY.email}</a>
+      </p>
+      <p class="flex shrink-0 gap-5 text-[13px] text-text-secondary">
+        <a href={PRIVACY_URL} class="inline-flex min-h-9 items-center transition-colors hover:text-text-primary md:min-h-0">Privacy</a>
+        <a href={TERMS_URL} class="inline-flex min-h-9 items-center transition-colors hover:text-text-primary md:min-h-0">Terms</a>
+      </p>
+    </div>
   </div>
 </footer>
-
-<style is:global>
-  /* The cards wait below their place until the footer is in view, then rise
-     one after another; a hovered card lifts its mark and draws a line under
-     the handle. */
-  .vrv-social-card {
-    opacity: 0;
-    transform: translateY(12px);
-    transition: opacity 0.55s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
-    transition-delay: calc(var(--i) * 80ms);
-  }
-  .vrv-social-footer.is-in .vrv-social-card { opacity: 1; transform: none; }
-  .vrv-social-handle {
-    background: linear-gradient(currentColor, currentColor) no-repeat 0 100% / 0 1px;
-    transition: background-size 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-  }
-  .group:hover .vrv-social-handle { background-size: 100% 1px; }
-  @media (prefers-reduced-motion: reduce) {
-    .vrv-social-card { opacity: 1; transform: none; transition: none; }
-    .vrv-social-handle { transition: none; }
-  }
-</style>
-
-<script>
-  // Mark the footer once it scrolls into view; the cards' transitions do
-  // the rest. Runs now and after each page the ClientRouter swaps in, and
-  // never watches the same footer twice.
-  function reveal() {
-    for (const el of document.querySelectorAll<HTMLElement>("[data-social-footer]:not([data-watched])")) {
-      el.dataset.watched = "1";
-      if (!("IntersectionObserver" in window)) { el.classList.add("is-in"); continue; }
-      const io = new IntersectionObserver((entries) => {
-        if (entries.some((en) => en.isIntersecting)) { el.classList.add("is-in"); io.disconnect(); }
-      }, { threshold: 0.15 });
-      io.observe(el);
-    }
-  }
-  reveal();
-  document.addEventListener("astro:page-load", reveal);
-</script>

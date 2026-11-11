@@ -1,13 +1,16 @@
 /**
- * The fitness tier tables and the two field-test equations the /start page
- * and its A4 sheet print. Written once here so the page and the sheet
- * cannot drift apart.
+ * The fitness tier tables, and the words the sheet prints for the two
+ * field-test equations. Written once here so the sheet's page, the A4
+ * sheet and the Find-your-number tool cannot drift apart. The arithmetic
+ * itself is in first-number.ts; the lines and examples here are built from it.
  *
  * The tables are the app's own: `data/met-thresholds.json` in the app repo,
  * `crfPerformanceCategories` (ages 40 and over) and `acsmCRFCategories`
  * (under 40). Copied on 2026-10-06; if the app's file changes, change this
  * one the same day. The equations are from `lib/calculations.ts` in the app.
  */
+
+import { RUN_LINES, WALK_LINES, runExampleText, walkExampleText, tierIndex, type Sex } from "./first-number.ts";
 
 /** The five categories, in order, as the app names them. */
 export const TIER_LABELS = ["Low", "Below average", "Above average", "High", "Elite"] as const;
@@ -58,29 +61,51 @@ export function tierRanges(row: TierRow): string[] {
   ];
 }
 
+/** The table row for an age, or null under 20, where the tables do not reach. */
+export function tierRowFor(sex: Sex, age: number): TierRow | null {
+  if (!(age >= 20)) return null;
+  const rows = sex === "female" ? TIERS_WOMEN : TIERS_MEN;
+  const i = age >= 70 ? 5 : Math.floor((age - 20) / 10);
+  return rows[Math.min(i, rows.length - 1)];
+}
+
+/**
+ * Where a figure lands for a person: the row, the tier (0 to 4), its label,
+ * and where the next tier starts. The figure is compared as it is printed,
+ * to one decimal, which is how a person reads the table on the sheet.
+ */
+export function tierFor(sex: Sex, age: number, mets: number): { row: TierRow; index: number; label: string; next: { label: string; from: number; away: number } | null } | null {
+  const row = tierRowFor(sex, age);
+  if (!row) return null;
+  const shown = Math.round(mets * 10) / 10;
+  const index = tierIndex(row.bounds, shown);
+  const next = index < 4 ? { label: TIER_LABELS[index + 1], from: row.bounds[index], away: Math.round((row.bounds[index] - shown) * 10) / 10 } : null;
+  return { row, index, label: TIER_LABELS[index], next };
+}
+
+/** The study a row's tiers come from, short, for a caption. */
+export const tierSourceShort = (age: number): string =>
+  age >= 40 ? "Mandsager et al., JAMA Netw Open 2018" : "Cooper Institute and ACSM norms, 1997";
+
 export const TIER_SOURCES = {
   over40: "Ages 40 and over: Mandsager K et al., JAMA Network Open, 2018, 122,007 patients at the Cleveland Clinic, treadmill tested.",
   under40: "Under 40: Cooper Institute and ACSM norms, 1997, VO2max ÷ 3.5.",
   meaning: "In the Cleveland Clinic study, below average rather than above carried about the same risk of dying as smoking or diabetes. A tier is a place in a table, and it moves.",
 };
 
-/** The Cooper 12-minute run (Cooper KH, JAMA, 1968), as the app computes it. */
+/** The Cooper 12-minute run (Cooper KH, JAMA, 1968), as the app computes it. The lines and the example are built from the arithmetic in first-number.ts. */
 export const RUN = {
-  lines: ["VO2max = (metres − 504.9) ÷ 44.73", "METs = VO2max ÷ 3.5"],
-  example: "2,400 m: (2400 − 504.9) ÷ 44.73 = 42.4, and 42.4 ÷ 3.5 = 12.1 METs.",
-  exampleMets: "12.1 METs",
+  lines: RUN_LINES,
+  example: runExampleText().text,
+  exampleMets: runExampleText().mets,
   source: "Cooper KH, JAMA, 1968.",
 };
 
-/** The six-minute walk, the line the app uses under 60 (Hong SH et al., 2019). */
+/** The six-minute walk, the line the app uses under 60 (Hong SH et al., 2019). Built from the same arithmetic. */
 export const WALK = {
-  lines: [
-    "VO2max = 61.1 − 11.1 × sex − 0.4 × age − 0.2 × weight kg + 0.02 × metres",
-    "sex: 1 for a man, 2 for a woman",
-    "METs = VO2max ÷ 3.5",
-  ],
-  example: "A man of 45, 80 kg, 600 m: 61.1 − 11.1 − 18 − 16 + 12 = 28.1, and 28.1 ÷ 3.5 = 8.0 METs.",
-  exampleMets: "8.0 METs",
+  lines: WALK_LINES,
+  example: walkExampleText().text,
+  exampleMets: walkExampleText().mets,
   source: "Hong et al., 2019, young adults. Over 60 the app uses a line that also takes height (Šagát et al., 2023).",
 };
 
@@ -95,7 +120,7 @@ export const SAFETY =
 export const SHEET_PDF = "/start/your-first-fitness-number.pdf";
 
 /**
- * The sentence a person agrees to when they leave an address on /start. It
+ * The sentence a person agrees to when they leave an address on the sheet's page. It
  * is stored with the row in newsletter_signups, so the record says what was
  * consented to, not just when. Change the wording here and the stored text
  * changes with it for new rows only.

@@ -94,7 +94,7 @@ export const SUBJECTS: Subject[] = [
       "What a MET is, why it is the number Verve leads with, how to measure yours in six to twelve minutes, and how much to trust the answer.",
     teaser:
       "What a MET is, the five tiers, which test to take and how much to trust it.",
-    metaTitle: "Fitness — The Science Behind Verve",
+    metaTitle: "Fitness · Science · Verve",
     metaDescription:
       "METs, the five cardiorespiratory fitness tiers, which test Verve offers you and how accurate each one is — every threshold traced to the study behind it.",
     accent: "#f97316",
@@ -113,7 +113,7 @@ export const SUBJECTS: Subject[] = [
       "How much, how hard, how often, and how much of the rest of the day you spend sitting.",
     teaser:
       "The weekly dose, Zone 2, strength, steps, sitting, and how active your whole day is.",
-    metaTitle: "Movement — The Science Behind Verve",
+    metaTitle: "Movement · Science · Verve",
     metaDescription:
       "The weekly aerobic dose, the Zone 2 heart-rate band, strength minutes, steps, sitting and physical activity level — each with the research that drew the line.",
     accent: "#34d399",
@@ -127,7 +127,7 @@ export const SUBJECTS: Subject[] = [
       "What your watch reads while you are asleep and in the minute after you stop, and what each of those readings is worth.",
     teaser:
       "Hours and stages, how steady your nights are, resting rate, and the fall after you stop.",
-    metaTitle: "Sleep & heart — The Science Behind Verve",
+    metaTitle: "Sleep & heart · Science · Verve",
     metaDescription:
       "Sleep timing and regularity, resting heart rate against your own normal, heart rate recovery, and how the four Today tiles are coloured.",
     accent: "#818cf8",
@@ -146,7 +146,7 @@ export const SUBJECTS: Subject[] = [
       "The readings that come from a cuff, a tape measure and a blood draw, in the order the Body page shows them. Each one carries the band Verve screens against.",
     teaser:
       "Blood pressure and lipids, waist and phenotype, grip and muscle, ageing well.",
-    metaTitle: "Body — The Science Behind Verve",
+    metaTitle: "Body · Science · Verve",
     metaDescription:
       "Blood sugar, blood pressure, lipids, waist and phenotype, muscle health and intrinsic capacity — and the screening band Verve uses for each.",
     accent: "#FBBF24",

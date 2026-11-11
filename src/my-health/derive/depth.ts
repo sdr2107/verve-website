@@ -79,7 +79,7 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
         <p class="mt-2 text-[13px] leading-relaxed text-text-tertiary">The four questions a coach asks of one person, then the working behind each. Every number is from ${p.self ? "your own rows" : p.mine ? `what is on file for ${esc(p.name)}` : `what ${esc(p.name)} chose to share`}.</p>
       </div>
     </div>`;
-  const cell = (k: string, v: string, sub: string, tone = "", last = false) => `<div class="flex flex-col gap-1 py-4 ${last ? "" : "sm:border-r sm:border-white/[0.08] sm:pr-4"} ${k === "MOVING" || k === "ACTIVITY" || k === "STEADY" || k === "DECLINING" ? "" : "sm:pl-4"}">${kicker(k, tone === "success" ? "text-success-light" : tone === "warning" ? "text-warning" : tone === "danger" ? "text-danger" : "text-text-tertiary")}<div class="text-[24px] font-extrabold leading-tight tracking-[-0.02em] text-text-primary">${v}</div><div class="text-[12.5px] leading-snug text-text-tertiary">${sub}</div></div>`;
+  const cell = (k: string, v: string, sub: string, tone = "", last = false) => `<div class="flex flex-col gap-1 py-4 ${last ? "" : "sm:border-r sm:border-ink/[0.08] sm:pr-4"} ${k === "MOVING" || k === "ACTIVITY" || k === "STEADY" || k === "DECLINING" ? "" : "sm:pl-4"}">${kicker(k, tone === "success" ? "text-success-light" : tone === "warning" ? "text-warning" : tone === "danger" ? "text-danger" : "text-text-tertiary")}<div class="text-[24px] font-extrabold leading-tight tracking-[-0.02em] text-text-primary">${v}</div><div class="text-[12.5px] leading-snug text-text-tertiary">${sub}</div></div>`;
   const cards = [
     cell(moving.k, moving.v, moving.sub, moving.tone),
     cell("FITNESS", latest ? `${fmt1(latest.v)} <span class="text-[13px] font-semibold ${trendWord === "rising" ? "text-success-light" : trendWord === "falling" ? "text-danger" : "text-text-tertiary"}">${trendWord}</span>` : "—", latest ? `VO₂max by ${esc(methodLabel(latest.method))}${within != null ? `, ${within >= 0 ? "up" : "down"} ${fmt1(Math.abs(within))} within the method` : ", first of its method"}` : "no fitness test on file"),
@@ -140,7 +140,7 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
       </div>
       <div class="min-w-0">${right}</div>
     </section>`;
-  const panel = (inner: string) => `<div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">${inner}</div>`;
+  const panel = (inner: string) => `<div class="rounded-2xl border border-ink/10 bg-ink/[0.03] p-4 sm:p-5">${inner}</div>`;
   const legend = (items: Array<[string, string, boolean?]>) => `<div class="flex flex-wrap gap-x-3.5 gap-y-1 text-[11.5px] text-text-secondary">${items.map(([c, l, sq]) => `<span><span class="mr-1.5 inline-block h-[9px] w-[9px] ${sq ? "rounded-[2px]" : "rounded-full"} align-[-1px]" style="background: ${c}"></span>${l}</span>`).join("")}</div>`;
   const ch1 = chapter(1, "TRAINING RHYTHM", esc(rhythmWords),
     d.acts.length ? `Twelve weeks, every day a dot, coloured by the day's hardest session. The gaps are as telling as the sessions.` : `The app's sync carries each session; an export carries weeks. The day-by-day rhythm arrives with the sync.`,
@@ -175,7 +175,7 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
      act.of ? `At goal <strong class="text-text-primary">${act.atGoal} of ${act.of}</strong> weeks${streak ? ` · ${streak} in a row` : ""}` : ""].filter(Boolean),
     twelve.length ? panel(`<div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_240px]">
       <div>${kicker(`WEEKLY MET-HOURS · GOAL ${goal}`)}<svg viewBox="0 0 540 140" class="mt-2 block h-auto w-full" role="img" aria-label="Twelve weeks of MET-hours as bars, the latest four brighter, with the goal line">${asvg}</svg></div>
-      <div class="flex flex-col gap-2.5 lg:border-l lg:border-white/[0.07] lg:pl-5">${kicker(`MINUTES BY EFFORT · LAST ${recent.length} WEEK${recent.length === 1 ? "" : "S"}`)}
+      <div class="flex flex-col gap-2.5 lg:border-l lg:border-ink/[0.07] lg:pl-5">${kicker(`MINUTES BY EFFORT · LAST ${recent.length} WEEK${recent.length === 1 ? "" : "S"}`)}
         ${allMin ? `<div class="flex h-3.5 overflow-hidden rounded-full"><span style="width: ${pct(easyMin)}%; background: #34d399"></span><span style="width: ${pct(modMin)}%; background: #f97316"></span><span style="width: ${pct(vigMin)}%; background: #f87171"></span></div>
         <div class="flex flex-col gap-1.5 text-[12.5px] text-text-secondary">
           <div class="flex justify-between"><span><span class="mr-1.5 inline-block h-2 w-2 rounded-sm align-[-1px]" style="background: #34d399"></span>Easy</span><strong class="text-text-primary">${pct(easyMin)}% · ${hm(easyMin)}</strong></div>
@@ -195,15 +195,15 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
   const ch3 = chapter(3, "SESSIONS", lastWorkouts.length ? `The last ${lastWorkouts.length}, as Verve read them` : "Sessions arrive with the sync",
     `Each session as the app synced it: what it was, how long, the MET-hours it earned, the minutes in ${their} Zone 2 band that day, the effort Verve graded it, and the 1-to-10 rating where the watch asked for one or ${who} typed one.`,
     [`<a href="/science/movement/a-workout" class="font-semibold text-accent-light hover:text-text-primary">A workout, as Verve reads it &rarr;</a>`],
-    lastWorkouts.length ? `<div class="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03]"><table class="w-full min-w-[640px] text-[12.5px]">
+    lastWorkouts.length ? `<div class="overflow-x-auto rounded-2xl border border-ink/10 bg-ink/[0.03]"><table class="w-full min-w-[640px] text-[12.5px]">
       <thead><tr class="text-left font-mono text-[10px] tracking-wider text-text-tertiary"><th class="px-3 py-2.5 font-semibold">WHEN</th><th class="px-3 py-2.5 font-semibold">SESSION</th><th class="px-3 py-2.5 text-right font-semibold">MIN</th><th class="px-3 py-2.5 text-right font-semibold">MET-H</th><th class="px-3 py-2.5 text-right font-semibold">ZONE 2</th><th class="px-3 py-2.5 font-semibold">EFFORT</th><th class="px-3 py-2.5 font-semibold">RATED</th><th class="px-3 py-2.5 font-semibold">NOTE</th></tr></thead>
-      <tbody class="divide-y divide-white/[0.06]">${lastWorkouts.map((w) => { const mins = Math.round(Number(w.duration_minutes) || 0), z2 = Math.round(Number(w.zone2_minutes) || 0), k = String(w.intensity_category ?? "light"), st = isStrength(w); const d = localDay(w.timestamp); return `<tr>
+      <tbody class="divide-y divide-ink/[0.06]">${lastWorkouts.map((w) => { const mins = Math.round(Number(w.duration_minutes) || 0), z2 = Math.round(Number(w.zone2_minutes) || 0), k = String(w.intensity_category ?? "light"), st = isStrength(w); const d = localDay(w.timestamp); return `<tr>
         <td class="px-3 py-2 font-mono text-[11px] text-text-tertiary">${d === today ? "Today" : d === addDays(today, -1) ? "Yesterday" : esc(dayWord(d))}</td>
         <td class="px-3 py-2 font-semibold text-text-primary">${esc(String(w.activity_name ?? "Workout"))}</td>
         <td class="px-3 py-2 text-right font-mono text-text-secondary">${mins}</td>
         <td class="px-3 py-2 text-right font-mono font-semibold text-text-primary">${fmt1(Number(w.met_hours) || 0)}</td>
         <td class="px-3 py-2 text-right font-mono ${z2 ? "text-success-light" : "text-text-muted"}">${z2 ? z2 : "—"}</td>
-        <td class="px-3 py-2"><span class="rounded-md bg-white/[0.06] px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider ${st ? "text-accent-light" : tone(k)}">${st ? "strength" : esc(k)}</span></td>
+        <td class="px-3 py-2"><span class="rounded-md bg-ink/[0.06] px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider ${st ? "text-accent-light" : tone(k)}">${st ? "strength" : esc(k)}</span></td>
         <td class="px-3 py-2 font-mono ${w.effort != null ? "text-text-secondary" : "text-text-muted"}">${w.effort != null ? `${Number(w.effort)}/10 <span class="text-[10px] text-text-tertiary">${effortWord(w.effort_source)}</span>` : "—"}</td>
         <td class="px-3 py-2 text-text-tertiary">${mins && mins === longest && !st ? "longest of the month" : st ? "counts toward the 60 min" : ""}</td></tr>`; }).join("")}</tbody></table></div>`
     : panel(`<p class="text-[13px] leading-relaxed text-text-tertiary">${p.self ? "Turn on Cloud Sync in the app and each session appears here as it was read." : "An export carries weeks, not sessions; a person with an account sends them on every sync."}</p>`));
@@ -256,7 +256,7 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
   };
   const nothingYet = !p.account_id ? "Only for a person with a Verve account: the app sends it on every sync." : !canSeeHeart ? `${esc(p.name)} has not shared sleep and heart.` : (p.self ? "Nothing here yet. In the app, turn on Back up watch readings (Settings → Your data → Backup); the night's sleep, resting heart rate and recovery arrive on the next sync. Off, they stay on the phone." : "Nothing read yet: their app's Back up watch readings switch is off, or the watch has not written a night yet.");
   const heartCard = (label: string, figure: string | null, over: string, tone: string, trend: string, empty: string, caption: string, alt: string) => `
-    <div class="flex min-h-[236px] flex-col gap-2.5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+    <div class="flex min-h-[236px] flex-col gap-2.5 rounded-2xl border border-ink/10 bg-ink/[0.03] p-4">
       ${kicker(label)}
       <div class="text-[28px] font-extrabold leading-none ${figure != null ? tone : "text-text-muted"}">${figure ?? "—"}${figure != null ? ` <span class="text-[12px] font-medium text-text-secondary">${over}</span>` : ""}</div>
       ${trend ? `<svg viewBox="0 0 330 110" class="block h-auto w-full" role="img" aria-label="${alt}">${trend}</svg>` : `<p class="text-[12.5px] leading-relaxed text-text-tertiary">${empty}</p>`}
@@ -329,7 +329,7 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
     heart?.steps.avg != null ? `${heart.steps.avg.toLocaleString()} steps a day over the last 7${heart.steps.prior != null ? ` (${heart.steps.prior.toLocaleString()} the week before)` : ""}.` : "",
     d.acts.length ? (vig7.length ? `${count(vig7.length, "vigorous session")} in the last 7 days, ${vig7.map((a) => Math.round(Number(a.duration_minutes) || 0)).join(" and ")} min.` : "No vigorous session in the last 7 days.") : ""].filter(Boolean);
   const col = (h: string, b: string) => `<div><b class="font-bold text-text-primary">${h}</b><br>${b}</div>`;
-  const readTogether = `<div class="mt-3.5 flex flex-col gap-2.5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+  const readTogether = `<div class="mt-3.5 flex flex-col gap-2.5 rounded-2xl border border-ink/10 bg-ink/[0.03] p-4">
     ${kicker("READ TOGETHER, FOR A COACH OR CLINICIAN")}
     <div class="grid gap-3.5 text-[12.5px] leading-[18px] text-text-secondary sm:grid-cols-2 lg:grid-cols-4">
       ${col("Pattern", patternText)}
@@ -359,18 +359,18 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
     `Only the markers outside their lab's range and the dates that are due. Everything else is on Labs, with its own chart.`,
     [],
     `<div class="grid gap-3.5 sm:grid-cols-3">
-      <div class="rounded-2xl border ${outRows.length ? "border-warning/40" : "border-white/10"} bg-white/[0.03] p-4">${kicker(outRows.length ? "OUTSIDE RANGE" : "LABS", outRows.length ? "text-warning" : "text-text-tertiary")}
+      <div class="rounded-2xl border ${outRows.length ? "border-warning/40" : "border-ink/10"} bg-ink/[0.03] p-4">${kicker(outRows.length ? "OUTSIDE RANGE" : "LABS", outRows.length ? "text-warning" : "text-text-tertiary")}
         ${outRows.length ? `<div class="mt-2 flex flex-col gap-2">${outRows.slice(0, 3).map((r) => `<div><div class="text-[14px] font-bold text-text-primary">${esc(r.label)} <span class="font-mono text-warning">${esc(r.latest)}</span></div><div class="text-[12px] text-text-tertiary">lab's range ${esc(r.range)} · ${esc(fmtDay(r.d))}${r.noFollow != null ? ` · no follow-up in ${r.noFollow} months` : ""}</div></div>`).join("")}${outRows.length > 3 ? `<button type="button" data-goto="body" class="text-left text-[12px] font-semibold text-accent-light hover:text-text-primary">and ${outRows.length - 3} more, on Body &rarr;</button>` : ""}</div>`
         : `<div class="mt-2 text-[14px] font-bold text-text-primary">${labRows.length ? `${labRows.length} marker${labRows.length === 1 ? "" : "s"}, all in range` : "Nothing on file"}</div><div class="text-[12px] text-text-tertiary">${labRows.length ? `latest ${esc(fmtDay(labRows[0].d))}` : "drop a report on the Reports tab"}</div>`}
       </div>
-      <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4">${kicker("BODY")}
+      <div class="rounded-2xl border border-ink/10 bg-ink/[0.03] p-4">${kicker("BODY")}
         ${wl || fat || musc || fnRows.length ? `<div class="mt-2 flex flex-col gap-1.5 text-[12.5px] leading-relaxed text-text-secondary">
           ${wl ? `<div class="text-[14px] font-bold text-text-primary">Waist <span class="font-mono">${wl.v} cm</span>${height ? ` · <span class="font-mono">${(wl.v / height).toFixed(2)}</span> to height` : ""}</div><div class="text-[12px] text-text-tertiary">${esc(fmtDay(wl.d))}${waist.length > 1 ? ` · ${wl.v === waist[0].v ? "the same as" : `${fmt1(Math.abs(wl.v - waist[0].v))} cm ${wl.v < waist[0].v ? "less than" : "more than"}`} the first` : ""}</div>` : ""}
           ${fat || musc ? `<div>${fat ? `Body fat <strong class="text-text-primary">${fat.v}%</strong>` : ""}${fat && musc ? " · " : ""}${musc ? `muscle <strong class="text-text-primary">${musc.v}%</strong>` : ""}${method ? ` · ${esc(String(method).toUpperCase())}` : ""}</div>` : ""}
           ${fnRows.length ? `<div>${fnRows.map((f) => { const [word, ok] = f.judge(f.pt!.v); return `${esc(f.label.replace(", 5 rises", ""))} <strong class="text-text-primary">${f.pt!.v} ${f.unit}</strong> <span class="${ok ? "text-success-light" : "text-warning"}">${esc(word)}</span>`; }).join(" · ")}${fnDay ? ` <span class="text-text-tertiary">· ${esc(fmtDay(fnDay))}</span>` : ""}</div>` : ""}
         </div>` : `<div class="mt-2 text-[13px] text-text-tertiary">No waist, composition or function test on file.</div>`}
       </div>
-      <div class="rounded-2xl border ${nextDue && nextDue.days < 0 ? "border-danger/40" : nextDue && nextDue.days <= 30 ? "border-warning/40" : "border-white/10"} bg-white/[0.03] p-4">${kicker("DUE", nextDue && nextDue.days < 0 ? "text-danger" : nextDue && nextDue.days <= 30 ? "text-warning" : "text-text-tertiary")}
+      <div class="rounded-2xl border ${nextDue && nextDue.days < 0 ? "border-danger/40" : nextDue && nextDue.days <= 30 ? "border-warning/40" : "border-ink/10"} bg-ink/[0.03] p-4">${kicker("DUE", nextDue && nextDue.days < 0 ? "text-danger" : nextDue && nextDue.days <= 30 ? "text-warning" : "text-text-tertiary")}
         ${dues.length ? `<div class="mt-2 flex flex-col gap-1.5 text-[13px]">${dues.slice(0, 4).map((d) => `<div><strong class="${dueTone(d)}">${esc(d.what)}</strong> <span class="text-text-secondary">${dueWord(d)}</span><div class="text-[11.5px] text-text-tertiary">${esc(d.why)}</div></div>`).join("")}</div>` : `<div class="mt-2 text-[13px] text-text-tertiary">Nothing due in the cited cadences.</div>`}
       </div>
     </div>`);

@@ -1,20 +1,24 @@
 ---
 /**
- * The landing page, in the order a first-time visitor needs things:
+ * The landing page (11 November 2026, the canvas "Verve on the web,
+ * rethought", boards 01, 03, 04 and 11). Light, in the order a first-time
+ * visitor needs things:
  *
- *   the promise in one line, with the Today card beside it at its real
- *   size: this morning's read, the thing the app shows first;
- *   what the evidence says, three figures on one line: the two cited
- *   claims and the count of the evidence base behind them;
- *   where the numbers land, three cards, one figure each with a sparkline
- *   and one plain sentence;
- *   every number named, with one marker's card as the proof.
+ *   the name, what Verve is in three words, one sentence, one action;
+ *   beside it the action itself: Find your number, a working tool that
+ *   asks for nothing and sends nothing, showing the sheet's worked example
+ *   until the visitor puts in their own;
+ *   what the studies found, three figures, each with its source, in the
+ *   studies' own terms;
+ *   what Verve reads: the four tabs as four dark frames, the product as it
+ *   is, inside the light page;
+ *   every threshold named, with one marker's bands as the proof;
+ *   who it is for; what you come back for; who built it; the plans.
  *
- * Rebuilt 24 October 2026 for air: one figure a card, one kicker a section,
- * margins up a third, type up a step. The dark ground, the two fonts and the
- * colours are unchanged; density was the problem, not the palette. The
- * sample chart with three thresholds and a legend left the fold, and the
- * five "what Verve tracks" lines went with it: the three cards say it.
+ * Start here is folded in: the first number, who it is for and what you
+ * come back for used to be a page of their own. No line on this page, or
+ * on the site, promises anything about how long a person will live; the
+ * two cohort findings are cited as findings.
  *
  * Nothing here is typed that the Science page counts. The citation count
  * and the ApoB card come from the data the Science page is built from, so
@@ -23,52 +27,40 @@
 import Layout from "../layouts/Layout.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import Footer from "../components/Footer.astro";
-import TodayCard from "../components/TodayCard.astro";
+import FirstNumber from "../components/FirstNumber.astro";
+import LandingGlimpses from "../components/LandingGlimpses.astro";
 import { COUNTS } from "../data/scienceTopics";
 import { BODY_MARKERS } from "../data/bodyMarkers";
-import { GET_APP_PATH } from "../data/site";
-import { RETURNS, RETURNS_INTRO } from "../data/returns";
+import { GET_APP_PATH, PRO_PAGES } from "../data/site";
+import { RETURNS } from "../data/returns";
+import { planOf, isPriced, priceText } from "../data/plans";
+
+/** The name line and the one sentence, as board 11 sets them. The title and the cards for X and iMessage read the same. */
+const NAME_LINE = "Verve · Evidence-based fitness tracking";
+const SENTENCE = "Verve reads your fitness, movement, sleep, heart and body against the thresholds clinicians use, and names the study behind every line.";
 
 /**
- * The two cited claims. Both studies are in CRF_SECTION (data/science.ts),
- * where the Fitness pages cite them; the figures are the studies' own.
+ * The two cited findings. Both studies are in CRF_SECTION (data/science.ts),
+ * where the Fitness pages cite them; the figures are the studies' own, and
+ * each line says what the study found, not what a reader will get.
  */
-const evidence = [
+const findings = [
   {
     value: "13%",
-    claim: "lower all-cause mortality for every extra MET of capacity",
-    source: "Kodama et al, JAMA 2009 · 33 studies, 102,980 people",
+    claim: "lower risk of death from any cause with each extra MET of fitness",
+    source: "Kodama et al., JAMA 2009 · 33 studies · 102,980 people",
   },
   {
     value: "5×",
-    claim: "the difference in all-cause mortality from the Low fitness tier to Elite",
-    source: "Mandsager et al, JAMA Network Open 2018 · 122,007 patients",
+    claim: "the risk of death from any cause in the lowest fitness tier, against the elite tier",
+    source: "Mandsager et al., JAMA Netw Open 2018 · 122,007 patients",
   },
 ];
 
-/**
- * Where the numbers land: one figure a page, a sparkline of how it moved,
- * one sentence. Sample figures; the section says so.
- */
-const pages = [
-  {
-    label: "Activity", dot: "#f97316",
-    value: "8.7", beside: "METs · Below average for your age",
-    spark: [40, 44, 42, 50, 54, 52, 58, 62, 60, 66],
-    line: "Your fitness as a number, the week's climb, and the morning read above it.",
-  },
-  {
-    label: "Body", dot: "#FBBF24",
-    value: "6", small: "of 8", beside: "metabolic markers in range",
-    spark: [30, 30, 45, 45, 45, 60, 60, 75, 75, 75],
-    line: "Blood pressure, lipids, waist and muscle, each against its band, with every earlier result behind it.",
-  },
-  {
-    label: "Trends", dot: "#818cf8",
-    value: "6h 29", beside: "a night this week · 25 min under your usual",
-    spark: [70, 76, 64, 72, 80, 68, 58],
-    line: "Weeks, months and years against your own usual, and a guide that says what moved.",
-  },
+const who = [
+  { title: "Starting again", line: "Told to get fitter. Verve shows it happening, in plain words." },
+  { title: "Already tracking", line: "Your watch’s number, set against the published line." },
+  { title: "Coaches and clinicians", line: "The pages people share with you, in one place. Reading is free.", doors: true },
 ];
 
 /** The proof card: one marker, exactly as the Body page prints it. */
@@ -79,158 +71,154 @@ const apoBands = apoB.bands.map((b) => {
   return { name, range };
 });
 const apoSource = apoB.citation.split(". ")[0];
-const bandTone = ["text-success-light", "text-warning", "text-danger"];
+
+const pro = planOf("pro");
+const priceLine = isPriced(pro) ? `Then ${priceText(pro, "monthly", pro.monthly.usd != null ? "usd" : "inr")} a month.` : "Price to be set.";
+
+const h2 = "text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] text-text-primary sm:text-[34px]";
+const eyebrow = "font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-text-3";
+const cite = "font-mono text-[10.5px] uppercase leading-[1.6] tracking-[0.04em] text-text-3";
+const quiet = "inline-flex min-h-11 items-center text-[15px] font-semibold text-accent-text underline-offset-4 hover:underline";
 ---
 
-<Layout
-  title="Verve — Evidence-based fitness tracking"
-  description="Verve reads your fitness, movement, sleep and heart, and body against the thresholds clinicians use, shows how each one moves over weeks and months, and names the study behind every line it draws."
->
+<Layout title={NAME_LINE} description={SENTENCE}>
   <SiteHeader />
 
-  <!-- ── Hero: the promise in one line, and this morning's read beside it ── -->
-  <section class="vrv-glow relative overflow-hidden px-6 pt-14 pb-14 sm:px-10 lg:pt-24 lg:pb-[88px]">
-    <div class="relative mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-[minmax(0,1.05fr)_390px] lg:gap-[72px]">
-      <div class="flex flex-col gap-6">
-        <h1 class="vrv-rise text-[40px] font-extrabold leading-[1.04] tracking-[-0.03em] text-text-primary sm:text-5xl lg:text-[58px] lg:leading-[1.04]">
-          Track the number that predicts how long you live.
-        </h1>
-        <p class="vrv-rise max-w-[560px] text-[16px] leading-[1.6] text-text-secondary sm:text-[18px]" style="--i: 1">
-          Verve reads your fitness, movement, sleep and heart, and body against
-          the thresholds clinicians use, and names the study behind every line
-          it draws.
-        </p>
-        <div class="vrv-rise flex flex-wrap gap-3" style="--i: 2">
-          <a href={GET_APP_PATH} class="inline-flex min-h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Get the app</a>
-          <a href="/start" class="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/14 px-5 text-sm font-bold text-text-primary transition-colors hover:border-white/25">No number yet? Start here</a>
+  <!-- ── The hero: the name, three words, one sentence, one action; and the action itself beside it ── -->
+  <section class="px-6 py-12 sm:px-10 lg:py-16">
+    <div class="mx-auto grid max-w-6xl items-start gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-14">
+      <div class="flex flex-col items-start lg:pt-16">
+        <p class:list={[eyebrow, "text-accent-text"]}>Verve</p>
+        <h1 class="mt-4 text-[40px] font-semibold leading-[1.04] tracking-[-0.03em] text-text-primary sm:text-[52px] lg:text-[60px]">Evidence-based fitness tracking.</h1>
+        <p class="mt-5 max-w-[500px] text-[17px] leading-[1.55] text-text-secondary sm:text-[18px]">{SENTENCE}</p>
+        <div class="mt-7 flex flex-wrap items-center gap-x-[22px] gap-y-2">
+          <a href="#find-your-number" class="inline-flex min-h-12 items-center justify-center rounded-full bg-accent px-6 text-[15px] font-semibold text-canvas transition-colors hover:bg-accent-text">Find your number</a>
+          <a href={GET_APP_PATH} target="_blank" rel="noopener" class={quiet}>Get the app</a>
         </div>
-        <p class="vrv-rise text-[13px] text-text-tertiary" style="--i: 3">Six minutes on flat ground, no app needed.</p>
+        <p class="mt-3.5 text-[13px] leading-[1.5] text-text-3">Six minutes of walking. No app, no email.</p>
       </div>
 
-      <div class="vrv-rise mx-auto w-full max-w-[390px]" style="--i: 2">
-        <TodayCard />
-      </div>
+      <FirstNumber />
     </div>
   </section>
 
-  <!-- ── What the evidence says: three figures on one line, set below the hero with room ── -->
-  <section class="px-6 sm:px-10">
-    <div class="mx-auto grid max-w-6xl gap-10 border-y border-white/[0.07] py-10 sm:grid-cols-3 sm:gap-12">
-      {evidence.map((e) => (
-        <div>
-          <p class="text-[44px] font-extrabold leading-none tracking-[-0.03em] text-text-primary sm:text-[52px]">{e.value}</p>
-          <p class="mt-3 text-[14px] leading-[1.55] text-text-secondary sm:text-[15px]">{e.claim}</p>
-          <p class="mt-3 font-mono text-[10.5px] uppercase tracking-[0.04em] text-text-tertiary">{e.source}</p>
-        </div>
-      ))}
-      <div>
-        <p class="text-[44px] font-extrabold leading-none tracking-[-0.03em] text-accent-light sm:text-[52px]">{COUNTS.citations}</p>
-        <p class="mt-3 text-[14px] leading-[1.55] text-text-secondary sm:text-[15px]">
-          citations behind {COUNTS.topics} topics and {COUNTS.markers} body markers, the whole evidence base in the open
-        </p>
-        <a href="/science" class="mt-3 inline-block text-[13.5px] font-bold text-accent-light transition-colors hover:text-text-primary">Read the evidence base &rarr;</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- ── What you come back for: the four returns, one per cadence (4 Nov 2026) ── -->
-  <section class="px-6 pt-16 sm:px-10 lg:pt-[88px]">
-    <div class="mx-auto flex max-w-6xl flex-col gap-7">
-      <div class="max-w-3xl">
-        <span class="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-text-tertiary">What you come back for</span>
-        <h2 class="mt-2 text-[28px] font-extrabold leading-[1.1] tracking-[-0.03em] text-text-primary sm:text-[34px]">
-          Your wearable says how you are today. Verve says where you stand.
-        </h2>
-        <p class="mt-4 text-[15px] leading-[1.6] text-text-secondary sm:text-[16px]">{RETURNS_INTRO}</p>
-      </div>
-      <ul class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {RETURNS.map((r) => (
-          <li class="flex flex-col gap-3 rounded-[20px] border border-white/10 bg-white/[0.03] p-6">
-            <span class="font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-accent-light">{r.cadence}</span>
-            <p class="text-[18px] font-bold leading-[1.2] tracking-[-0.01em] text-text-primary">{r.title}</p>
-            <p class="text-[14px] leading-[1.55] text-text-secondary">{r.body}</p>
-            <a href={r.href} class="mt-auto inline-block text-[13.5px] font-bold text-accent-light transition-colors hover:text-text-primary">{r.cta} &rarr;</a>
-          </li>
+  <!-- ── What the studies found: three figures, each with its source ── -->
+  <section aria-labelledby="found" class="border-y border-border bg-card px-6 py-10 sm:px-10">
+    <div class="mx-auto flex max-w-6xl flex-col gap-5">
+      <h2 id="found" class={eyebrow}>What the studies found</h2>
+      <div class="grid gap-8 sm:grid-cols-3 sm:gap-10">
+        {findings.map((f) => (
+          <div class="flex flex-col gap-2">
+            <p class="font-mono text-[40px] font-semibold leading-none tracking-[-0.02em] text-text-primary">{f.value}</p>
+            <p class="text-[15px] leading-[1.5] text-text-primary">{f.claim}</p>
+            <p class={cite}>{f.source}</p>
+          </div>
         ))}
-      </ul>
-    </div>
-  </section>
-
-  <!-- ── Where the numbers land: three pages, one figure each ─────────────── -->
-  <section class="px-6 pt-16 sm:px-10 lg:pt-[88px]">
-    <div class="mx-auto flex max-w-6xl flex-col gap-7">
-      <div class="flex flex-wrap items-end justify-between gap-6">
-        <div>
-          <span class="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-text-tertiary">Where the numbers land</span>
-          <h2 class="mt-2 text-[28px] font-extrabold leading-[1.1] tracking-[-0.03em] text-text-primary sm:text-[34px]">
-            Three pages. One figure each, and the line behind it.
-          </h2>
+        <div class="flex flex-col gap-2">
+          <p class="font-mono text-[40px] font-semibold leading-none tracking-[-0.02em] text-text-primary">{COUNTS.citations}</p>
+          <p class="text-[15px] leading-[1.5] text-text-primary">citations behind {COUNTS.topics} topics and {COUNTS.markers} body markers, all in the open</p>
+          <a href="/science" class="inline-flex min-h-6 items-center self-start text-[14px] font-semibold text-accent-text underline-offset-4 hover:underline">Read the evidence base</a>
         </div>
-        <div class="flex shrink-0 items-center gap-2">
-          <span class="rounded-xl border border-white/14 px-4 py-2 text-xs font-bold text-text-primary">iPhone</span>
-          <span class="rounded-xl border border-white/8 px-4 py-2 text-xs font-bold text-text-tertiary">Android &middot; soon</span>
-        </div>
-      </div>
-
-      <ul class="grid gap-5 sm:grid-cols-3">
-        {pages.map((p) => (
-          <li class="flex flex-col gap-4 rounded-[20px] border border-white/10 bg-white/[0.03] p-6">
-            <span class="flex items-center gap-2">
-              <span class="h-2 w-2 rounded-full" style={`background: ${p.dot}`}></span>
-              <span class="font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">{p.label}</span>
-            </span>
-            <span class="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-              <span class="font-mono text-[44px] font-bold leading-none tracking-[-0.02em]" style={`color: ${p.dot}`}>
-                {p.value}{p.small && <span class="text-[18px] text-text-tertiary"> {p.small}</span>}
-              </span>
-              <span class="text-sm text-text-secondary">{p.beside}</span>
-            </span>
-            <span class="flex h-[34px] items-end gap-[3px]" aria-hidden="true">
-              {p.spark.map((h, i) => (
-                <span class="flex-1 rounded-t-[2px]" style={`height: ${h}%; background: ${p.dot}; opacity: ${i === p.spark.length - 1 ? 1 : 0.55}`}></span>
-              ))}
-            </span>
-            <span class="text-sm leading-[1.55] text-text-secondary">{p.line}</span>
-          </li>
-        ))}
-      </ul>
-      <div class="flex flex-wrap items-baseline justify-between gap-3">
-        <p class="font-mono text-[11px] text-text-muted">Sample figures throughout.</p>
-        <a href="/videos" class="text-sm font-bold text-accent-light transition-colors hover:text-text-primary">Watch how Verve works, in short videos &rarr;</a>
       </div>
     </div>
   </section>
 
-  <!-- ── Every number named: the promise, kept, with one marker as the proof ── -->
-  <section class="px-6 pt-16 pb-20 sm:px-10 lg:pt-[88px] sm:pb-28">
-    <div class="mx-auto grid max-w-6xl items-center gap-10 border-t border-white/[0.07] pt-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-16">
-      <div class="flex flex-col gap-3.5">
-        <span class="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-text-tertiary">Every number named</span>
-        <h2 class="text-[28px] font-extrabold leading-[1.1] tracking-[-0.03em] text-text-primary sm:text-[34px]">
-          Every threshold, traced to its source.
-        </h2>
-        <p class="max-w-[520px] text-[16px] leading-[1.6] text-text-secondary">
-          Every line Verve draws links to the paper it came from. No scores, no
-          colours without a cut-point, nothing you cannot check.
-        </p>
-        <a href="/science" class="text-sm font-bold text-accent-light transition-colors hover:text-text-primary">
-          Read the full evidence base &rarr;
-        </a>
+  <!-- ── What Verve reads: the four tabs, shown as they are ── -->
+  <section class="px-6 py-14 sm:px-10 lg:py-16">
+    <div class="mx-auto flex max-w-6xl flex-col gap-8">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div class="flex flex-col gap-2.5">
+          <h2 class={h2}>What Verve reads</h2>
+          <p class="text-[17px] leading-[1.55] text-text-secondary">Four tabs. Each answers one question.</p>
+        </div>
+        <span class="inline-flex h-[22px] items-center rounded-full border border-border-strong bg-alt px-[9px] font-mono text-[10.5px] font-semibold uppercase tracking-[0.04em] text-text-2">Sample figures</span>
       </div>
-      <div class="rounded-[20px] border border-white/10 bg-white/[0.03] p-6">
+      <LandingGlimpses />
+      <a href="/how-it-works" class:list={[quiet, "self-start"]}>See every screen in How it works</a>
+    </div>
+  </section>
+
+  <!-- ── Every threshold, named: one marker as the proof ── -->
+  <section class="border-t border-border bg-card px-6 py-14 sm:px-10">
+    <div class="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-14">
+      <div class="flex flex-col items-start gap-3.5">
+        <h2 class={h2}>Every threshold, named.</h2>
+        <p class="text-[17px] leading-[1.55] text-text-secondary">Each line Verve draws links to the paper it came from. Nothing you cannot check.</p>
+        <a href="/science" class={quiet}>Read the evidence base</a>
+      </div>
+      <div class="flex flex-col gap-4 rounded-2xl border border-border bg-canvas p-5 sm:p-6">
         <div class="flex items-baseline justify-between">
-          <span class="text-lg font-extrabold text-text-primary">{apoB.label}</span>
-          <span class="font-mono text-[11px] text-text-tertiary">{apoB.units[0]}</span>
+          <h3 class="text-[18px] font-semibold text-text-primary">{apoB.label}</h3>
+          <span class="font-mono text-[12px] text-text-3">{apoB.units[0]}</span>
         </div>
-        <dl class="mt-3 space-y-2.5 text-sm">
-          {apoBands.map((b, i) => (
-            <div class="flex justify-between">
-              <dt class="text-text-secondary">{b.name}</dt>
-              <dd class:list={["font-mono", bandTone[Math.min(i, bandTone.length - 1)]]}>{b.range}</dd>
+        <dl class="grid grid-cols-3 gap-2.5">
+          {apoBands.map((b) => (
+            <div class="flex flex-col gap-1.5 rounded-[10px] border border-border bg-card p-3.5">
+              <dt class="text-[13px] text-text-2">{b.name}</dt>
+              <dd class="font-mono text-[18px] font-semibold text-text-primary sm:text-[22px]">{b.range}</dd>
             </div>
           ))}
         </dl>
-        <p class="mt-3.5 text-[11.5px] leading-relaxed text-text-tertiary">{apoSource}.</p>
+        <p class="text-[13px] leading-[1.55] text-text-2">{apoSource}.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Who it is for ── -->
+  <section id="who-it-is-for" class="scroll-mt-6 border-t border-border px-6 py-14 sm:px-10">
+    <div class="mx-auto flex max-w-6xl flex-col gap-7">
+      <h2 class={h2}>Who it is for</h2>
+      <ul class="grid gap-5 sm:grid-cols-3" role="list">
+        {who.map((w) => (
+          <li class="flex flex-col gap-2 rounded-2xl border border-border bg-card p-[22px]">
+            <h3 class="text-[17px] font-semibold text-text-primary">{w.title}</h3>
+            <p class="text-[15px] leading-[1.5] text-text-secondary">{w.line}</p>
+            {w.doors && (
+              <p class="mt-1 flex flex-wrap gap-x-4 text-[14px] font-semibold">
+                {PRO_PAGES.map((p) => <a href={p.href} class="inline-flex min-h-9 items-center text-accent-text underline-offset-4 hover:underline">For a {p.label.toLowerCase()}</a>)}
+              </p>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── What you come back for: the four returns, one per cadence ── -->
+  <section id="what-you-come-back-for" class="scroll-mt-6 border-t border-border bg-card px-6 py-14 sm:px-10">
+    <div class="mx-auto flex max-w-6xl flex-col gap-7">
+      <h2 class={h2}>What you come back for</h2>
+      <ul class="grid gap-x-5 gap-y-7 sm:grid-cols-2 lg:grid-cols-4" role="list">
+        {RETURNS.map((r) => (
+          <li class="flex flex-col gap-2 border-t-2 border-text pt-4">
+            <span class={eyebrow}>{r.cadence}</span>
+            <h3 class="text-[17px] font-semibold text-text-primary">{r.title}</h3>
+            <p class="text-[15px] leading-[1.5] text-text-secondary">{r.line}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── Who built it ── -->
+  <section class="border-t border-border px-6 py-10 sm:px-10">
+    <div class="mx-auto max-w-6xl">
+      <p class="max-w-[820px] text-[20px] font-medium leading-[1.4] tracking-[-0.01em] text-text-primary sm:text-[22px]">Built by a radiologist. No ads, no data sold, no score nobody can explain.</p>
+    </div>
+  </section>
+
+  <!-- ── The plans, in one line ── -->
+  <section class="px-6 pb-14 pt-2 sm:px-10">
+    <div class="mx-auto max-w-6xl">
+      <div class="flex flex-wrap items-center justify-between gap-x-8 gap-y-5 rounded-2xl border border-accent-border bg-accent-fill px-6 py-7 sm:px-9 sm:py-8">
+        <div class="flex flex-col gap-2">
+          <p class="text-[21px] font-semibold leading-[1.25] tracking-[-0.015em] text-text-primary sm:text-[24px]">Free shows your numbers. Pro reads them.</p>
+          <p class="text-[15px] leading-[1.5] text-accent-text">14 days of Pro on the website, no card. {priceLine}</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <a href="#find-your-number" class="inline-flex min-h-12 items-center justify-center rounded-full bg-accent px-6 text-[15px] font-semibold text-canvas transition-colors hover:bg-accent-text">Find your number</a>
+          <a href="/plans" class={quiet}>See the plans</a>
+        </div>
       </div>
     </div>
   </section>

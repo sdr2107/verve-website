@@ -5,49 +5,113 @@
 @import "@fontsource/jetbrains-mono/700.css";
 
 /*
- * One set of tokens: the app's, now the website's (8 November 2026, the
- * canvas "My health, redesigned", board 8). The matte dark set the app took
- * on 3 November: one canvas, one card, one alt surface, two borders, four
- * greys for text, one accent, good, caution in gold, concern. Nothing is
- * orange. Every small grey passes 4.5:1 on the card.
+ * Two sets of values on one set of names (11 November 2026, the canvas
+ * "Verve on the web, rethought", boards 02, 07 and 08).
  *
- * The old names stay as aliases onto the new values, so the public pages
- * re-skin without an edit: a visitor who signs in sees no change of house.
+ * LIGHT is the default: the public pages read dark on light, which reads
+ * better at every age and more so in small type. DARK is the app's matte
+ * set, the one the website took on 8 November. It applies in three places:
+ *   :root[data-theme="dark"]     the person chose dark (My health's switch)
+ *   :root[data-theme="system"]   My health, when the device prefers dark
+ *   .theme-dark                  a scope class: an app frame, a product
+ *                                glimpse or a dark section inside a light
+ *                                page. The product is shown as it is.
+ * The names never change, so `bg-canvas`, `text-text-2`, `border-border`
+ * and every alias mean the right thing in each. Layout.astro sets the
+ * attribute; src/lib/theme.ts reads and writes the choice.
+ *
+ * `well` is an inset panel's ground and `shade` a drop shadow's colour;
+ * each carries its own alpha, so write `bg-well` and `shadow-shade` bare.
+ *
+ * `ink` is the colour that sits ON the canvas: near-black on light, white
+ * on dark. A hairline or a faint wash is ink at low alpha (`border-ink/10`,
+ * `bg-ink/4`), so it shows on both. Never write `white/…` for that.
+ *
+ * `static`: every token is written out even when no utility uses it, so an
+ * inline `var(--color-…)` in a script-built string always resolves.
  */
-@theme {
+@theme static {
   --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   /* surfaces */
+  --color-canvas:        #F7F7F4;
+  --color-card:          #FFFFFF;
+  --color-alt:           #F1F1EE;
+  --color-border:        #E4E4E0;
+  --color-border-strong: #CFCFCA;
+
+  /* text */
+  --color-text:   #14141C;
+  --color-text-2: #4C4C5C;
+  --color-text-3: #6B6B7E;   /* eyebrows, small labels: the smallest grey allowed on a card (4.9:1 on the canvas) */
+  --color-text-4: #A3A3B2;   /* never for words a person reads: rules, placeholders, 24 px and up */
+  --color-ink:    #14141C;   /* what sits on the canvas; use at low alpha for hairlines and washes */
+  --color-well:   rgb(20 20 28 / 0.045);   /* an inset panel: a table's ground, a code well (`bg-well`) */
+  --color-shade:  rgb(20 20 28 / 0.16);    /* a menu's or a sheet's drop shadow (`shadow-shade`) */
+
+  /* accent */
+  --color-accent:        #4A4AA8;
+  --color-accent-text:   #35357E;
+  --color-accent-fill:   #ECECFB;
+  --color-accent-border: #B9BAF0;
+
+  /* meaning */
+  --color-good:    #0B7A54;
+  --color-caution: #7A4C08;   /* dark gold, never orange */
+  --color-concern: #C23B3B;
+
+  /* the zones: zone 1 is neutral, zone 2 the app's green, zone 3 its darker fill; z3-text passes 4.5:1 on white */
+  --color-z2:      #5E9A2A;
+  --color-z3:      #3B6D11;
+  --color-z3-text: #3B6D11;
+
+  /* ── aliases: the names the pages were written with, on the same values ── */
+  --color-canvas-2: #F7F7F4;
+  --color-canvas-3: #F7F7F4;
+  --color-text-primary:   #14141C;
+  --color-text-secondary: #4C4C5C;
+  --color-text-tertiary:  #6B6B7E;
+  --color-text-muted:     #6B6B7E;   /* the old pages use this name for small notes a person reads: text-3's value, not text-4's */
+  --color-accent-light:   #35357E;
+  --color-glow:           #4A4AA8;
+  --color-success:        #0B7A54;
+  --color-success-light:  #0B7A54;
+  --color-warning:        #7A4C08;
+  --color-danger:         #C23B3B;
+  --color-met-hero:       #4A4AA8;
+  --color-cyan:           #4A4AA8;
+  --color-violet:         #4A4AA8;
+}
+
+:root { color-scheme: light; }
+
+/* ── the dark set: the app's matte dark, unchanged from 8 November ── */
+:root[data-theme="dark"],
+.theme-dark {
+  color-scheme: dark;
   --color-canvas:        #0D0D15;
   --color-card:          #15151F;
   --color-alt:           #1B1B27;
   --color-border:        #262636;
   --color-border-strong: #32324A;
-
-  /* text */
   --color-text:   #F2F2F7;
   --color-text-2: #A9A9B8;
-  --color-text-3: #8B8BA0;   /* eyebrows, small labels: the smallest grey allowed on a card */
-  --color-text-4: #55556A;   /* 24 px and up only */
-
-  /* accent */
+  --color-text-3: #8B8BA0;
+  --color-text-4: #55556A;
+  --color-ink:    #FFFFFF;
+  --color-well:   rgb(0 0 0 / 0.22);
+  --color-shade:  rgb(0 0 0 / 0.5);
   --color-accent:        #A9ABF7;
   --color-accent-text:   #C7C9FF;
   --color-accent-fill:   #1E1E3A;
   --color-accent-border: #4A4AA8;
-
-  /* meaning */
   --color-good:    #34D399;
-  --color-caution: #D9A441;   /* muted gold, never orange */
+  --color-caution: #D9A441;
   --color-concern: #F87171;
-
-  /* the zones: zone 1 is neutral, zone 2 the app's green, zone 3 its darker fill with a lighter text on dark */
   --color-z2:      #97C459;
   --color-z3:      #3B6D11;
   --color-z3-text: #5E9A2A;
-
-  /* ── aliases: the names the pages were written with, on the new values ── */
   --color-canvas-2: #0D0D15;
   --color-canvas-3: #0D0D15;
   --color-text-primary:   #F2F2F7;
@@ -60,9 +124,67 @@
   --color-success-light:  #34D399;
   --color-warning:        #D9A441;
   --color-danger:         #F87171;
-  --color-met-hero:       #A9ABF7;   /* the MET hero number was orange; nothing is */
+  --color-met-hero:       #A9ABF7;
   --color-cyan:           #A9ABF7;
   --color-violet:         #A9ABF7;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    color-scheme: dark;
+    --color-canvas:        #0D0D15;
+    --color-card:          #15151F;
+    --color-alt:           #1B1B27;
+    --color-border:        #262636;
+    --color-border-strong: #32324A;
+    --color-text:   #F2F2F7;
+    --color-text-2: #A9A9B8;
+    --color-text-3: #8B8BA0;
+    --color-text-4: #55556A;
+    --color-ink:    #FFFFFF;
+    --color-well:   rgb(0 0 0 / 0.22);
+    --color-shade:  rgb(0 0 0 / 0.5);
+    --color-accent:        #A9ABF7;
+    --color-accent-text:   #C7C9FF;
+    --color-accent-fill:   #1E1E3A;
+    --color-accent-border: #4A4AA8;
+    --color-good:    #34D399;
+    --color-caution: #D9A441;
+    --color-concern: #F87171;
+    --color-z2:      #97C459;
+    --color-z3:      #3B6D11;
+    --color-z3-text: #5E9A2A;
+    --color-canvas-2: #0D0D15;
+    --color-canvas-3: #0D0D15;
+    --color-text-primary:   #F2F2F7;
+    --color-text-secondary: #A9A9B8;
+    --color-text-tertiary:  #8B8BA0;
+    --color-text-muted:     #55556A;
+    --color-accent-light:   #C7C9FF;
+    --color-glow:           #A9ABF7;
+    --color-success:        #34D399;
+    --color-success-light:  #34D399;
+    --color-warning:        #D9A441;
+    --color-danger:         #F87171;
+    --color-met-hero:       #A9ABF7;
+    --color-cyan:           #A9ABF7;
+    --color-violet:         #A9ABF7;
+  }
+}
+/* While the theme is being switched, nothing eases: every colour lands in the same frame (src/lib/theme.ts). */
+:root.vrv-theme-switch,
+:root.vrv-theme-switch *,
+:root.vrv-theme-switch *::before,
+:root.vrv-theme-switch *::after {
+  transition: none !important;
+}
+
+/* A dark scope is a surface of its own: its words and its ground follow its tokens, not the page's.
+   In the base layer, so a bg-* or text-* utility on the same element still wins. */
+@layer base {
+  .theme-dark {
+    color: var(--color-text);
+    background-color: var(--color-canvas);
+  }
 }
 
 body {
@@ -93,7 +215,7 @@ body {
   .r-chip { border-radius: 999px; }
 }
 
-/* The canvas is matte: one colour, no gradient. The class stays on every page's body. */
+/* The canvas is flat: one colour, no gradient, in either set. The class stays on every page's body. */
 .vrv-canvas {
   background: var(--color-canvas);
 }
@@ -113,7 +235,7 @@ body {
   width: 56rem;
   height: 56rem;
   border-radius: 9999px;
-  background: radial-gradient(circle, rgba(169, 171, 247, 0.09) 0%, rgba(169, 171, 247, 0) 68%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-accent) 9%, transparent) 0%, color-mix(in srgb, var(--color-accent) 0%, transparent) 68%);
   pointer-events: none;
 }
 
@@ -127,7 +249,7 @@ input[type="password"] {
 
 /* A search hit's matched word: the accent at low alpha, the text as it was. */
 mark {
-  background: rgba(169, 171, 247, 0.22);
+  background: color-mix(in srgb, var(--color-accent) 22%, transparent);
   color: inherit;
   border-radius: 3px;
   padding: 0 1px;
@@ -156,7 +278,7 @@ button:not(:disabled) {
 /* Where a search hit, or any link with a hash, lands: the heading is lit
    for a moment so the eye finds it, then the light fades. */
 @keyframes vrv-target {
-  0%   { background-color: rgba(169, 171, 247, 0.22); box-shadow: 0 0 0 8px rgba(169, 171, 247, 0.22); }
+  0%   { background-color: color-mix(in srgb, var(--color-accent) 22%, transparent); box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-accent) 22%, transparent); }
   100% { background-color: transparent; box-shadow: 0 0 0 8px transparent; }
 }
 .vrv-anchor:target {
@@ -164,5 +286,5 @@ button:not(:disabled) {
   animation: vrv-target 1.8s ease-out 0.15s both;
 }
 @media (prefers-reduced-motion: reduce) {
-  .vrv-anchor:target { animation: none; background-color: rgba(169, 171, 247, 0.14); }
+  .vrv-anchor:target { animation: none; background-color: color-mix(in srgb, var(--color-accent) 14%, transparent); }
 }

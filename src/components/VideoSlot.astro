@@ -7,7 +7,9 @@
  * controls. Nothing loads until it is asked for, and nothing comes from a
  * third party. Under the title, the length and, for a video that is also on
  * the channel, the way to YouTube. A topic with no video yet keeps the
- * dashed placeholder, so the page says so rather than showing a gap.
+ * dashed placeholder, so the page says so rather than showing a gap. Each
+ * video carries id="video-<slug>", which is where a search hit under Watch
+ * lands. Nothing plays by itself and nothing has sound.
  */
 import { videosForTopic, videosBySlugs, videoSrc, videoPoster, videoChannel, fmtSeconds, type Video } from "../data/videos";
 import { TOPICS, topicHref } from "../data/scienceTopics";
@@ -29,11 +31,11 @@ const cols = videos.length > 2 ? "sm:grid-cols-2 lg:grid-cols-3" : videos.length
 {videos.length ? (
   <div class={`grid gap-4 ${cols}`}>
     {videos.map((v) => (
-      <figure class="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]" data-vrv-video={videoSrc(v)}>
+      <figure id={`video-${v.slug}`} class="scroll-mt-8 overflow-hidden rounded-2xl border border-ink/10 bg-ink/[0.03]" data-vrv-video={videoSrc(v)}>
         <div class="relative aspect-video bg-canvas" data-vrv-stage>
           <img src={videoPoster(v)} alt="" loading="lazy" decoding="async" class="h-full w-full object-cover" />
           <button type="button" data-vrv-play aria-label={`Play: ${v.title}`} class="group absolute inset-0 flex items-center justify-center">
-            <span class="flex h-14 w-14 items-center justify-center rounded-full border border-white/20 bg-canvas/80 text-text-primary shadow-lg transition-transform group-hover:scale-105">
+            <span class="flex h-14 w-14 items-center justify-center rounded-full border border-ink/20 bg-canvas/80 text-text-primary shadow-lg transition-transform group-hover:scale-105">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
             </span>
           </button>
@@ -73,8 +75,8 @@ const cols = videos.length > 2 ? "sm:grid-cols-2 lg:grid-cols-3" : videos.length
     });
   </script>
 ) : (
-  <div class="flex items-center gap-4 rounded-xl border border-dashed border-white/12 bg-white/2 px-5 py-4">
-    <div class="flex shrink-0 items-center justify-center rounded-full bg-white/6" style="width: 40px; height: 40px;">
+  <div class="flex items-center gap-4 rounded-xl border border-dashed border-ink/12 bg-ink/2 px-5 py-4">
+    <div class="flex shrink-0 items-center justify-center rounded-full bg-ink/6" style="width: 40px; height: 40px;">
       <svg width="16" height="16" class="text-text-tertiary" style="width: 16px; height: 16px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3" /></svg>
     </div>
     <div>

@@ -27,19 +27,19 @@ const { title = "Get the sheet", lede = "One A4 page: the test, the arithmetic, 
 <section class="flex flex-wrap items-start gap-5 rounded-[20px] border border-accent/40 bg-accent/[0.08] p-6 sm:p-7" data-sheetbox data-source={source}>
   <div class="flex min-w-[280px] flex-1 flex-col gap-1.5">
     <h2 class="text-[22px] font-bold text-text-primary">{title}</h2>
-    <p class="text-[15px] text-[#c7d2fe] sm:text-base">{lede}</p>
+    <p class="text-[15px] text-accent-text sm:text-base">{lede}</p>
   </div>
   <form id="sheetform" class="flex min-w-[280px] flex-1 flex-col gap-3" novalidate>
     <div class="flex flex-wrap gap-2.5">
       <label for="email" class="sr-only">Your email</label>
       <input id="email" name="email" type="email" required autocomplete="email" placeholder="you@example.com"
-        class="min-h-12 min-w-[200px] flex-1 rounded-xl border border-white/[0.16] bg-[#15151F] px-4 text-[17px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
+        class="min-h-12 min-w-[200px] flex-1 rounded-xl border border-ink/[0.16] bg-card px-4 text-[17px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
       <button type="submit" id="sheetsubmit" class="min-h-12 rounded-xl bg-accent px-5 text-[17px] font-bold text-canvas transition-opacity hover:opacity-90 disabled:opacity-60">Send me the sheet</button>
     </div>
     <p class="text-[13px] leading-snug text-text-tertiary">{NEWSLETTER_CONSENT} <a href={PRIVACY_URL} class="text-accent-light hover:underline">Privacy policy</a>.</p>
     <p id="sheetmsg" class="hidden text-[14px] leading-snug text-text-primary" role="status" aria-live="polite"></p>
   </form>
-  <div id="sheetdone" class="hidden min-w-[280px] flex-1 flex-col gap-3 rounded-xl border border-white/[0.12] bg-[#15151F] p-5">
+  <div id="sheetdone" class="hidden min-w-[280px] flex-1 flex-col gap-3 rounded-xl border border-ink/[0.12] bg-card p-5">
     <p class="text-[17px] font-bold text-text-primary">Here is your sheet.</p>
     <a id="sheetlink" href={SHEET_PDF} target="_blank" rel="noopener" class="inline-flex min-h-11 items-center self-start rounded-xl bg-accent px-5 font-bold text-canvas transition-opacity hover:opacity-90">Open the A4 sheet (PDF)</a>
     <p id="sheetmail" class="text-[14px] text-text-secondary">A copy is on its way to your inbox, from hello@verve-app.health. One letter a week follows; every one has an Unsubscribe button.</p>

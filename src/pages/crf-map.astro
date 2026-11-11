@@ -24,7 +24,7 @@ const nodeCount = (function count(n: any): number {
 ---
 
 <Layout
-  title="Cardiorespiratory Fitness — the whole picture, mapped"
+  title="The CRF map · Verve"
   description={`An interactive map of the American Heart Association's scientific statement on cardiorespiratory fitness — ${nodeCount} concepts, from what CRF measures to how to improve it. Pan, zoom, expand.`}
   image="/og-crf-map.png"
 >
@@ -41,7 +41,7 @@ const nodeCount = (function count(n: any): number {
       Every concept in the AHA's statement on CRF as a clinical vital sign —
       what it measures, why it predicts mortality, how to test it, and what
       actually raises it — laid out as one tree of {nodeCount} nodes.
-      <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer" class="text-accent-light underline decoration-white/25 underline-offset-2 hover:text-text-primary">
+      <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer" class="text-accent-light underline decoration-ink/25 underline-offset-2 hover:text-text-primary">
         Read the source statement &rarr;
       </a>
     </p>
@@ -49,13 +49,13 @@ const nodeCount = (function count(n: any): number {
 
   <!-- ── Map ─────────────────────────────────────────────────────────── -->
   <section class="mx-auto max-w-[1400px] px-3 pb-14 sm:px-6">
-    <div class="overflow-hidden rounded-2xl border border-white/8 bg-white/[0.025]">
+    <div class="theme-dark overflow-hidden rounded-2xl border border-ink/8 bg-canvas">
 
       <!-- Controls -->
-      <div class="flex flex-wrap items-center gap-2 border-b border-white/8 px-3 py-2.5">
+      <div class="flex flex-wrap items-center gap-2 border-b border-ink/8 px-3 py-2.5">
         <button data-act="expand"   class="ctl">Expand all</button>
         <button data-act="collapse" class="ctl">Collapse</button>
-        <span class="mx-1 hidden h-4 w-px bg-white/12 sm:block"></span>
+        <span class="mx-1 hidden h-4 w-px bg-ink/12 sm:block"></span>
         <button data-act="out"  class="ctl ctl-icon" aria-label="Zoom out">&minus;</button>
         <span id="zoomLabel" class="min-w-[3.2rem] text-center font-mono text-xs text-text-tertiary">100%</span>
         <button data-act="in"   class="ctl ctl-icon" aria-label="Zoom in">+</button>

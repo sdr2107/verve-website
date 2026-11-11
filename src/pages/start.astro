@@ -1,236 +1,100 @@
 ---
 /**
- * /start — Start here: the first page a stranger reads.
+ * /start — where Start here went (11 November 2026, the canvas "Verve on
+ * the web, rethought", board 05).
  *
- * Built 2026-10-08 from the Design canvas "Start here, redesigned". In
- * order: what Verve is and the three things it stands for; who it is for;
- * what you get on the site and in the app, with the price stated once;
- * what the website does; the three free things, the sheet first with its
- * email box; then the order to do things in; the free call, only once its
- * Calendly address exists; and sign in, for the person who already has the
- * app. Two asks on the whole page, the email and the sign-in, never on
- * the same screen. The sheet itself, with the tables, is at /sheet.
+ * Start here was a page of its own: what Verve is, who it is for, the free
+ * sheet, the letters, the call. The landing page is that page now: the
+ * first number is a working tool on it, with who it is for and what you
+ * come back for beneath. This address stays, because old links, the
+ * printed sheet and search results point at it: a short page that says
+ * where each thing lives, and still carries the call. Nothing a visitor
+ * could do here was removed.
  */
 import Layout from "../layouts/Layout.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import Footer from "../components/Footer.astro";
-import SheetBox from "../components/SheetBox.astro";
-import { GET_APP_PATH, SUBSTACK_URL, X_URL, YOUTUBE_URL, TIKTOK_URL, INSTAGRAM_URL, CALENDLY_URL } from "../data/site";
-import { AI_SUMMARY_OPEN } from "../data/plans";
-import { RETURNS } from "../data/returns";
+import CallCard from "../components/CallCard.astro";
+import { GET_APP_PATH, SUBSTACK_URL, X_URL, YOUTUBE_URL, TIKTOK_URL, INSTAGRAM_URL } from "../data/site";
 
 const LETTERS = "https://roplekarsudeep.substack.com";
-const claims = [
-  { n: "01", color: "text-success", title: "Every line names its study.", body: "The threshold, the journal, the year. Nothing you cannot check." },
-  { n: "02", color: "text-accent-light", title: "Your labs and your training in one place.", body: "A watch cannot read a blood report. Verve reads both." },
-  { n: "03", color: "text-warning", title: "Built by a doctor, for the person the doctor sends home.", body: "No ads, no data sold, no score nobody can explain." },
+const places = [
+  { title: "Find your number", body: "Six minutes of walking, or twelve of running. Your fitness in METs and where it stands for your age, on the front page. No app, no email.", href: "/#find-your-number", cta: "Open the tool" },
+  { title: "The free sheet", body: "The same sum on one A4 page, with the tier tables, to print and keep.", href: "/sheet", cta: "Open the sheet" },
+  { title: "Who it is for", body: "Starting again, already tracking, or reading other people’s pages as a coach or a clinician.", href: "/#who-it-is-for", cta: "See the three" },
+  { title: "How the app works", body: "The four tabs, the Guide, free and Pro, how Verve counts, and six short videos.", href: "/how-it-works", cta: "Read the manual" },
+  { title: "The evidence", body: "Every threshold Verve uses, traced to its source. One search, across topics, thresholds and videos.", href: "/science", cta: "Search the science" },
+  { title: "My health", body: "Drop a lab report, add your family, share a page with a coach or a doctor. The same account as the app.", href: "/my-health", cta: "Sign in" },
 ];
-const who = [
-  { title: "Starting again", grey: "After surgery, a diagnosis, or years away. Told to get fitter and given nothing to see it with.", white: "Verve shows the category climbing and the markers moving toward range, in plain words. Your family can watch too." },
-  { title: "Already tracking", grey: "A watch or a ring, workouts logged, and a number on the maker's own scale.", white: "The same number against the published threshold, with the study named, beside the blood markers the watch cannot see." },
-  { title: "Coaches and clinicians", grey: "People who share their pages with you, and you with your own sign-in.", white: "Their numbers in one place, only what each chose to share, and your note kept as a copy. Reading is free.", href: "/clinician" },
-];
-const site = [
-  { k: "REPORTS", color: "text-success", title: "Drop a lab report, done", body: "A PDF or a photo of any lab's report. The values are read, filed under the right person, dated, and sent to the app marked unchecked until you look. The file stays in a folder only you can open." },
-  { k: "PEOPLE", color: "text-accent-light", title: "Add your family", body: "A parent's reports live in a WhatsApp chat. Give them a page of their own, file their results under it, and give a doctor access to that page and nothing else. They can stop it any time." },
-  { k: "IN DEPTH", color: "text-warning", title: "The working, in five chapters", body: "Rhythm, load and intensity, sessions, fitness and recovery, labs and body. The page a coach reads, and the page you read when you want to know why a number moved." },
-  ...(AI_SUMMARY_OPEN ? [{ k: "IN VERVE'S WORDS", color: "text-[#c4b5fd]", title: "A summary, written from your numbers", body: "A few paragraphs on In depth that say what this month's numbers mean against the thresholds, every figure traceable to a card above it. Opt in, never on by default, your name never sent." }] : []),
-  { k: "COACHES AND CLINICIANS", color: "text-success-light", title: "Share a page, not an account", body: "Tick what a coach or a doctor may see: labs, imaging, activity, body, heart. They sign in with their own account and land on everyone who shares with them. Verified ones carry a badge." },
-];
-const order = [
-  { title: "Read the Science page", body: "Pick the marker you care about. See where the line comes from.", href: "/science" },
-  { title: "Follow along", body: "X and Substack for the letters. TikTok, Instagram and YouTube for the videos.", href: LETTERS },
-  { title: "Get the app, free", body: "Your first test in the app places you in the table. Retest in eight weeks.", href: GET_APP_PATH },
-  { title: "Try Pro for 14 days", body: "Keep it if The Guide earns its place. If not, the free app stays yours.", href: GET_APP_PATH },
+const doors = [
+  { label: "For a coach", href: "/coach" },
+  { label: "For a clinician", href: "/clinician" },
+  { label: "The plans", href: "/plans" },
+  { label: "Get the app", href: GET_APP_PATH },
 ];
 ---
 
 <Layout
-  title="Start here — Verve"
-  description="What Verve is, who it is for, what you get on the site and in the app, and three things that are free today, starting with your first fitness number."
+  title="Start here · Verve"
+  description="Start here is the front page now: find your first fitness number, see who Verve is for, and where everything else lives."
   cardType="summary"
 >
   <SiteHeader current="start" />
 
-  <main class="mx-auto flex w-full max-w-[1080px] flex-col gap-20 px-4 pb-20 pt-14 sm:px-6 lg:gap-24 lg:pt-16">
+  <main class="mx-auto flex w-full max-w-[1080px] flex-col gap-14 px-4 pb-20 pt-14 sm:px-6 lg:pt-16">
 
-    <!-- 1. What Verve is, and what it stands for -->
-    <section class="flex flex-col gap-7">
-      <div class="flex max-w-[820px] flex-col gap-4">
-        <span class="font-mono text-xs font-semibold uppercase tracking-[0.12em] text-accent-light">Start here</span>
-        <h1 class="text-[42px] font-extrabold leading-[1.02] tracking-[-0.03em] text-text-primary sm:text-[60px]">Your health, read against the evidence.</h1>
-        <p class="text-[19px] font-medium leading-[1.35] text-[#c7d2fe] sm:text-[22px]">Verve reads your fitness, movement, sleep, heart and blood against the thresholds clinicians use, shows how each moves over months, and names the study behind every line.</p>
-      </div>
-      <div class="grid gap-4 sm:grid-cols-3">
-        {claims.map((c) => (
-          <div class="flex flex-col gap-1.5 rounded-2xl border border-white/[0.08] bg-white/[0.04] px-6 py-5">
-            <span class={`font-mono text-[11px] tracking-[0.1em] ${c.color}`}>{c.n}</span>
-            <p class="text-[18px] font-bold text-text-primary">{c.title}</p>
-            <p class="text-[15px] text-text-secondary">{c.body}</p>
-          </div>
-        ))}
-      </div>
+    <section class="flex max-w-[760px] flex-col gap-4">
+      <span class="font-mono text-xs font-semibold uppercase tracking-[0.12em] text-accent-light">Start here</span>
+      <h1 class="text-[34px] font-semibold leading-[1.08] tracking-[-0.03em] text-text-primary sm:text-[44px]">Start on the front page.</h1>
+      <p class="text-[17px] leading-[1.6] text-text-secondary">This page used to hold the introduction. The front page does that now, and your first fitness number is a working tool on it. Everything that was here has a home below.</p>
+      <a href="/#find-your-number" class="inline-flex min-h-12 items-center self-start rounded-full bg-accent px-6 text-[15px] font-semibold text-canvas transition-colors hover:bg-accent-text">Find your number</a>
     </section>
 
-    <!-- 2. Who it is for -->
-    <section class="flex flex-col gap-5">
-      <h2 class="text-[28px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[32px]">Who it is for</h2>
-      <div class="grid gap-4 sm:grid-cols-3">
-        {who.map((w) => (
-          <div class="flex flex-col gap-2.5 rounded-[18px] border border-white/[0.08] p-6">
-            <h3 class="text-[21px] font-bold text-text-primary">{w.title}</h3>
-            <p class="text-[15.5px] text-text-secondary">{w.grey}</p>
-            <p class="text-[15.5px] text-text-primary">{w.white}</p>
-            {w.href && <p class="mt-1 flex flex-wrap gap-x-4 text-[14px] font-semibold"><a href="/coach" class="text-accent-light hover:underline">The coach's door</a><a href="/clinician" class="text-accent-light hover:underline">The clinician's door</a></p>}
-          </div>
-        ))}
-      </div>
-    </section>
-
-    <!-- 3. What you get: the site and the app, the price said once -->
-    <section class="flex flex-col gap-5">
-      <h2 class="text-[28px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[32px]">What you get</h2>
-      <div class="grid gap-4 sm:grid-cols-2">
-        <div class="flex flex-col gap-3.5 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-7">
-          <span class="font-mono text-[11px] tracking-[0.1em] text-accent-light">ON THIS SITE · FREE</span>
-          <div class="flex flex-col gap-1">
-            <p class="text-[19px] font-bold text-text-primary">Science</p>
-            <p class="text-[15.5px] text-text-secondary">Every threshold Verve uses, traced to its source. One search box. No account.</p>
-          </div>
-          <div class="flex flex-col gap-1">
-            <p class="text-[19px] font-bold text-text-primary">My health</p>
-            <p class="text-[15.5px] text-text-secondary">Drop a lab report as a PDF or a photo. The values file themselves, and go to the app. Share a page with a coach, a clinician, or family. Needs the same account as the app.</p>
-          </div>
-        </div>
-        <div class="flex flex-col gap-3.5 rounded-[18px] border border-accent/40 bg-accent/[0.08] p-7">
-          <span class="font-mono text-[11px] tracking-[0.1em] text-accent-light">IN THE APP · iPHONE NOW, ANDROID SOON</span>
-          <div class="flex flex-col gap-1">
-            <p class="text-[19px] font-bold text-text-primary">Your numbers, against their thresholds</p>
-            <p class="text-[15.5px] text-[#c7d2fe]">Fitness in METs and your tier by age, movement, sleep, heart and body, each read against the line the studies draw, each over months.</p>
-          </div>
-          <div class="flex flex-col gap-1">
-            <p class="text-[19px] font-bold text-text-primary">Free, and then Pro</p>
-            <p class="text-[15.5px] text-[#c7d2fe]">The app is free. Pro adds The Guide and In depth: $3.99 a month or $29.99 a year, after a 14-day trial. Nothing free is taken away.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-    <!-- 3b. What you come back for: the four returns (4 Nov 2026), the same four as the home page -->
-    <section class="flex flex-col gap-5">
-      <h2 class="text-[28px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[32px]">What you come back for</h2>
-      <ul class="grid gap-4 sm:grid-cols-2">
-        {RETURNS.map((r) => (
-          <li class="flex flex-col gap-2 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-6">
-            <span class="font-mono text-[11px] tracking-[0.1em] text-accent-light">{r.cadence.toUpperCase()}</span>
-            <p class="text-[19px] font-bold text-text-primary">{r.title}</p>
-            <p class="text-[15.5px] text-text-secondary">{r.body}</p>
-            <a href={r.href} class="mt-1 inline-block text-[14px] font-bold text-accent-light transition-colors hover:text-text-primary">{r.cta} &rarr;</a>
+    <section class="flex flex-col gap-5" aria-labelledby="where">
+      <h2 id="where" class="text-[24px] font-semibold tracking-[-0.02em] text-text-primary sm:text-[28px]">Where each thing lives</h2>
+      <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" role="list">
+        {places.map((p) => (
+          <li class="flex flex-col gap-2 rounded-2xl border border-border bg-card p-6">
+            <h3 class="text-[18px] font-semibold text-text-primary">{p.title}</h3>
+            <p class="text-[15px] leading-[1.5] text-text-secondary">{p.body}</p>
+            <a href={p.href} class="mt-auto inline-flex min-h-9 items-center self-start text-[14.5px] font-semibold text-accent-text underline-offset-4 hover:underline">{p.cta}</a>
           </li>
         ))}
       </ul>
+      <p class="flex flex-wrap gap-x-6 gap-y-1 text-[14.5px] font-semibold">
+        {doors.map((d) => <a href={d.href} class="inline-flex min-h-9 items-center text-accent-text underline-offset-4 hover:underline">{d.label}</a>)}
+      </p>
     </section>
 
-
-    <!-- 4. What the website does -->
-    <section class="flex flex-col gap-5">
-      <div class="flex flex-col gap-1.5">
-        <h2 class="text-[28px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[32px]">What the website does</h2>
-        <p class="max-w-[860px] text-text-secondary">The app reads your phone. The website reads what your phone cannot: the paper in the drawer, the people around you, and the working behind every number.</p>
+    <section class="grid gap-4 sm:grid-cols-2">
+      <div class="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6">
+        <span class="font-mono text-[11px] tracking-[0.1em] text-text-3">THE LETTERS</span>
+        <h2 class="text-[20px] font-semibold text-text-primary">One number a week</h2>
+        <p class="text-[15px] leading-[1.5] text-text-secondary">The threshold it is measured against, the study behind it, and what you can check today. Written by a radiologist, read in five minutes. The sheet&rsquo;s page has the box to get it by email.</p>
+        <p class="mt-auto flex flex-wrap gap-x-5 gap-y-1 text-[14.5px] font-semibold">
+          <a href={LETTERS} class="inline-flex min-h-9 items-center text-accent-text underline-offset-4 hover:underline">Read the letters</a>
+          <a href="/sheet" class="inline-flex min-h-9 items-center text-accent-text underline-offset-4 hover:underline">Get them by email</a>
+        </p>
       </div>
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {site.map((c) => (
-          <div class="flex flex-col gap-2 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-6">
-            <span class={`font-mono text-[11px] tracking-[0.1em] ${c.color}`}>{c.k}</span>
-            <h3 class="text-[20px] font-bold text-text-primary">{c.title}</h3>
-            <p class="text-[15px] text-text-secondary">{c.body}</p>
-          </div>
-        ))}
-        <div class="flex flex-col gap-2 rounded-[18px] border border-accent/40 bg-accent/[0.08] p-6">
-          <span class="font-mono text-[11px] tracking-[0.1em] text-accent-light">ONE ACCOUNT</span>
-          <h3 class="text-[20px] font-bold text-text-primary">The app and the website share it</h3>
-          <p class="text-[15px] text-[#c7d2fe]">Sign in once, with Apple, Google or an emailed link. What you file here appears in the app; what the app records appears here. Delete the account and everything goes with it.</p>
-          <a href="/my-health" class="mt-1 inline-flex min-h-11 items-center self-start rounded-xl bg-accent px-5 font-bold text-canvas transition-opacity hover:opacity-90">Open My health</a>
-        </div>
-      </div>
-    </section>
-
-    <!-- 5. Free, today -->
-    <section class="flex flex-col gap-5">
-      <div class="flex flex-col gap-1.5">
-        <h2 class="text-[28px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[32px]">Free, today</h2>
-        <p class="max-w-[720px] text-text-secondary">Three things you can use before you decide anything.</p>
-      </div>
-      <SheetBox title="Your first fitness number" lede="Walk six minutes or run twelve, one line of arithmetic, and the tier tables by age. One A4 page, and the same on the sheet's page." />
-      <div class="grid gap-4 sm:grid-cols-2">
-        <div class="flex flex-col gap-3 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-6">
-          <span class="font-mono text-[11px] tracking-[0.1em] text-success">THE LETTERS</span>
-          <h3 class="text-[21px] font-bold text-text-primary">One number a week</h3>
-          <p class="text-[15.5px] text-text-secondary">The threshold it is measured against, the study behind it, and what you can check today. Written by a radiologist, read in five minutes.</p>
-          <a href={LETTERS} class="mt-auto inline-flex min-h-11 items-center self-start rounded-xl border border-white/[0.16] px-[18px] font-semibold text-text-primary transition-colors hover:border-white/30">Read the letters</a>
-        </div>
-        <div class="flex flex-col gap-3 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-6">
-          <span class="font-mono text-[11px] tracking-[0.1em] text-warning">THE VIDEOS</span>
-          <h3 class="text-[21px] font-bold text-text-primary">One a day, under a minute</h3>
-          <p class="text-[15.5px] text-text-secondary">One number against its threshold. The study is in the caption.</p>
-          <p class="mt-auto flex flex-wrap gap-x-4 gap-y-2 text-[15px] font-semibold">
-            <a href={YOUTUBE_URL} class="text-accent-light hover:underline">YouTube</a>
-            <a href={INSTAGRAM_URL} class="text-accent-light hover:underline">Instagram</a>
-            <a href={TIKTOK_URL} class="text-accent-light hover:underline">TikTok</a>
-          </p>
-        </div>
+      <div class="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6">
+        <span class="font-mono text-[11px] tracking-[0.1em] text-text-3">THE VIDEOS</span>
+        <h2 class="text-[20px] font-semibold text-text-primary">One number, under a minute</h2>
+        <p class="text-[15px] leading-[1.5] text-text-secondary">Each sits on the Science page it explains. The study is in the caption.</p>
+        <p class="mt-auto flex flex-wrap gap-x-5 gap-y-1 text-[14.5px] font-semibold">
+          <a href="/videos" class="inline-flex min-h-9 items-center text-accent-text underline-offset-4 hover:underline">All the videos</a>
+          <a href={YOUTUBE_URL} class="inline-flex min-h-9 items-center text-accent-text underline-offset-4 hover:underline">YouTube</a>
+          <a href={INSTAGRAM_URL} class="inline-flex min-h-9 items-center text-accent-text underline-offset-4 hover:underline">Instagram</a>
+          <a href={TIKTOK_URL} class="inline-flex min-h-9 items-center text-accent-text underline-offset-4 hover:underline">TikTok</a>
+        </p>
       </div>
     </section>
 
-    <!-- 6. Then, in this order -->
-    <section class="flex flex-col gap-5">
-      <h2 class="text-[28px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[32px]">Then, in this order</h2>
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {order.map((o, i) => (
-          <a href={o.href} class="flex flex-col gap-2 rounded-2xl border border-white/[0.08] p-6 transition-colors hover:border-white/20">
-            <span class="font-mono text-[13px] text-accent-light">{i + 1}</span>
-            <p class="text-[17px] font-bold text-text-primary">{o.title}</p>
-            <p class="text-[14.5px] text-text-secondary">{o.body}</p>
-          </a>
-        ))}
-      </div>
-    </section>
+    <CallCard />
 
-    <!-- 7. The call, once its address exists -->
-    {CALENDLY_URL && (
-      <section class="flex flex-wrap items-start gap-7 rounded-[20px] border border-white/[0.08] bg-white/[0.04] p-7 sm:p-8">
-        <img src="/sudeep.jpg" alt="Dr Sudeep Roplekar" width="120" height="120" class="h-[120px] w-[120px] shrink-0 rounded-full border border-white/[0.12] object-cover" />
-        <div class="flex min-w-[280px] flex-1 flex-col gap-3.5">
-          <div class="flex flex-col gap-3">
-            <h2 class="text-[26px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[28px]">Fifteen minutes with Dr Sudeep Roplekar. Free.</h2>
-            <p class="max-w-[720px] text-[15.5px] leading-relaxed text-text-secondary">I am a radiologist. I read scans all day, and most of what I see on them was years in the making. Around that job I built Verve on my own: an app that reads your fitness, movement, sleep, heart and blood against the thresholds the studies use, and a website that reads the lab reports a phone cannot. I tested it on myself first; my watch gave one fitness number and a twelve-minute run gave another, and the weekly letters began there.</p>
-            <p class="max-w-[720px] text-[15.5px] leading-relaxed text-text-secondary">On a call I can tell you what your number means, where the next row up is, and what a week that gets you there looks like. What I cannot do is treat you; that stays with your doctor.</p>
-            <p class="text-text-primary">Bring your number from the sheet. We talk through three things.</p>
-          </div>
-          <div class="grid gap-3.5 sm:grid-cols-3">
-            <div class="flex flex-col gap-1"><span class="font-mono text-[12px] text-accent-light">1</span><p class="font-bold text-text-primary">Who you are</p><p class="text-[14.5px] text-text-secondary">Your week, your health, what you want from the next few months.</p></div>
-            <div class="flex flex-col gap-1"><span class="font-mono text-[12px] text-accent-light">2</span><p class="font-bold text-text-primary">What your sheet says</p><p class="text-[14.5px] text-text-secondary">The row you landed in, what it means, and what the next row up would take.</p></div>
-            <div class="flex flex-col gap-1"><span class="font-mono text-[12px] text-accent-light">3</span><p class="font-bold text-text-primary">A training week you can keep</p><p class="text-[14.5px] text-text-secondary">Two or three things to build it around, and the first one to do this week.</p></div>
-          </div>
-          <p class="text-[13.5px] text-text-tertiary">Wellness, not medical advice. Nothing on the call replaces your doctor.</p>
-        </div>
-        <a href={CALENDLY_URL} target="_blank" rel="noopener" class="inline-flex min-h-12 items-center self-center rounded-xl bg-accent px-6 font-bold text-canvas transition-opacity hover:opacity-90">Pick a time</a>
-      </section>
-    )}
-
-    <!-- 8. Sign in -->
-    <section class="flex flex-wrap items-center gap-5 border-t border-white/[0.08] pt-8">
-      <div class="flex min-w-[280px] flex-1 flex-col gap-1.5">
-        <h2 class="text-[24px] font-extrabold tracking-[-0.02em] text-text-primary">Already have the app?</h2>
-        <p class="text-text-secondary">Sign in with the same account. You land on your own numbers. A coach or clinician lands on the people who share with them. One account; the site works out which you are.</p>
-      </div>
-      <a href="/my-health" class="inline-flex min-h-12 items-center rounded-xl border border-white/20 px-6 font-bold text-text-primary transition-colors hover:border-white/35">Sign in</a>
-    </section>
-
-    <!-- Byline -->
-    <section class="flex flex-wrap items-center gap-5 border-t border-white/[0.08] pt-6">
+    <section class="flex flex-wrap items-center gap-5 border-t border-border pt-6">
       <div class="flex min-w-[280px] flex-1 flex-col gap-1">
-        <p class="font-bold text-text-primary">Dr Sudeep Roplekar</p>
-        <p class="text-base text-text-secondary">Radiologist. I built Verve to see my own numbers against the thresholds the studies use. One letter a week. <a href={SUBSTACK_URL} class="text-accent-light hover:underline">The letters</a> · <a href={X_URL} class="text-accent-light hover:underline">X</a></p>
+        <p class="font-semibold text-text-primary">Dr Sudeep Roplekar</p>
+        <p class="text-base text-text-secondary">Radiologist. I built Verve to see my own numbers against the thresholds the studies use. One letter a week. <a href={SUBSTACK_URL} class="text-accent-text underline-offset-4 hover:underline">The letters</a> · <a href={X_URL} class="text-accent-text underline-offset-4 hover:underline">X</a></p>
       </div>
     </section>
 

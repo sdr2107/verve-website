@@ -18,7 +18,7 @@ const onTopics = VIDEOS.filter((v) => v.topic).length;
 ---
 
 <Layout
-  title="Videos — Verve"
+  title="Videos · Verve"
   description="Every short video Verve has made: how the app works, and the science behind each number, one study at a time."
 >
   <SiteHeader current="videos" />
@@ -31,7 +31,7 @@ const onTopics = VIDEOS.filter((v) => v.topic).length;
       </h1>
       <p class="mt-4 text-[16px] leading-[1.6] text-text-secondary">
         {VIDEOS.length} short videos, {fmtSeconds(total)} in all: how the app works, and the science behind each number,
-        one study at a time. Captions, no sound. {onTopics} of them sit on the topic page they explain; the rest are here alone.
+        one study at a time. Captions, no sound. {onTopics} of them sit on the <a href="/science?show=watch" class="font-semibold text-accent-light underline-offset-4 hover:underline">Science</a> topic they explain, and the product&rsquo;s own are on <a href="/how-it-works#watch" class="font-semibold text-accent-light underline-offset-4 hover:underline">How it works</a>. This is the whole list.
       </p>
     </div>
 
@@ -39,7 +39,7 @@ const onTopics = VIDEOS.filter((v) => v.topic).length;
       const vs = videosInGroup(g.key);
       if (!vs.length) return null;
       return (
-        <section class="mt-14 border-t border-white/[0.07] pt-10" id={g.key}>
+        <section class="mt-14 border-t border-ink/[0.07] pt-10" id={g.key}>
           <div class="flex flex-wrap items-baseline justify-between gap-3">
             <h2 class="text-[24px] font-extrabold tracking-[-0.02em] text-text-primary">{g.label}</h2>
             <p class="text-sm text-text-tertiary">{g.blurb} &middot; {vs.length}</p>

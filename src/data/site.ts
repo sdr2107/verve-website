@@ -1,15 +1,13 @@
 /**
  * The site's fixed addresses and its navigation, in one place.
  *
- * The header and the footer both read NAV and SOCIAL, so the same links
- * appear at the top and the bottom of every page, in the same order: the
- * site's pages as links, the accounts under one heading, Social. Before this
- * the App Store address was written into five files and the header on each
- * page carried a different subset of the links; the footer was the only
- * place all of them appeared.
+ * The header reads NAV; the footer reads FOOTER_LINKS and the accounts. One
+ * list each, so a link is never typed into a page. Before this the App
+ * Store address was written into five files and the header on each page
+ * carried a different subset of the links.
  */
 
-import { PLANS_OPEN } from "./plans";
+import { PLANS_OPEN } from "./plans.ts";
 
 export const APP_STORE_URL = "https://apps.apple.com/app/id6760022278";
 /**
@@ -73,16 +71,30 @@ export interface NavLink {
   external?: boolean;
 }
 
+/**
+ * The top bar: three places, then the way in and the app (11 November 2026,
+ * the canvas "Verve on the web, rethought", board 05). Start here is the
+ * landing page now; Videos sit inside Science and How it works; My health
+ * is the account entry at the top right, "Sign in" to a stranger; Social
+ * is in the footer. Nothing was deleted: FOOTER_LINKS lists the addresses
+ * that left the bar.
+ */
 export const NAV: NavLink[] = [
-  // the free sheet: where a visitor with no number yet begins
-  { key: "start", label: "Start here", href: "/start" },
-  // how the app works, section by section: the tabs, the Guide, free and Pro, how it counts, the wearables (4 Nov 2026)
+  // how the app works, section by section: the manual, and the six product videos
   { key: "how", label: "How it works", href: "/how-it-works" },
   { key: "science", label: "Science", href: "/science" },
-  { key: "videos", label: "Videos", href: "/videos" },
-  { key: "my-health", label: "My health", href: "/my-health" },
   // the plans page joins the nav when plans open; until then it is a preview at /plans
   ...(PLANS_OPEN ? [{ key: "plans" as const, label: "Plans", href: "/plans" }] : []),
+];
+
+/** The account entry at the top right: one address for both of its names. */
+export const ACCOUNT_PATH = "/my-health";
+
+/** The footer's row: the bar's three, then the pages that are reached from inside others. */
+export const FOOTER_LINKS: { label: string; href: string }[] = [
+  ...NAV.map((l) => ({ label: l.label, href: l.href })),
+  { label: "Videos", href: "/videos" },
+  { label: "The free sheet", href: "/sheet" },
 ];
 
 export type SocialKey = "x" | "substack" | "tiktok" | "instagram" | "youtube";
@@ -96,14 +108,15 @@ export interface SocialLink {
 }
 
 /**
- * The accounts, under the one heading Social in the header and the footer.
- * X and Substack are Sudeep's own; TikTok, Instagram and YouTube are the app's.
+ * The accounts. X and Substack are Sudeep's own; TikTok, Instagram and
+ * YouTube are the app's and share one handle. The footer names them; the
+ * header no longer does.
  */
 /**
  * The two doors for professionals. Out of the header and the footer since
  * 8 October 2026: My health works out who is who, so nobody needs a door.
  * The pages stay as the pitch a coach or a doctor reads first, linked from
- * the "Coaches and clinicians" card on Start here.
+ * the "Coaches and clinicians" card on the landing page.
  */
 export const PRO_PAGES: NavLink[] = [
   { key: "coach", label: "Coach", href: "/coach" },
@@ -112,7 +125,8 @@ export const PRO_PAGES: NavLink[] = [
 
 /**
  * The free fifteen-minute call: the Calendly event's address. Null until
- * the event exists; Start here shows the call section only when it is set.
+ * the event exists; the call card (the sheet's page and /start) shows only
+ * when it is set.
  */
 export const CALENDLY_URL: string | null = "https://calendly.com/sudeep-verve-app/first-number";
 
@@ -123,3 +137,10 @@ export const SOCIAL: SocialLink[] = [
   { key: "instagram", label: "Instagram", handle: "@verveapp.health", href: INSTAGRAM_URL },
   { key: "youtube", label: "YouTube", handle: "@verveapp.health", href: YOUTUBE_URL },
 ];
+
+/** The app's own handle, the same on its three accounts; the footer writes it once. */
+export const APP_HANDLE = "@verveapp.health";
+/** The app's accounts, in the order the footer names them. */
+export const APP_SOCIAL: SocialLink[] = (["instagram", "tiktok", "youtube"] as const).map((k) => SOCIAL.find((s) => s.key === k)!);
+/** The founder's own accounts: where he writes, named as his. */
+export const FOUNDER_SOCIAL: SocialLink[] = (["x", "substack"] as const).map((k) => SOCIAL.find((s) => s.key === k)!);

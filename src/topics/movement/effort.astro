@@ -40,7 +40,7 @@ import VideoSlot from "../../components/VideoSlot.astro";
 
 <div class="mt-5 grid gap-4 lg:grid-cols-2">
   <!-- the problem, the scale, one effort per session -->
-  <div class="flex flex-col gap-3.5 rounded-2xl border border-white/8 bg-white/4 p-5 sm:p-6">
+  <div class="flex flex-col gap-3.5 rounded-2xl border border-ink/8 bg-ink/4 p-5 sm:p-6">
     <p class="text-sm leading-relaxed text-text-secondary">
       <strong class="text-text-primary">The problem.</strong>
       Beta-blockers blunt the heart-rate response to exertion: at a given
@@ -82,7 +82,7 @@ import VideoSlot from "../../components/VideoSlot.astro";
   </div>
 
   <!-- how the scales line up, and why these cut-points -->
-  <div class="flex flex-col gap-3.5 rounded-2xl border border-white/8 bg-white/4 p-5 sm:p-6">
+  <div class="flex flex-col gap-3.5 rounded-2xl border border-ink/8 bg-ink/4 p-5 sm:p-6">
     <p class="font-mono text-[10px] uppercase tracking-[0.14em] text-text-tertiary">
       How the scales line up
     </p>
@@ -96,7 +96,7 @@ import VideoSlot from "../../components/VideoSlot.astro";
             <th class="px-2 py-2 font-semibold">ACSM equivalents</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-white/[0.06]">
+        <tbody class="divide-y divide-ink/[0.06]">
           {mapping.map(([a, w, v, acsmEq]) => (
             <tr>
               <td class="px-2 py-2 font-mono font-semibold text-text-primary">{a}</td>
@@ -128,7 +128,7 @@ import VideoSlot from "../../components/VideoSlot.astro";
   <a href={acsm} target="_blank" rel="noopener" class="hover:text-text-primary">&rarr; ACSM Guidelines, 11th ed.</a>
 </div>
 
-<div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+<div class="mt-6 rounded-2xl border border-ink/8 bg-ink/4 p-6">
   <p class="text-sm leading-relaxed text-text-secondary">
     <strong class="text-text-primary">What switches over.</strong>
     When the profile says beta-blocker, the minutes, the <a href={zone2}>Zone

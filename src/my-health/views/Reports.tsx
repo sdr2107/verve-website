@@ -45,15 +45,15 @@ function Card({ d, canWrite }: { d: ReportCard; canWrite: boolean }) {
   const save = () => { setRenaming(false); actions.report("rename", f.name, label); };
   const Buttons = ({ mobile }: { mobile: boolean }) => (
     <>
-      <button type="button" onClick={() => actions.report("view", f.name)} class={mobile ? "rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary" : "rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-white/25 hover:text-text-primary"}>View</button>
-      {canWrite ? <button type="button" onClick={() => actions.report("parse", f.name)} class={mobile ? "rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary" : "rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-white/25 hover:text-text-primary"}>{o || im ? "Read again" : "Read values"}</button> : null}
+      <button type="button" onClick={() => actions.report("view", f.name)} class={mobile ? "rounded-lg border border-ink/12 px-3 py-1.5 text-xs font-semibold text-text-secondary" : "rounded-lg border border-ink/12 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-ink/25 hover:text-text-primary"}>View</button>
+      {canWrite ? <button type="button" onClick={() => actions.report("parse", f.name)} class={mobile ? "rounded-lg border border-ink/12 px-3 py-1.5 text-xs font-semibold text-text-secondary" : "rounded-lg border border-ink/12 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-ink/25 hover:text-text-primary"}>{o || im ? "Read again" : "Read values"}</button> : null}
       {canWrite ? (mobile
-        ? <button type="button" onClick={() => actions.report("del", f.name)} class="ml-auto rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-tertiary">Delete</button>
-        : <button type="button" onClick={() => actions.report("del", f.name)} title="Delete" aria-label="Delete report" class="rounded-lg border border-white/12 px-2 py-1.5 text-text-tertiary transition-colors hover:border-danger/50 hover:text-danger"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /></svg></button>) : null}
+        ? <button type="button" onClick={() => actions.report("del", f.name)} class="ml-auto rounded-lg border border-ink/12 px-3 py-1.5 text-xs font-semibold text-text-tertiary">Delete</button>
+        : <button type="button" onClick={() => actions.report("del", f.name)} title="Delete" aria-label="Delete report" class="rounded-lg border border-ink/12 px-2 py-1.5 text-text-tertiary transition-colors hover:border-danger/50 hover:text-danger"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /></svg></button>) : null}
     </>
   );
   return (
-    <div class={`rounded-2xl border ${d.flagged ? "border-warning/45" : "border-white/10"} bg-white/[0.03] p-4`}>
+    <div class={`rounded-2xl border ${d.flagged ? "border-warning/45" : "border-ink/10"} bg-ink/[0.03] p-4`}>
       <div class="flex items-center gap-3">
         <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-accent/[0.12]">
           {isPhotoName(f.name)
@@ -66,9 +66,9 @@ function Card({ d, canWrite }: { d: ReportCard; canWrite: boolean }) {
               <>
                 <input value={label} maxLength={80} autoFocus onInput={(e) => setLabel((e.target as HTMLInputElement).value)}
                   onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setRenaming(false); }}
-                  class="w-full min-w-0 flex-1 rounded-lg border border-accent/50 bg-white/[0.04] px-2.5 py-1 text-sm font-bold text-text-primary focus:outline-none" />
+                  class="w-full min-w-0 flex-1 rounded-lg border border-accent/50 bg-ink/[0.04] px-2.5 py-1 text-sm font-bold text-text-primary focus:outline-none" />
                 <button type="button" onClick={save} class="shrink-0 rounded-lg bg-accent px-2.5 py-1 text-xs font-bold text-canvas">Save</button>
-                <button type="button" onClick={() => setRenaming(false)} class="shrink-0 rounded-lg border border-white/12 px-2.5 py-1 text-xs font-semibold text-text-secondary">Cancel</button>
+                <button type="button" onClick={() => setRenaming(false)} class="shrink-0 rounded-lg border border-ink/12 px-2.5 py-1 text-xs font-semibold text-text-secondary">Cancel</button>
               </>
             ) : (
               <>
@@ -78,7 +78,7 @@ function Card({ d, canWrite }: { d: ReportCard; canWrite: boolean }) {
             )}
           </div>
           <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-tertiary">
-            {d.date ? <span class="rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-text-secondary">{fmtDay(d.date).toUpperCase()}</span> : null}
+            {d.date ? <span class="rounded-md bg-ink/[0.06] px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-text-secondary">{fmtDay(d.date).toUpperCase()}</span> : null}
             {im ? <span class="rounded-md bg-accent/15 px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-accent-light">{String(im.modality).toUpperCase()}</span> : null}
             {outcome ? <span>{outcome}</span> : null}
             {appLine ? <span>· {appLine}</span> : null}
@@ -88,11 +88,11 @@ function Card({ d, canWrite }: { d: ReportCard; canWrite: boolean }) {
       </div>
       <div class="mt-3 flex flex-wrap gap-2 sm:hidden"><Buttons mobile={true} /></div>
       {d.flagged ? (
-        <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-white/[0.06] pt-3">
+        <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-ink/[0.06] pt-3">
           <span class="rounded-md bg-warning/15 px-2 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-warning">Duplicate</span>
           <span class="min-w-0 flex-1 text-xs leading-relaxed text-text-tertiary">The same file as <strong class="font-semibold text-text-secondary">{pretty(d.original!)}</strong>. Its values were filed once; this PDF is a second copy.</span>
           {canWrite ? <button type="button" onClick={() => actions.report("del", f.name, "quiet")} class="rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-xs font-bold text-accent-light hover:bg-accent/20">Remove this copy</button> : null}
-          {canWrite ? <button type="button" onClick={() => keepBoth(f.name)} class="rounded-lg border border-white/12 px-3 py-1.5 text-xs font-semibold text-text-secondary hover:border-white/25">Keep both</button> : null}
+          {canWrite ? <button type="button" onClick={() => keepBoth(f.name)} class="rounded-lg border border-ink/12 px-3 py-1.5 text-xs font-semibold text-text-secondary hover:border-ink/25">Keep both</button> : null}
         </div>
       ) : null}
     </div>
@@ -112,7 +112,7 @@ export function Reports() {
   }, [query, shown, total, activeTab.value]);
   return (
     <>
-      {query && !shown ? <p class="rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm text-text-tertiary">No report matches "{query}". A report matches by its name, its date, a value read from it, or its study.</p> : null}
+      {query && !shown ? <p class="rounded-2xl border border-ink/10 bg-ink/[0.03] p-5 text-sm text-text-tertiary">No report matches "{query}". A report matches by its name, its date, a value read from it, or its study.</p> : null}
       {years.map((y) => (
         <details key={y.year} class="group">
           <summary class="flex cursor-pointer list-none items-center gap-2.5 py-1 text-text-primary [&::-webkit-details-marker]:hidden">
@@ -140,11 +140,11 @@ export function AppImports() {
   if (!imps.length) return null;
   const canWrite = !!p?.mine;
   return (
-    <section class="mt-6 max-w-3xl rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+    <section class="mt-6 max-w-3xl rounded-2xl border border-ink/10 bg-ink/[0.03] p-4">
       <div class="font-mono text-[10px] font-semibold tracking-widest text-text-tertiary">FROM THE VERVE APP</div>
       <div class="mt-2 flex flex-col gap-2">
         {imps.map((im) => (
-          <div key={im.tag} class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-white/[0.08] px-3 py-2 text-[13px]">
+          <div key={im.tag} class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-ink/[0.08] px-3 py-2 text-[13px]">
             <span class="font-semibold text-text-primary">{importTitle(im)}</span>
             {im.imported ? <span class="text-text-muted">dropped here {fmtDay(im.imported)}</span> : null}
             <span class="text-text-tertiary">{appImportWords(im)}</span>
@@ -164,7 +164,7 @@ export function YearsOnFile() {
   const thisY = String(new Date().getFullYear());
   const csvYears = years.filter((y) => y.csvOnly);
   return (
-    <section class="mt-6 max-w-3xl rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+    <section class="mt-6 max-w-3xl rounded-2xl border border-ink/10 bg-ink/[0.03] p-4">
       <div class="flex items-baseline justify-between"><div class="font-mono text-[10px] font-semibold tracking-widest text-text-tertiary">YEARS ON FILE</div><span class="font-mono text-[10.5px] text-text-tertiary">{years.length} years · {total} weeks</span></div>
       <div class="mt-3 flex items-end gap-2" style={{ height: "110px" }} aria-hidden="true">
         {years.map((y) => { const h = Math.max(4, Math.round((y.weeks / max) * 72)); return (

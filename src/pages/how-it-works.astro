@@ -16,6 +16,8 @@ import Footer from "../components/Footer.astro";
 import { topicHref } from "../data/scienceTopics";
 import { WEARABLE_ROWS, WEARABLE_COLS, WEARABLE_COL_IDS } from "../data/wearables";
 import { GET_APP_PATH } from "../data/site";
+import VideoSlot from "../components/VideoSlot.astro";
+import { videosInGroup } from "../data/videos";
 
 const weeklyVolume = topicHref("weekly-volume");
 const crf = topicHref("crf");
@@ -39,7 +41,11 @@ const BACKGROUND_HRR_ROWS: [string | null, string, string][] = [
   ["Climbing stairs", "54%", "51%"],
 ];
 
+/** The product's own videos: what the app does, screen by screen. They left the Videos heading for this page (11 Nov 2026). */
+const productVideos = videosInGroup("how-verve-works");
+
 const sections = [
+  { id: "watch", label: "Watch it" },
   { id: "tabs", label: "The four tabs" },
   { id: "guide", label: "The Guide" },
   { id: "free-and-pro", label: "Free and Pro" },
@@ -73,7 +79,7 @@ const gates: [string, string, string][] = [
 ---
 
 <Layout
-  title="How it works — Verve"
+  title="How it works · Verve"
   description="The app section by section: the four tabs, how the Guide reads your week, what is free and what Pro opens, how Verve counts the weekly dose and the resting MET, and what each wearable writes."
   cardType="summary"
 >
@@ -89,9 +95,16 @@ const gates: [string, string, string][] = [
       </div>
       <nav aria-label="Sections" class="flex flex-wrap gap-2">
         {sections.map((s) => (
-          <a href={`#${s.id}`} class="rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2 text-[13px] font-semibold text-text-secondary transition-colors hover:border-white/20 hover:text-text-primary">{s.label}</a>
+          <a href={`#${s.id}`} class="rounded-xl border border-ink/10 bg-ink/[0.03] px-3.5 py-2 text-[13px] font-semibold text-text-secondary transition-colors hover:border-ink/20 hover:text-text-primary">{s.label}</a>
         ))}
       </nav>
+    </section>
+
+    <!-- ── the product, shown: its own short videos ── -->
+    <section id="watch" class="scroll-mt-24 flex flex-col gap-6">
+      <h2 class="text-[28px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[32px]">Watch it</h2>
+      <p class="max-w-[820px] text-[15.5px] leading-[1.6] text-text-secondary">{productVideos.length} short videos of the app itself. Captions, no sound; nothing plays until you press it. The videos on the science sit on the topic each explains, and <a href="/science?show=watch" class="font-semibold text-accent-light underline-offset-4 hover:underline">the Science search lists them under Watch</a>.</p>
+      <VideoSlot slugs={productVideos.map((v) => v.slug)} />
     </section>
 
     <!-- ── 1 · the four tabs ── -->
@@ -100,7 +113,7 @@ const gates: [string, string, string][] = [
       <p class="max-w-[820px] text-[15.5px] leading-[1.6] text-text-secondary">Each tab answers one question. Each card on it is a door to a full page with the back row at the top, and every figure on a page carries the device that wrote it.</p>
       <ul class="grid gap-4 sm:grid-cols-2">
         {tabs.map((t) => (
-          <li class="flex flex-col gap-2.5 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-6">
+          <li class="flex flex-col gap-2.5 rounded-[18px] border border-ink/[0.08] bg-ink/[0.04] p-6">
             <span class="font-mono text-[11px] tracking-[0.1em] text-accent-light">{t.name.toUpperCase()}</span>
             <p class="text-[18px] font-bold leading-[1.25] text-text-primary">{t.q}</p>
             <p class="text-[14.5px] leading-[1.6] text-text-secondary">{t.body}</p>
@@ -116,7 +129,7 @@ const gates: [string, string, string][] = [
         <p>If the Monday read reads everything, why read Training, Sleep or Recovery on their own? The answer is depth, not scope. The Monday read is <strong class="text-text-primary">breadth</strong>: every ledger, one sentence each with its figure, one WIN at the top and one NEXT at the bottom. A deeper read is <strong class="text-text-primary">depth</strong>: one ledger, day by day or session by session, with a narrower next step. A deeper read never contradicts the Monday read; it continues one of its sentences.</p>
         <p>Four rules hold it together. A section earns its line only with data in both periods; otherwise it says so in five words. The app offers one deeper read a week, the section whose numbers moved most, never all five. Every sentence carries its figure inline, so the read can be checked against the numbers beneath it. And the numbers are free on every period, while the written reads are what Pro buys, after one sample read per account.</p>
       </div>
-      <div class="overflow-x-auto rounded-xl border border-white/10 bg-black/20">
+      <div class="overflow-x-auto rounded-xl border border-ink/10 bg-well">
         <table class="w-full min-w-[820px] text-[13px]">
           <thead>
             <tr class="text-left font-mono text-[10.5px] uppercase tracking-[0.1em] text-text-tertiary">
@@ -125,7 +138,7 @@ const gates: [string, string, string][] = [
           </thead>
           <tbody>
             {guideRows.map(([r, from, says, when]) => (
-              <tr class="border-t border-white/[0.07] align-top text-text-secondary">
+              <tr class="border-t border-ink/[0.07] align-top text-text-secondary">
                 <td class="px-4 py-3 font-semibold text-text-primary">{r}</td><td class="px-4 py-3">{from}</td><td class="px-4 py-3">{says}</td><td class="px-4 py-3">{when}</td>
               </tr>
             ))}
@@ -138,7 +151,7 @@ const gates: [string, string, string][] = [
     <section id="free-and-pro" class="scroll-mt-24 flex flex-col gap-6">
       <h2 class="text-[28px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[32px]">Free and Pro</h2>
       <p class="max-w-[820px] text-[15.5px] leading-[1.6] text-text-secondary">One rule on every page: free shows your numbers, Pro reads them. Nothing free is taken away when a trial ends. Where a free account meets a Pro door, the app says in one line what Pro adds there, offers the 14-day trial when the App Store says your Apple ID may take it, and shows the store's prices. See <a href="/plans" class="font-semibold text-accent-light hover:text-text-primary">Plans</a> for the prices.</p>
-      <div class="overflow-x-auto rounded-xl border border-white/10 bg-black/20">
+      <div class="overflow-x-auto rounded-xl border border-ink/10 bg-well">
         <table class="w-full min-w-[640px] text-[13px]">
           <thead>
             <tr class="text-left font-mono text-[10.5px] uppercase tracking-[0.1em] text-text-tertiary">
@@ -147,7 +160,7 @@ const gates: [string, string, string][] = [
           </thead>
           <tbody>
             {gates.map(([w, f, p]) => (
-              <tr class="border-t border-white/[0.07] align-top text-text-secondary">
+              <tr class="border-t border-ink/[0.07] align-top text-text-secondary">
                 <td class="px-4 py-3 font-semibold text-text-primary">{w}</td><td class="px-4 py-3">{f}</td><td class="px-4 py-3">{p}</td>
               </tr>
             ))}
@@ -160,22 +173,22 @@ const gates: [string, string, string][] = [
     <section id="counting" class="scroll-mt-24 flex flex-col gap-6">
       <h2 class="text-[28px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[32px]">How Verve counts</h2>
       <div class="grid gap-4 sm:grid-cols-2">
-        <div class="flex flex-col gap-2.5 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-6">
+        <div class="flex flex-col gap-2.5 rounded-[18px] border border-ink/[0.08] bg-ink/[0.04] p-6">
           <span class="font-mono text-[11px] tracking-[0.1em] text-accent-light">THE WEEKLY DOSE</span>
           <p class="text-[14.5px] leading-[1.6] text-text-secondary">MET-minutes of your logged moderate and vigorous aerobic sessions, each session's MET times its minutes, summed over the ISO week. The goal is the ACC's 500 to 1,000. One ledger computes it, so the Activity card, Prior Weeks, the Monday note and the Guide show the same number.</p>
           <a href={`${weeklyVolume}#weekly-dose`} class="text-[13.5px] font-bold text-accent-light hover:text-text-primary">The dose, with its evidence &rarr;</a>
         </div>
-        <div class="flex flex-col gap-2.5 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-6">
+        <div class="flex flex-col gap-2.5 rounded-[18px] border border-ink/[0.08] bg-ink/[0.04] p-6">
           <span class="font-mono text-[11px] tracking-[0.1em] text-accent-light">THE ASCENT'S MINUTES</span>
           <p class="text-[14.5px] leading-[1.6] text-text-secondary">The climb on the Activity tab counts measured moderate and vigorous minutes, a minute classed by the MET it was done at. They are not the moderate-equivalent minutes the WHO and AHA publish, which credit a vigorous minute twice, so the flags on the climb carry no organisation's name. Two rulers, kept apart on purpose.</p>
           <a href={`${weeklyVolume}#two-rulers`} class="text-[13.5px] font-bold text-accent-light hover:text-text-primary">Two rulers &rarr;</a>
         </div>
-        <div class="flex flex-col gap-2.5 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-6">
+        <div class="flex flex-col gap-2.5 rounded-[18px] border border-ink/[0.08] bg-ink/[0.04] p-6">
           <span class="font-mono text-[11px] tracking-[0.1em] text-accent-light">THE RESTING MET</span>
           <p class="text-[14.5px] leading-[1.6] text-text-secondary">A watch's active energy is energy above rest. A MET derived from it is one MET short, so Verve adds the resting MET before a session meets the moderate and vigorous cut-points. One exception, by writer: WHOOP's figure already holds the resting burn and is read as it is. Synced sessions from before this rule were repaired once.</p>
           <a href={`${weeklyVolume}#energy-with-rest`} class="text-[13.5px] font-bold text-accent-light hover:text-text-primary">Energy, with rest &rarr;</a>
         </div>
-        <div class="flex flex-col gap-2.5 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-6">
+        <div class="flex flex-col gap-2.5 rounded-[18px] border border-ink/[0.08] bg-ink/[0.04] p-6">
           <span class="font-mono text-[11px] tracking-[0.1em] text-accent-light">REMNANT CHOLESTEROL</span>
           <p class="text-[14.5px] leading-[1.6] text-text-secondary">Total cholesterol minus HDL minus LDL, the three printed on one report. The LDL's method is read off the report and labels the number: a directly measured LDL makes the remnant a measurement; a calculated LDL makes it the share of triglycerides the equation set aside, triglycerides &divide; 5 under Friedewald. Thirty mg/dL and above reads elevated, the same line on the LDL card in the app and in the Labs tab on My health.</p>
           <a href={`${heartHealth}#remnant-cholesterol`} class="text-[13.5px] font-bold text-accent-light hover:text-text-primary">Remnant cholesterol, with its evidence &rarr;</a>
@@ -188,7 +201,7 @@ const gates: [string, string, string][] = [
     <section id="wearables" class="scroll-mt-24 flex flex-col gap-6">
       <h2 class="text-[28px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[32px]">What each wearable writes</h2>
       <p class="max-w-[820px] text-[15.5px] leading-[1.6] text-text-secondary">Verve reads Apple Health on an iPhone and Health Connect on Android. A reading reaches it only when the wearable's own app has written it there. The table is each maker's published list, reading by reading, against what Verve does with it. The notes on how to read it, and how to connect each device, are on the <a href={wearablesTopic} class="font-semibold text-accent-light hover:text-text-primary">science topic</a>; Settings &rarr; Data sources in the app names every writer it has actually seen on your phone.</p>
-      <div class="overflow-x-auto rounded-xl border border-white/10 bg-black/20">
+      <div class="overflow-x-auto rounded-xl border border-ink/10 bg-well">
         <table class="w-full min-w-[1180px] text-[12px]">
           <thead>
             <tr class="text-left font-mono text-[10.5px] uppercase tracking-[0.1em] text-text-tertiary">
@@ -199,7 +212,7 @@ const gates: [string, string, string][] = [
           </thead>
           <tbody>
             {WEARABLE_ROWS.map((cells) => (
-              <tr class="border-t border-white/[0.07] align-top text-text-secondary">
+              <tr class="border-t border-ink/[0.07] align-top text-text-secondary">
                 {cells.map((c, i) => (
                   <td class={`px-3 py-2.5 ${i === 0 ? "font-semibold text-text-primary" : i === cells.length - 1 ? "text-accent-light" : ""}`}>{c}</td>
                 ))}
@@ -211,13 +224,13 @@ const gates: [string, string, string][] = [
 
       <!-- Background movement: what fills it and when to look. The app's row
            links here (6 Nov 2026). -->
-      <div id="background-movement" class="scroll-mt-24 flex max-w-[820px] flex-col gap-3 rounded-[18px] border border-white/[0.08] bg-white/[0.04] p-6">
+      <div id="background-movement" class="scroll-mt-24 flex max-w-[820px] flex-col gap-3 rounded-[18px] border border-ink/[0.08] bg-ink/[0.04] p-6">
         <span class="font-mono text-[11px] tracking-[0.1em] text-accent-light">BACKGROUND MOVEMENT</span>
         <p class="text-[14.5px] leading-[1.6] text-text-secondary">Background movement is the moving you do outside logged sessions: the commute, errands, stairs. Verve reads it from heart rate shared through the day. A stretch counts when heart rate is at or above 15% of your heart rate reserve and the same five minutes hold at least 200 steps. There is no daily limit. Its moderate and vigorous minutes join the weekly climb. None of it counts toward the weekly dose.</p>
         <p class="text-[14.5px] leading-[1.6] text-text-secondary"><span class="font-semibold text-text-primary">What fills it.</span> A wearable that shares heart rate between sessions, not only inside them, with steps fine enough to place in five-minute windows. The row in the table says which do. On an iPhone, the phone's own step count serves when it is carried. A wearable that shares heart rate inside sessions only leaves the row empty, and so does a day whose only steps arrive as one block. Verve estimates nothing in its place.</p>
         <p class="text-[14.5px] leading-[1.6] text-text-secondary"><span class="font-semibold text-text-primary">When to look.</span> The next day. A day is counted once it is complete, so today's figure is never there today. Yesterday is counted again each time the app opens during the following day, which lets a ring or watch that synced late catch up. After that the figure is fixed. Open the wearable's own app first, then Verve.</p>
         <p class="text-[14.5px] leading-[1.6] text-text-secondary"><span class="font-semibold text-text-primary">Why 15%.</span> Two studies measured how much of their heart rate reserve adults used in everyday activities. Standing tasks sat near 10%, slow walking near 20%. The line is drawn between them.</p>
-        <div class="overflow-x-auto rounded-xl border border-white/10 bg-black/20">
+        <div class="overflow-x-auto rounded-xl border border-ink/10 bg-well">
           <table class="w-full min-w-[420px] text-[12.5px]">
             <thead>
               <tr class="text-left font-mono text-[10.5px] uppercase tracking-[0.1em] text-text-tertiary">
@@ -233,7 +246,7 @@ const gates: [string, string, string][] = [
                     <td class="px-3 py-2 font-semibold" colspan="3">Verve's line: 15% of heart rate reserve</td>
                   </tr>
                 ) : (
-                  <tr class="border-t border-white/[0.07] text-text-secondary">
+                  <tr class="border-t border-ink/[0.07] text-text-secondary">
                     <td class="px-3 py-2 font-semibold text-text-primary">{activity}</td>
                     <td class="px-3 py-2 text-right font-mono">{a}</td>
                     <td class="px-3 py-2 text-right font-mono">{b}</td>
@@ -252,8 +265,8 @@ const gates: [string, string, string][] = [
 
     <section class="flex flex-col gap-4 rounded-[20px] border border-accent/40 bg-accent/[0.08] p-7">
       <p class="text-[19px] font-bold text-text-primary">See it with your own numbers</p>
-      <p class="text-[15.5px] text-[#c7d2fe]">The app is free. Your first fitness test places you in the table; the first Monday read is yours to keep.</p>
-      <div><a href={GET_APP_PATH} class="inline-block rounded-xl bg-accent px-5 py-3 text-[14px] font-bold text-[#0d0d15]">Get the app</a></div>
+      <p class="text-[15.5px] text-accent-text">The app is free. Your first fitness test places you in the table; the first Monday read is yours to keep.</p>
+      <div><a href={GET_APP_PATH} class="inline-block rounded-xl bg-accent px-5 py-3 text-[14px] font-bold text-canvas">Get the app</a></div>
     </section>
   </main>
 

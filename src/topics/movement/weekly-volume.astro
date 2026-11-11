@@ -170,7 +170,7 @@ const rulers: [string, string, string, string][] = [
   says how much work was done, in the unit the dose evidence is written in. The app keeps them apart on
   purpose, and never converts one into the other.
 </p>
-<div class="mt-4 overflow-x-auto rounded-xl border border-white/10 bg-black/20">
+<div class="mt-4 overflow-x-auto rounded-xl border border-ink/10 bg-well">
   <table class="w-full min-w-[720px] text-[12.5px]">
     <thead>
       <tr class="text-left font-mono text-[10px] uppercase tracking-wider text-text-tertiary">
@@ -180,7 +180,7 @@ const rulers: [string, string, string, string][] = [
         <th class="px-3 py-2.5 font-semibold">Counts</th>
       </tr>
     </thead>
-    <tbody class="divide-y divide-white/[0.06]">
+    <tbody class="divide-y divide-ink/[0.06]">
       {rulers.map(([n, u, r, c]) => (
         <tr class="align-top">
           <td class="px-3 py-2.5 font-semibold text-text-primary">{n}</td>
