@@ -113,21 +113,21 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
     : perWeek >= 4 && longestGap <= 2 ? `${Math.round(perWeek)} a week, never ${longestGap + 1} days off`
     : perWeek >= 3 ? `${Math.round(perWeek)} a week, with a ${longestGap}-day gap`
     : perWeek >= 1 ? `${Math.round(perWeek)} a week, and quiet stretches` : "Quiet, lately";
-  const dotColor: Record<string, string> = { vigorous: "#f87171", moderate: "#f97316", light: "#34d399" };
-  let rsvg = `<g fill="#94a3b8" font-size="10" font-family="${MONO}">${["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((w, r) => `<text x="0" y="${30 + r * 26}">${w}</text>`).join("")}</g>`;
+  const dotColor: Record<string, string> = { vigorous: "var(--color-concern)", moderate: "var(--color-caution)", light: "var(--color-good)" };
+  let rsvg = `<g fill="var(--color-text-2)" font-size="10" font-family="${MONO}">${["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"].map((w, r) => `<text x="0" y="${30 + r * 26}">${w}</text>`).join("")}</g>`;
   let lastMonth = "";
   for (let c = 0; c < 12; c++) {
     const wk = addDays(gridStart, c * 7), cx = 70 + c * 60;
     const mo = wk.slice(0, 7);
-    if (mo !== lastMonth) { lastMonth = mo; rsvg += `<text x="${cx}" y="10" text-anchor="middle" fill="#64748b" font-size="10" font-family="${MONO}">${monthOf(wk).toUpperCase()}</text>`; }
+    if (mo !== lastMonth) { lastMonth = mo; rsvg += `<text x="${cx}" y="10" text-anchor="middle" fill="var(--color-text-3)" font-size="10" font-family="${MONO}">${monthOf(wk).toUpperCase()}</text>`; }
     for (let r = 0; r < 7; r++) {
       const d = addDays(wk, r), cy = 26 + r * 26;
       if (d > today) continue;
       const k = dayKind.get(d);
       const title = `<title>${esc(fmtDay(d))}${k ? `: ${k.kind}${k.strength ? ", strength" : ""}` : ": rest"}</title>`;
-      if (!k) rsvg += `<circle cx="${cx}" cy="${cy}" r="6" fill="rgba(255,255,255,0.1)">${title}</circle>`;
-      else if (k.strength && !k.kind) rsvg += `<rect x="${cx - 6}" y="${cy - 6}" width="12" height="12" rx="2" fill="#818cf8">${title}</rect>`;
-      else { rsvg += `<circle cx="${cx}" cy="${cy}" r="6" fill="${dotColor[k.kind] ?? "#34d399"}">${title}</circle>`; if (k.strength) rsvg += `<rect x="${cx + 4}" y="${cy - 10}" width="7" height="7" rx="1.5" fill="#818cf8"/>`; }
+      if (!k) rsvg += `<circle cx="${cx}" cy="${cy}" r="6" fill="color-mix(in srgb, var(--color-ink) 10%, transparent)">${title}</circle>`;
+      else if (k.strength && !k.kind) rsvg += `<rect x="${cx - 6}" y="${cy - 6}" width="12" height="12" rx="2" fill="var(--color-accent)">${title}</rect>`;
+      else { rsvg += `<circle cx="${cx}" cy="${cy}" r="6" fill="${dotColor[k.kind] ?? "var(--color-good)"}">${title}</circle>`; if (k.strength) rsvg += `<rect x="${cx + 4}" y="${cy - 10}" width="7" height="7" rx="1.5" fill="var(--color-accent)"/>`; }
     }
   }
   const chapter = (n: number, title: string, heading: string, body: string, lines: string[], right: string) => `
@@ -147,22 +147,22 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
     [`<strong class="text-text-primary">${fmt1(recentAvg)} MET-hours</strong> a week, the last ${recent.length === 1 ? "week" : `${recent.length} weeks`}`,
      d.acts.length ? `<strong class="text-text-primary">${Math.round(perWeek)} session${Math.round(perWeek) === 1 ? "" : "s"}</strong> a week${[...kinds].length ? ` · ${esc([...kinds].sort((x, y) => y[1] - x[1]).slice(0, 3).map(([k, n]) => `${k} ${Math.round(n / Math.max(1, recent.length))}`).join(", "))}` : ""}` : "",
      d.acts.length ? `Longest gap <strong class="text-text-primary">${longestGap} day${longestGap === 1 ? "" : "s"}</strong> · ${sessionDays} of ${daysBetween(gridStart, today) + 1} days with a session` : ""].filter(Boolean),
-    d.acts.length ? panel(`<div class="flex flex-wrap items-center justify-between gap-2">${kicker("ONE DOT A DAY · THIS WEEK LAST")}${legend([["rgba(255,255,255,0.18)", "Rest"], ["#34d399", "Easy"], ["#f97316", "Moderate"], ["#f87171", "Vigorous"], ["#818cf8", "Strength", true]])}</div><div class="mt-3 overflow-x-auto"><svg viewBox="0 0 760 200" class="block h-auto w-full min-w-[440px]" role="img" aria-label="Twelve weeks as columns of seven dots, one a day, coloured by the day's hardest session">${rsvg}</svg></div>`)
+    d.acts.length ? panel(`<div class="flex flex-wrap items-center justify-between gap-2">${kicker("ONE DOT A DAY · THIS WEEK LAST")}${legend([["color-mix(in srgb, var(--color-ink) 18%, transparent)", "Rest"], ["var(--color-good)", "Easy"], ["var(--color-caution)", "Moderate"], ["var(--color-concern)", "Vigorous"], ["var(--color-accent)", "Strength", true]])}</div><div class="mt-3 overflow-x-auto"><svg viewBox="0 0 760 200" class="block h-auto w-full min-w-[440px]" role="img" aria-label="Twelve weeks as columns of seven dots, one a day, coloured by the day's hardest session">${rsvg}</svg></div>`)
     : panel(`<p class="text-[13px] leading-relaxed text-text-tertiary">${weeks.length ? `${weeks.length} week${weeks.length === 1 ? "" : "s"} on file from an export. Turn on Cloud Sync in the app for the days themselves.` : "No weeks on file."}</p>`));
 
   // ── 2 · load and intensity ───────────────────────────────────────────
   const maxW = Math.max(goal, ...twelve.map((w) => Number(w.met_hours)));
   const bw = 30, gap = 12, left = 24;
   const ySv = (v: number) => 120 - (v / maxW) * 100;
-  let asvg = `<line x1="${left}" y1="120" x2="528" y2="120" stroke="rgba(255,255,255,0.14)"/>`;
-  asvg += `<line x1="${left}" y1="${ySv(goal).toFixed(1)}" x2="528" y2="${ySv(goal).toFixed(1)}" stroke="#a5b4fc" stroke-opacity="0.7" stroke-dasharray="4 4"/><text x="528" y="${(ySv(goal) - 5).toFixed(1)}" text-anchor="end" fill="#a5b4fc" font-size="10" font-family="${MONO}">GOAL ${goal}</text>`;
+  let asvg = `<line x1="${left}" y1="120" x2="528" y2="120" stroke="color-mix(in srgb, var(--color-ink) 14%, transparent)"/>`;
+  asvg += `<line x1="${left}" y1="${ySv(goal).toFixed(1)}" x2="528" y2="${ySv(goal).toFixed(1)}" stroke="var(--color-accent-text)" stroke-opacity="0.7" stroke-dasharray="4 4"/><text x="528" y="${(ySv(goal) - 5).toFixed(1)}" text-anchor="end" fill="var(--color-accent-text)" font-size="10" font-family="${MONO}">GOAL ${goal}</text>`;
   twelve.forEach((w, i) => {
     const x = left + 6 + i * (bw + gap), y = ySv(Number(w.met_hours));
     const dim = i < twelve.length - Math.min(4, recent.length) || w.week_start >= thisMonday;
-    asvg += `<rect x="${x}" y="${y.toFixed(1)}" width="${bw}" height="${(120 - y).toFixed(1)}" rx="2" fill="#f97316" fill-opacity="${dim ? 0.5 : 1}"><title>Week of ${esc(fmtDay(w.week_start))}: ${fmt1(Number(w.met_hours))} MET-hours, ${w.workouts} workout${Number(w.workouts) === 1 ? "" : "s"}</title></rect>`;
+    asvg += `<rect x="${x}" y="${y.toFixed(1)}" width="${bw}" height="${(120 - y).toFixed(1)}" rx="2" fill="var(--color-caution)" fill-opacity="${dim ? 0.5 : 1}"><title>Week of ${esc(fmtDay(w.week_start))}: ${fmt1(Number(w.met_hours))} MET-hours, ${w.workouts} workout${Number(w.workouts) === 1 ? "" : "s"}</title></rect>`;
   });
   let lastM = "";
-  twelve.forEach((w, i) => { const mo = w.week_start.slice(0, 7); if (mo === lastM) return; lastM = mo; asvg += `<text x="${left + 6 + i * (bw + gap)}" y="134" fill="#94a3b8" font-size="10" font-family="${MONO}">${monthOf(w.week_start).toUpperCase()}</text>`; });
+  twelve.forEach((w, i) => { const mo = w.week_start.slice(0, 7); if (mo === lastM) return; lastM = mo; asvg += `<text x="${left + 6 + i * (bw + gap)}" y="134" fill="var(--color-text-2)" font-size="10" font-family="${MONO}">${monthOf(w.week_start).toUpperCase()}</text>`; });
   const sumK = (k: "light_min" | "moderate_min" | "vigorous_min") => recent.reduce((t, w) => t + (Number(w[k]) || 0), 0);
   const easyMin = sumK("light_min"), modMin = sumK("moderate_min"), vigMin = sumK("vigorous_min"), allMin = easyMin + modMin + vigMin;
   const pct = (v: number) => allMin ? Math.round((v / allMin) * 100) : 0;
@@ -176,13 +176,13 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
     twelve.length ? panel(`<div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_240px]">
       <div>${kicker(`WEEKLY MET-HOURS · GOAL ${goal}`)}<svg viewBox="0 0 540 140" class="mt-2 block h-auto w-full" role="img" aria-label="Twelve weeks of MET-hours as bars, the latest four brighter, with the goal line">${asvg}</svg></div>
       <div class="flex flex-col gap-2.5 lg:border-l lg:border-ink/[0.07] lg:pl-5">${kicker(`MINUTES BY EFFORT · LAST ${recent.length} WEEK${recent.length === 1 ? "" : "S"}`)}
-        ${allMin ? `<div class="flex h-3.5 overflow-hidden rounded-full"><span style="width: ${pct(easyMin)}%; background: #34d399"></span><span style="width: ${pct(modMin)}%; background: #f97316"></span><span style="width: ${pct(vigMin)}%; background: #f87171"></span></div>
+        ${allMin ? `<div class="flex h-3.5 overflow-hidden rounded-full"><span style="width: ${pct(easyMin)}%; background: var(--color-good)"></span><span style="width: ${pct(modMin)}%; background: var(--color-caution)"></span><span style="width: ${pct(vigMin)}%; background: var(--color-concern)"></span></div>
         <div class="flex flex-col gap-1.5 text-[12.5px] text-text-secondary">
-          <div class="flex justify-between"><span><span class="mr-1.5 inline-block h-2 w-2 rounded-sm align-[-1px]" style="background: #34d399"></span>Easy</span><strong class="text-text-primary">${pct(easyMin)}% · ${hm(easyMin)}</strong></div>
-          <div class="flex justify-between"><span><span class="mr-1.5 inline-block h-2 w-2 rounded-sm align-[-1px]" style="background: #f97316"></span>Moderate</span><strong class="text-text-primary">${pct(modMin)}% · ${hm(modMin)}</strong></div>
-          <div class="flex justify-between"><span><span class="mr-1.5 inline-block h-2 w-2 rounded-sm align-[-1px]" style="background: #f87171"></span>Vigorous</span><strong class="text-text-primary">${pct(vigMin)}% · ${hm(vigMin)}</strong></div>
+          <div class="flex justify-between"><span><span class="mr-1.5 inline-block h-2 w-2 rounded-sm align-[-1px]" style="background: var(--color-good)"></span>Easy</span><strong class="text-text-primary">${pct(easyMin)}% · ${hm(easyMin)}</strong></div>
+          <div class="flex justify-between"><span><span class="mr-1.5 inline-block h-2 w-2 rounded-sm align-[-1px]" style="background: var(--color-caution)"></span>Moderate</span><strong class="text-text-primary">${pct(modMin)}% · ${hm(modMin)}</strong></div>
+          <div class="flex justify-between"><span><span class="mr-1.5 inline-block h-2 w-2 rounded-sm align-[-1px]" style="background: var(--color-concern)"></span>Vigorous</span><strong class="text-text-primary">${pct(vigMin)}% · ${hm(vigMin)}</strong></div>
         </div>
-        <p class="text-[12px] leading-relaxed text-text-muted">${pct(easyMin) >= 50 && pct(vigMin) >= 15 ? "Most of the week easy, with hard days: the shape the endurance literature keeps finding." : pct(vigMin) >= 40 ? "A large hard share. The literature keeps finding that most of a week is better spent easy." : "The split of the minutes, as the app graded each session."}</p>` : `<p class="text-[13px] text-text-tertiary">No minutes on file.</p>`}
+        <p class="text-[12px] leading-relaxed text-text-3">${pct(easyMin) >= 50 && pct(vigMin) >= 15 ? "Most of the week easy, with hard days: the shape the endurance literature keeps finding." : pct(vigMin) >= 40 ? "A large hard share. The literature keeps finding that most of a week is better spent easy." : "The split of the minutes, as the app graded each session."}</p>` : `<p class="text-[13px] text-text-tertiary">No minutes on file.</p>`}
       </div></div>`)
     : panel(`<p class="text-[13px] text-text-tertiary">No weeks on file.</p>`));
 
@@ -202,9 +202,9 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
         <td class="px-3 py-2 font-semibold text-text-primary">${esc(String(w.activity_name ?? "Workout"))}</td>
         <td class="px-3 py-2 text-right font-mono text-text-secondary">${mins}</td>
         <td class="px-3 py-2 text-right font-mono font-semibold text-text-primary">${fmt1(Number(w.met_hours) || 0)}</td>
-        <td class="px-3 py-2 text-right font-mono ${z2 ? "text-success-light" : "text-text-muted"}">${z2 ? z2 : "—"}</td>
+        <td class="px-3 py-2 text-right font-mono ${z2 ? "text-success-light" : "text-text-3"}">${z2 ? z2 : "—"}</td>
         <td class="px-3 py-2"><span class="rounded-md bg-ink/[0.06] px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider ${st ? "text-accent-light" : tone(k)}">${st ? "strength" : esc(k)}</span></td>
-        <td class="px-3 py-2 font-mono ${w.effort != null ? "text-text-secondary" : "text-text-muted"}">${w.effort != null ? `${Number(w.effort)}/10 <span class="text-[10px] text-text-tertiary">${effortWord(w.effort_source)}</span>` : "—"}</td>
+        <td class="px-3 py-2 font-mono ${w.effort != null ? "text-text-secondary" : "text-text-3"}">${w.effort != null ? `${Number(w.effort)}/10 <span class="text-[10px] text-text-tertiary">${effortWord(w.effort_source)}</span>` : "—"}</td>
         <td class="px-3 py-2 text-text-tertiary">${mins && mins === longest && !st ? "longest of the month" : st ? "counts toward the 60 min" : ""}</td></tr>`; }).join("")}</tbody></table></div>`
     : panel(`<p class="text-[13px] leading-relaxed text-text-tertiary">${p.self ? "Turn on Cloud Sync in the app and each session appears here as it was read." : "An export carries weeks, not sessions; a person with an account sends them on every sync."}</p>`));
 
@@ -215,12 +215,12 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
     const t0 = new Date(tests[0].measured_on + "T00:00:00").getTime(), t1 = Math.max(new Date(tests[tests.length - 1].measured_on + "T00:00:00").getTime(), t0 + 86400000);
     const xf = (d: string) => 40 + ((new Date(d + "T00:00:00").getTime() - t0) / (t1 - t0)) * 470;
     const yf = (v: number) => 120 - ((v - lo) / (hi - lo)) * 100;
-    fsvg += `<line x1="24" y1="120" x2="528" y2="120" stroke="rgba(255,255,255,0.14)"/><text x="8" y="124" fill="#94a3b8" font-size="10" font-family="${MONO}">${Math.round(lo)}</text><text x="8" y="24" fill="#94a3b8" font-size="10" font-family="${MONO}">${Math.round(hi)}</text>`;
+    fsvg += `<line x1="24" y1="120" x2="528" y2="120" stroke="color-mix(in srgb, var(--color-ink) 14%, transparent)"/><text x="8" y="124" fill="var(--color-text-2)" font-size="10" font-family="${MONO}">${Math.round(lo)}</text><text x="8" y="24" fill="var(--color-text-2)" font-size="10" font-family="${MONO}">${Math.round(hi)}</text>`;
     for (const grp of [false, true]) {
       const g = tests.filter((t) => t.max === grp);
-      if (g.length > 1) fsvg += `<polyline points="${g.map((t) => `${xf(t.measured_on).toFixed(1)},${yf(t.v).toFixed(1)}`).join(" ")}" fill="none" stroke="${grp ? "#a5b4fc" : "#64748b"}" stroke-width="2"${grp ? "" : ' stroke-dasharray="3 4"'}/>`;
+      if (g.length > 1) fsvg += `<polyline points="${g.map((t) => `${xf(t.measured_on).toFixed(1)},${yf(t.v).toFixed(1)}`).join(" ")}" fill="none" stroke="${grp ? "var(--color-accent-text)" : "var(--color-text-3)"}" stroke-width="2"${grp ? "" : ' stroke-dasharray="3 4"'}/>`;
     }
-    for (const t of tests) fsvg += `<circle cx="${xf(t.measured_on).toFixed(1)}" cy="${yf(t.v).toFixed(1)}" r="${t.max ? 6 : 5}" fill="${t.max ? "#818cf8" : "#64748b"}" stroke="#0D0D1C" stroke-width="2"><title>${esc(fmtDay(t.measured_on))}: ${fmt1(t.v)} by ${esc(methodLabel(t.method))}</title></circle><text x="${xf(t.measured_on).toFixed(1)}" y="${(yf(t.v) - 11).toFixed(1)}" text-anchor="middle" fill="${t.max ? "#c7d2fe" : "#94a3b8"}" font-size="12" font-weight="700">${fmt1(t.v)}</text><text x="${xf(t.measured_on).toFixed(1)}" y="134" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="${MONO}">${monthOf(t.measured_on).toUpperCase()}</text>`;
+    for (const t of tests) fsvg += `<circle cx="${xf(t.measured_on).toFixed(1)}" cy="${yf(t.v).toFixed(1)}" r="${t.max ? 6 : 5}" fill="${t.max ? "var(--color-accent)" : "var(--color-text-3)"}" stroke="var(--color-card)" stroke-width="2"><title>${esc(fmtDay(t.measured_on))}: ${fmt1(t.v)} by ${esc(methodLabel(t.method))}</title></circle><text x="${xf(t.measured_on).toFixed(1)}" y="${(yf(t.v) - 11).toFixed(1)}" text-anchor="middle" fill="${t.max ? "var(--color-accent-text)" : "var(--color-text-2)"}" font-size="12" font-weight="700">${fmt1(t.v)}</text><text x="${xf(t.measured_on).toFixed(1)}" y="134" text-anchor="middle" fill="var(--color-text-2)" font-size="10" font-family="${MONO}">${monthOf(t.measured_on).toUpperCase()}</text>`;
   }
   const fitWords = !latest ? "No test yet" : trendWord === "rising" ? "Rising" : trendWord === "falling" ? "Slipping, within the method" : "Holding, not yet rising";
   const rhrLine = heart?.rhr.latest != null ? (heart.rhr.read ? `Resting rate <strong class="text-text-primary">in band ${heart.rhr.inBand} of the last ${heart.rhr.read}</strong> mornings${heart.rhr.run > 1 ? `, <span class="text-warning">${heart.rhr.run} running above it</span>` : ""}` : "") : "";
@@ -231,7 +231,7 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
     [latest ? `<strong class="text-text-primary">${fmt1(latest.v)} mL/kg/min</strong> by ${esc(methodLabel(latest.method))} on ${esc(fmtDay(latest.measured_on))}${within != null ? `, ${within >= 0 ? "up" : "down"} ${fmt1(Math.abs(within))} on the ${esc(methodLabel(latest.method))} of ${esc(monthYearOf(prevSame!.measured_on))}` : ", the first of its method"}` : "",
      latest?.category ? `Category <strong class="text-text-primary">${esc(String(latest.category).replace(/-/g, " "))}</strong>` : "",
      crfDue ? `Retest <strong class="${dueTone(crfDue)}">${dueWord(crfDue)}</strong>, the app's own reminder` : ""].filter(Boolean),
-    panel(`${kicker("FITNESS TESTS")}${tests.length ? `<svg viewBox="0 0 540 140" class="mt-2 block h-auto w-full" role="img" aria-label="Fitness tests over time, maximal tests in colour and submaximal in grey">${fsvg}</svg><p class="mt-1.5 text-[12px] leading-relaxed text-text-muted">${tests.some((t) => !t.max) ? "Submaximal tests in grey, never compared with a maximal one." : "All tests on file are maximal."}</p>` : `<p class="mt-2 text-[13px] text-text-tertiary">No fitness test on file.</p>`}`));
+    panel(`${kicker("FITNESS TESTS")}${tests.length ? `<svg viewBox="0 0 540 140" class="mt-2 block h-auto w-full" role="img" aria-label="Fitness tests over time, maximal tests in colour and submaximal in grey">${fsvg}</svg><p class="mt-1.5 text-[12px] leading-relaxed text-text-3">${tests.some((t) => !t.max) ? "Submaximal tests in grey, never compared with a maximal one." : "All tests on file are maximal."}</p>` : `<p class="mt-2 text-[13px] text-text-tertiary">No fitness test on file.</p>`}`));
 
   // ── 5 · sleep and heart: three readings, each against its own band ───
   // Figures first: three equal cards, the person's own band shaded under
@@ -248,17 +248,17 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
     const xf = (d: string) => 4 + ((new Date(d + "T00:00:00").getTime() - t0) / (t1 - t0)) * 282;
     const yf = (v: number) => 100 - ((v - lo) / Math.max(1, hi - lo)) * 90;
     let out = "";
-    if (band) out += `<rect x="4" y="${yf(band.hi).toFixed(1)}" width="282" height="${Math.max(1, yf(band.lo) - yf(band.hi)).toFixed(1)}" fill="#818cf8" fill-opacity="0.12"/>`;
-    if (usual != null) out += `<line x1="4" y1="${yf(usual).toFixed(1)}" x2="286" y2="${yf(usual).toFixed(1)}" stroke="#818cf8" stroke-opacity="0.6" stroke-dasharray="3 3"/><text x="290" y="${(yf(usual) + 3).toFixed(1)}" fill="#818cf8" font-size="9" font-family="${MONO}">usual</text>`;
-    if (pts.length > 1) out += `<polyline points="${pts.map((q) => `${xf(q.day).toFixed(1)},${yf(q.v).toFixed(1)}`).join(" ")}" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linejoin="round"/>`;
-    for (const q of pts) out += `<circle cx="${xf(q.day).toFixed(1)}" cy="${yf(q.v).toFixed(1)}" r="${q.off ? 3.2 : 1.8}" fill="${q.off ? "#FBBF24" : "#818cf8"}" stroke="${q.off ? "#FBBF24" : "#818cf8"}" stroke-width="1.5"><title>${q.title}</title></circle>`;
+    if (band) out += `<rect x="4" y="${yf(band.hi).toFixed(1)}" width="282" height="${Math.max(1, yf(band.lo) - yf(band.hi)).toFixed(1)}" fill="var(--color-accent)" fill-opacity="0.12"/>`;
+    if (usual != null) out += `<line x1="4" y1="${yf(usual).toFixed(1)}" x2="286" y2="${yf(usual).toFixed(1)}" stroke="var(--color-accent)" stroke-opacity="0.6" stroke-dasharray="3 3"/><text x="290" y="${(yf(usual) + 3).toFixed(1)}" fill="var(--color-accent)" font-size="9" font-family="${MONO}">usual</text>`;
+    if (pts.length > 1) out += `<polyline points="${pts.map((q) => `${xf(q.day).toFixed(1)},${yf(q.v).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--color-accent)" stroke-width="1.8" stroke-linejoin="round"/>`;
+    for (const q of pts) out += `<circle cx="${xf(q.day).toFixed(1)}" cy="${yf(q.v).toFixed(1)}" r="${q.off ? 3.2 : 1.8}" fill="${q.off ? "var(--color-caution)" : "var(--color-accent)"}" stroke="${q.off ? "var(--color-caution)" : "var(--color-accent)"}" stroke-width="1.5"><title>${q.title}</title></circle>`;
     return out;
   };
   const nothingYet = !p.account_id ? "Only for a person with a Verve account: the app sends it on every sync." : !canSeeHeart ? `${esc(p.name)} has not shared sleep and heart.` : (p.self ? "Nothing here yet. In the app, turn on Back up watch readings (Settings → Your data → Backup); the night's sleep, resting heart rate and recovery arrive on the next sync. Off, they stay on the phone." : "Nothing read yet: their app's Back up watch readings switch is off, or the watch has not written a night yet.");
   const heartCard = (label: string, figure: string | null, over: string, tone: string, trend: string, empty: string, caption: string, alt: string) => `
     <div class="flex min-h-[236px] flex-col gap-2.5 rounded-2xl border border-ink/10 bg-ink/[0.03] p-4">
       ${kicker(label)}
-      <div class="text-[28px] font-extrabold leading-none ${figure != null ? tone : "text-text-muted"}">${figure ?? "—"}${figure != null ? ` <span class="text-[12px] font-medium text-text-secondary">${over}</span>` : ""}</div>
+      <div class="text-[28px] font-extrabold leading-none ${figure != null ? tone : "text-text-3"}">${figure ?? "—"}${figure != null ? ` <span class="text-[12px] font-medium text-text-secondary">${over}</span>` : ""}</div>
       ${trend ? `<svg viewBox="0 0 330 110" class="block h-auto w-full" role="img" aria-label="${alt}">${trend}</svg>` : `<p class="text-[12.5px] leading-relaxed text-text-tertiary">${empty}</p>`}
       <div class="mt-auto font-mono text-[10px] leading-relaxed text-text-tertiary">${caption}</div>
     </div>`;
@@ -396,7 +396,7 @@ export function depthOf(d: PersonData, p: PersonLite, today = new Date().toLocal
   // ── what changed this week ─────────────────────────────────────────────
   const events = eventsFrom(d.labs, labRows, fit, act, today);
   const changed = kicker("WHAT CHANGED THIS WEEK") + (events.length
-    ? events.slice(0, 4).map((e) => `<span><span class="text-text-muted">${esc(dayWord(e.d))}</span> ${e.text}</span>`).join("")
+    ? events.slice(0, 4).map((e) => `<span><span class="text-text-3">${esc(dayWord(e.d))}</span> ${e.text}</span>`).join("")
     : `<span class="text-text-tertiary">Nothing new this week.</span>`);
   return { head, cards, chapters, changed, working, heartRows };
 }

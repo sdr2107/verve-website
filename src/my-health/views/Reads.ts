@@ -104,7 +104,7 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
       ["Background movement", f.background != null ? round0(f.background) : DASH, f.background != null ? "min a day" : ""],
     ];
     return card(`<div class="t-eyebrow">What the Guide read</div><div class="mt-2 flex flex-col">${rows.map(([l, v, u]) =>
-      `<div class="flex items-baseline justify-between gap-3 border-t border-border py-[7px] first:border-t-0"><span class="t-small text-text-2">${l}</span><span class="shrink-0 whitespace-nowrap"><span class="t-figure-row ${v === DASH ? "text-text-4" : "text-text"}">${v}</span>${u && v !== DASH ? `<span class="t-unit ml-1">${u}</span>` : ""}</span></div>`).join("")}</div>
+      `<div class="flex items-baseline justify-between gap-3 border-t border-border py-[7px] first:border-t-0"><span class="t-small text-text-2">${l}</span><span class="shrink-0 whitespace-nowrap"><span class="t-figure-row ${v === DASH ? "text-text-3" : "text-text"}">${v}</span>${u && v !== DASH ? `<span class="t-unit ml-1">${u}</span>` : ""}</span></div>`).join("")}</div>
       <p class="t-caption mt-2 text-text-3">The week of ${esc(dayMonth(monday))}, counted the way the app counts it.</p>`);
   }
 
@@ -119,7 +119,7 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
     const shares = r && ctx!.threads.length ? ctx!.threads.map((t) => btn(`share:${t.id}`, r.shared_at ? `Shared · share again with ${esc(t.label)}` : `Share with ${esc(t.label)}`)).join("") : "";
     return card(`<div class="t-eyebrow">Allowance</div><p class="t-small mt-2 text-text-2">${ALLOWANCE_LINE}</p>${consentBox()}
       <div class="mt-3 flex flex-col gap-2">${btn("write", writeLabel(), true, state === "writing")}${shares}${r ? btn("pdf", "Download as PDF") : ""}</div>
-      ${r ? `<label class="t-eyebrow mt-4 block">My note</label><textarea data-r="notebox" rows="3" maxlength="2000" placeholder="What I will do about it…" class="r-btn mt-1 w-full resize-none border border-border bg-alt px-3 py-2 text-[13px] text-text placeholder:text-text-4 focus:border-accent-border focus:outline-none">${esc(r.note ?? "")}</textarea><span data-r="notemsg" class="t-caption text-text-3"></span><span data-r="msg" class="t-caption block text-text-3"></span>
+      ${r ? `<label class="t-eyebrow mt-4 block">My note</label><textarea data-r="notebox" rows="3" maxlength="2000" placeholder="What I will do about it…" class="r-btn mt-1 w-full resize-none border border-border bg-alt px-3 py-2 text-[13px] text-text placeholder:text-text-3 focus:border-accent-border focus:outline-none">${esc(r.note ?? "")}</textarea><span data-r="notemsg" class="t-caption text-text-3"></span><span data-r="msg" class="t-caption block text-text-3"></span>
       <button type="button" data-r="delete" class="t-caption mt-2 text-left text-text-3 hover:text-concern">Delete this read</button>` : ""}`);
   }
 

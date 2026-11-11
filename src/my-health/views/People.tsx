@@ -47,13 +47,13 @@ export function PersonMenu() {
         <span class="min-w-0 flex-1 truncate text-left">{onGroup ? (inClients ? "All clients" : "Everyone") : nameOf(cur)}</span>
         <svg class="shrink-0 text-text-tertiary" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
       </button>
-      <div id="personmenu" role="menu" class={`absolute left-0 top-full z-30 mt-2 ${open ? "flex" : "hidden"} w-72 max-w-[calc(100vw-3rem)] flex-col gap-0.5 rounded-2xl border border-ink/12 bg-[#12122a] p-1.5 shadow-2xl shadow-shade`}>
+      <div id="personmenu" role="menu" class={`absolute left-0 top-full z-30 mt-2 ${open ? "flex" : "hidden"} w-72 max-w-[calc(100vw-3rem)] flex-col gap-0.5 rounded-2xl border border-ink/12 bg-card p-1.5 shadow-2xl shadow-shade`}>
         {shown.map((p) => { const on = p.id === cur.id && !onGroup; return (
           <button key={p.id || "self"} type="button" role="menuitem" aria-current={on ? "true" : "false"} onClick={pick(() => actions.person("switch", p.id))} class={itemClass(on)}>
             <span class={`flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${p.self ? "bg-accent/25 text-accent-light" : "bg-ink/8 text-text-secondary"}`}>{initialOf(p)}</span>
             <span class="min-w-0 flex-1"><span class="block truncate font-semibold">{nameOf(p)}</span><span class="block truncate text-[11.5px] text-text-tertiary">{hintOf(p)}</span></span>
             {p.self && roleChip(myRole.value) ? <span class="inline-flex h-5 shrink-0 items-center rounded-full border border-accent-border bg-accent-fill px-2 font-mono text-[10px] font-semibold tracking-[0.04em] text-accent-text">{roleChip(myRole.value)}</span> : null}
-            {on ? <svg class="shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg> : null}
+            {on ? <svg class="shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-good)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg> : null}
           </button>); })}
         <span class="mx-2 my-1 h-px bg-ink/[0.08]" aria-hidden="true"></span>
         {others.length ? <button type="button" role="menuitem" id="everyone" aria-current={onGroup ? "true" : "false"} onClick={pick(() => actions.person("everyone"))} class={itemClass(onGroup)}><PeopleIcon /><span class="min-w-0 flex-1 truncate font-semibold">{inClients ? "All clients, ranked by movement" : "Everyone, ranked by movement"}</span><span class="font-mono text-[10.5px] text-text-tertiary">{others.length}</span></button> : null}
