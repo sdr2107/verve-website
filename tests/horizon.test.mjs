@@ -126,15 +126,15 @@ test("pace interpolates from the start to the date and reads the gap", () => {
   assert.equal(paceOf(tgt("rhr", 52, 52), H, read(52), TODAY).pace_word, "Already there");
 });
 
-test("a standing weekly figure reads as the weeks that met it", () => {
+test("a standing weekly figure reads as the weeks that reached it", () => {
   const weekly = [{ week_start: "2026-10-05", v: 1040 }, { week_start: "2026-10-12", v: 880 }, { week_start: "2026-10-19", v: 1120 }, { week_start: "2026-10-26", v: 814 }];
   const p = paceOf(tgt("dose", 820, 1000), H, read(814), TODAY, weekly);
-  assert.equal(p.pace_word, "Met in 2 of the last 4 weeks"); assert.equal(p.tone, "caution");
+  assert.equal(p.pace_word, "Reached in 2 of the last 4 weeks"); assert.equal(p.tone, "caution");
   assert.equal(paceOf(tgt("dose", 820, 1000), H, read(814), TODAY, []).pace_word, "No complete week yet");
   // a floor set BELOW the latest week is still a floor: the weeks at or above it are met, not the weeks under it
   const under = [{ week_start: "2026-10-05", v: 1040 }, { week_start: "2026-10-12", v: 880 }, { week_start: "2026-10-19", v: 1120 }, { week_start: "2026-10-26", v: 1132 }];
   const floor = paceOf(tgt("dose", 1132, 1000), H, read(1132), TODAY, under);
-  assert.equal(floor.pace_word, "Met in 3 of the last 4 weeks"); assert.equal(floor.tone, "caution");
+  assert.equal(floor.pace_word, "Reached in 3 of the last 4 weeks"); assert.equal(floor.tone, "caution");
 });
 
 test("a blood marker is known when you measure", () => {
@@ -147,7 +147,7 @@ test("a blood marker is known when you measure", () => {
 test("pacesOf looks the readings up in the document", () => {
   const ps = pacesOf([tgt("mets", 8.6, 9.6), tgt("dose", 820, 1000), tgt("waist", 98, 90)], H, person, TODAY);
   assert.equal(ps[0].now, 8.9); assert.equal(ps[0].nowText, "8.9");
-  assert.equal(ps[1].pace_word, "Met in 2 of the last 4 weeks");
+  assert.equal(ps[1].pace_word, "Reached in 2 of the last 4 weeks");
   assert.equal(ps[2].now, 96); assert.equal(ps[2].startText, "98");
 });
 
@@ -175,7 +175,7 @@ test("the setup's note says the pace a number implies, against the person's own 
   assert.match(w, /^2\.2 kg in 23 weeks is under 0\.1 kg a week\./);
   assert.match(w, /About your recent pace: your last six months moved 2\.6 kg/);
   assert.match(impliedPace(MARKER_BY_KEY.ldl, read(131), 100, 23, [], TODAY), /known only when you measure/);
-  assert.match(impliedPace(MARKER_BY_KEY.dose, read(880), 1000, 23, [], TODAY, [{ week_start: "a", v: 1040 }, { week_start: "b", v: 880 }]), /met it in 1 of the last 2/);
+  assert.match(impliedPace(MARKER_BY_KEY.dose, read(880), 1000, 23, [], TODAY, [{ week_start: "a", v: 1040 }, { week_start: "b", v: 880 }]), /reached it in 1 of the last 2/);
   assert.match(impliedPace(MARKER_BY_KEY.grip, null, 46, 23, [], TODAY), /No reading yet/);
   assert.match(impliedPace(MARKER_BY_KEY.waist, read(96), 90, 23, [{ d: "2026-05-03", v: 99 }, { d: "2026-11-03", v: 96 }], TODAY), /^Six centimetres in 23 weeks\. Twice your recent pace/);
 });
@@ -299,8 +299,8 @@ test("the document as it stood on a day keeps only what was on file by then", ()
 
 test("an outcome is the pace rule read on the date: weeks met, the week a number was reached, or short by the gap", () => {
   const dose = outcomeOf(tgt("dose", 1040, 1000, { start_on: "2026-09-13" }), DONE, person);
-  assert.equal(dose.word, "Met in 4 of 8 weeks"); assert.equal(dose.tone, "caution"); assert.equal(dose.endText, "814");
-  assert.equal(outcomeOf(tgt("dose", 1040, 800, { start_on: "2026-09-13" }), DONE, person).word, "Met in 8 of 8 weeks");
+  assert.equal(dose.word, "Reached in 4 of 8 weeks"); assert.equal(dose.tone, "caution"); assert.equal(dose.endText, "814");
+  assert.equal(outcomeOf(tgt("dose", 1040, 800, { start_on: "2026-09-13" }), DONE, person).word, "Reached in 8 of 8 weeks");
   const held = outcomeOf(tgt("zone2_week", 90, 96, { start_on: "2026-09-13" }), DONE, person);
   assert.equal(held.word, "Reached in week 1"); assert.equal(held.tone, "good"); assert.equal(held.endText, "96");
   const lost = outcomeOf(tgt("zone2_week", 90, 100, { start_on: "2026-09-13" }), DONE, person);

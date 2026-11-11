@@ -34,7 +34,7 @@ export type MarkerDef = {
   how: string;
   /** The unit the target is typed in; a blood marker takes the unit of the person's own reading. */
   unit: string; decimals: number; kind: MarkerKind; cadence: Cadence; group: MarkerGroup;
-  /** A standing weekly figure to hold every week from here (the dose): read as "met in k of the last n weeks". */
+  /** A standing weekly figure to hold every week from here (the dose): read as "reached in k of the last n weeks" (never "met": the word sits beside MET-minutes). */
   standing?: boolean;
   /** Shown as hours and minutes. */
   hm?: boolean;
@@ -316,7 +316,7 @@ export const elapsedShare = (h: HorizonLike, today: string) => { const total = d
  * Pace: what has moved against what the date needs. Within five per cent of the whole way either side is on pace;
  * further ahead is ahead; further behind is behind by the gap in the marker's words. A marker that has not moved from
  * its start after four weeks is not yet moving; one within five per cent of the target is nearly there. A standing
- * weekly figure (the dose) reads as the weeks that met it; a blood marker is known only when a report lands.
+ * weekly figure (the dose) reads as the weeks that reached it; a blood marker is known only when a report lands.
  */
 export function paceOf(target: Target, horizon: HorizonLike, now: Reading | null, today: string, weekly?: { week_start: string; v: number | null }[]): Pace {
   const def = MARKER_BY_KEY[target.marker] ?? { key: target.marker, label: target.label, unit: target.unit ?? "", decimals: 1, kind: "measured", cadence: "monthly", group: "body", how: "" } as MarkerDef;
@@ -338,9 +338,9 @@ export function paceOf(target: Target, horizon: HorizonLike, now: Reading | null
     const read = (weekly ?? []).slice(-4).filter((w) => w.v != null);
     if (!read.length) return { ...base, expected_today, progress, pace_word: "No complete week yet", tone: "neutral" };
     // A standing figure is a floor whatever the start was: a dose target set below this week's figure still reads
-    // "hold at least this", so the weeks AT OR ABOVE it are the ones met, never the weeks under it.
+    // "hold at least this", so the weeks AT OR ABOVE it are the ones that reached it, never the weeks under it.
     const met = read.filter((w) => w.v! >= goal).length;
-    return { ...base, expected_today, progress: met / read.length, pace_word: `Met in ${met} of the last ${read.length} week${read.length === 1 ? "" : "s"}`, tone: met === read.length ? "good" : "caution" };
+    return { ...base, expected_today, progress: met / read.length, pace_word: `Reached in ${met} of the last ${read.length} week${read.length === 1 ? "" : "s"}`, tone: met === read.length ? "good" : "caution" };
   }
   if (cur == null) return { ...base, expected_today, progress, pace_word: "No reading yet", tone: "neutral" };
   if (def.kind === "blood" && now && target.start_on && now.on <= target.start_on) {
@@ -402,7 +402,7 @@ export function impliedPace(def: MarkerDef, now: Reading | null, target: number,
   if (def.standing) {
     const read = (weekly ?? []).filter((w) => w.v != null);
     const met = read.filter((w) => w.v! >= target).length;
-    return read.length ? `Every week from here. You have met it in ${met} of the last ${read.length}.` : "Every week from here. No complete week on file yet.";
+    return read.length ? `Every week from here. You have reached it in ${met} of the last ${read.length}.` : "Every week from here. No complete week on file yet.";
   }
   if (def.kind === "blood") return "A blood target is known only when you measure. Choose the week you will, and the report lands here.";
   if (!now) return "No reading yet; the first one becomes the start.";
@@ -568,7 +568,7 @@ export function horizonWeeks(person: Person, key: MarkerKey, h: HorizonLike): { 
 export type Outcome = { marker: MarkerKey; label: string; how: string; unit: string; startText: string; endText: string; targetText: string; word: string; tone: Tone };
 /**
  * What a target came to on the date, by the same pace rule read at the end of the line: a standing weekly figure is
- * the weeks of the whole road that met it; a weekly marker names the week it first reached its number (and says so if
+ * the weeks of the whole road that reached it; a weekly marker names the week it first reached its number (and says so if
  * it did not hold); everything else is reached, nearly there, or short by the gap in the marker's own words.
  */
 export function outcomeOf(target: Target, h: HorizonLike, person: Person): Outcome {
@@ -582,7 +582,7 @@ export function outcomeOf(target: Target, h: HorizonLike, person: Person): Outco
     const read = horizonWeeks(then, target.marker, h).filter((w) => w.v != null);
     if (!read.length) return { ...base, word: "No complete week", tone: "neutral" };
     const met = read.filter((w) => w.v! >= goal).length;
-    return { ...base, word: `Met in ${met} of ${read.length} week${read.length === 1 ? "" : "s"}`, tone: met === read.length ? "good" : "caution" };
+    return { ...base, word: `Reached in ${met} of ${read.length} week${read.length === 1 ? "" : "s"}`, tone: met === read.length ? "good" : "caution" };
   }
   if (def.kind === "weekly") {
     const first = horizonWeeks(then, target.marker, h).find((w) => w.v != null && reachedTarget(target, w.v));
