@@ -1,52 +1,25 @@
 /**
- * returns — why a person comes back to Verve, said once, used on the home
- * page and on /start (4 Nov 2026).
+ * returns — why a person comes back to Verve, said once (4 Nov 2026; cut to
+ * one line each for the landing page, 11 Nov 2026, board 01).
  *
  * The founder's framing: a wearable's own app says how you are today —
  * recovery, strain, a sleep score — and does it well. Verve does not compete
- * there. It reads the measures that predict how long and how well a person
- * lives, from whatever they wear, against the thresholds clinicians use.
- * Four returns, one per cadence. No wearable is named: Verve is software for
- * any of them, and copy that names one dates itself.
+ * there. It says where you stand, from whatever you wear, against the
+ * thresholds clinicians use. Four returns, one per cadence. No wearable is
+ * named: Verve is software for any of them, and copy that names one dates
+ * itself. No promise about anyone's lifespan is made here or anywhere on
+ * the site; the studies' findings are cited in their own terms.
  */
 export interface Return {
   cadence: "Daily" | "Weekly" | "Quarterly" | "Yearly";
   title: string;
-  body: string;
-  href: string;
-  cta: string;
+  /** One short line: what it is. */
+  line: string;
 }
 
-export const RETURNS_INTRO =
-  "Your wearable's app tells you how you are today, and does it well. Verve reads the measures that predict how long and how well you live — fitness in METs against your age and sex, the weekly dose against the ACC's figure, sleep regularity, the markers a clinic would order — from whatever you wear, with the study behind every line.";
-
 export const RETURNS: Return[] = [
-  {
-    cadence: "Daily",
-    title: "The dose this week",
-    body: "One bar that fills by Sunday, in MET-minutes, from any wearable, each reading named by the device that wrote it.",
-    href: "/science#weekly-dose",
-    cta: "Why MET-minutes",
-  },
-  {
-    cadence: "Weekly",
-    title: "The Monday read",
-    body: "What changed last week and what to do about it, in words, grounded in your own numbers. One a week free; more with Pro.",
-    href: "/plans",
-    cta: "The Guide",
-  },
-  {
-    cadence: "Quarterly",
-    title: "The calendar of measurements",
-    body: "A fitness test every eight weeks, the body check-in, the labs on the interval their guideline names. Verve keeps the dates and nudges once.",
-    href: "/science#crf",
-    cta: "How fitness is graded",
-  },
-  {
-    cadence: "Yearly",
-    title: "The report for your doctor",
-    body: "Drop a lab report here and the values file themselves. The page you take to the doctor is built from everything the app and the site hold.",
-    href: "/my-health",
-    cta: "My health",
-  },
+  { cadence: "Daily", title: "The dose this week", line: "One bar that fills by Sunday." },
+  { cadence: "Weekly", title: "The Monday read", line: "What changed, in words." },
+  { cadence: "Quarterly", title: "The calendar of measurements", line: "Verve keeps the dates." },
+  { cadence: "Yearly", title: "The page for your doctor", line: "Built from everything on file." },
 ];

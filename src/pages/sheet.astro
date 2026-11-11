@@ -21,6 +21,7 @@ import SiteHeader from "../components/SiteHeader.astro";
 import Footer from "../components/Footer.astro";
 import { GET_APP_PATH, SUBSTACK_URL, X_URL } from "../data/site";
 import SheetBox from "../components/SheetBox.astro";
+import CallCard from "../components/CallCard.astro";
 import {
   TIERS_MEN, TIERS_WOMEN, TIER_SHORT, TIER_SOURCES, tierRanges,
   RUN, WALK, RETEST, SAFETY,
@@ -40,7 +41,7 @@ const steps = [
 ---
 
 <Layout
-  title="Your first fitness number — a free sheet by Dr Sudeep Roplekar"
+  title="Your first fitness number · Verve"
   description="Walk six minutes or run twelve, one line of arithmetic, and the fitness tier tables the studies use. Free, no app needed."
   cardType="summary"
 >
@@ -53,7 +54,7 @@ const steps = [
       <span class="font-mono text-xs font-semibold uppercase tracking-[0.1em] text-accent-light">A free sheet · Dr Sudeep Roplekar, radiologist</span>
       <h1 class="text-[40px] font-extrabold leading-[1.04] tracking-[-0.03em] text-text-primary sm:text-[56px]">Your first fitness number</h1>
       <p class="text-[19px] font-medium leading-[1.35] text-accent-text sm:text-[22px]">Walk six minutes, or run twelve. One line of arithmetic. A table.</p>
-      <p class="text-[16px] leading-relaxed text-text-secondary sm:text-[18px]">The number almost nobody has on file. No app needed.</p>
+      <p class="text-[16px] leading-relaxed text-text-secondary sm:text-[18px]">The number almost nobody has on file. No app needed. <a href="/#find-your-number" class="font-semibold text-accent-light underline-offset-4 hover:underline">Or let the page do the sum</a>.</p>
     </section>
 
     <SheetBox />
@@ -136,6 +137,8 @@ const steps = [
         <a href={GET_APP_PATH} target="_blank" rel="noopener" class="mt-1.5 inline-flex min-h-11 items-center self-start rounded-xl bg-accent px-5 font-bold text-canvas transition-opacity hover:opacity-90">Get the app</a>
       </div>
     </section>
+
+    <CallCard />
 
     <!-- Byline -->
     <section class="flex flex-wrap items-center gap-5 border-t border-ink/[0.08] pt-6">

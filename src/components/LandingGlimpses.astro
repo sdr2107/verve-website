@@ -1,0 +1,137 @@
+---
+/**
+ * What Verve reads — the four tabs as four small frames (11 November 2026,
+ * board 01). Drawn, not screenshotted: sharp at any size and a few
+ * kilobytes. Every frame sits in `.theme-dark`, so the product is shown as
+ * it is, matte dark, inside the light page. Fixed sample figures; the
+ * section says so.
+ *
+ * Each frame fades in as it comes into view, tied to the page's own scroll
+ * (CSS scroll-driven animation; nothing takes the scroll over). A browser
+ * without it shows the frames at once. The Trends line draws left to
+ * right, once, over 400 ms, when its frame is in view. All of it is off
+ * under prefers-reduced-motion, and the frames are complete without script.
+ */
+const frame = "theme-dark vrv-enter flex w-full max-w-[250px] flex-col gap-2.5 rounded-[28px] border border-border bg-canvas px-4 pb-7 pt-[18px] sm:h-[400px] sm:pb-[18px]";
+const tile = "flex flex-col gap-1.5 rounded-[14px] border border-border bg-card p-3";
+const eb = "font-mono text-[10px] font-medium uppercase tracking-[0.1em] text-text-3";
+const big = "font-mono text-[30px] font-semibold leading-none text-text";
+const unit = "ml-[5px] font-mono text-[11px] text-text-3";
+const small = "text-[12px] leading-[1.4] text-text-2";
+const body = [
+  { name: "ApoB", value: "84 mg/dL", tone: "caution", at: 58 },
+  { name: "HbA1c", value: "5.4 %", tone: "good", at: 30 },
+  { name: "Waist", value: "92 cm", tone: "good", at: 44 },
+];
+---
+
+<ul class="grid grid-cols-1 justify-items-center gap-x-6 gap-y-9 sm:grid-cols-2 lg:grid-cols-4" role="list">
+  <li class="flex w-full max-w-[250px] flex-col gap-4">
+    <div class={frame} role="img" aria-label="The Activity tab, sample figures: fitness 8.7 METs, below average for your age; weekly dose 640 of 1,000 MET-minutes">
+      <span class={eb}>Activity</span>
+      <div class={tile}>
+        <span class="text-[11.5px] text-text-2">Fitness</span>
+        <span><span class={big}>8.7</span><span class={unit}>METs</span></span>
+        <span class={small}>Below average for your age</span>
+        <span class="mt-0.5 flex gap-[3px]" aria-hidden="true">
+          {[0, 1, 2, 3, 4].map((i) => <span class:list={["h-[5px] flex-1 rounded-[3px]", i === 1 ? "bg-accent" : "bg-border-strong"]}></span>)}
+        </span>
+      </div>
+      <div class={tile}>
+        <span class="text-[11.5px] text-text-2">Weekly dose</span>
+        <span><span class="font-mono text-[22px] font-semibold leading-none text-text">640</span><span class={unit}>of 1,000 MET-min</span></span>
+        <span class="h-1.5 rounded-[3px] bg-border" aria-hidden="true"><span class="block h-1.5 w-[64%] rounded-[3px] bg-accent"></span></span>
+      </div>
+    </div>
+    <div><h3 class="text-[15px] font-semibold text-text-primary">Activity</h3><p class="mt-1 text-[14px] leading-[1.45] text-text-secondary">What did the week ask of you?</p></div>
+  </li>
+
+  <li class="flex w-full max-w-[250px] flex-col gap-4">
+    <div class={frame} role="img" aria-label="The Body tab, sample figures: 6 of 8 metabolic markers in range; ApoB 84 mg/dL, HbA1c 5.4 per cent, waist 92 cm">
+      <span class={eb}>Body</span>
+      <div class={tile}>
+        <span><span class={big}>6</span><span class={unit}>of 8</span></span>
+        <span class={small}>metabolic markers in range</span>
+      </div>
+      <div class:list={[tile, "gap-2.5"]}>
+        {body.map((m) => (
+          <>
+            <span class="flex items-baseline justify-between"><span class="text-[11.5px] text-text">{m.name}</span><span class:list={["font-mono text-[12px]", m.tone === "caution" ? "text-caution" : "text-good"]}>{m.value}</span></span>
+            <span class="relative h-[5px] rounded-[3px] bg-border" aria-hidden="true"><span class:list={["absolute -top-[3px] h-[11px] w-[11px] rounded-full border-2 border-card", m.tone === "caution" ? "bg-caution" : "bg-good"]} style={`left: ${m.at}%`}></span></span>
+          </>
+        ))}
+      </div>
+    </div>
+    <div><h3 class="text-[15px] font-semibold text-text-primary">Body</h3><p class="mt-1 text-[14px] leading-[1.45] text-text-secondary">What do the markers say?</p></div>
+  </li>
+
+  <li class="flex w-full max-w-[250px] flex-col gap-4">
+    <div class={frame} role="img" aria-label="The Trends tab, sample figures: sleep 6 hours 29 a night this week, 25 minutes under your usual">
+      <span class={eb}>Trends</span>
+      <div class={tile}>
+        <span class="text-[11.5px] text-text-2">Sleep, a night this week</span>
+        <span><span class={big}>6h 29</span></span>
+        <span class={small}>25 min under your usual</span>
+      </div>
+      <div class:list={[tile, "gap-2"]}>
+        <svg viewBox="0 0 200 84" width="100%" height="84" aria-hidden="true">
+          <line x1="0" y1="26" x2="200" y2="26" stroke="var(--color-text-4)" stroke-width="1" stroke-dasharray="4 4"></line>
+          <polyline class="vrv-draw" pathLength="1" points="6,40 37,48 68,30 99,52 130,44 161,36 194,46" fill="none" stroke="var(--color-accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline>
+          <circle class="vrv-draw-end" cx="194" cy="46" r="3.5" fill="var(--color-accent)"></circle>
+          <line x1="0" y1="83" x2="200" y2="83" stroke="var(--color-border)" stroke-width="1"></line>
+        </svg>
+        <span class="flex justify-between font-mono text-[10px] text-text-3"><span>Mon</span><span>usual 6h 54</span><span>Sun</span></span>
+      </div>
+    </div>
+    <div><h3 class="text-[15px] font-semibold text-text-primary">Trends</h3><p class="mt-1 text-[14px] leading-[1.45] text-text-secondary">Is it moving?</p></div>
+  </li>
+
+  <li class="flex w-full max-w-[250px] flex-col gap-4">
+    <div class={frame} role="img" aria-label="The Guide tab, a sample read: a win and a next step">
+      <span class={eb}>Guide</span>
+      <div class={tile}>
+        <span class="font-mono text-[10.5px] font-semibold tracking-[0.08em] text-good">WIN</span>
+        <span class="text-[13px] leading-[1.4] text-text">Three sessions in zone 2, 96 minutes in all.</span>
+      </div>
+      <div class={tile}>
+        <span class="font-mono text-[10.5px] font-semibold tracking-[0.08em] text-accent-text">NEXT</span>
+        <span class="text-[13px] leading-[1.4] text-text">In bed by 23:00 on two more nights.</span>
+      </div>
+    </div>
+    <div><h3 class="text-[15px] font-semibold text-text-primary">Guide</h3><p class="mt-1 text-[14px] leading-[1.45] text-text-secondary">What changed, and what next?</p></div>
+  </li>
+</ul>
+
+<style is:global>
+  /* A frame fades in as it enters view, tied to the reader's own scroll. Where the browser cannot tie it, the frame is simply there. */
+  @keyframes vrv-enter { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .vrv-enter { animation: vrv-enter linear both; animation-timeline: view(); animation-range: entry 0% entry 55%; }
+    }
+  }
+</style>
+
+<script>
+  // The Trends line draws left to right, once, over 400 ms, when its frame is in view. Drawn in full
+  // without this script, and left alone when the device asks for less motion.
+  function draw() {
+    const lines = document.querySelectorAll<SVGPolylineElement>(".vrv-draw:not([data-drawn])");
+    if (!lines.length || !("IntersectionObserver" in window) || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const io = new IntersectionObserver((entries) => {
+      for (const en of entries) {
+        if (!en.isIntersecting) continue;
+        const line = en.target as SVGPolylineElement;
+        io.unobserve(line); line.dataset.drawn = "1";
+        line.style.strokeDasharray = "1";
+        const end = line.parentElement?.querySelector<SVGCircleElement>(".vrv-draw-end");
+        if (end) end.style.opacity = "0";
+        const a = line.animate([{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], { duration: 400, easing: "cubic-bezier(0.2, 0.7, 0.2, 1)" });
+        a.onfinish = () => { line.style.strokeDasharray = ""; if (end) end.style.opacity = ""; };
+      }
+    }, { threshold: 0.6 });
+    lines.forEach((l) => io.observe(l));
+  }
+  draw();
+  document.addEventListener("astro:page-load", draw);
+</script>
