@@ -69,7 +69,7 @@ function PlanSheet() {
   const box = (p: Period, per: string, sub: string) => (
     <button type="button" aria-pressed={period === p} onClick={() => setPeriod(p)}
       class={`flex flex-1 flex-col items-start gap-1 rounded-[10px] border px-4 py-3 text-left ${period === p ? "border-accent-border bg-accent-fill" : "border-border bg-alt hover:border-border-strong"}`}>
-      <span class="flex items-baseline gap-2"><span class="font-mono text-[22px] font-semibold text-text">{priceText(pro, p, cur)}</span><span class="text-[13px] text-text-2">{per}</span></span>
+      <span class="flex items-baseline gap-2"><span class="t-figure text-text">{priceText(pro, p, cur)}</span><span class="text-[13px] text-text-2">{per}</span></span>
       <span class="text-[12px] text-text-3">{sub}</span>
     </button>
   );

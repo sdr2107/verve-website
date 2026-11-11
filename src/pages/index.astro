@@ -13,7 +13,8 @@
  *   what Verve reads: the four tabs as four dark frames, the product as it
  *   is, inside the light page;
  *   every threshold named, with one marker's bands as the proof;
- *   who it is for; what you come back for; who built it; the plans.
+ *   who it is for; what you come back for; the plans. (The line on who
+ *   built it came out on 11 November 2026, at the founder's word.)
  *
  * Start here is folded in: the first number, who it is for and what you
  * come back for used to be a page of their own. No line on this page, or
@@ -109,13 +110,13 @@ const quiet = "inline-flex min-h-11 items-center text-[15px] font-semibold text-
       <div class="grid gap-8 sm:grid-cols-3 sm:gap-10">
         {findings.map((f) => (
           <div class="flex flex-col gap-2">
-            <p class="font-mono text-[40px] font-semibold leading-none tracking-[-0.02em] text-text-primary">{f.value}</p>
+            <p class="t-figure text-text-primary">{f.value}</p>
             <p class="text-[15px] leading-[1.5] text-text-primary">{f.claim}</p>
             <p class={cite}>{f.source}</p>
           </div>
         ))}
         <div class="flex flex-col gap-2">
-          <p class="font-mono text-[40px] font-semibold leading-none tracking-[-0.02em] text-text-primary">{COUNTS.citations}</p>
+          <p class="t-figure text-text-primary">{COUNTS.citations}</p>
           <p class="text-[15px] leading-[1.5] text-text-primary">citations behind {COUNTS.topics} topics and {COUNTS.markers} body markers, all in the open</p>
           <a href="/science" class="inline-flex min-h-6 items-center self-start text-[14px] font-semibold text-accent-text underline-offset-4 hover:underline">Read the evidence base</a>
         </div>
@@ -155,7 +156,7 @@ const quiet = "inline-flex min-h-11 items-center text-[15px] font-semibold text-
           {apoBands.map((b) => (
             <div class="flex flex-col gap-1.5 rounded-[10px] border border-border bg-card p-3.5">
               <dt class="text-[13px] text-text-2">{b.name}</dt>
-              <dd class="font-mono text-[18px] font-semibold text-text-primary sm:text-[22px]">{b.range}</dd>
+              <dd class="t-figure text-[18px] text-text-primary sm:text-[22px]">{b.range}</dd>
             </div>
           ))}
         </dl>
@@ -200,15 +201,8 @@ const quiet = "inline-flex min-h-11 items-center text-[15px] font-semibold text-
     </div>
   </section>
 
-  <!-- ── Who built it ── -->
-  <section class="border-t border-border px-6 py-10 sm:px-10">
-    <div class="mx-auto max-w-6xl">
-      <p class="max-w-[820px] text-[20px] font-medium leading-[1.4] tracking-[-0.01em] text-text-primary sm:text-[22px]">Built by a radiologist. No ads, no data sold, no score nobody can explain.</p>
-    </div>
-  </section>
-
   <!-- ── The plans, in one line ── -->
-  <section class="px-6 pb-14 pt-2 sm:px-10">
+  <section class="border-t border-border px-6 py-14 sm:px-10">
     <div class="mx-auto max-w-6xl">
       <div class="flex flex-wrap items-center justify-between gap-x-8 gap-y-5 rounded-2xl border border-accent-border bg-accent-fill px-6 py-7 sm:px-9 sm:py-8">
         <div class="flex flex-col gap-2">

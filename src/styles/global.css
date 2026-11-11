@@ -211,7 +211,18 @@ body {
 
 /* The seven sizes and the two figure sizes (board 8). Inter for words,
    JetBrains Mono for every figure, unit and eyebrow; words never carry a
-   number's weight. A utility on the same element still wins. */
+   number's weight. A utility on the same element still wins.
+
+   ONE figure style on every page (11 November 2026, the founder: "the
+   landing page numbers look different in each section ... make it uniform
+   for my health and rest of website. I like the numbers that are used in
+   ApoB '79'"). The landing page drew its figures at 64, 40, 30 and 22 px
+   with two letter spacings; My health drew its own at 28. A figure a card
+   or a section leads with is now `t-figure` everywhere: the ApoB card's
+   own style, 22 px, weight 600, no letter spacing. A figure in a row or a
+   table is `t-figure-row`, the same face and weight at 15 px. Never write
+   a figure's size by hand; a phone may step `t-figure` down where three
+   sit in one row (the ApoB card's bands). */
 @layer components {
   .t-display    { font-size: 28px; line-height: 1.15; font-weight: 600; letter-spacing: -0.02em; }
   .t-heading    { font-size: 22px; line-height: 1.2;  font-weight: 600; letter-spacing: -0.015em; }
@@ -221,7 +232,7 @@ body {
   .t-small      { font-size: 13px; line-height: 1.45; font-weight: 400; }
   .t-caption    { font-size: 12px; line-height: 1.4;  font-weight: 400; }
   .t-eyebrow    { font-family: var(--font-mono); font-size: 11px; line-height: 1.3; font-weight: 500; color: var(--color-text-3); }
-  .t-figure     { font-family: var(--font-mono); font-size: 28px; line-height: 1;   font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .t-figure     { font-family: var(--font-mono); font-size: 22px; line-height: 1.2; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: 0; }
   .t-figure-row { font-family: var(--font-mono); font-size: 15px; line-height: 1.2; font-weight: 600; font-variant-numeric: tabular-nums; }
   .t-unit       { font-family: var(--font-mono); font-size: 11px; line-height: 1.3; font-weight: 500; color: var(--color-text-3); }
   /* the three radii, by name, so a card is always 16 and a button always 10 */

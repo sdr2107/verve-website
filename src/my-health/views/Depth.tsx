@@ -198,7 +198,7 @@ export function Depth() {
           {last.tiles.map((t) => (
             <div key={t.label} class="r-btn border border-border bg-alt p-3">
               <div class="t-caption text-text-2">{t.label}</div>
-              <div class="mt-1.5 flex flex-wrap items-baseline gap-x-1.5"><span class={`t-figure text-[22px] ${t.figure === DASH ? "text-text-3" : "text-text"}`}>{t.figure}</span>{t.unit ? <span class="t-unit">{t.unit}</span> : null}</div>
+              <div class="mt-1.5 flex flex-wrap items-baseline gap-x-1.5"><span class={`t-figure ${t.figure === DASH ? "text-text-3" : "text-text"}`}>{t.figure}</span>{t.unit ? <span class="t-unit">{t.unit}</span> : null}</div>
               <div class="t-caption mt-1 text-text-3">{t.note}</div>
             </div>
           ))}

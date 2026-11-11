@@ -9,7 +9,9 @@
  * the App Store link, and for Android the plain words until there is a
  * listing. Then the accounts: five circles, each one account, the app's
  * three first and the founder's two after, with one quiet line under them
- * that writes the app's handle once and says whose the other two are. No
+ * that says whose the last two are. (The line also wrote the app's handle
+ * until 11 November 2026; the founder asked why, and each circle already
+ * names its account, so it went.) No
  * brand colours: the glyphs take the page's text colour, in either theme.
  * Then the company: name, CIN and registered office, as the Companies Act
  * asks and as anyone verifying the site expects to find, with the privacy
@@ -29,7 +31,7 @@ interface Props {
 }
 const { showScience = true } = Astro.props;
 
-import { FOOTER_LINKS, APP_SOCIAL, FOUNDER_SOCIAL, APP_HANDLE, APP_STORE_URL, PLAY_STORE_URL, PRIVACY_URL, TERMS_URL, COMPANY } from "../data/site";
+import { FOOTER_LINKS, APP_SOCIAL, FOUNDER_SOCIAL, APP_STORE_URL, PLAY_STORE_URL, PRIVACY_URL, TERMS_URL, COMPANY } from "../data/site";
 import SocialIcon from "./SocialIcon.astro";
 import StoreBadge from "./StoreBadge.astro";
 
@@ -85,7 +87,7 @@ const accounts = [
           </li>
         ))}
       </ul>
-      <p class="text-[13px] text-text-secondary"><span class="font-mono text-[12px]">{APP_HANDLE}</span> &middot; the founder writes on X and Substack</p>
+      <p class="text-[13px] text-text-secondary">The founder writes on X and Substack.</p>
     </div>
 
     <div class="flex flex-col gap-3 border-t border-border pt-5 text-[12px] leading-relaxed text-text-tertiary md:flex-row md:items-start md:justify-between md:gap-10">

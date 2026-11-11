@@ -80,8 +80,8 @@ const seg = "min-h-10 flex-1 whitespace-nowrap rounded-[8px] px-1.5 text-[12.5px
     <p data-fn-summary class="font-mono text-[12px] text-text-2">Six-minute walk &middot; {sample.metres} m &middot; a man of {sample.age}, {sample.weightKg} kg</p>
     <div class="flex items-end justify-between gap-4">
       <p class="flex items-baseline gap-2">
-        <span data-fn-mets class="font-mono text-[56px] font-semibold leading-[0.95] tracking-[-0.02em] text-text-primary sm:text-[64px]">{sample.mets.toFixed(1)}</span>
-        <span class="font-mono text-[15px] text-text-3">METs</span>
+        <span data-fn-mets class="t-figure text-text-primary">{sample.mets.toFixed(1)}</span>
+        <span class="t-unit">METs</span>
       </p>
       <p class="text-right">
         <span data-fn-tier class="block text-[16px] font-semibold text-text-primary">{tier.label}</span>
