@@ -63,7 +63,7 @@ const Svg = ({ w, h, inner, label }: { w: number; h: number; inner: string; labe
   : <p class="t-small mt-4 text-text-3">Nothing to draw yet.</p>;
 const Th = ({ t, right }: { t: string; right?: boolean }) => <th class={`t-eyebrow pb-2 font-medium ${right ? "text-right" : "text-left"}`}>{t}</th>;
 const Td = ({ v, unit, tone, right = true }: { v: string; unit?: string; tone?: string; right?: boolean }) => (
-  <td class={`py-2 ${right ? "text-right" : "text-left"}`}><span class={`t-figure-row ${v === DASH ? "text-text-4" : tone ?? "text-text"}`}>{v}</span>{unit && v !== DASH ? <span class="t-unit ml-1">{unit}</span> : null}</td>
+  <td class={`py-2 ${right ? "text-right" : "text-left"}`}><span class={`t-figure-row ${v === DASH ? "text-text-3" : tone ?? "text-text"}`}>{v}</span>{unit && v !== DASH ? <span class="t-unit ml-1">{unit}</span> : null}</td>
 );
 
 export function Depth() {
@@ -186,7 +186,7 @@ export function Depth() {
           {last.tiles.map((t) => (
             <div key={t.label} class="r-btn border border-border bg-alt p-3">
               <div class="t-caption text-text-2">{t.label}</div>
-              <div class="mt-1.5 flex flex-wrap items-baseline gap-x-1.5"><span class={`t-figure text-[22px] ${t.figure === DASH ? "text-text-4" : "text-text"}`}>{t.figure}</span>{t.unit ? <span class="t-unit">{t.unit}</span> : null}</div>
+              <div class="mt-1.5 flex flex-wrap items-baseline gap-x-1.5"><span class={`t-figure text-[22px] ${t.figure === DASH ? "text-text-3" : "text-text"}`}>{t.figure}</span>{t.unit ? <span class="t-unit">{t.unit}</span> : null}</div>
               <div class="t-caption mt-1 text-text-3">{t.note}</div>
             </div>
           ))}
@@ -263,7 +263,7 @@ export function Depth() {
               {vitalRows.map((r) => (
                 <tr key={r.label} class="border-t border-border">
                   <td class="t-small py-2 pr-2 text-text-2">{r.label}{r.unit ? <span class="t-unit ml-1">{r.unit}</span> : null}</td>
-                  {weekDays.map((x) => { const v = x > today ? null : r.of(x); return <td key={x} class={`py-2 text-center font-mono text-[13px] ${v == null ? "text-text-4" : "font-semibold text-text"}`}>{x > today ? "·" : v ?? DASH}</td>; })}
+                  {weekDays.map((x) => { const v = x > today ? null : r.of(x); return <td key={x} class={`py-2 text-center font-mono text-[13px] ${v == null ? "text-text-3" : "font-semibold text-text"}`}>{x > today ? "·" : v ?? DASH}</td>; })}
                 </tr>
               ))}
             </tbody>

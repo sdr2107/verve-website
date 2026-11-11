@@ -57,8 +57,8 @@ function Card({ d, canWrite }: { d: ReportCard; canWrite: boolean }) {
       <div class="flex items-center gap-3">
         <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-accent/[0.12]">
           {isPhotoName(f.name)
-            ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h3l2-2h6l2 2h3v12H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
-            : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /></svg>}
+            ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h3l2-2h6l2 2h3v12H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
+            : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /></svg>}
         </span>
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2">
@@ -73,7 +73,7 @@ function Card({ d, canWrite }: { d: ReportCard; canWrite: boolean }) {
             ) : (
               <>
                 <div class="truncate text-sm font-semibold text-text-primary">{pretty(f.name)}</div>
-                {canWrite ? <button type="button" onClick={startRename} title="Rename" aria-label="Rename report" class="shrink-0 text-text-muted transition-colors hover:text-text-primary"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg></button> : null}
+                {canWrite ? <button type="button" onClick={startRename} title="Rename" aria-label="Rename report" class="shrink-0 text-text-3 transition-colors hover:text-text-primary"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg></button> : null}
               </>
             )}
           </div>
@@ -146,13 +146,13 @@ export function AppImports() {
         {imps.map((im) => (
           <div key={im.tag} class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-ink/[0.08] px-3 py-2 text-[13px]">
             <span class="font-semibold text-text-primary">{importTitle(im)}</span>
-            {im.imported ? <span class="text-text-muted">dropped here {fmtDay(im.imported)}</span> : null}
+            {im.imported ? <span class="text-text-3">dropped here {fmtDay(im.imported)}</span> : null}
             <span class="text-text-tertiary">{appImportWords(im)}</span>
             {canWrite ? <button type="button" onClick={() => actions.report("rmimport", im.tag)} class="ml-auto min-h-9 text-[12px] font-semibold text-text-tertiary hover:text-danger">Remove</button> : null}
           </div>
         ))}
       </div>
-      <p class="mt-2 text-[12px] text-text-muted">The weeks, fitness tests and waist readings are on the Overview; the lab values are on Labs with everything else. Where a week came from both sync and a file, sync wins.</p>
+      <p class="mt-2 text-[12px] text-text-3">The weeks, fitness tests and waist readings are on the Overview; the lab values are on Labs with everything else. Where a week came from both sync and a file, sync wins.</p>
     </section>
   );
 }

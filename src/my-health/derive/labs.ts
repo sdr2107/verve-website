@@ -64,9 +64,9 @@ export function sparkSvg(rs: any[]): string {
   const pts = vals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
   const dots = vals.map((v, i) => {
     const own = inRange(rs[i]);
-    return `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${i === vals.length - 1 ? 3.5 : 2.5}" fill="${own === false ? "#FBBF24" : "#818cf8"}"><title>${rs[i].measured_on}: ${v}</title></circle>`;
+    return `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="${i === vals.length - 1 ? 3.5 : 2.5}" fill="${own === false ? "var(--color-caution)" : "var(--color-accent)"}"><title>${rs[i].measured_on}: ${v}</title></circle>`;
   }).join("");
-  return `${rs.length > 1 ? `<polyline points="${pts}" fill="none" stroke="#818cf8" stroke-width="1.5" opacity="0.6"/>` : ""}${dots}`;
+  return `${rs.length > 1 ? `<polyline points="${pts}" fill="none" stroke="var(--color-accent)" stroke-width="1.5" opacity="0.6"/>` : ""}${dots}`;
 }
 
 /**
@@ -99,7 +99,7 @@ export function bigChartHtml(rsAll: any[]): string {
     if (r.ref_low == null && r.ref_high == null) return "";
     const yTop = Y(r.ref_high != null ? Number(r.ref_high) : hi);
     const yBot = Y(r.ref_low != null ? Number(r.ref_low) : lo);
-    return `<rect x="${midX(i - 1).toFixed(1)}" y="${yTop.toFixed(1)}" width="${(midX(i) - midX(i - 1)).toFixed(1)}" height="${Math.max(0, yBot - yTop).toFixed(1)}" fill="#10B981" opacity="0.09"/>`;
+    return `<rect x="${midX(i - 1).toFixed(1)}" y="${yTop.toFixed(1)}" width="${(midX(i) - midX(i - 1)).toFixed(1)}" height="${Math.max(0, yBot - yTop).toFixed(1)}" fill="var(--color-good)" opacity="0.09"/>`;
   }).join("");
 
   // ② range-change diamonds
@@ -108,26 +108,26 @@ export function bigChartHtml(rsAll: any[]): string {
   const changes: string[] = [];
   for (let i = 1; i < rs.length; i++) {
     if (rk(rs[i]) !== rk(rs[i - 1])) {
-      diamonds += `<g transform="translate(${X(i).toFixed(1)},${T - 8})"><rect x="-4.5" y="-4.5" width="9" height="9" transform="rotate(45)" fill="#818cf8"><title>Different lab range from ${fmtDay(rs[i].measured_on)}: ${rangeLabel(rs[i - 1]) || "none"} → ${rangeLabel(rs[i]) || "none"}</title></rect></g>`;
+      diamonds += `<g transform="translate(${X(i).toFixed(1)},${T - 8})"><rect x="-4.5" y="-4.5" width="9" height="9" transform="rotate(45)" fill="var(--color-accent)"><title>Different lab range from ${fmtDay(rs[i].measured_on)}: ${rangeLabel(rs[i - 1]) || "none"} → ${rangeLabel(rs[i]) || "none"}</title></rect></g>`;
       changes.push(`${rangeLabel(rs[i - 1]) || "no range"} → ${rangeLabel(rs[i]) || "no range"} from ${fmtDay(rs[i].measured_on)}`);
     }
   }
 
   // ③ line, dots (own-range verdicts), axis
   const line = rs.length > 1
-    ? `<polyline points="${vals.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ")}" fill="none" stroke="#818cf8" stroke-width="2"/>` : "";
+    ? `<polyline points="${vals.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--color-accent)" stroke-width="2"/>` : "";
   const dots = rs.map((r, i) => {
     const own = inRange(r);
-    const c = own === false ? "#FBBF24" : own === true ? "#34D399" : "#94A3B8";
-    return `<circle cx="${X(i).toFixed(1)}" cy="${Y(Number(r.value)).toFixed(1)}" r="4" fill="${c}" stroke="#0B0F1A" stroke-width="1.5"><title>${fmtDay(r.measured_on)}: ${r.value}${r.unit ? " " + r.unit : ""} (range ${rangeLabel(r) || "—"})</title></circle>`;
+    const c = own === false ? "var(--color-caution)" : own === true ? "var(--color-good)" : "var(--color-text-2)";
+    return `<circle cx="${X(i).toFixed(1)}" cy="${Y(Number(r.value)).toFixed(1)}" r="4" fill="${c}" stroke="var(--color-card)" stroke-width="1.5"><title>${fmtDay(r.measured_on)}: ${r.value}${r.unit ? " " + r.unit : ""} (range ${rangeLabel(r) || "—"})</title></circle>`;
   }).join("");
   const step = Math.max(1, Math.ceil(rs.length / 6));
   const xlabels = rs.map((r, i) => (i % step === 0 || i === rs.length - 1)
-    ? `<text x="${X(i).toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="9" fill="#64748B" font-family="ui-monospace,monospace">${new Date(r.measured_on + "T00:00:00").toLocaleDateString(undefined, { month: "short", year: "2-digit" })}</text>` : "").join("");
+    ? `<text x="${X(i).toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="9" fill="var(--color-text-3)" font-family="ui-monospace,monospace">${new Date(r.measured_on + "T00:00:00").toLocaleDateString(undefined, { month: "short", year: "2-digit" })}</text>` : "").join("");
   const ticks = [0.15, 0.5, 0.85].map((f) => {
     const v = lo + (hi - lo) * (1 - f);
     const yy = T + f * (H - T - B);
-    return `<line x1="${L}" y1="${yy}" x2="${W - R}" y2="${yy}" stroke="#FFFFFF" opacity="0.05"/><text x="${L - 6}" y="${yy + 3}" text-anchor="end" font-size="9" fill="#64748B" font-family="ui-monospace,monospace">${Number(v.toPrecision(3))}</text>`;
+    return `<line x1="${L}" y1="${yy}" x2="${W - R}" y2="${yy}" stroke="#FFFFFF" opacity="0.05"/><text x="${L - 6}" y="${yy + 3}" text-anchor="end" font-size="9" fill="var(--color-text-3)" font-family="ui-monospace,monospace">${Number(v.toPrecision(3))}</text>`;
   }).join("");
 
   const unitLabel = rs[rs.length - 1].unit ? esc(String(rs[rs.length - 1].unit)) : "";
@@ -149,7 +149,7 @@ export function bigChartHtml(rsAll: any[]): string {
           return `<div class="flex items-baseline gap-3 py-1">
             <span class="w-24 font-mono text-[10px] text-text-tertiary">${fmtDay(r.measured_on)}</span>
             <span class="flex-1 font-mono text-xs ${own === false ? "text-warning" : own === true ? "text-success" : "text-text-primary"}">${r.value}${r.unit ? ` ${esc(r.unit)}` : ""}</span>
-            <span class="font-mono text-[10px] text-text-muted">${esc(rangeLabel(r) || "no printed range")}</span>
+            <span class="font-mono text-[10px] text-text-3">${esc(rangeLabel(r) || "no printed range")}</span>
           </div>`;
         }).join("")}
       </div>

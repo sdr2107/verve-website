@@ -13,8 +13,8 @@
  */
 import { addDays, daysBetween, esc, fmtDay } from "./format.ts";
 
-/** The tokens, as hex, for SVG: the same values global.css carries. */
-export const C = { accent: "#A9ABF7", accentText: "#C7C9FF", good: "#34D399", caution: "#D9A441", concern: "#F87171", text: "#F2F2F7", text2: "#A9A9B8", text3: "#8B8BA0", text4: "#55556A", border: "#262636", borderStrong: "#32324A", alt: "#1B1B27", card: "#15151F", canvas: "#0D0D15", z2: "#97C459", z3: "#3B6D11", z3text: "#5E9A2A" };
+/** The tokens, by name, for SVG: each drawing takes its colours from the page's theme, so one string is right in light and in dark. */
+export const C = { accent: "var(--color-accent)", accentText: "var(--color-accent-text)", good: "var(--color-good)", caution: "var(--color-caution)", concern: "var(--color-concern)", text: "var(--color-text)", text2: "var(--color-text-2)", text3: "var(--color-text-3)", text4: "var(--color-text-4)", border: "var(--color-border)", borderStrong: "var(--color-border-strong)", alt: "var(--color-alt)", card: "var(--color-card)", canvas: "var(--color-canvas)", z2: "var(--color-z2)", z3: "var(--color-z3)", z3text: "var(--color-z3-text)" };
 const MONO = "JetBrains Mono, ui-monospace, monospace";
 const axisText = (x: number, y: number, t: string, anchor = "start") => `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}" fill="${C.text3}" font-size="10" font-family="${MONO}">${esc(t)}</text>`;
 const shortDay = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -77,7 +77,7 @@ export function bedWakeSvg(nights: NightSpan[], usual: { start: number; end: num
   nights.forEach((n, i) => {
     const yy = T + i * rowH + rowH / 2;
     s += axisText(4, yy + 4, n.label);
-    if (n.startMin == null || n.endMin == null) { s += `<text x="${x(lo + 60)}" y="${(yy + 4).toFixed(1)}" fill="${C.text4}" font-size="10" font-family="${MONO}">—</text>`; return; }
+    if (n.startMin == null || n.endMin == null) { s += `<text x="${x(lo + 60)}" y="${(yy + 4).toFixed(1)}" fill="${C.text3}" font-size="10" font-family="${MONO}">—</text>`; return; }
     s += `<rect x="${x(n.startMin).toFixed(1)}" y="${(yy - rowH * 0.28).toFixed(1)}" width="${Math.max(2, x(n.endMin) - x(n.startMin)).toFixed(1)}" height="${(rowH * 0.56).toFixed(1)}" rx="3" fill="${n.late ? C.caution : C.accent}" fill-opacity="${n.late ? 0.85 : 0.7}"><title>${esc(`${fmtDay(n.day)}: ${hm(n.startMin)} to ${hm(n.endMin)}`)}</title></rect>`;
   });
   return s;
@@ -120,7 +120,7 @@ export function weekBarsSvg(weeks: WeekBar[]): string {
   s += `<line x1="${L}" y1="${y(goal).toFixed(1)}" x2="${W - R}" y2="${y(goal).toFixed(1)}" stroke="${C.accent}" stroke-opacity="0.7" stroke-dasharray="4 4"/>` + axisText(4, y(goal) + 4, goal.toLocaleString());
   weeks.forEach((w, i) => {
     const cx = L + slot * i + slot / 2;
-    if (w.dose == null) { s += `<text x="${cx.toFixed(1)}" y="${(H - B - 6).toFixed(1)}" text-anchor="middle" fill="${C.text4}" font-size="12" font-family="${MONO}">—</text>`; }
+    if (w.dose == null) { s += `<text x="${cx.toFixed(1)}" y="${(H - B - 6).toFixed(1)}" text-anchor="middle" fill="${C.text3}" font-size="12" font-family="${MONO}">—</text>`; }
     else {
       const top = y(w.dose);
       s += `<rect x="${(cx - bw / 2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${(H - B - top).toFixed(1)}" rx="3" fill="${w.dose >= w.goal ? C.good : C.accent}" fill-opacity="${w.current ? 0.55 : 0.9}"><title>${esc(`${w.label}: ${w.dose.toLocaleString()} MET-min of ${w.goal.toLocaleString()}`)}</title></rect>`;

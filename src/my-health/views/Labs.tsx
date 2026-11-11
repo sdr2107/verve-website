@@ -31,8 +31,8 @@ function Row({ name, rs }: { name: string; rs: any[] }) {
         </span>
         <svg class="hidden shrink-0 sm:block" width="120" height="28" viewBox="0 0 120 28" dangerouslySetInnerHTML={{ __html: sparkSvg(rs) }} />
         <span class={`shrink-0 whitespace-nowrap text-right font-mono text-xs ${valColor}`}>{latest.value}{latest.unit ? ` ${latest.unit}` : ""}</span>
-        <span class="hidden w-24 shrink-0 truncate text-right font-mono text-[10px] text-text-muted sm:inline" title={rangeLabel(latest)}>{rangeLabel(latest)}</span>
-        <span class="text-text-muted">{open ? "▾" : "▸"}</span>
+        <span class="hidden w-24 shrink-0 truncate text-right font-mono text-[10px] text-text-3 sm:inline" title={rangeLabel(latest)}>{rangeLabel(latest)}</span>
+        <span class="text-text-3">{open ? "▾" : "▸"}</span>
       </button>
       {/* A computed figure that needs a sentence: the arithmetic in the report's own numbers, then what it means. */}
       {open && explain ? (
@@ -89,7 +89,7 @@ export function Labs() {
               class={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[13px] transition-colors ${on ? "bg-accent/15 font-bold text-text-primary" : "text-text-secondary hover:bg-ink/[0.05]"}`}>
               <span class="flex-1">{SECTIONS[s]}</span>
               <span class={`rounded-md ${flagged ? "bg-warning/15 text-warning" : "bg-ink/[0.06] text-text-tertiary"} px-1.5 py-0.5 font-mono text-[9px] font-semibold tracking-wider`}>{rows.length}{flagged ? ` · ${flagged}!` : ""}</span>
-              <span class="text-text-muted md:hidden">›</span>
+              <span class="text-text-3 md:hidden">›</span>
             </button>
           );
         })}

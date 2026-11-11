@@ -73,7 +73,7 @@ export function mountMessages(root: HTMLElement, supabase: SupabaseClient, onUnr
     <div class="mt-4 hidden" data-m="pinform"></div>
     <div class="mt-4 flex flex-col gap-2.5" data-m="list"></div>
     <div class="mt-4 r-card border border-border bg-card p-3" data-m="composer">
-      <textarea rows="2" maxlength="4000" data-m="text" placeholder="Reply…" class="t-body w-full resize-none bg-transparent px-1 text-text placeholder:text-text-4 focus:outline-none"></textarea>
+      <textarea rows="2" maxlength="4000" data-m="text" placeholder="Reply…" class="t-body w-full resize-none bg-transparent px-1 text-text placeholder:text-text-3 focus:outline-none"></textarea>
       <div class="mt-2 flex flex-wrap items-center gap-3">
         <label class="t-small flex cursor-pointer items-center gap-1.5 font-semibold text-text-2 hover:text-text">${ICON.clip}<input type="file" accept="application/pdf,image/png,image/jpeg,image/webp" class="hidden" data-m="file" />Attach</label>
         <span class="t-caption text-text-3" data-m="filename"></span>
@@ -81,7 +81,7 @@ export function mountMessages(root: HTMLElement, supabase: SupabaseClient, onUnr
         <button type="button" data-m="send" class="r-btn min-h-9 bg-accent px-4 text-[13px] font-semibold text-canvas transition-opacity hover:opacity-90 disabled:opacity-50">Send</button>
       </div>
     </div>
-    <p class="t-caption mt-3 text-text-4">Not for emergencies: messages may not be read quickly. For symptoms, call your doctor or emergency services.</p>`;
+    <p class="t-caption mt-3 text-text-3">Not for emergencies: messages may not be read quickly. For symptoms, call your doctor or emergency services.</p>`;
 
   const $m = (k: string) => root.querySelector(`[data-m="${k}"]`) as HTMLElement;
   const say = (t: string) => { $m("msg").textContent = t; };

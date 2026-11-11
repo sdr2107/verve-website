@@ -28,7 +28,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
 -->
 
 <Layout
-  title="My health — Verve"
+  title="My health · Verve"
   description="Sign in with your Verve account, drop old lab reports, and their values file themselves into your app and your own lab dashboard."
   cardType="summary"
   theme="app"
@@ -100,7 +100,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         <ul class="mt-1 hidden flex-col gap-3.5 lg:flex">
           <li class="flex items-start gap-3.5">
             <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-accent/[0.14]">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14" /></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14" /></svg>
             </span>
             <span>
               <span class="block text-[15px] font-semibold text-text-primary">Drop a report</span>
@@ -109,7 +109,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           </li>
           <li class="flex items-start gap-3.5">
             <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-success/[0.12]">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l4 4L19 7" /></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-good)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l4 4L19 7" /></svg>
             </span>
             <span>
               <span class="block text-[15px] font-semibold text-text-primary">Every value read</span>
@@ -118,7 +118,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           </li>
           <li class="flex items-start gap-3.5">
             <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-warning/[0.12]">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2" /><path d="M11 18h2" /></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-caution)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2" /><path d="M11 18h2" /></svg>
             </span>
             <span>
               <span class="block text-[15px] font-semibold text-text-primary">The app&rsquo;s markers go to your phone</span>
@@ -131,6 +131,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
 
       <!-- the card: one primary action, the alternative under a rule -->
       <div class="mt-6 rounded-[20px] border border-ink/10 bg-ink/[0.03] p-5 sm:p-7 lg:mt-0">
+        <!-- a visitor who pressed "Keep it" on the landing page: the number waits in this browser until they are in -->
+        <p id="keepline" role="status" class="mb-4 hidden rounded-[10px] border border-accent-border bg-accent-fill px-4 py-3 text-[14px] font-medium leading-snug text-accent-text"></p>
         <div class="flex w-full gap-1 rounded-full border border-ink/10 bg-ink/[0.04] p-1 sm:w-fit">
           <button type="button" data-mode="signin" class="min-h-10 flex-1 rounded-full px-4 py-1.5 text-[13px] font-bold sm:flex-none">Sign in</button>
           <button type="button" data-mode="signup" class="min-h-10 flex-1 rounded-full px-4 py-1.5 text-[13px] font-semibold sm:flex-none">Create account</button>
@@ -162,7 +164,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         </div>
         <div id="appleor" class="mt-4 flex items-center gap-3">
           <div class="h-px flex-1 bg-ink/10"></div>
-          <span class="text-xs text-text-muted">or with email</span>
+          <span class="text-xs text-text-3">or with email</span>
           <div class="h-px flex-1 bg-ink/10"></div>
         </div>
 
@@ -170,12 +172,12 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <div id="namerow" class="hidden">
             <label for="fullname" class="mb-1.5 block text-xs font-semibold text-text-secondary">Your name</label>
             <input id="fullname" type="text" autocomplete="name" placeholder="How the app should greet you"
-              class="w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-3 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none sm:text-sm" />
+              class="w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-3 text-[15px] text-text-primary placeholder:text-text-3 focus:border-accent focus:outline-none sm:text-sm" />
           </div>
           <div>
             <label for="email" class="mb-1.5 block text-xs font-semibold text-text-secondary">Email</label>
             <input id="email" type="email" required placeholder="you@example.com" autocomplete="email"
-              class="w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-3 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none sm:text-sm" />
+              class="w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-3 text-[15px] text-text-primary placeholder:text-text-3 focus:border-accent focus:outline-none sm:text-sm" />
           </div>
           <div>
             <div class="mb-1.5 flex items-baseline justify-between">
@@ -184,7 +186,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
             </div>
             <div class="relative">
               <input id="password" type="password" placeholder="Password" autocomplete="current-password"
-                class="w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-3 pr-12 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none sm:text-sm" />
+                class="w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-3 pr-12 text-[15px] text-text-primary placeholder:text-text-3 focus:border-accent focus:outline-none sm:text-sm" />
               <button type="button" data-eye="password" aria-label="Show password"
                 class="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-text-tertiary hover:text-text-primary">
                 <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -193,7 +195,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           </div>
           <!-- consent, affirmative and unticked: an account is not a newsletter -->
           <label id="newsletterrow" class="hidden items-start gap-2.5 text-xs leading-relaxed text-text-secondary">
-            <input id="newsletter" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0 accent-[#818cf8]" />
+            <input id="newsletter" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0 accent-accent" />
             <span>Send me the Verve newsletter: an email now and then on the science, and what changed in the app. Unsubscribe any time.</span>
           </label>
           <button type="submit" id="authsubmit"
@@ -204,7 +206,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
 
         <div id="ordiv" class="mt-4 flex items-center gap-3">
           <div class="h-px flex-1 bg-ink/10"></div>
-          <span class="text-xs text-text-muted">or</span>
+          <span class="text-xs text-text-3">or</span>
           <div class="h-px flex-1 bg-ink/10"></div>
         </div>
 
@@ -285,20 +287,14 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
            always were; from lg they are a column on the left that stays
            put while the page scrolls, so the page itself is only about the
            one person picked. -->
-      <aside class="pt-5 lg:sticky lg:top-6 lg:flex lg:min-h-[72vh] lg:w-[220px] lg:shrink-0 lg:flex-col lg:gap-5 lg:pt-8">
+      <aside id="mhside" data-nav="page" class="pt-5 lg:sticky lg:top-6 lg:flex lg:min-h-[72vh] lg:w-[220px] lg:shrink-0 lg:flex-col lg:gap-5 lg:pt-8">
         <!-- Everything here is in the markup from the first byte (board 9):
              a slot with nothing behind it yet is dimmed, never absent, so the
              sidebar you see at 0.0 s is the sidebar you see at 2.0 s. -->
-        <!-- which account this is: the sign-in method and the address (Apple may hide it behind a relay) -->
-        <div id="whoami" class="min-h-[40px] px-3" data-dim="1">
-          <div class="t-eyebrow" id="whoamikind">Signed in</div>
-          <div class="mt-1 break-all text-[12px] leading-snug text-text-2" id="whoamiaddr"></div>
-        </div>
         <div id="peoplewrap" class="min-h-[44px]" data-dim="1">
           <!-- two places on one sign-in: your own health, and your clients (only when someone shares with you) -->
           <div id="spaceswitch" class="mb-3"></div>
-          <h3 class="t-eyebrow mb-2 hidden px-3 lg:block">People</h3>
-          <!-- one control: the name of whose page this is, with the menu under it -->
+          <!-- one control: the name of whose page this is, with the menu under it (no heading: "People" names the group below) -->
           <div id="people" class="relative"></div>
         </div>
         <!-- the tabs, in the app's order, each with its sub-links; the sub-links of the
@@ -328,6 +324,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           </div>
           <button type="button" class="mh-tab" data-tab="horizon" id="horizontab"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17h18"/><path d="M6 17a6 6 0 0 1 12 0"/><path d="M12 3v2M4.9 7.9l1.4 1.4M19.1 7.9l-1.4 1.4"/></svg><span>Horizon</span><span class="mh-badge">Pro</span></button>
           <div data-sub="horizon" role="group" aria-label="horizon sections"></div>
+          <h3 class="t-eyebrow mb-2 mt-5 hidden px-3 lg:block">Records</h3>
           <button type="button" class="mh-tab" data-tab="body"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6l-5.5 9a2 2 0 0 0 1.7 3h11.6a2 2 0 0 0 1.7-3L14 9V3"/></svg><span>Body</span><span data-count class="mh-count"></span></button>
           <div data-sub="body" role="group" aria-label="body sections">
             <button type="button" class="mh-sub" data-tab-for="body" data-section="metabolic">Metabolic</button>
@@ -336,20 +333,41 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
             <button type="button" class="mh-sub" data-tab-for="body" data-section="reports">Lab reports</button>
           </div>
           <button type="button" class="mh-tab" data-tab="reports"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg><span>Reports</span><span data-count class="mh-count"></span></button>
+          <h3 class="t-eyebrow mb-2 mt-5 hidden px-3 lg:block">People</h3>
           <button type="button" class="mh-tab" data-tab="messages" id="messagestab" data-dim="1"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span>Messages</span><span data-count class="mh-count"></span></button>
-          <h3 class="t-eyebrow mb-2 mt-5 hidden px-3 lg:block">Account</h3>
-          <!-- who can see this page: the entry opens the panel on the page -->
+          <!-- who can see this page: the entry opens the panel over the page -->
           <div id="accesswrap" data-dim="1">
-            <button type="button" id="accessgo" class="mh-tab w-full"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span class="flex min-w-0 flex-col leading-snug"><span>Access</span><span id="accesssub" class="t-caption font-normal text-text-3"></span></span></button>
+            <button type="button" id="accessgo" class="mh-tab w-full"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span>Sharing</span><span id="accesssub" class="mh-count"></span></button>
           </div>
-          <!-- download what this page shows: the person's own data, or what a share lets you see -->
-          <div id="exportwrap" class="mh-tab cursor-default" data-dim="1">
-            <svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span id="exportlabel">Download</span>
-            <span class="ml-auto flex gap-1"><button type="button" id="exportcsv" class="mh-chip">CSV</button><button type="button" id="exportjson" class="mh-chip">JSON</button></span>
-          </div>
-          <a href="/plans" id="planwrap" class="mh-tab"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span>Plan</span><span id="planname" class="mh-count">Free</span></a>
         </nav>
-        <p class="t-caption mt-auto hidden px-3 text-text-3 lg:block">Drag a PDF anywhere on this page to add it.</p>
+        <!-- Settings has its own navigation; it takes the sidebar's place while Settings is open (board 08) -->
+        <nav id="settingsnav" aria-label="Settings" class="mt-4 flex flex-wrap gap-1 lg:mt-0 lg:flex-col lg:gap-0.5">
+          <h3 class="t-eyebrow mb-2 hidden px-3 lg:block">Settings</h3>
+          <button type="button" class="mh-tab" data-settings="profile"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Profile</span></button>
+          <button type="button" class="mh-tab" data-settings="plan"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span>Plan and billing</span></button>
+          <button type="button" class="mh-tab" data-settings="email"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span>Email and notifications</span></button>
+          <button type="button" class="mh-tab" data-settings="sharing"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span>Sharing</span></button>
+          <button type="button" class="mh-tab" data-settings="data"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span>Data</span></button>
+          <button type="button" class="mh-tab" data-settings="appearance"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span>Appearance</span></button>
+          <button type="button" id="settingsback" class="mh-tab lg:mt-4"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg><span>Back to my page</span></button>
+        </nav>
+        <!-- the account, at the bottom-left: the name and the plan as the server knows it; the menu opens above it -->
+        <div id="acct" class="relative mt-4 lg:mt-auto" data-dim="1">
+          <div id="acctmenu" role="menu" aria-label="Account" class="absolute left-0 right-0 top-full z-20 mt-2 hidden flex-col rounded-[12px] border border-border bg-card p-1.5 shadow-xl shadow-shade lg:bottom-full lg:top-auto lg:mb-2 lg:mt-0">
+            <button type="button" role="menuitem" class="mh-menuitem" data-acct="settings"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Settings</span></button>
+            <button type="button" role="menuitem" class="mh-menuitem" data-acct="appearance"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span>Appearance</span></button>
+            <a role="menuitem" class="mh-menuitem" href="/how-it-works/"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7M12 17h.01"/></svg><span>Help</span></a>
+            <button type="button" role="menuitem" class="mh-menuitem" data-acct="signout"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg><span>Sign out</span></button>
+          </div>
+          <div class="flex items-center gap-2.5 rounded-[12px] border border-border bg-card px-2.5 py-2">
+            <button type="button" id="acctavatar" data-acct-toggle aria-label="Account menu" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-fill text-[13px] font-semibold text-accent-text"></button>
+            <span class="flex min-w-0 flex-1 flex-col leading-tight">
+              <button type="button" id="acctname" data-acct-toggle class="truncate text-left text-[13.5px] font-semibold text-text"></button>
+              <button type="button" id="acctplan" title="Your plan" class="truncate text-left text-[12px] text-text-3 transition-colors hover:text-text">Free</button>
+            </span>
+            <button type="button" id="acctchev" data-acct-toggle aria-label="Account menu" aria-haspopup="menu" aria-expanded="false" class="flex h-8 w-7 shrink-0 items-center justify-center rounded-[8px] text-text-3 transition-colors hover:text-text"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg></button>
+          </div>
+        </div>
       </aside>
 
       <!-- ═══ THE PAGE: one person ═══════════════════════════════════════ -->
@@ -362,7 +380,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <div id="oveyebrow" class="t-eyebrow mb-2 min-h-[14px]"></div>
           <div class="flex items-center gap-2.5">
             <h1 id="greet" class="t-display min-h-[32px] text-text"></h1>
-            <button type="button" id="namechange" aria-label="Change your name" title="Change your name" class="hidden text-text-muted transition-colors hover:text-text-primary">
+            <button type="button" id="namechange" aria-label="Change your name" title="Change your name" class="hidden text-text-3 transition-colors hover:text-text-primary">
               <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
             </button>
           </div>
@@ -371,7 +389,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <form id="nameform" class="mt-3 hidden flex-wrap items-center gap-2">
             <label for="namein" class="text-[13px] text-text-secondary">What should we call you?</label>
             <input id="namein" type="text" autocomplete="given-name" placeholder="Your first name"
-              class="w-44 max-w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none sm:text-sm" />
+              class="w-44 max-w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-3 focus:border-accent focus:outline-none sm:text-sm" />
             <button type="submit" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Save</button>
             <button type="button" id="namelater" class="text-xs font-medium text-text-tertiary hover:text-text-primary">Not now</button>
           </form>
@@ -384,7 +402,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
                  forwards only senders Apple has on file, so the letter needs one it can reach -->
             <span id="newsrelay" class="hidden basis-full text-[13px] text-text-secondary">Apple hides your address from Verve, so the letter needs one it can reach: where should it go?</span>
             <input id="newsemail" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" aria-label="The address to send the newsletter to"
-              class="hidden w-60 max-w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none sm:text-sm" />
+              class="hidden w-60 max-w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-3 focus:border-accent focus:outline-none sm:text-sm" />
             <button type="button" id="newsyes" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas transition-opacity hover:opacity-90 disabled:opacity-60">Yes, send it</button>
             <button type="button" id="newsno" class="text-xs font-medium text-text-tertiary hover:text-text-primary">No thanks</button>
             <span id="newsmsg" class="hidden basis-full text-[12.5px] leading-snug text-text-primary" role="status" aria-live="polite"></span>
@@ -405,15 +423,15 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           </div>
           <label id="personnamewrap" class="flex flex-col gap-1 text-[12px] text-text-secondary">Their name
             <input id="personname" type="text" autocomplete="off" placeholder="Amma" maxlength="60" required
-              class="w-48 max-w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
+              class="w-48 max-w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-3 focus:border-accent focus:outline-none" />
           </label>
           <label id="personbornwrap" class="flex flex-col gap-1 text-[12px] text-text-secondary">Born, year (optional)
             <input id="personborn" type="number" inputmode="numeric" min="1900" max="2100" placeholder="1958"
-              class="w-28 rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
+              class="w-28 rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-3 focus:border-accent focus:outline-none" />
           </label>
           <label id="personemailwrap" class="hidden flex-col gap-1 text-[12px] text-text-secondary">Their email
             <input id="personemail" type="email" autocomplete="off" placeholder="umar@example.com"
-              class="w-64 max-w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
+              class="w-64 max-w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-3 focus:border-accent focus:outline-none" />
           </label>
           <button type="submit" id="personsave" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Add</button>
           <button type="button" id="personcancel" class="min-h-10 px-2 text-xs font-medium text-text-tertiary hover:text-text-primary">Cancel</button>
@@ -424,7 +442,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         <div id="personnotewrap" class="mt-3 hidden max-w-3xl">
           <label for="personnote" class="font-mono text-[10px] font-semibold tracking-wider text-text-tertiary">NOTE &middot; ONLY YOU SEE THIS</label>
           <textarea id="personnote" rows="2" placeholder="On metformin since June. Next HbA1c due December."
-            class="mt-1 w-full resize-none rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[14px] leading-relaxed text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"></textarea>
+            class="mt-1 w-full resize-none rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[14px] leading-relaxed text-text-primary placeholder:text-text-3 focus:border-accent focus:outline-none"></textarea>
         </div>
         <!-- the note a coach or clinician keeps on a page shared with them: a
              copy for their convenience, exportable, and gone from here when
@@ -435,7 +453,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
             <button type="button" id="notesexport" class="text-[12px] font-medium text-text-tertiary hover:text-text-primary">Export all my notes</button>
           </div>
           <textarea id="viewernote" rows="2" placeholder="Seen 7 Oct. Walk test 540 m. Retest in eight weeks."
-            class="mt-1 w-full resize-none rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[14px] leading-relaxed text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"></textarea>
+            class="mt-1 w-full resize-none rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[14px] leading-relaxed text-text-primary placeholder:text-text-3 focus:border-accent focus:outline-none"></textarea>
         </div>
         <!-- the message count rides on the Messages tab and the plan on the Account group (board 1): nothing pops in here -->
         <!-- over the plan's people: the next person is not added, and this says why -->
@@ -463,9 +481,9 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       <div id="mhsearchwrap" class="mt-3 hidden max-w-3xl">
         <label for="mhsearch" class="sr-only">Search reports and markers</label>
         <div class="flex items-center gap-2 rounded-xl border border-ink/12 bg-ink/[0.04] px-3 focus-within:border-accent/60">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="shrink-0 text-text-muted" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="shrink-0 text-text-3" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
           <input id="mhsearch" type="search" autocomplete="off" spellcheck="false" placeholder="Search: ApoB, echo, March 2024, a report's name…"
-            class="min-h-10 w-full bg-transparent text-[14px] text-text-primary placeholder:text-text-muted focus:outline-none" />
+            class="min-h-10 w-full bg-transparent text-[14px] text-text-primary placeholder:text-text-3 focus:outline-none" />
           <button type="button" id="mhsearchclear" class="hidden shrink-0 text-xs font-semibold text-text-tertiary hover:text-text-primary">Clear</button>
         </div>
         <p id="mhsearchnote" class="mt-1.5 hidden text-[12px] text-text-tertiary"></p>
@@ -526,10 +544,10 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
             <div class="rounded-2xl border border-ink/10 bg-ink/[0.03] p-4">
               <h3 class="text-[15px] font-extrabold text-text-primary">Retest due</h3>
               <div id="glancedue" class="mt-2 flex flex-col gap-1.5 text-[13px] leading-relaxed text-text-secondary"></div>
-              <p class="mt-2 text-[12px] text-text-muted">Lab cadences are the cited ones on the marker pages. A person sees the same due dates on their own In depth tab.</p>
+              <p class="mt-2 text-[12px] text-text-3">Lab cadences are the cited ones on the marker pages. A person sees the same due dates on their own In depth tab.</p>
             </div>
           </div>
-          <p class="mt-2 text-[12px] text-text-muted">Consent decides what you see: nothing here shows without the person's tick, and they can stop at any time.</p>
+          <p class="mt-2 text-[12px] text-text-3">Consent decides what you see: nothing here shows without the person's tick, and they can stop at any time.</p>
         </section>
       </div>
 
@@ -543,13 +561,15 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
            carries the card. Every slot is in the markup with its height, so
            nothing arrives after the first paint. -->
       <div id="tab-overview" class="mt-5 hidden">
+        <!-- "Keep it", the far side: the number a visitor brought is on the page, and the 14 days if they started -->
+        <div id="keepcard" class="mb-5 hidden max-w-3xl rounded-[16px] border border-accent-border bg-accent-fill p-5"></div>
         <p id="ovline" class="t-body min-h-[46px] max-w-3xl text-text-2"></p>
         <div id="guidepointer" class="mt-4 h-[56px]"></div>
         <div id="ovglance" class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"></div>
         <!-- values for the app that were read but never sent: one line, until it is done -->
         <div id="tosend" class="mt-4 hidden flex-wrap items-center gap-3 rounded-2xl border border-accent/30 bg-accent/[0.06] px-4 py-3.5">
           <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-accent/[0.16]">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-text)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg>
           </span>
           <span id="tosendtext" class="min-w-0 flex-1 text-[13px] leading-relaxed text-text-secondary"></span>
           <button id="tosendgo" class="min-h-10 rounded-full bg-accent px-4 py-2 text-[13px] font-semibold text-canvas transition-opacity hover:opacity-90">Review and send &rarr;</button>
@@ -573,11 +593,11 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <div class="font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">Where the readings come from</div>
           <div class="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] sm:items-center">
             <div class="rounded-2xl border border-ink/14 px-4 py-3 text-center"><span class="block text-sm font-extrabold text-text-primary">Whatever you wear</span><span class="mt-0.5 block text-[11.5px] text-text-tertiary">Apple Watch, Garmin, Oura, WHOOP, Samsung, a phone alone</span></div>
-            <span class="hidden text-center text-xl text-text-muted sm:block" aria-hidden="true">&rarr;</span>
+            <span class="hidden text-center text-xl text-text-3 sm:block" aria-hidden="true">&rarr;</span>
             <div class="rounded-2xl border border-ink/14 px-4 py-3 text-center"><span class="block text-sm font-extrabold text-text-primary">Apple Health &middot; Health Connect</span><span class="mt-0.5 block text-[11.5px] text-text-tertiary">the phone's own store; the wearable's app writes to it</span></div>
-            <span class="hidden text-center text-xl text-text-muted sm:block" aria-hidden="true">&rarr;</span>
+            <span class="hidden text-center text-xl text-text-3 sm:block" aria-hidden="true">&rarr;</span>
             <div class="rounded-2xl border border-ink/14 px-4 py-3 text-center"><span class="block text-sm font-extrabold text-text-primary">Verve on the phone</span><span class="mt-0.5 block text-[11.5px] text-text-tertiary">reads the store, never one maker's cloud</span></div>
-            <span class="hidden text-center text-xl text-text-muted sm:block" aria-hidden="true">&rarr;</span>
+            <span class="hidden text-center text-xl text-text-3 sm:block" aria-hidden="true">&rarr;</span>
             <div class="rounded-2xl border border-ink/14 px-4 py-3 text-center"><span class="block text-sm font-extrabold text-text-primary">This page</span><span class="mt-0.5 block text-[11.5px] text-text-tertiary">the same daily signals, with the writer's name</span></div>
           </div>
           <p class="mt-3 text-[12.5px] leading-relaxed text-text-secondary">Verve depends on the store, not on any wearable. What reaches this page is what your device's app chose to write there, and each card says who wrote it and what that writer leaves out, so a missing stage or a missing HRV is named, never guessed.</p>
@@ -669,7 +689,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
             <dt class="font-bold text-text-primary">Max</dt><dd>Your family, up to five in all. Each person on the plan has Pro, here and in the app.</dd>
             <dt class="font-bold text-text-primary">Enterprise</dt><dd>Client seats, counted at Coach. In depth on each client, the group table. A paid seat is a paid seat: each client has Pro through it, here and in the app, and their history stays theirs.</dd>
           </dl>
-          <p class="mt-3 text-[12px] leading-relaxed text-text-muted">Everything already on file stays visible if a plan lapses: the trends, the years, View PDF, sending to the app. The gate is on new drops only. <a href="/plans" class="font-semibold text-accent-light hover:text-text-primary">See the plans</a></p>
+          <p class="mt-3 text-[12px] leading-relaxed text-text-3">Everything already on file stays visible if a plan lapses: the trends, the years, View PDF, sending to the app. The gate is on new drops only. <a href="/plans" class="font-semibold text-accent-light hover:text-text-primary">See the plans</a></p>
         </section>
 
         <!-- the report names someone else: held here, nothing filed, until you say whose it is -->
@@ -703,7 +723,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
             <div class="mt-4 flex flex-wrap items-center gap-3">
               <button id="confirm"
                 class="rounded-xl bg-accent px-5 py-3 text-sm font-bold text-canvas transition-opacity hover:opacity-90 disabled:opacity-50"></button>
-              <span class="text-xs text-text-muted">
+              <span class="text-xs text-text-3">
                 Duplicates — same marker, same date, same value — are never sent twice.
               </span>
             </div>
@@ -723,7 +743,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
             <button id="discard" class="rounded-xl border border-ink/14 px-4 py-2.5 text-sm font-semibold text-text-secondary transition-colors hover:border-ink/25">
               Close review
             </button>
-            <span class="text-xs text-text-muted">Everything above is already on your Labs tab — closing loses nothing.</span>
+            <span class="text-xs text-text-3">Everything above is already on your Labs tab — closing loses nothing.</span>
           </div>
         </div>
 
@@ -733,17 +753,76 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         <!-- the next step in the chain: picture, what moved, values, paper -->
         <button type="button" data-goto="overview" class="mt-8 flex w-full max-w-3xl items-center justify-between gap-4 rounded-2xl border border-ink/12 bg-ink/[0.03] px-5 py-4 text-left transition-colors hover:border-ink/25 hover:bg-ink/[0.05]">
           <span class="min-w-0"><span class="block font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary">BACK</span><span class="mt-1 block text-[14.5px] font-bold text-text-primary">Overview: this week so far, in six cards</span></span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-text)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </button>
       </div>
 
-      <p class="mt-10 text-xs leading-5 text-text-muted">
+      <!-- ═══ SETTINGS (board 08) ═══════════════════════════════════════════
+           One page for the plan, the emails and the data, reached from the
+           name at the bottom-left. Profile, Sharing and Data are the controls
+           the page already had, gathered here; Plan and billing, Email and
+           notifications and Appearance are drawn by views/Settings.tsx. -->
+      <div id="tab-settings" class="hidden pt-5 sm:pt-8">
+        <div class="t-eyebrow mb-2">Your account</div>
+        <h1 class="t-display text-text">Settings</h1>
+        <div class="mt-6 grid max-w-5xl gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] xl:items-start">
+          <div class="flex min-w-0 flex-col gap-4">
+            <section id="settings-profile" data-settings-section="profile" class="rounded-[16px] border border-border bg-card p-5 scroll-mt-6">
+              <h2 class="m-0 text-[18px] font-semibold text-text">Profile</h2>
+              <div class="mt-3 flex flex-col">
+                <div class="grid gap-x-4 gap-y-1 py-3 sm:grid-cols-[132px_minmax(0,1fr)]">
+                  <div class="text-[13px] text-text-3">Name</div>
+                  <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1"><span id="setname" class="min-w-0 truncate text-[15px] font-medium text-text">—</span><button type="button" id="setnamechange" class="text-[13px] font-semibold text-accent-text">Change</button></div>
+                </div>
+                <!-- which account this is: the sign-in method and the address (Apple may hide it behind a relay) -->
+                <div id="whoami" class="grid gap-x-4 gap-y-1 border-t border-border py-3 sm:grid-cols-[132px_minmax(0,1fr)]" data-dim="1">
+                  <div class="text-[13px] text-text-3" id="whoamikind">Signed in</div>
+                  <div class="min-w-0 break-all text-[14px] leading-snug text-text-2" id="whoamiaddr"></div>
+                </div>
+              </div>
+              <p class="m-0 mt-1 text-[12.5px] leading-relaxed text-text-3">The same sign-in as the app. The name is the one the app greets you with.</p>
+            </section>
+            <section id="settings-plan" data-settings-section="plan" class="rounded-[16px] border border-border bg-card p-5 scroll-mt-6">
+              <h2 class="m-0 text-[18px] font-semibold text-text">Plan and billing</h2>
+              <div id="setplanroot" class="mt-3"></div>
+            </section>
+            <section id="settings-sharing" data-settings-section="sharing" class="rounded-[16px] border border-border bg-card p-5 scroll-mt-6">
+              <h2 class="m-0 text-[18px] font-semibold text-text">Sharing</h2>
+              <p id="setsharingline" class="m-0 mt-3 text-[15px] font-medium text-text">Only you, so far</p>
+              <p class="m-0 mt-1 text-[12.5px] leading-relaxed text-text-3">Who can see this page, and what each may see. You can change or stop a share at any time.</p>
+              <div class="mt-3"><button type="button" id="setsharinggo" class="inline-flex min-h-10 items-center rounded-full border border-border-strong px-4 text-[13.5px] font-semibold text-text transition-colors hover:border-text-3">Manage sharing</button></div>
+            </section>
+          </div>
+          <div class="flex min-w-0 flex-col gap-4">
+            <section id="settings-email" data-settings-section="email" class="rounded-[16px] border border-border bg-card p-5 scroll-mt-6">
+              <h2 class="m-0 text-[18px] font-semibold text-text">Email and notifications</h2>
+              <div id="setemailroot" class="mt-2"></div>
+            </section>
+            <section id="settings-data" data-settings-section="data" class="rounded-[16px] border border-border bg-card p-5 scroll-mt-6">
+              <h2 class="m-0 text-[18px] font-semibold text-text">Data</h2>
+              <!-- download what this page shows: the person's own data, or what a share lets you see -->
+              <div id="exportwrap" class="mt-3 flex flex-wrap items-center gap-2" data-dim="1">
+                <span id="exportlabel" class="mr-1 text-[14px] text-text-2">Download</span>
+                <button type="button" id="exportcsv" class="inline-flex min-h-10 items-center rounded-full border border-border-strong px-4 text-[13.5px] font-semibold text-text transition-colors hover:border-text-3">Export as CSV</button>
+                <button type="button" id="exportjson" class="inline-flex min-h-10 items-center rounded-full border border-border-strong px-4 text-[13.5px] font-semibold text-text transition-colors hover:border-text-3">Export as JSON</button>
+              </div>
+              <div class="mt-4 border-t border-border pt-4">
+                <button type="button" id="deleteaccount" class="inline-flex min-h-10 items-center rounded-full border border-concern/50 px-4 text-[13.5px] font-semibold text-concern transition-colors hover:border-concern">Delete my account</button>
+                <span id="deletemsg" class="ml-2 text-[12.5px] text-text-3"></span>
+                <p class="m-0 mt-2 text-[12.5px] leading-relaxed text-text-3">Everything on this account goes with it, here and in the app. It cannot be undone.</p>
+              </div>
+            </section>
+            <section id="settings-appearance" data-settings-section="appearance" class="rounded-[16px] border border-border bg-card p-5 scroll-mt-6">
+              <h2 class="m-0 text-[18px] font-semibold text-text">Appearance</h2>
+              <div id="setappearanceroot" class="mt-3"></div>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <p class="mt-10 text-xs leading-5 text-text-3">
         Wellness screening, not a diagnosis — parsing can misread a report, which is
         why you confirm app-bound values. Reports and values are private to your account.
-      </p>
-      <p class="mt-3 text-xs leading-5 text-text-muted">
-        <button type="button" id="deleteaccount" class="underline decoration-ink/25 underline-offset-2 transition-colors hover:text-text-primary">Delete my account</button>
-        <span id="deletemsg" class="ml-2"></span>
       </p>
       </div>
      </div>
@@ -780,7 +859,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         <div class="font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary">GIVE ACCESS TO SOMEONE NEW</div>
         <label class="flex flex-col gap-1 text-[12px] text-text-secondary">Their email
           <input id="shareemail" type="email" required autocomplete="off" placeholder="coach@example.com"
-            class="w-80 max-w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
+            class="w-80 max-w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-3 focus:border-accent focus:outline-none" />
         </label>
         <fieldset class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13.5px] text-text-primary">
           <legend class="mb-1 text-[12px] text-text-secondary">What they see</legend>
@@ -789,11 +868,11 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
             <button type="button" data-preset="clinician" class="min-h-8 rounded-lg border border-ink/12 px-2.5 text-[12px] font-semibold text-text-secondary transition-colors hover:border-ink/25 hover:text-text-primary">a clinician</button>
             <span>or choose yourself.</span>
           </div>
-          <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-scope="labs" class="h-4 w-4 accent-[#818cf8]" />Labs</label>
-          <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-scope="imaging" class="h-4 w-4 accent-[#818cf8]" />Imaging</label>
-          <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-scope="activity" class="h-4 w-4 accent-[#818cf8]" />Activity and fitness</label>
-          <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-scope="body" class="h-4 w-4 accent-[#818cf8]" />Body measurements</label>
-          <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-scope="heart" class="h-4 w-4 accent-[#818cf8]" />Sleep and heart</label>
+          <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-scope="labs" class="h-4 w-4 accent-accent" />Labs</label>
+          <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-scope="imaging" class="h-4 w-4 accent-accent" />Imaging</label>
+          <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-scope="activity" class="h-4 w-4 accent-accent" />Activity and fitness</label>
+          <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-scope="body" class="h-4 w-4 accent-accent" />Body measurements</label>
+          <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-scope="heart" class="h-4 w-4 accent-accent" />Sleep and heart</label>
         </fieldset>
         <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
           <button type="submit" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Send the invitation</button>
@@ -809,7 +888,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   <div id="veil" class="pointer-events-none fixed inset-0 z-50 hidden items-center justify-center bg-canvas-3/75 p-6 backdrop-blur-sm">
     <div class="flex w-full max-w-[560px] flex-col items-center gap-3.5 rounded-3xl border-2 border-dashed border-accent/70 bg-canvas/85 px-8 py-11 text-center">
       <span class="flex h-16 w-16 items-center justify-center rounded-[18px] bg-accent/[0.16]">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-text)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
       </span>
       <p class="text-[26px] font-extrabold tracking-[-0.02em] text-text-primary">Drop to add</p>
       <p class="max-w-[380px] text-[13px] leading-relaxed text-text-secondary">
@@ -829,7 +908,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   @keyframes mh-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes mh-veil { from { opacity: 0; } to { opacity: 1; } }
   @keyframes mh-frame { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
-  @keyframes mh-pulse { 0%, 100% { background-color: transparent; } 40% { background-color: rgba(251, 191, 36, 0.22); } }
+  @keyframes mh-pulse { 0%, 100% { background-color: transparent; } 40% { background-color: color-mix(in srgb, var(--color-caution) 22%, transparent); } }
 
   /* Nothing rises or fades after load (board 9): the page paints once, with every slot in place. */
   /* a tile not tapped steps aside: it fades, blurs and shrinks before the page redraws without it */
@@ -845,11 +924,11 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   /* a slot with nothing behind it yet: dimmed, in place, never absent */
   [data-dim="1"] { opacity: 0.45; }
 
-  /* ── the sidebar: tabs, sub-links, the account group ── */
-  #tabbar .mh-tab { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 6px 12px; border-radius: 10px; font-size: 13.5px; font-weight: 500; color: var(--color-text-2); border-left: 2px solid transparent; white-space: nowrap; text-align: left; transition: color 0.12s, background-color 0.12s; }
-  #tabbar .mh-tab:hover { color: var(--color-text); background: rgba(255, 255, 255, 0.04); }
-  #tabbar .mh-tab[aria-current="page"] { color: var(--color-text); background: var(--color-alt); border-left-color: var(--color-accent); }
-  #tabbar .mh-ico { flex-shrink: 0; }
+  /* ── the sidebar: three groups of tabs with their sub-links, Settings' own navigation, the account at the foot ── */
+  :is(#tabbar, #settingsnav) .mh-tab { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 6px 12px; border-radius: 10px; font-size: 13.5px; font-weight: 500; color: var(--color-text-2); border-left: 2px solid transparent; white-space: nowrap; text-align: left; transition: color 0.12s, background-color 0.12s; }
+  :is(#tabbar, #settingsnav) .mh-tab:hover { color: var(--color-text); background: color-mix(in srgb, var(--color-ink) 4%, transparent); }
+  :is(#tabbar, #settingsnav) .mh-tab[aria-current="page"] { color: var(--color-text); background: var(--color-alt); border-left-color: var(--color-accent); }
+  :is(#tabbar, #settingsnav, #acctmenu) .mh-ico { flex-shrink: 0; }
   #tabbar .mh-badge { margin-left: auto; border-radius: 999px; border: 1px solid var(--color-accent-border); background: var(--color-accent-fill); padding: 1px 7px; font-family: var(--font-mono); font-size: 10px; font-weight: 500; color: var(--color-accent-text); }
   #tabbar .mh-count { margin-left: auto; font-family: var(--font-mono); font-size: 11px; font-weight: 500; color: var(--color-text-3); }
   #tabbar .mh-count:empty { display: none; }
@@ -861,18 +940,26 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   #tabbar[data-active-tab="horizon"] [data-sub="horizon"], #tabbar[data-active-tab="body"] [data-sub="body"] { display: flex; }
   #tabbar .mh-sub { display: flex; align-items: center; min-height: 28px; padding: 3px 10px; border-radius: 8px; font-size: 13px; color: var(--color-text-3); border-left: 2px solid transparent; text-align: left; white-space: nowrap; }
   #tabbar .mh-sub:hover { color: var(--color-text); }
-  #tabbar .mh-sub[aria-current="page"] { color: var(--color-text); border-left-color: var(--color-accent); background: rgba(255, 255, 255, 0.03); }
+  #tabbar .mh-sub[aria-current="page"] { color: var(--color-text); border-left-color: var(--color-accent); background: color-mix(in srgb, var(--color-ink) 3%, transparent); }
   @media (max-width: 1023.98px) {
-    #tabbar h3 { display: none; }
-    #tabbar .mh-tab { border-left: 0; border-bottom: 2px solid transparent; border-radius: 10px 10px 0 0; min-height: 34px; padding: 5px 10px; }
-    #tabbar .mh-tab[aria-current="page"] { background: transparent; border-bottom-color: var(--color-accent); }
+    :is(#tabbar, #settingsnav) h3 { display: none; }
+    :is(#tabbar, #settingsnav) .mh-tab { border-left: 0; border-bottom: 2px solid transparent; border-radius: 10px 10px 0 0; min-height: 34px; padding: 5px 10px; }
+    :is(#tabbar, #settingsnav) .mh-tab[aria-current="page"] { background: transparent; border-bottom-color: var(--color-accent); }
     #tabbar .mh-badge, #tabbar .mh-count { margin-left: 2px; }
     #tabbar [data-sub] { order: 50; flex-direction: row; flex-wrap: wrap; flex-basis: 100%; padding-left: 0; gap: 6px; margin: 6px 0 2px; }
     #tabbar .mh-sub { border: 1px solid var(--color-border); border-radius: 999px; padding: 4px 11px; min-height: 30px; }
     #tabbar .mh-sub[aria-current="page"] { border-color: var(--color-accent-border); background: var(--color-accent-fill); }
-    #tabbar #accesswrap, #tabbar #exportwrap, #tabbar #planwrap { order: 60; }
-    #tabbar #exportwrap, #tabbar #planwrap, #tabbar #accesswrap .mh-tab { min-height: 30px; font-size: 12.5px; padding: 4px 8px; }
+    #tabbar #accesswrap { order: 60; }
   }
+  /* one of the two navigations at a time: the page's tabs, or Settings' own with the way back */
+  #mhside[data-nav="settings"] #peoplewrap, #mhside[data-nav="settings"] #tabbar { display: none; }
+  #mhside[data-nav="page"] #settingsnav { display: none; }
+  /* the account menu: four rows, opened above the name on a desk and below it on a phone */
+  #acctmenu .mh-menuitem { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 6px 10px; border-radius: 8px; font-size: 13.5px; font-weight: 500; color: var(--color-text-2); text-align: left; }
+  #acctmenu .mh-menuitem:hover, #acctmenu .mh-menuitem:focus-visible { color: var(--color-text); background: var(--color-alt); }
+  /* a Settings section reached by its link: one brief ring so the eye finds it */
+  @keyframes mh-find { from { box-shadow: 0 0 0 2px var(--color-accent-border); } to { box-shadow: 0 0 0 2px transparent; } }
+  [data-settings-section].mh-find { animation: mh-find 1.2s ease-out 1; }
   /* a file dragged over the page */
   #veil.flex { animation: mh-veil 0.15s ease-out both; }
   #veil.flex > div { animation: mh-frame 0.18s cubic-bezier(0.2, 0.7, 0.2, 1) 0.05s both; }
@@ -897,11 +984,11 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   @media (min-width: 640px) { .mh-scroll > * { flex-shrink: 1; } }
 
   /* the sign-in card's status line: a quiet row, tinted only when something went wrong */
-  .mh-status { border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); padding: 9px 13px; }
-  .mh-status.text-danger { border-color: rgba(248,113,113,0.30); background: rgba(248,113,113,0.06); }
+  .mh-status { border-radius: 10px; border: 1px solid color-mix(in srgb, var(--color-ink) 8%, transparent); background: color-mix(in srgb, var(--color-ink) 3%, transparent); padding: 9px 13px; }
+  .mh-status.text-danger { border-color: color-mix(in srgb, var(--color-concern) 30%, transparent); background: color-mix(in srgb, var(--color-concern) 6%, transparent); }
 
   @media (prefers-reduced-motion: reduce) {
-    .mh-ring, .mh-open, .mh-slide, #veil.flex, #veil.flex > div, .mh-pulse {
+    .mh-ring, .mh-open, .mh-slide, #veil.flex, #veil.flex > div, .mh-pulse, [data-settings-section].mh-find {
       animation: none; opacity: 1; transform: none; stroke-dashoffset: 0;
     }
   }
@@ -927,6 +1014,9 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   import { mountDepth } from "../my-health/views/Depth";
   import { mountHorizon } from "../my-health/views/Horizon.tsx";
   import { mountPlanSheet } from "../my-health/views/PlanSheet.tsx";
+  import { mountSettings, planInfoSignal } from "../my-health/views/Settings.tsx";
+  import { KEEP_KEY, alreadyKept, browserZone, isSettingsSection, keepCard, keepLine, keepRow, parseKeep, planLine, trialOffered, type Keep, type KeepOutcome, type SettingsSection } from "../my-health/account";
+  import { insertFirstNumber, saveWeekly, startWebTrial, websiteNumbers } from "../my-health/accountApi";
   import { mountReports } from "../my-health/views/Reports";
   import { mountPeople } from "../my-health/views/People";
   import { REPORT_EXT, pretty, stampOf, isPhotoName, unitFits, APP_KEYS, appBoundFor, isSent, reportAppState, pendingReports, uncheckedInApp, type AppBound } from "../my-health/derive/reports";
@@ -1035,6 +1125,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   // ── tiny DOM helpers ───────────────────────────────────────────────────
   const $ = (id: string) => document.getElementById(id)!;
   const show = (id: string, on: boolean) => $(id).classList.toggle("hidden", !on);
+  /** The same, for an element another file may or may not render (the site header's slot). */
+  const showIf = (id: string, on: boolean) => { document.getElementById(id)?.classList.toggle("hidden", !on); };
   /** A slot with nothing behind it yet: dimmed in place, never removed (board 9). */
   const dim = (id: string, on: boolean) => { $(id).dataset.dim = on ? "1" : "0"; };
   /** A status line: grey while something is happening, tinted when it went wrong. */
@@ -1077,13 +1169,16 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   let ent = entitlements("free");
   const enforced = (() => { try { return PLANS_ENFORCED || sessionStorage.getItem("mh-plans-enforce") === "1"; } catch { return PLANS_ENFORCED; } })();
   async function loadPlan() {
-    // Everyone is on the free plan while the plans are dormant (PLANS_OPEN).
-    // The my_plan function was asked for on every load and does not exist;
-    // when plans open, the plan joins the document.
+    // Nothing is held to a plan while the plans are dormant (PLANS_ENFORCED),
+    // so the entitlements stay Free's for everyone. The LABEL is the
+    // server's: the horizon function's `plan` action says whether this
+    // account is Pro and through what (the VIP list, a trial, the website,
+    // the app). It is asked for, never waited for: until it answers, and
+    // whenever it cannot, the line under the name reads as it always did.
     plan = "free";
     ent = entitlements(plan);
     show("whopays", PLANS_OPEN);
-    $("planname").textContent = plan === "free" ? "Free" : planOf(plan).name;
+    void settingsView.refreshPlan();
   }
   const lockCard = (title: string, body: string, cta = "See the plans") => `
     <div class="text-[17px] font-extrabold text-text-primary">${title}</div>
@@ -1485,7 +1580,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     const first = titleCase(printed).split(" ")[0] || "them";
     $("namecheck").innerHTML = `
       <div class="flex items-center gap-2.5">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3 22 20H2Z"/><path d="M12 9v5M12 17v.5"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-caution)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3 22 20H2Z"/><path d="M12 9v5M12 17v.5"/></svg>
         <p class="text-[15px] font-extrabold text-text-primary">This report names ${esc(printed)}, not ${esc(who.self ? "you" : who.name)}.</p>
       </div>
       <p class="text-[13px] leading-relaxed text-text-secondary">${esc(fileName)} was read but not filed. Nothing has gone to any timeline. Whose is it?</p>
@@ -1623,7 +1718,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       return word ? `<span class="inline-flex h-5 items-center rounded-full border border-accent-border bg-accent-fill px-2 font-mono text-[10px] font-semibold tracking-[0.04em] text-accent-text" title="Verified ${esc(x!.role)}${x!.title ? ` · ${esc(x!.title)}` : ""}">${word}</span>` : "";
     };
     const titleOf = (email: string) => pros.get(String(email).toLowerCase())?.title ?? "";
-    $("accesssub").textContent = rows.length ? `${rows.length} ${rows.length === 1 ? "person" : "people"} can see this page` : "Only you, so far";
+    $("accesssub").textContent = rows.length ? `${rows.length} ${rows.length === 1 ? "person" : "people"}` : "";
+    $("setsharingline").textContent = rows.length ? `${rows.length} ${rows.length === 1 ? "person" : "people"} can see this page` : "Only you, so far";
     const APP_SCOPES = new Set(["activity", "body", "heart"]);
     const offered = Object.keys(SCOPE_LABEL).filter((k) => k !== "notes" && (p.account_id || !APP_SCOPES.has(k)));
     $("sharelist").innerHTML = rows.length ? rows.map((g: any) => `
@@ -1641,7 +1737,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <button type="button" data-stop="${g.id}" class="min-h-9 rounded-lg border border-danger/35 px-3 text-[12px] font-semibold text-danger/90 transition-colors hover:border-danger/60 hover:text-danger">${g.status === "active" ? "Stop" : "Cancel"}</button>
         </div>
         <form data-edit="${g.id}" class="mt-3 hidden flex-wrap items-center gap-x-4 gap-y-1 border-t border-ink/[0.06] pt-3 text-[13px] text-text-primary">
-          ${offered.map((k) => `<label class="flex min-h-9 items-center gap-2"><input type="checkbox" value="${k}" ${(g.scopes ?? []).includes(k) ? "checked" : ""} class="h-4 w-4 accent-[#818cf8]" />${esc(SCOPE_LABEL[k])}</label>`).join("")}
+          ${offered.map((k) => `<label class="flex min-h-9 items-center gap-2"><input type="checkbox" value="${k}" ${(g.scopes ?? []).includes(k) ? "checked" : ""} class="h-4 w-4 accent-accent" />${esc(SCOPE_LABEL[k])}</label>`).join("")}
           <span class="ml-auto flex items-center gap-3">
             <button type="button" data-editcancel class="text-[12px] font-medium text-text-tertiary hover:text-text-primary">Cancel</button>
             <button type="submit" class="min-h-9 rounded-lg bg-accent px-3.5 text-[12.5px] font-bold text-canvas transition-opacity hover:opacity-90">Save</button>
@@ -1767,10 +1863,10 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         <p class="text-[14px] text-text-primary"><strong>${esc(r.requester_name || r.requester_email)}</strong> asks to see your My health page.</p>
         <p class="text-[12.5px] text-text-tertiary">Nothing is shared until you say so. Tick what they may see; you can change or stop it later under "Who can see this page".</p>
         <div class="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-text-primary">
-          <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-rscope="labs" class="h-4 w-4 accent-[#818cf8]" />Labs</label>
-          <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-rscope="imaging" class="h-4 w-4 accent-[#818cf8]" />Imaging</label>
-          <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-rscope="activity" class="h-4 w-4 accent-[#818cf8]" />Activity and fitness</label>
-          <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-rscope="body" class="h-4 w-4 accent-[#818cf8]" />Body measurements</label>
+          <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-rscope="labs" class="h-4 w-4 accent-accent" />Labs</label>
+          <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-rscope="imaging" class="h-4 w-4 accent-accent" />Imaging</label>
+          <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-rscope="activity" class="h-4 w-4 accent-accent" />Activity and fitness</label>
+          <label class="flex min-h-9 items-center gap-1.5"><input type="checkbox" data-rscope="body" class="h-4 w-4 accent-accent" />Body measurements</label>
         </div>
         <div class="flex gap-2">
           <button type="submit" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas">Allow</button>
@@ -2206,13 +2302,13 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     const latest = new Map<string, any>();
     for (const r of data ?? []) if (!latest.has(r.person_id)) latest.set(r.person_id, r);
     const monday = mondayOf(new Date());
-    const item = (r: any, who: string) => (r?.summary?.conversations ?? []).filter((c: any) => c.who === who).map((c: any) => esc(String(c.text))).join("<br>") || `<span class="text-text-muted">—</span>`;
+    const item = (r: any, who: string) => (r?.summary?.conversations ?? []).filter((c: any) => c.who === who).map((c: any) => esc(String(c.text))).join("<br>") || `<span class="text-text-3">—</span>`;
     el.innerHTML = `<div class="flex flex-wrap items-center justify-between gap-3"><div><div class="font-mono text-[10.5px] font-semibold tracking-[0.14em] text-accent-light">THE GUIDE · EACH CLIENT</div>
         <div class="mt-1 text-[12.5px] text-text-tertiary">Only what each client shares is read. Open a client for the full read and share it into their Messages.</div></div>
         <button type="button" id="readall" class="rounded-xl border border-violet-400/50 px-3.5 py-1.5 text-[13px] font-bold text-accent-light">Read every client's week</button></div>
       <div class="mt-3 overflow-x-auto"><table class="w-full min-w-[720px] text-[13px]"><thead><tr class="text-left font-mono text-[10px] tracking-wider text-text-tertiary"><th class="px-2 py-2">CLIENT</th><th class="px-2 py-2">DOCTOR</th><th class="px-2 py-2">COACH</th><th class="px-2 py-2">READ</th></tr></thead>
       <tbody class="divide-y divide-ink/[0.06]">${clients.map((p) => { const r = latest.get(p.id); return `<tr data-openread="${p.id}" class="cursor-pointer hover:bg-ink/[0.03]"><td class="px-2 py-2.5 font-semibold text-text-primary">${esc(p.name || "Unnamed")}</td>
-        <td class="px-2 py-2.5 text-danger">${r ? item(r, "doctor") : `<span class="text-text-muted">not read yet</span>`}</td><td class="px-2 py-2.5 text-success-light">${r ? item(r, "coach") : ""}</td>
+        <td class="px-2 py-2.5 text-danger">${r ? item(r, "doctor") : `<span class="text-text-3">not read yet</span>`}</td><td class="px-2 py-2.5 text-success-light">${r ? item(r, "coach") : ""}</td>
         <td class="px-2 py-2.5 font-mono text-[11.5px] ${r && day0(r.created_at) >= monday ? "text-accent-light" : "text-text-tertiary"}">${r ? esc(fmtDay(day0(r.created_at))) : "—"}</td></tr>`; }).join("")}</tbody></table></div>
       <p id="readallmsg" class="mt-2 text-[12.5px] text-text-tertiary"></p>`;
     el.querySelectorAll("[data-openread]").forEach((tr) => tr.addEventListener("click", async () => { await switchPerson((tr as HTMLElement).dataset.openread!); setTab("guide"); }));
@@ -2311,7 +2407,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     const canSeeLabs = (p: Person) => p.self || p.mine || p.scopes.includes("labs");
     $("glancerows").innerHTML = lines.map((l) => {
       const ch = l.act.change;
-      const chTone = ch == null ? "text-text-muted" : ch >= 0.05 ? "text-success-light" : ch <= -0.05 ? "text-danger" : "text-text-secondary";
+      const chTone = ch == null ? "text-text-3" : ch >= 0.05 ? "text-success-light" : ch <= -0.05 ? "text-danger" : "text-text-secondary";
       const tw = l.act.thisWeek?.dose_met_min != null ? String(Math.round(l.act.thisWeek.dose_met_min)) : null;
       const fitTone = l.fit.trendWord === "rising" ? "text-success-light" : l.fit.trendWord === "falling" ? "text-danger" : "text-text-tertiary";
       const labText = l.labRows.length
@@ -2323,10 +2419,10 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         <td class="px-3 py-2.5 font-semibold text-text-primary">${l.p.self ? "You" : esc(l.p.name || "Unnamed")}</td>
         <td class="px-3 py-2.5 text-text-tertiary">${esc(l.p.self ? "you" : l.p.mine ? "you look after" : scopeList(l.p.scopes).toLowerCase() || "nothing yet")}</td>
         <td class="px-3 py-2.5 font-bold ${chTone}">${ch == null ? "—" : `${signed(ch * 100, 0)}%`}</td>
-        <td class="px-3 py-2.5">${tw == null ? `<span class="text-text-muted">—</span> <span class="text-text-tertiary">no sessions</span>` : `<span class="font-mono font-semibold text-text-primary">${tw}</span> <span class="text-text-tertiary">MET-min</span>`}</td>
+        <td class="px-3 py-2.5">${tw == null ? `<span class="text-text-3">—</span> <span class="text-text-tertiary">no sessions</span>` : `<span class="font-mono font-semibold text-text-primary">${tw}</span> <span class="text-text-tertiary">MET-min</span>`}</td>
         <td class="px-3 py-2.5 text-text-secondary">${l.fit.latest ? `${fmt1(l.fit.latest.v)}${l.fit.trendWord ? ` <span class="${fitTone}">${l.fit.trendWord}</span>` : ""}` : "—"}</td>
         <td class="px-3 py-2.5 text-text-secondary">${labText}</td>
-        <td class="px-3 py-2.5">${due ? `<span class="${dueTone(due)}">${esc(due.what)} · ${dueWord(due)}</span>` : `<span class="text-text-muted">—</span>`}</td>
+        <td class="px-3 py-2.5">${due ? `<span class="${dueTone(due)}">${esc(due.what)} · ${dueWord(due)}</span>` : `<span class="text-text-3">—</span>`}</td>
         <td class="px-3 py-2.5 ${q != null && q >= 14 ? "text-danger font-semibold" : "text-text-tertiary"}">${q == null ? "—" : q === 0 ? "today" : q === 1 ? "yesterday" : `${q} days ago`}</td>
         <td class="px-3 py-2.5 text-text-tertiary">${l.act.of ? `${l.act.atGoal} of ${l.act.of}` : "—"}</td>
       </tr>`;
@@ -2337,7 +2433,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     // this week, across everyone
     const feed = lines.flatMap((l) => l.events.map((e) => ({ ...e, who: l.p.self ? "You" : (l.p.name || "Unnamed") }))).sort((x, y) => y.d.localeCompare(x.d)).slice(0, 6);
     $("glanceweek").innerHTML = feed.length
-      ? feed.map((e) => `<div><span class="font-mono text-[11px] text-text-muted">${esc(dayWord(e.d)).toUpperCase()}</span> &nbsp;<strong class="text-text-primary">${esc(e.who)}</strong>: ${e.text}</div>`).join("")
+      ? feed.map((e) => `<div><span class="font-mono text-[11px] text-text-3">${esc(dayWord(e.d)).toUpperCase()}</span> &nbsp;<strong class="text-text-primary">${esc(e.who)}</strong>: ${e.text}</div>`).join("")
       : `<div class="text-text-tertiary">Nothing new this week.</div>`;
 
     // retest due, across everyone: overdue first, then the next 30 and 90 days
@@ -2376,12 +2472,16 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   // in CSS by aria-current and the nav's data-active-tab, so a switch
   // writes two attributes and nothing is rebuilt; the sub-links of the
   // active tab show by that attribute alone (board 9, rule 5).
-  const TABS = ["group", "overview", "guide", "depth", "horizon", "body", "reports", "messages"];
+  const TABS = ["group", "overview", "guide", "depth", "horizon", "body", "reports", "messages", "settings"];
   /** The old hashes still land: the Guide's read, Labs, the Sleep & heart section. */
   const TAB_ALIAS: Record<string, string> = { read: "guide", labs: "body", clients: "group" };
   const SECTION_ALIAS: Record<string, string> = { heart: "vitals" };
   let activeTab = "overview";
+  /** The tab to go back to from Settings, and the Settings section its link names ("" = the top). */
+  let lastPageTab = "overview";
+  let settingsSection: SettingsSection | "" = "";
   const hashFor = (tab: string, sec: string) =>
+    tab === "settings" ? (settingsSection ? `#settings-${settingsSection}` : "#settings") :
     tab === "group" ? (spaceSignal.value === "clients" ? "#clients" : "#group")
     : (tab === "overview" || tab === "depth" || tab === "body") && sec !== "all" ? `#${tab}-${sec}` : `#${tab}`;
   function setTab(t: string) {
@@ -2392,11 +2492,16 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     // the person's own rows step aside, and no person is lit in the sidebar
     const switching = activeTab !== t;
     const wasGroup = activeTab === "group", group = t === "group";
+    const settings = t === "settings";
     activeTab = t; activeTabSignal.value = t;
+    if (!settings) lastPageTab = t;
     TABS.forEach((x) => show("tab-" + x, x === t));
     if (t === "messages" && switching) void messagesView.refresh();
     if (t === "horizon" && switching) horizonView.refresh();
-    show("pagehead", !group); show("personwrap", !group && people.some((x) => !!x.id));
+    if (settings && switching) void settingsView.refresh();
+    // Settings is about the account, not about a person: the greeting steps aside and the sidebar shows Settings' own navigation
+    $("mhside").dataset.nav = settings ? "settings" : "page";
+    show("pagehead", !group && !settings); show("personwrap", !group && !settings && people.some((x) => !!x.id));
     show("mhsearchwrap", t === "body" || t === "reports");
     const bar = $("tabbar");
     bar.dataset.activeTab = t;
@@ -2489,7 +2594,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       showWhoAmI(session.user);
       askForNewsletter(session.user);
       appLink?.classList.add("hidden"); signinLink?.classList.add("hidden");
-      show("signout", true); show("home", true); show("auth", false);
+      showIf("signout", true); show("home", true); show("auth", false);
       const wanted = window.location.hash.replace("#", "") || (coachDoor ? "clients" : "");
       // #overview-movement, #depth-sleep, #body-heart: the tab and its section; the old names still land
       const [wantTab, ...rest] = wanted.split("-");
@@ -2497,6 +2602,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       if (wantSec && ["overview", "depth", "body"].includes(TAB_ALIAS[wantTab] ?? wantTab)) setSectionState(SECTION_ALIAS[wantSec] ?? wantSec);
       setTab(TABS.includes(TAB_ALIAS[wantTab] ?? wantTab) ? wantTab : "overview");
       if ((TAB_ALIAS[wantTab] ?? wantTab) === "horizon" && wanted) openHorizon("#" + wanted);   // #horizon-<id> or #horizon-new lands on that page
+      if (wantTab === "settings") openSettings(wantSec);                                         // #settings-plan, #settings-email, …
       // The first round trip, one for everything the page needs before it
       // can say whose page this is: the name, the people, the plan, the
       // role, and the one-time merge of other accounts under this email.
@@ -2523,6 +2629,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         } catch { /* the merge is a courtesy; the page works without it */ }
       });
       fillOwnName();
+      paintAccount();
       firstName = fullName.split(/\s+/)[0] ?? "";
       $("greet").textContent = greeting();
       $("oveyebrow").textContent = eyebrow();
@@ -2541,12 +2648,17 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       await Promise.all([refresh(false).finally(() => show("loading", false)), loadPersonNote(), loadSharing(), loadInvites(), loadAsked(), loadRequests(), loadGlance(), loadAiSummary()]);
       void pruneDocuments(userId, people.map((p) => p.id).filter(Boolean));
       if (fromStore) void revalidate(person?.id ?? "");
+      // "Keep it": a number brought from the landing page goes onto the person's own page, once the page is drawn
+      void consumeKeep();
     } else {
       firstName = "";
       people = []; person = null;
       dim("peoplewrap", true);
       appLink?.classList.remove("hidden"); signinLink?.classList.add("hidden");
-      show("auth", true); show("home", false); show("signout", false); dim("whoami", true);
+      show("auth", true); show("home", false); showIf("signout", false); dim("whoami", true);
+      // a visitor who pressed "Keep it" on the landing page: say what signing in will keep
+      const waiting = readKeep();
+      $("keepline").textContent = waiting ? keepLine(waiting) : ""; show("keepline", !!waiting);
       if (oauthError) msg("authmsg", `Apple sign-in did not finish: ${oauthError.replace(/\+/g, " ")}.`, true);
       if (door === "coach") {
         $("authkick").textContent = "Coach · the coach's door";
@@ -2716,6 +2828,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     fullName = name;
     firstName = name.split(/\s+/)[0] ?? "";
     $("greet").textContent = greeting();
+    paintAccount();
     show("namechange", true);
     hideNameForm();
   });
@@ -2866,7 +2979,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     show("lastmethod", !!d);
     document.querySelectorAll<HTMLElement>("[data-provider]").forEach((b) => {
       const on = !!d && b.dataset.provider === d;
-      b.style.outline = on ? "2px solid rgba(129,140,248,0.65)" : "";
+      b.style.outline = on ? "2px solid color-mix(in srgb, var(--color-accent) 65%, transparent)" : "";
       b.style.outlineOffset = on ? "2px" : "";
     });
   }
@@ -3069,11 +3182,13 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     $("newpw").focus();
   }
 
-  $("signout").addEventListener("click", async () => {
+  /** Sign out: the account menu's last row, and the header's button where the header carries one. */
+  async function signOut() {
     if (userId) await clearDocuments(userId);
     await supabase.auth.signOut();
     boot();
-  });
+  }
+  document.getElementById("signout")?.addEventListener("click", () => void signOut());
 
   // Delete account: the same server function as the app's button. It removes
   // report files, every row and the account itself, with no email to anyone.
@@ -3142,14 +3257,14 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     const C = 2 * Math.PI * 22;
     const frac = judged ? ok / judged : 0;
     const len = (frac * C).toFixed(1);
-    const color = judged === 0 ? "#64748b" : ok === judged ? "#34d399" : "#FBBF24";
+    const color = judged === 0 ? "var(--color-text-3)" : ok === judged ? "var(--color-good)" : "var(--color-caution)";
     return `
       <svg width="52" height="52" viewBox="0 0 56 56" aria-hidden="true">
-        <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="5"/>
+        <circle cx="28" cy="28" r="22" fill="none" stroke="color-mix(in srgb, var(--color-ink) 7%, transparent)" stroke-width="5"/>
         <circle class="mh-ring" style="--len: ${len}; --i: ${i}" cx="28" cy="28" r="22" fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round"
           stroke-dasharray="${len} ${C.toFixed(1)}" transform="rotate(-90 28 28)"/>
-        <text x="28" y="26.5" text-anchor="middle" font-size="13" font-weight="800" fill="#f1f5f9">${judged ? ok : "–"}</text>
-        <text x="28" y="37" text-anchor="middle" font-size="7.5" fill="#64748b">${judged ? `of ${judged}` : "no range"}</text>
+        <text x="28" y="26.5" text-anchor="middle" font-size="13" font-weight="800" fill="var(--color-text)">${judged ? ok : "–"}</text>
+        <text x="28" y="37" text-anchor="middle" font-size="7.5" fill="var(--color-text-3)">${judged ? `of ${judged}` : "no range"}</text>
       </svg>`;
   }
 
@@ -3746,7 +3861,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <input data-key="${v.key}" type="number" step="any" value="${v.value}"
             class="w-28 rounded-lg border border-ink/12 bg-ink/[0.04] px-3 py-1.5 text-right font-mono text-sm text-text-primary focus:border-accent focus:outline-none" />
           <span class="w-14 text-xs text-text-tertiary">${esc(unit)}</span>
-          <input data-drop="${v.key}" type="checkbox" ${near != null ? "" : "checked"} title="${near != null ? "Unticked — the same value sits nearby in your app; tick to send anyway" : "Untick to leave this value out"}" class="h-4 w-4 accent-[#818cf8]" />
+          <input data-drop="${v.key}" type="checkbox" ${near != null ? "" : "checked"} title="${near != null ? "Unticked — the same value sits nearby in your app; tick to send anyway" : "Untick to leave this value out"}" class="h-4 w-4 accent-accent" />
         </div>`;
     }).join("") || `<p class="py-2 text-sm text-text-tertiary">None of the app's markers were in this report.</p>`;
 
@@ -3775,7 +3890,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <div class="flex items-baseline gap-3 py-1.5">
             <span class="flex-1 text-[13px] text-text-primary">${esc(v.name)}</span>
             <span class="font-mono text-xs ${inRange(v) === false ? "mh-pulse px-1 text-warning" : "text-success"}">${v.value}${v.unit ? ` ${esc(v.unit)}` : ""}</span>
-            <span class="w-24 text-right font-mono text-[10px] text-text-muted">${esc(rangeLabel(v))}</span>
+            <span class="w-24 text-right font-mono text-[10px] text-text-3">${esc(rangeLabel(v))}</span>
           </div>`).join("")}
       </div>`).join("");
 
@@ -3845,7 +3960,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
             <div class="flex items-baseline gap-3 py-1.5">
               <span class="flex-1 text-[13px] text-text-primary">${esc(v.name)}</span>
               <span class="font-mono text-xs ${inRange(v) === false ? "text-warning" : inRange(v) === true ? "text-success" : "text-text-primary"}">${v.value}${v.unit ? ` ${esc(v.unit)}` : ""}</span>
-              <span class="w-24 text-right font-mono text-[10px] text-text-muted">${esc(rangeLabel(v))}</span>
+              <span class="w-24 text-right font-mono text-[10px] text-text-3">${esc(rangeLabel(v))}</span>
             </div>`).join("")}
         </div>` : ""}
       ${out.impression ? `
@@ -3862,7 +3977,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         </div>` : ""}
       <div class="mt-4 flex flex-wrap items-center gap-3">
         <button id="echoclose" class="rounded-xl border border-ink/14 px-4 py-2.5 text-sm font-semibold text-text-secondary transition-colors hover:border-ink/25">Close</button>
-        <span class="text-xs text-text-muted">Numbers are read from the report's printed text — never measured from images. Ranges shown only when the report prints them.</span>
+        <span class="text-xs text-text-3">Numbers are read from the report's printed text — never measured from images. Ranges shown only when the report prints them.</span>
       </div>`;
     show("echoreview", true);
     $("echoreview").scrollIntoView({ block: "start", behavior: "smooth" });
@@ -3977,16 +4092,112 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     slot.innerHTML = rows.join("");
     slot.querySelectorAll<HTMLElement>("[data-horizon]").forEach((b) => b.addEventListener("click", () => openHorizon(`#horizon-${b.dataset.horizon}`)));
   }
-  // the Plan row opens the sheet (board 07); a modified click still follows the link to the Plans page
+  // the plan line under the name opens the sheet (what Pro adds); Settings › Plan and billing opens it too
   const planRoot = document.createElement("div");
   planRoot.id = "planroot";
   document.body.appendChild(planRoot);
   const planSheet = mountPlanSheet(planRoot);
-  $("planwrap").addEventListener("click", (e) => {
-    const m = e as MouseEvent;
-    if (m.metaKey || m.ctrlKey || m.shiftKey || m.altKey || m.button !== 0) return;
-    e.preventDefault(); planSheet.open();
+  $("acctplan").addEventListener("click", () => planSheet.open());
+
+  // ── Settings, and the account at the bottom-left (boards 07 and 08) ──────
+  const settingsView = mountSettings({ plan: $("setplanroot"), email: $("setemailroot"), appearance: $("setappearanceroot") }, {
+    supabase: supabase as any, url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY,
+    userId: () => userId,
+    ownPersonId: () => people.find((p) => p.self)?.id || null,
+    openPlanSheet: () => planSheet.open(),
+    goHorizon: () => openHorizon("#horizon-new"),
   });
+  // the line under the name is the plan as the server knows it; "Free" until it answers, and when it cannot
+  effect(() => { $("acctplan").textContent = planLine(planInfoSignal.value); });
+  /** The account block and Settings › Profile: the name on the account, or the address's first part when there is none. */
+  function paintAccount() {
+    const name = fullName || userEmail.split("@")[0] || "Your account";
+    $("acctname").textContent = name;
+    $("acctavatar").textContent = (name.trim()[0] ?? "·").toUpperCase();
+    $("setname").textContent = fullName || "No name yet";
+    dim("acct", !userId);
+  }
+  /** Settings, at its top or at one section: the link names it, the section is brought into view and ringed once. */
+  function openSettings(sec = "") {
+    settingsSection = isSettingsSection(sec) ? sec : "";
+    setTab("settings");
+    $("settingsnav").querySelectorAll<HTMLElement>("[data-settings]").forEach((b) => b.setAttribute("aria-current", b.dataset.settings === settingsSection ? "page" : "false"));
+    history.replaceState(null, "", hashFor("settings", ""));
+    const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!settingsSection) { window.scrollTo({ top: 0 }); return; }
+    const el = document.getElementById(`settings-${settingsSection}`);
+    if (!el) return;
+    el.scrollIntoView({ block: "start", behavior: calm ? "auto" : "smooth" });
+    el.classList.remove("mh-find"); void el.offsetWidth; el.classList.add("mh-find");
+  }
+  $("settingsnav").querySelectorAll<HTMLElement>("[data-settings]").forEach((b) => b.addEventListener("click", () => openSettings(b.dataset.settings!)));
+  $("settingsback").addEventListener("click", () => { settingsSection = ""; setTab(lastPageTab); });
+  $("setsharinggo").addEventListener("click", openAccess);
+  $("setnamechange").addEventListener("click", () => { setTab("overview"); $("namechange").click(); });
+  const acctMenu = (open: boolean) => {
+    const m = $("acctmenu");
+    m.classList.toggle("hidden", !open); m.classList.toggle("flex", open);
+    $("acctchev").setAttribute("aria-expanded", String(open));
+  };
+  document.querySelectorAll("[data-acct-toggle]").forEach((b) => b.addEventListener("click", () => acctMenu($("acctmenu").classList.contains("hidden"))));
+  document.addEventListener("click", (e) => { if (!(e.target as HTMLElement).closest?.("#acct")) acctMenu(false); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") acctMenu(false); });
+  $("acctmenu").querySelectorAll<HTMLElement>("[data-acct]").forEach((b) => b.addEventListener("click", () => {
+    acctMenu(false);
+    const k = b.dataset.acct;
+    if (k === "settings") openSettings();
+    else if (k === "appearance") openSettings("appearance");
+    else if (k === "signout") void signOut();
+  }));
+
+  // ── "Keep it", the far side (board 03, frame 4) ──────────────────────────
+  // The landing page leaves the visitor's number in this browser and sends
+  // them here. Signed out, the sign-in card says what signing in keeps;
+  // signed in, the number goes onto the person's own page once, the 14 days
+  // start only if the server says this account is on Free and never had
+  // them, and the weekly email is saved only if they ticked it. Every step
+  // fails soft: nothing here can stop the page from drawing.
+  const KEEP_CARD = "mh-keepcard";
+  const readKeep = (): Keep | null => { try { return parseKeep(localStorage.getItem(KEEP_KEY)); } catch { return null; } };
+  function paintKeepCard() {
+    let o: KeepOutcome | null = null;
+    try { o = JSON.parse(sessionStorage.getItem(KEEP_CARD) ?? "null"); } catch { /* no card */ }
+    const card = o ? keepCard(o) : null;
+    const el = $("keepcard");
+    if (!card) { show("keepcard", false); el.innerHTML = ""; return; }
+    el.innerHTML = `<div class="flex items-start justify-between gap-4"><h2 class="m-0 text-[18px] font-semibold text-text">${esc(card.title)}</h2><button type="button" id="keepclose" aria-label="Close" class="-mr-1 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-text-3 transition-colors hover:text-text"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+      <ul class="m-0 mt-3 flex list-none flex-col gap-1.5 p-0">${card.lines.map((l) => `<li class="flex gap-2 text-[15px] leading-relaxed text-text-2"><span aria-hidden="true" class="text-accent-text">·</span><span>${esc(l)}</span></li>`).join("")}</ul>
+      ${card.foot ? `<p class="m-0 mt-3 text-[12.5px] leading-relaxed text-text-3">${esc(card.foot)}</p>` : ""}`;
+    show("keepcard", true);
+    $("keepclose").addEventListener("click", () => { try { sessionStorage.removeItem(KEEP_CARD); } catch { /* fine */ } paintKeepCard(); });
+  }
+  let keeping = false;
+  async function consumeKeep() {
+    paintKeepCard();
+    const k = readKeep();
+    // ?keep=1 has done its work once the page is here; the address is the page's own again
+    if (new URLSearchParams(location.search).has("keep")) history.replaceState(null, "", location.pathname + location.hash);
+    const own = people.find((p) => p.self);
+    if (!k || keeping || !userId || !own?.id) return;   // no own page yet: the number waits for the next visit
+    keeping = true;
+    try {
+      const filed = await websiteNumbers(supabase as any, own.id);
+      if (filed === null) return;                         // could not read: leave it for the next visit
+      const kept = alreadyKept(k, filed) || await insertFirstNumber(supabase as any, keepRow(k, { userId, personId: own.id }));
+      if (!kept) return;
+      // the plan first: only an account the server calls Free, with its trial unspent, starts one
+      const info = await settingsView.refreshPlan();
+      const trial = trialOffered(info) ? await startWebTrial(supabase as any) : null;
+      if (trial?.started) void settingsView.refreshPlan();
+      const weekly = k.weekly ? (await saveWeekly(supabase as any, userId, true, browserZone())).state === "on" : false;
+      try { localStorage.removeItem(KEEP_KEY); } catch { /* it will be seen as already kept next time */ }
+      const outcome: KeepOutcome = { kept: true, mets: k.mets, trial, weekly };
+      try { sessionStorage.setItem(KEEP_CARD, JSON.stringify(outcome)); } catch { /* the card is a courtesy */ }
+      paintKeepCard();
+      // the number is a new row: read the page again so Fitness shows it
+      if (!alreadyKept(k, filed)) { invalidateDocument(); await refresh(false); }
+    } catch { /* the page works without it */ } finally { keeping = false; }
+  }
   mountReports({ cards: $("repcards"), imports: $("appimportsroot"), years: $("yearsonfileroot") });
   mountPeople({ menu: $("people"), head: $("personhead"), tabhead: $("tabhead"), space: $("spaceswitch") });
   actions.person = (kind, id) => {

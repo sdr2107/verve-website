@@ -42,9 +42,9 @@ function Row({ r, open, onOpen }: { r: BodyRow; open: boolean; onOpen: () => voi
           <span class="t-caption block truncate text-text-3">{sub}</span>
         </span>
         <span class="hidden min-w-0 sm:block">{r.track ? <RangeTrack t={r.track} tone={r.tone} /> : <span class="block h-[6px] w-full rounded-full bg-alt/60"></span>}</span>
-        <span class={`t-caption min-w-0 truncate ${r.value == null ? "text-text-4" : TONE_TEXT[r.tone]}`}>{band}</span>
+        <span class={`t-caption min-w-0 truncate ${r.value == null ? "text-text-3" : TONE_TEXT[r.tone]}`}>{band}</span>
         <span class="shrink-0 whitespace-nowrap text-right">
-          <span class={`t-figure-row ${r.value == null ? "text-text-4" : "text-text"}`}>{r.value ?? DASH}</span>
+          <span class={`t-figure-row ${r.value == null ? "text-text-3" : "text-text"}`}>{r.value ?? DASH}</span>
           {r.value != null && r.unit ? <span class="t-unit ml-1">{r.unit}</span> : null}
         </span>
       </button>
