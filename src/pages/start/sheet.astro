@@ -14,7 +14,21 @@
  *
  * Standalone on purpose: no site header, no footer, its own light palette,
  * so the print is one page with nothing to cut.
+ *
+ * The fonts are the site's own files, and Inter here is the fixed-weight
+ * family ("Inter", @fontsource/inter), not the variable one the pages use.
+ * Chrome writes a variable font into a PDF as drawn shapes, a few letters
+ * to a font, and the words in the file come apart: nothing to search, and
+ * a screen reader hears fragments. Fixed weights go in as real fonts and
+ * the text stays whole. Only the weights this page sets are loaded.
  */
+import "@fontsource/inter/latin-400.css";
+import "@fontsource/inter/latin-ext-400.css";
+import "@fontsource/inter/latin-700.css";
+import "@fontsource/inter/latin-ext-700.css";
+import "@fontsource/inter/latin-800.css";
+import "@fontsource/inter/latin-ext-800.css";
+import "@fontsource/jetbrains-mono/latin-400.css";
 import { TIERS_MEN, TIERS_WOMEN, TIER_SHORT, TIER_SOURCES, tierRanges, RUN, WALK, RETEST, SAFETY } from "../../data/fitness-tiers";
 
 const tables = [
@@ -30,9 +44,7 @@ const resultCols = ["Date", "Walk or run", "Metres", "VO2max", "METs", "Tier"];
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
-    <title>Your first fitness number — the sheet</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=JetBrains+Mono:wght@400;600&display=swap" />
+    <title>Your first fitness number · Verve</title>
     <style>
       @page { size: A4; margin: 0; }
       html, body { margin: 0; background: #fff; }
