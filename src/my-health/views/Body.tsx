@@ -6,13 +6,22 @@
  * history. Then the lab reports on file. No row says when a test is due; no
  * row draws a trend. The rows and the bands are ../derive/body, from the
  * app's registry copied into src/data/body-list.ts.
+ *
+ * One section at a time (canvas "Verve on the web, refined", board 07): the
+ * sidebar lists Metabolic, Heart, Muscle and Lab reports; a press shows that
+ * one. Body opens on Metabolic. A search reads every group, so while words
+ * are typed every group with a match is on the page.
  */
 import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
-import { derived, person, section, activeTab, searchQuery, actions, BODY_KEYS } from "../state.ts";
+import { derived, person, section, setSection, sectionFor, activeTab, searchQuery, actions, BODY_KEYS } from "../state.ts";
 import { fmtDay } from "../derive/format.ts";
 import { bodyHeadline, bodyListOf, type BodyRow, type Tone, type Track } from "../derive/body.ts";
 import { searchTermsOf, landsAll } from "../derive/labs.ts";
+import { Pager } from "./Pager.tsx";
+
+/** The four sections, by the names the sidebar gives them. */
+const BODY_TITLE: Record<(typeof BODY_KEYS)[number], string> = { metabolic: "Metabolic", heart: "Heart", muscle: "Muscle", reports: "Lab reports" };
 
 const DASH = "—";
 const TONE_TEXT: Record<Tone, string> = { good: "text-good", caution: "text-caution", concern: "text-concern", neutral: "text-text-2" };
@@ -75,11 +84,9 @@ export function Body() {
   const d = derived.value, p = person.value;
   const [openKey, setOpenKey] = useState("");
   const query = searchQuery.value, terms = searchTermsOf(query);
-  const sec = section.value, tab = activeTab.value;
-  useEffect(() => {
-    if (tab !== "body" || !(BODY_KEYS as readonly string[]).includes(sec)) return;
-    document.getElementById(`body-${sec}`)?.scrollIntoView({ block: "start", behavior: "smooth" });
-  }, [sec, tab]);
+  const tab = activeTab.value;
+  const cur = sectionFor("body", section.value) as (typeof BODY_KEYS)[number];
+  const at = BODY_KEYS.indexOf(cur);
   const list = d ? bodyListOf(d) : null;
   const matches = list && terms.length ? list.sections.flatMap((s) => s.rows).filter((r) => landsAll(r.label.toLowerCase(), terms)).length : 0;
   useEffect(() => { if (tab === "body") actions.searchNote(terms.length ? `${matches} row${matches === 1 ? " matches" : "s match"}` : ""); }, [query, matches, tab]);
@@ -93,8 +100,8 @@ export function Body() {
     <div>
       <div class="flex flex-wrap items-end justify-between gap-4">
         <div class="min-w-0">
-          <div class="t-eyebrow">Body · the app's list{list.latestLab ? ` · latest labs ${fmtDay(list.latestLab)}` : ""}</div>
-          <h2 class="t-display mt-2 text-text">{bodyHeadline(list)}</h2>
+          <div class="t-eyebrow">Body <span aria-hidden="true">&rsaquo;</span> {terms.length ? "every group" : BODY_TITLE[cur]}{list.latestLab ? ` · latest labs ${fmtDay(list.latestLab)}` : ""}</div>
+          <h1 class="t-display mt-2 text-text">{bodyHeadline(list)}</h1>
           <p class="t-body mt-3 max-w-3xl text-text-2">The app's Body list, row for row and in its order: the name, where you sit in the range, the band in words, the value. Labs and body measures live together here. Blood pressure sits with the vitals.</p>
         </div>
         <div class="flex flex-wrap gap-2">
@@ -106,9 +113,9 @@ export function Body() {
       <div class="mt-6 flex flex-col gap-5">
         {list.sections.map((s) => {
           const rows = terms.length ? s.rows.filter((r) => landsAll(r.label.toLowerCase(), terms)) : s.rows;
-          if (!rows.length) return null;
+          if (!rows.length || (!terms.length && s.key !== cur)) return null;
           return (
-            <section key={s.key} id={`body-${s.key}`} class="r-card scroll-mt-6 border border-border bg-card p-5 sm:px-6">
+            <section key={s.key} id={`body-${s.key}`} class="r-card border border-border bg-card p-5 sm:px-6">
               <div class="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 class="t-title text-text">{s.title}</h3>
                 <span class="t-caption text-text-3">{s.recorded} of {s.total} read{s.watch ? ` · ${s.watch} outside` : ""}</span>
@@ -117,7 +124,7 @@ export function Body() {
             </section>
           );
         })}
-        <section id="body-reports" class="r-card scroll-mt-6 border border-border bg-card p-5 sm:px-6">
+        {cur === "reports" && !terms.length ? <section id="body-reports" class="r-card border border-border bg-card p-5 sm:px-6">
           <div class="flex flex-wrap items-baseline justify-between gap-2">
             <h3 class="t-title text-text">Lab reports on file</h3>
             <span class="t-caption text-text-3">{reports.length ? `${reports.length} on file` : "none yet"}</span>
@@ -135,8 +142,11 @@ export function Body() {
               })}
             </div>
           ) : <p class="t-small mt-2 text-text-3">Drop a lab report on Reports and every value in it lands here, judged by the app's bands.</p>}
-        </section>
+        </section> : null}
       </div>
+      {terms.length ? null : <Pager at={at + 1} of={BODY_KEYS.length}
+        prev={at > 0 ? { label: BODY_TITLE[BODY_KEYS[at - 1]], go: () => setSection(BODY_KEYS[at - 1]) } : null}
+        next={at < BODY_KEYS.length - 1 ? { label: BODY_TITLE[BODY_KEYS[at + 1]], go: () => setSection(BODY_KEYS[at + 1]) } : null} />}
       <p class="t-caption mt-4 max-w-3xl text-text-3">Ranges are the app's, read from the same thresholds file. No row says when a test is due. No row draws a trend; a tap on the name opens the history.</p>
     </div>
   );

@@ -285,8 +285,11 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
            chip row and the tab pills across the top of the page, as they
            always were; from lg they are a column on the left that stays
            put while the page scrolls, so the page itself is only about the
-           one person picked. -->
-      <aside id="mhside" data-nav="page" class="pt-5 lg:sticky lg:top-6 lg:flex lg:min-h-[72vh] lg:w-[220px] lg:shrink-0 lg:flex-col lg:gap-5 lg:pt-8">
+           one person picked. From lg the column sits in its own box: a tinted
+           panel with a line round it, the lit row a raised pill, the account
+           at its foot (canvas "Verve on the web, refined", board 03). The
+           order is Overview, In depth, Horizon, the Guide. -->
+      <aside id="mhside" data-nav="page" class="pt-5 lg:sticky lg:top-6 lg:mt-8 lg:flex lg:max-h-[calc(100vh-3rem)] lg:min-h-[72vh] lg:w-[248px] lg:shrink-0 lg:flex-col lg:gap-4 lg:overflow-y-auto lg:rounded-[16px] lg:border lg:border-border lg:bg-alt lg:p-3">
         <!-- Everything here is in the markup from the first byte (board 9):
              a slot with nothing behind it yet is dimmed, never absent, so the
              sidebar you see at 0.0 s is the sidebar you see at 2.0 s. -->
@@ -296,8 +299,9 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <!-- one control: the name of whose page this is, with the menu under it (no heading: "People" names the group below) -->
           <div id="people" class="relative"></div>
         </div>
-        <!-- the tabs, in the app's order, each with its sub-links; the sub-links of the
-             active tab show by the nav's data-active-tab alone, never by a loader -->
+        <!-- the tabs, each with its sub-links; the sub-links of the active tab show by the
+             nav's data-active-tab alone, never by a loader. A sub-link is a page of its
+             own: pressed, its section is what the page shows, and nothing else. -->
         <nav id="tabbar" aria-label="Views" data-active-tab="overview" class="mt-4 flex flex-wrap gap-1 lg:mt-0 lg:flex-col lg:gap-0.5">
           <h3 id="tabhead" class="t-eyebrow mb-2 hidden px-3 lg:block">Your page</h3>
           <button type="button" class="mh-tab" data-tab="overview" aria-current="page"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg><span>Overview</span></button>
@@ -309,7 +313,6 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
             <button type="button" class="mh-sub" data-tab-for="overview" data-section="movement">Movement</button>
             <button type="button" class="mh-sub" data-tab-for="overview" data-section="body">Body</button>
           </div>
-          <button type="button" class="mh-tab" data-tab="guide" id="readtab" data-dim="1"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5V5.5M8 7h8M8 10.5h6"/></svg><span>The Guide</span></button>
           <button type="button" class="mh-tab" data-tab="depth"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>In depth</span></button>
           <div data-sub="depth" role="group" aria-label="depth sections">
             <button type="button" class="mh-sub" data-tab-for="depth" data-section="lastweek">Last week</button>
@@ -323,6 +326,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           </div>
           <button type="button" class="mh-tab" data-tab="horizon" id="horizontab"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17h18"/><path d="M6 17a6 6 0 0 1 12 0"/><path d="M12 3v2M4.9 7.9l1.4 1.4M19.1 7.9l-1.4 1.4"/></svg><span>Horizon</span><span class="mh-badge">Pro</span></button>
           <div data-sub="horizon" role="group" aria-label="horizon sections"></div>
+          <button type="button" class="mh-tab" data-tab="guide" id="readtab" data-dim="1"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5V5.5M8 7h8M8 10.5h6"/></svg><span>The Guide</span></button>
           <h3 class="t-eyebrow mb-2 mt-5 hidden px-3 lg:block">Records</h3>
           <button type="button" class="mh-tab" data-tab="body"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6l-5.5 9a2 2 0 0 0 1.7 3h11.6a2 2 0 0 0 1.7-3L14 9V3"/></svg><span>Body</span><span data-count class="mh-count"></span></button>
           <div data-sub="body" role="group" aria-label="body sections">
@@ -339,8 +343,10 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
             <button type="button" id="accessgo" class="mh-tab w-full"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span>Sharing</span><span id="accesssub" class="mh-count"></span></button>
           </div>
         </nav>
-        <!-- Settings has its own navigation; it takes the sidebar's place while Settings is open (board 08) -->
-        <nav id="settingsnav" aria-label="Settings" class="mt-4 flex flex-wrap gap-1 lg:mt-0 lg:flex-col lg:gap-0.5">
+        <!-- Settings has its own navigation; it takes the sidebar's place while Settings is open (board 08).
+             The way back is first; then the six sections, one on the page at a time. -->
+        <nav id="settingsnav" aria-label="Settings" class="mt-4 flex gap-1 lg:mt-0 lg:flex-col lg:gap-0.5">
+          <button type="button" id="settingsback" class="mh-tab mh-back lg:mb-3"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg><span>My health</span></button>
           <h3 class="t-eyebrow mb-2 hidden px-3 lg:block">Settings</h3>
           <button type="button" class="mh-tab" data-settings="profile"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Profile</span></button>
           <button type="button" class="mh-tab" data-settings="plan"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span>Plan and billing</span></button>
@@ -348,7 +354,6 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <button type="button" class="mh-tab" data-settings="sharing"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span>Sharing</span></button>
           <button type="button" class="mh-tab" data-settings="data"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span>Data</span></button>
           <button type="button" class="mh-tab" data-settings="appearance"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span>Appearance</span></button>
-          <button type="button" id="settingsback" class="mh-tab lg:mt-4"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg><span>Back to my page</span></button>
         </nav>
         <!-- the account, at the bottom-left: the name and the plan as the server knows it; the menu opens above it -->
         <div id="acct" class="relative mt-4 lg:mt-auto" data-dim="1">
@@ -358,7 +363,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
             <a role="menuitem" class="mh-menuitem" href="/how-it-works/"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7M12 17h.01"/></svg><span>Help</span></a>
             <button type="button" role="menuitem" class="mh-menuitem" data-acct="signout"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg><span>Sign out</span></button>
           </div>
-          <div class="flex items-center gap-2.5 rounded-[12px] border border-border bg-card px-2.5 py-2">
+          <div class="flex items-center gap-2.5 rounded-[12px] border border-border-strong bg-card px-2.5 py-2">
             <button type="button" id="acctavatar" data-acct-toggle aria-label="Account menu" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-fill text-[13px] font-semibold text-accent-text"></button>
             <span class="flex min-w-0 flex-1 flex-col leading-tight">
               <button type="button" id="acctname" data-acct-toggle class="truncate text-left text-[13.5px] font-semibold text-text"></button>
@@ -555,16 +560,18 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
            Exertion, Movement, Body (canvas "My health, redesigned", boards
            2, 3 and 12). One sentence of figures under the greeting and the
            Guide's pointer, both of fixed height; then the cards, a view
-           (src/my-health/views/Overview). A card opens in place: the other
-           five shrink to a strip and the open one fills the width; the hash
-           carries the card. Every slot is in the markup with its height, so
-           nothing arrives after the first paint. -->
+           (src/my-health/views/Overview). A card is the door to its own
+           section (canvas "Verve on the web, refined", boards 03 and 04):
+           pressed, that section is the page, the greeting, the line and
+           the pointer step aside, and the hash carries it. Every slot is in
+           the markup with its height, so nothing arrives after the first
+           paint. -->
       <div id="tab-overview" class="mt-5 hidden">
         <!-- "Keep it", the far side: the number a visitor brought is on the page, and the 14 days if they started -->
         <div id="keepcard" class="mb-5 hidden max-w-3xl rounded-[16px] border border-accent-border bg-accent-fill p-5"></div>
         <p id="ovline" class="t-body min-h-[46px] max-w-3xl text-text-2"></p>
         <div id="guidepointer" class="mt-4 h-[56px]"></div>
-        <div id="ovglance" class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"></div>
+        <div id="ovglance" class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3"></div>
         <!-- values for the app that were read but never sent: one line, until it is done -->
         <div id="tosend" class="mt-4 hidden flex-wrap items-center gap-3 rounded-2xl border border-accent/30 bg-accent/[0.06] px-4 py-3.5">
           <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-accent/[0.16]">
@@ -756,19 +763,19 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         </button>
       </div>
 
-      <!-- ═══ SETTINGS (board 08) ═══════════════════════════════════════════
-           One page for the plan, the emails and the data, reached from the
-           name at the bottom-left. Profile, Sharing and Data are the controls
-           the page already had, gathered here; Plan and billing, Email and
+      <!-- ═══ SETTINGS (board 08; one section at a time, "refined" board 06) ══
+           The plan, the emails and the data, reached from the name at the
+           bottom-left. Six sections in the sidebar, one on the page: a press
+           shows that section and nothing else, the heading names it, and the
+           address carries it (#settings-plan). Profile, Sharing and Data are
+           the controls the page already had; Plan and billing, Email and
            notifications and Appearance are drawn by views/Settings.tsx. -->
       <div id="tab-settings" class="hidden pt-5 sm:pt-8">
-        <div class="t-eyebrow mb-2">Your account</div>
-        <h1 class="t-display text-text">Settings</h1>
-        <div class="mt-6 grid max-w-5xl gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] xl:items-start">
-          <div class="flex min-w-0 flex-col gap-4">
-            <section id="settings-profile" data-settings-section="profile" class="rounded-[16px] border border-border bg-card p-5 scroll-mt-6">
-              <h2 class="m-0 text-[18px] font-semibold text-text">Profile</h2>
-              <div class="mt-3 flex flex-col">
+        <div class="t-eyebrow mb-2">Settings</div>
+        <h1 id="settingstitle" class="t-display text-text">Profile</h1>
+        <div class="mt-6 max-w-2xl">
+            <section id="settings-profile" data-settings-section="profile" aria-labelledby="settingstitle" class="rounded-[16px] border border-border bg-card p-5">
+              <div class="flex flex-col">
                 <div class="grid gap-x-4 gap-y-1 py-3 sm:grid-cols-[132px_minmax(0,1fr)]">
                   <div class="text-[13px] text-text-3">Name</div>
                   <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1"><span id="setname" class="min-w-0 truncate text-[15px] font-medium text-text">—</span><button type="button" id="setnamechange" class="text-[13px] font-semibold text-accent-text">Change</button></div>
@@ -781,26 +788,20 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
               </div>
               <p class="m-0 mt-1 text-[12.5px] leading-relaxed text-text-3">The same sign-in as the app. The name is the one the app greets you with.</p>
             </section>
-            <section id="settings-plan" data-settings-section="plan" class="rounded-[16px] border border-border bg-card p-5 scroll-mt-6">
-              <h2 class="m-0 text-[18px] font-semibold text-text">Plan and billing</h2>
-              <div id="setplanroot" class="mt-3"></div>
+            <section id="settings-plan" data-settings-section="plan" aria-labelledby="settingstitle" class="hidden rounded-[16px] border border-border bg-card p-5">
+              <div id="setplanroot"></div>
             </section>
-            <section id="settings-sharing" data-settings-section="sharing" class="rounded-[16px] border border-border bg-card p-5 scroll-mt-6">
-              <h2 class="m-0 text-[18px] font-semibold text-text">Sharing</h2>
-              <p id="setsharingline" class="m-0 mt-3 text-[15px] font-medium text-text">Only you, so far</p>
+            <section id="settings-sharing" data-settings-section="sharing" aria-labelledby="settingstitle" class="hidden rounded-[16px] border border-border bg-card p-5">
+              <p id="setsharingline" class="m-0 text-[15px] font-medium text-text">Only you, so far</p>
               <p class="m-0 mt-1 text-[12.5px] leading-relaxed text-text-3">Who can see this page, and what each may see. You can change or stop a share at any time.</p>
               <div class="mt-3"><button type="button" id="setsharinggo" class="inline-flex min-h-10 items-center rounded-full border border-border-strong px-4 text-[13.5px] font-semibold text-text transition-colors hover:border-text-3">Manage sharing</button></div>
             </section>
-          </div>
-          <div class="flex min-w-0 flex-col gap-4">
-            <section id="settings-email" data-settings-section="email" class="rounded-[16px] border border-border bg-card p-5 scroll-mt-6">
-              <h2 class="m-0 text-[18px] font-semibold text-text">Email and notifications</h2>
-              <div id="setemailroot" class="mt-2"></div>
+            <section id="settings-email" data-settings-section="email" aria-labelledby="settingstitle" class="hidden rounded-[16px] border border-border bg-card p-5">
+              <div id="setemailroot"></div>
             </section>
-            <section id="settings-data" data-settings-section="data" class="rounded-[16px] border border-border bg-card p-5 scroll-mt-6">
-              <h2 class="m-0 text-[18px] font-semibold text-text">Data</h2>
+            <section id="settings-data" data-settings-section="data" aria-labelledby="settingstitle" class="hidden rounded-[16px] border border-border bg-card p-5">
               <!-- download what this page shows: the person's own data, or what a share lets you see -->
-              <div id="exportwrap" class="mt-3 flex flex-wrap items-center gap-2" data-dim="1">
+              <div id="exportwrap" class="flex flex-wrap items-center gap-2" data-dim="1">
                 <span id="exportlabel" class="mr-1 text-[14px] text-text-2">Download</span>
                 <button type="button" id="exportcsv" class="inline-flex min-h-10 items-center rounded-full border border-border-strong px-4 text-[13.5px] font-semibold text-text transition-colors hover:border-text-3">Export as CSV</button>
                 <button type="button" id="exportjson" class="inline-flex min-h-10 items-center rounded-full border border-border-strong px-4 text-[13.5px] font-semibold text-text transition-colors hover:border-text-3">Export as JSON</button>
@@ -811,11 +812,9 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
                 <p class="m-0 mt-2 text-[12.5px] leading-relaxed text-text-3">Everything on this account goes with it, here and in the app. It cannot be undone.</p>
               </div>
             </section>
-            <section id="settings-appearance" data-settings-section="appearance" class="rounded-[16px] border border-border bg-card p-5 scroll-mt-6">
-              <h2 class="m-0 text-[18px] font-semibold text-text">Appearance</h2>
-              <div id="setappearanceroot" class="mt-3"></div>
+            <section id="settings-appearance" data-settings-section="appearance" aria-labelledby="settingstitle" class="hidden rounded-[16px] border border-border bg-card p-5">
+              <div id="setappearanceroot"></div>
             </section>
-          </div>
         </div>
       </div>
 
@@ -924,41 +923,52 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   [data-dim="1"] { opacity: 0.45; }
 
   /* ── the sidebar: three groups of tabs with their sub-links, Settings' own navigation, the account at the foot ── */
-  :is(#tabbar, #settingsnav) .mh-tab { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 6px 12px; border-radius: 10px; font-size: 13.5px; font-weight: 500; color: var(--color-text-2); border-left: 2px solid transparent; white-space: nowrap; text-align: left; transition: color 0.12s, background-color 0.12s; }
+  :is(#tabbar, #settingsnav) .mh-tab { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 6px 10px; border-radius: 9px; font-size: 13.5px; font-weight: 500; color: var(--color-text-2); border: 1px solid transparent; white-space: nowrap; text-align: left; transition: color 0.12s, background-color 0.12s; }
   :is(#tabbar, #settingsnav) .mh-tab:hover { color: var(--color-text); background: color-mix(in srgb, var(--color-ink) 4%, transparent); }
-  :is(#tabbar, #settingsnav) .mh-tab[aria-current="page"] { color: var(--color-text); background: var(--color-alt); border-left-color: var(--color-accent); }
+  /* the lit row: a raised pill on the tinted panel */
+  :is(#tabbar, #settingsnav) .mh-tab[aria-current="page"] { color: var(--color-text); font-weight: 600; background: var(--color-card); border-color: var(--color-border); }
+  /* the tab whose section is on the page: named, not raised; its lit sub-link is the pill */
+  #tabbar:has(.mh-sub[aria-current="page"]) .mh-tab[aria-current="page"] { background: transparent; border-color: transparent; }
+  #settingsnav .mh-back { color: var(--color-accent-text); font-weight: 600; }
   :is(#tabbar, #settingsnav, #acctmenu) .mh-ico { flex-shrink: 0; }
   #tabbar .mh-badge { margin-left: auto; border-radius: 999px; border: 1px solid var(--color-accent-border); background: var(--color-accent-fill); padding: 1px 7px; font-family: var(--font-mono); font-size: 10px; font-weight: 500; color: var(--color-accent-text); }
   #tabbar .mh-count { margin-left: auto; font-family: var(--font-mono); font-size: 11px; font-weight: 500; color: var(--color-text-3); }
   #tabbar .mh-count:empty { display: none; }
   #tabbar .mh-chip { border-radius: 999px; border: 1px solid var(--color-border); padding: 1px 8px; font-family: var(--font-mono); font-size: 10.5px; font-weight: 500; color: var(--color-text-2); }
   #tabbar .mh-chip:hover { color: var(--color-text); border-color: var(--color-border-strong); }
-  #tabbar [data-sub] { display: none; flex-direction: column; gap: 1px; padding-left: 27px; margin: 2px 0 6px; }
+  #tabbar [data-sub] { display: none; flex-direction: column; gap: 1px; padding-left: 26px; margin: 2px 0 6px; }
   #tabbar [data-sub]:empty { display: none !important; }
   #tabbar[data-active-tab="overview"] [data-sub="overview"], #tabbar[data-active-tab="depth"] [data-sub="depth"],
   #tabbar[data-active-tab="horizon"] [data-sub="horizon"], #tabbar[data-active-tab="body"] [data-sub="body"] { display: flex; }
-  #tabbar .mh-sub { display: flex; align-items: center; min-height: 28px; padding: 3px 10px; border-radius: 8px; font-size: 13px; color: var(--color-text-3); border-left: 2px solid transparent; text-align: left; white-space: nowrap; }
+  #tabbar .mh-sub { display: flex; align-items: center; min-height: 28px; padding: 3px 8px; border-radius: 7px; font-size: 13px; font-weight: 500; color: var(--color-text-2); border: 1px solid transparent; text-align: left; white-space: nowrap; }
   #tabbar .mh-sub:hover { color: var(--color-text); }
-  #tabbar .mh-sub[aria-current="page"] { color: var(--color-text); border-left-color: var(--color-accent); background: color-mix(in srgb, var(--color-ink) 3%, transparent); }
+  #tabbar .mh-sub[aria-current="page"] { color: var(--color-text); font-weight: 600; background: var(--color-card); border-color: var(--color-border); }
   @media (max-width: 1023.98px) {
     :is(#tabbar, #settingsnav) h3 { display: none; }
-    :is(#tabbar, #settingsnav) .mh-tab { border-left: 0; border-bottom: 2px solid transparent; border-radius: 10px 10px 0 0; min-height: 34px; padding: 5px 10px; }
-    :is(#tabbar, #settingsnav) .mh-tab[aria-current="page"] { background: transparent; border-bottom-color: var(--color-accent); }
+    :is(#tabbar, #settingsnav) .mh-tab { border: 0; border-bottom: 2px solid transparent; border-radius: 10px 10px 0 0; min-height: 34px; padding: 5px 10px; }
+    :is(#tabbar, #settingsnav) .mh-tab[aria-current="page"],
+    #tabbar:has(.mh-sub[aria-current="page"]) .mh-tab[aria-current="page"] { background: transparent; border-bottom-color: var(--color-accent); }
     #tabbar .mh-badge, #tabbar .mh-count { margin-left: 2px; }
-    #tabbar [data-sub] { order: 50; flex-direction: row; flex-wrap: wrap; flex-basis: 100%; padding-left: 0; gap: 6px; margin: 6px 0 2px; }
-    #tabbar .mh-sub { border: 1px solid var(--color-border); border-radius: 999px; padding: 4px 11px; min-height: 30px; }
-    #tabbar .mh-sub[aria-current="page"] { border-color: var(--color-accent-border); background: var(--color-accent-fill); }
+    /* a tab's sections, and Settings' six: one row of chips that scrolls sideways, so the page does not grow */
+    #tabbar [data-sub] { order: 50; flex-direction: row; flex-wrap: nowrap; flex-basis: 100%; min-width: 0; padding-left: 0; gap: 6px; margin: 6px 0 2px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    #tabbar [data-sub]::-webkit-scrollbar, #settingsnav::-webkit-scrollbar { display: none; }
+    #tabbar .mh-sub { flex-shrink: 0; border: 1px solid var(--color-border); border-radius: 999px; padding: 4px 11px; min-height: 32px; }
+    #tabbar .mh-sub[aria-current="page"] { border-color: var(--color-accent-border); background: var(--color-accent-fill); color: var(--color-accent-text); }
+    #settingsnav { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+    #settingsnav .mh-tab { flex-shrink: 0; }
     #tabbar #accesswrap { order: 60; }
   }
+  /* the box scrolls inside itself on a short window; its bar is thin and wears the panel's own colours */
+  #mhside { scrollbar-width: thin; scrollbar-color: var(--color-border-strong) transparent; }
   /* one of the two navigations at a time: the page's tabs, or Settings' own with the way back */
   #mhside[data-nav="settings"] #peoplewrap, #mhside[data-nav="settings"] #tabbar { display: none; }
   #mhside[data-nav="page"] #settingsnav { display: none; }
   /* the account menu: four rows, opened above the name on a desk and below it on a phone */
   #acctmenu .mh-menuitem { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 6px 10px; border-radius: 8px; font-size: 13.5px; font-weight: 500; color: var(--color-text-2); text-align: left; }
   #acctmenu .mh-menuitem:hover, #acctmenu .mh-menuitem:focus-visible { color: var(--color-text); background: var(--color-alt); }
-  /* a Settings section reached by its link: one brief ring so the eye finds it */
-  @keyframes mh-find { from { box-shadow: 0 0 0 2px var(--color-accent-border); } to { box-shadow: 0 0 0 2px transparent; } }
-  [data-settings-section].mh-find { animation: mh-find 1.2s ease-out 1; }
+  /* one section of the Overview on the page: the line, the Guide's pointer and the page's notices step aside */
+  #tab-overview[data-section-open] > :is(#keepcard, #ovline, #guidepointer, #tosend, #emptycard) { display: none !important; }
+  #tab-overview[data-section-open] > #ovglance { margin-top: 0; }
   /* a file dragged over the page */
   #veil.flex { animation: mh-veil 0.15s ease-out both; }
   #veil.flex > div { animation: mh-frame 0.18s cubic-bezier(0.2, 0.7, 0.2, 1) 0.05s both; }
@@ -987,7 +997,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   .mh-status.text-danger { border-color: color-mix(in srgb, var(--color-concern) 30%, transparent); background: color-mix(in srgb, var(--color-concern) 6%, transparent); }
 
   @media (prefers-reduced-motion: reduce) {
-    .mh-ring, .mh-open, .mh-slide, #veil.flex, #veil.flex > div, .mh-pulse, [data-settings-section].mh-find {
+    .mh-ring, .mh-open, .mh-slide, #veil.flex, #veil.flex > div, .mh-pulse {
       animation: none; opacity: 1; transform: none; stroke-dashoffset: 0;
     }
   }
@@ -1007,14 +1017,14 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   import { derivePerson, type PersonData } from "../my-health/derive/person";
   import { labsJudged, SECTIONS, SECTION_ORDER, searchTermsOf, landsAll, dateHay } from "../my-health/derive/labs";
   import { effect } from "@preact/signals";
-  import { derived as derivedSignal, doc as docSignal, person as personSignal, people as peopleSignal, firstName as firstNameSignal, myRole as myRoleSignal, section as sectionSignal, setSection as setSectionState, latestRead as latestReadSignal, readOf, activeTab as activeTabSignal, searchQuery as searchQuerySignal, depthLocked as depthLockedSignal, depthWorking as depthWorkingSignal, actions, openLabs, space as spaceSignal, isClient } from "../my-health/state";
+  import { derived as derivedSignal, doc as docSignal, person as personSignal, people as peopleSignal, firstName as firstNameSignal, myRole as myRoleSignal, section as sectionSignal, setSection as setSectionState, sectionFor, latestRead as latestReadSignal, readOf, activeTab as activeTabSignal, searchQuery as searchQuerySignal, depthLocked as depthLockedSignal, depthWorking as depthWorkingSignal, actions, openLabs, space as spaceSignal, isClient } from "../my-health/state";
   import { mountOverview } from "../my-health/views/Overview";
   import { mountBody } from "../my-health/views/Body";
   import { mountDepth } from "../my-health/views/Depth";
   import { mountHorizon } from "../my-health/views/Horizon.tsx";
   import { mountPlanSheet } from "../my-health/views/PlanSheet.tsx";
   import { mountSettings, planInfoSignal } from "../my-health/views/Settings.tsx";
-  import { KEEP_KEY, alreadyKept, browserZone, isSettingsSection, keepCard, keepLine, keepRow, parseKeep, planLine, trialOffered, type Keep, type KeepOutcome, type SettingsSection } from "../my-health/account";
+  import { KEEP_KEY, SETTINGS_SECTIONS, alreadyKept, browserZone, isSettingsSection, keepCard, keepLine, keepRow, parseKeep, planLine, trialOffered, type Keep, type KeepOutcome, type SettingsSection } from "../my-health/account";
   import { insertFirstNumber, saveWeekly, startWebTrial, websiteNumbers } from "../my-health/accountApi";
   import { mountReports } from "../my-health/views/Reports";
   import { mountPeople } from "../my-health/views/People";
@@ -2467,22 +2477,51 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   $("mhsearchclear").addEventListener("click", () => { ($("mhsearch") as HTMLInputElement).value = ""; $("mhsearch").dispatchEvent(new Event("input")); $("mhsearch").focus(); });
 
   // ── tabs ───────────────────────────────────────────────────────────────
-  // Eight panes, one lit at a time. The sidebar's buttons carry their look
+  // Nine panes, one lit at a time. The sidebar's buttons carry their look
   // in CSS by aria-current and the nav's data-active-tab, so a switch
   // writes two attributes and nothing is rebuilt; the sub-links of the
   // active tab show by that attribute alone (board 9, rule 5).
+  //
+  // One section on the page at a time (canvas "Verve on the web, refined",
+  // boards 04, 06 and 07): the Overview is its six cards or one section;
+  // In depth and Body always hold one of theirs; Settings one of its six.
   const TABS = ["group", "overview", "guide", "depth", "horizon", "body", "reports", "messages", "settings"];
   /** The old hashes still land: the Guide's read, Labs, the Sleep & heart section. */
   const TAB_ALIAS: Record<string, string> = { read: "guide", labs: "body", clients: "group" };
   const SECTION_ALIAS: Record<string, string> = { heart: "vitals" };
   let activeTab = "overview";
-  /** The tab to go back to from Settings, and the Settings section its link names ("" = the top). */
+  /** The tab to go back to from Settings, and the Settings section on the page (Profile when none is named). */
   let lastPageTab = "overview";
-  let settingsSection: SettingsSection | "" = "";
+  let settingsSection: SettingsSection = "profile";
   const hashFor = (tab: string, sec: string) =>
-    tab === "settings" ? (settingsSection ? `#settings-${settingsSection}` : "#settings") :
+    tab === "settings" ? `#settings-${settingsSection}` :
     tab === "group" ? (spaceSignal.value === "clients" ? "#clients" : "#group")
     : (tab === "overview" || tab === "depth" || tab === "body") && sec !== "all" ? `#${tab}-${sec}` : `#${tab}`;
+
+  // A press that changes the page is a step in the browser's history, so
+  // Back returns to the page before it and a link can name one section.
+  // The address of the entry in hand is kept in step with the page by
+  // replaceState, as before; a step copies that entry first, once per
+  // press however many things the press changes. Boot and Back apply an
+  // address and never add one.
+  let quietNav = 0, steppedThisTick = false;
+  const quietly = (fn: () => void) => { quietNav++; try { fn(); } finally { quietNav--; } };
+  function step() {
+    if (quietNav || steppedThisTick || !marked.has("painted")) return;
+    steppedThisTick = true;
+    queueMicrotask(() => { steppedThisTick = false; });
+    history.pushState(null, "", location.href);
+  }
+  actions.step = step;
+
+  /** The greeting belongs to a tab's own page; a section's page opens with its own heading. */
+  function paintHead() {
+    const tab = activeTabSignal.value, sec = sectionSignal.value;
+    const group = tab === "group", settings = tab === "settings";
+    const sectionPage = (tab === "overview" || tab === "depth" || tab === "body") && sec !== "all";
+    show("pagehead", !group && !settings && !sectionPage);
+    $("tab-overview").toggleAttribute("data-section-open", tab === "overview" && sec !== "all");
+  }
   function setTab(t: string) {
     if (marked.has("painted")) mark("interaction");
     t = TAB_ALIAS[t] ?? t;
@@ -2490,17 +2529,21 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     // Everyone is a view of the account, not of a person: the greeting and
     // the person's own rows step aside, and no person is lit in the sidebar
     const switching = activeTab !== t;
+    if (switching) step();
     const wasGroup = activeTab === "group", group = t === "group";
     const settings = t === "settings";
     activeTab = t; activeTabSignal.value = t;
     if (!settings) lastPageTab = t;
+    // In depth and Body hold one of their own sections; a section of another tab never follows a switch
+    const sec = sectionFor(t, sectionSignal.value);
+    if (sec !== sectionSignal.value) quietly(() => setSectionState(sec));
     TABS.forEach((x) => show("tab-" + x, x === t));
     if (t === "messages" && switching) void messagesView.refresh();
     if (t === "horizon" && switching) horizonView.refresh();
     if (settings && switching) void settingsView.refresh();
     // Settings is about the account, not about a person: the greeting steps aside and the sidebar shows Settings' own navigation
     $("mhside").dataset.nav = settings ? "settings" : "page";
-    show("pagehead", !group && !settings); show("personwrap", !group && !settings && people.some((x) => !!x.id));
+    paintHead(); show("personwrap", !group && !settings && people.some((x) => !!x.id));
     show("mhsearchwrap", t === "body" || t === "reports");
     const bar = $("tabbar");
     bar.dataset.activeTab = t;
@@ -2508,6 +2551,28 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     if (group !== wasGroup && people.some((x) => !!x.id)) renderPeople();
     history.replaceState(null, "", hashFor(t, sectionSignal.value));
   }
+  /**
+   * Put an address on the page: #overview-movement, #depth-sleep, #body-heart, #horizon-<id>, #settings-plan,
+   * and the old names. Boot calls it with the address the page arrived at; Back and Forward with the one they
+   * return to. It never adds a step of its own.
+   */
+  function applyHash(wanted: string) {
+    quietly(() => {
+      const [wantTab, ...rest] = wanted.split("-");
+      const wantSec = rest.join("-");
+      const tab = TAB_ALIAS[wantTab] ?? wantTab;
+      if (tab === "settings") { openSettings(wantSec); return; }
+      setSectionState(["overview", "depth", "body"].includes(tab) && wantSec ? (SECTION_ALIAS[wantSec] ?? wantSec) : "all");
+      setTab(TABS.includes(tab) ? tab : "overview");
+      if (tab === "horizon" && wantSec) openHorizon("#" + wanted);   // #horizon-<id> or #horizon-new lands on that page
+    });
+  }
+  window.addEventListener("popstate", () => {
+    if (!userId) return;   // signed out, the address is the sign-in card's own
+    const wanted = location.hash.replace("#", "");
+    if (wanted === "clients" || wanted === "group") { quietly(() => { if (wanted === "clients") { spaceSignal.value = "clients"; renderPeople(); } setTab("group"); }); return; }
+    applyHash(wanted);
+  });
   /** The small figure beside a tab in the sidebar: how many outside range, how many new. */
   function setTabCount(t: string, text: string, tone = "text-text-3") {
     const el = $("tabbar").querySelector(`[data-tab="${t}"] [data-count]`);
@@ -2595,13 +2660,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       appLink?.classList.add("hidden"); signinLink?.classList.add("hidden");
       showIf("signout", true); show("home", true); show("auth", false);
       const wanted = window.location.hash.replace("#", "") || (coachDoor ? "clients" : "");
-      // #overview-movement, #depth-sleep, #body-heart: the tab and its section; the old names still land
-      const [wantTab, ...rest] = wanted.split("-");
-      const wantSec = rest.join("-");
-      if (wantSec && ["overview", "depth", "body"].includes(TAB_ALIAS[wantTab] ?? wantTab)) setSectionState(SECTION_ALIAS[wantSec] ?? wantSec);
-      setTab(TABS.includes(TAB_ALIAS[wantTab] ?? wantTab) ? wantTab : "overview");
-      if ((TAB_ALIAS[wantTab] ?? wantTab) === "horizon" && wanted) openHorizon("#" + wanted);   // #horizon-<id> or #horizon-new lands on that page
-      if (wantTab === "settings") openSettings(wantSec);                                         // #settings-plan, #settings-email, …
+      // #overview-movement, #depth-sleep, #body-heart, #horizon-<id>, #settings-plan: the tab and its section; the old names still land
+      applyHash(wanted);
       // The first round trip, one for everything the page needs before it
       // can say whose page this is: the name, the people, the plan, the
       // role, and the one-time merge of other accounts under this email.
@@ -2639,8 +2699,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       applyPersonMode();
       // the place follows whose page opened: a client's page is under Clients
       if (person && isClient(person)) spaceSignal.value = "clients";
-      if (wanted === "clients" && people.some(isClient)) { spaceSignal.value = "clients"; renderPeople(); setTab("group"); }
-      else if (wanted === "group") setTab("group");   // only once the people are known
+      if (wanted === "clients" && people.some(isClient)) quietly(() => { spaceSignal.value = "clients"; renderPeople(); setTab("group"); });
+      else if (wanted === "group") quietly(() => setTab("group"));   // only once the people are known
       // The second round trip, and the last: every table of the person's
       // own at once. refresh() itself fetches labs, the app's rows and the
       // report folder together, then draws every tab once.
@@ -3294,19 +3354,35 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     show("emptycard", !allLabs.length && !allWeeks.length && !syncSignals.length);
     wireGoto();
   }
-  // The section: one card open on the Overview, one chapter on In depth, one
-  // group on Body. The sub-links of the active tab are lit by aria-current;
-  // the hash carries the tab and the section.
+  // The section: one of the Overview's six, one of In depth's eight, one of
+  // Body's four, alone on the page. The sub-links of the active tab are lit
+  // by aria-current; the hash carries the tab and the section; the page is
+  // read from its top, since what was under the pointer is no longer there.
+  let lastSectionPage = "";
+  /** On a phone a row of chips scrolls sideways: the lit one is brought into the row's view, and the page itself is not moved. */
+  function showLitChip(b: HTMLElement) {
+    const row = b.parentElement;
+    if (!row || row.scrollWidth <= row.clientWidth) return;
+    row.scrollLeft += b.getBoundingClientRect().left - row.getBoundingClientRect().left - 16;
+  }
   effect(() => {
     const sec = sectionSignal.value, tab = activeTabSignal.value;
     document.querySelectorAll<HTMLElement>("#tabbar [data-section]").forEach((b) => {
-      b.setAttribute("aria-current", b.dataset.tabFor === tab && b.dataset.section === sec ? "page" : "false");
+      const lit = b.dataset.tabFor === tab && b.dataset.section === sec;
+      b.setAttribute("aria-current", lit ? "page" : "false");
+      if (lit) showLitChip(b);
     });
-    if (marked.has("painted")) history.replaceState(null, "", hashFor(tab, sec));
+    paintHead();
+    const pageNow = `${tab}/${sec}`;
+    if (marked.has("painted")) {
+      history.replaceState(null, "", hashFor(tab, sec));
+      if (pageNow !== lastSectionPage && tab !== "settings") window.scrollTo({ top: 0 });
+    }
+    lastSectionPage = pageNow;
   });
   function setSection(tab: string, k: string) {
     if (marked.has("painted")) mark("interaction");
-    if (activeTab !== tab) setTab(tab);
+    if (activeTab !== tab) { step(); quietly(() => setSectionState(k)); setTab(tab); }
     setSectionState(k);
     history.replaceState(null, "", hashFor(tab, k));
   }
@@ -4074,6 +4150,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     onOff: (off) => { horizonOff = off; dim("horizontab", off); if (off) drawHorizonSubLinks([]); },
   });
   function openHorizon(hash: string) {
+    if (location.hash !== hash) step();
     setTab("horizon");
     horizonView.open(hash);
     history.replaceState(null, "", hash);
@@ -4116,21 +4193,20 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     $("setname").textContent = fullName || "No name yet";
     dim("acct", !userId);
   }
-  /** Settings, at its top or at one section: the link names it, the section is brought into view and ringed once. */
+  /** Settings, one section on the page: the link names it (Profile when it names none), the heading says it, the other five are not drawn. */
   function openSettings(sec = "") {
-    settingsSection = isSettingsSection(sec) ? sec : "";
+    const want: SettingsSection = isSettingsSection(sec) ? sec : "profile";
+    if (activeTab !== "settings" || want !== settingsSection) step();
+    settingsSection = want;
     setTab("settings");
-    $("settingsnav").querySelectorAll<HTMLElement>("[data-settings]").forEach((b) => b.setAttribute("aria-current", b.dataset.settings === settingsSection ? "page" : "false"));
+    $("settingsnav").querySelectorAll<HTMLElement>("[data-settings]").forEach((b) => { b.setAttribute("aria-current", b.dataset.settings === want ? "page" : "false"); if (b.dataset.settings === want) showLitChip(b); });
+    document.querySelectorAll<HTMLElement>("[data-settings-section]").forEach((el) => el.classList.toggle("hidden", el.dataset.settingsSection !== want));
+    $("settingstitle").textContent = SETTINGS_SECTIONS.find(([k]) => k === want)?.[1] ?? "Settings";
     history.replaceState(null, "", hashFor("settings", ""));
-    const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!settingsSection) { window.scrollTo({ top: 0 }); return; }
-    const el = document.getElementById(`settings-${settingsSection}`);
-    if (!el) return;
-    el.scrollIntoView({ block: "start", behavior: calm ? "auto" : "smooth" });
-    el.classList.remove("mh-find"); void el.offsetWidth; el.classList.add("mh-find");
+    window.scrollTo({ top: 0 });
   }
   $("settingsnav").querySelectorAll<HTMLElement>("[data-settings]").forEach((b) => b.addEventListener("click", () => openSettings(b.dataset.settings!)));
-  $("settingsback").addEventListener("click", () => { settingsSection = ""; setTab(lastPageTab); });
+  $("settingsback").addEventListener("click", () => setTab(lastPageTab));
   $("setsharinggo").addEventListener("click", openAccess);
   $("setnamechange").addEventListener("click", () => { setTab("overview"); $("namechange").click(); });
   const acctMenu = (open: boolean) => {
