@@ -3,7 +3,8 @@
  * parts of the page that ask the server something. Plan and billing shows
  * the plan as the server knows it and, on Free, the 14-day trial; Email and
  * notifications holds the weekly email's switch and each open horizon's
- * check-in switch; Appearance is light, dark or the device's own.
+ * check-in switch; Appearance is light, dark or the device's own, one choice
+ * for the whole site (src/lib/theme.ts).
  *
  * Profile, Sharing and Data are the page's own markup (the name's edit, the
  * access panel, the exports and the account's deletion are the controls the
@@ -17,7 +18,7 @@ import { render } from "preact";
 import { useState } from "preact/hooks";
 import { signal } from "@preact/signals";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getTheme, setTheme, type ThemeChoice } from "../../lib/theme.ts";
+import { getTheme, setTheme, THEME_EVENT, type ThemeChoice } from "../../lib/theme.ts";
 import { listHorizons, updateHorizon, type HorizonFull } from "../horizon/api.ts";
 import {
   type PlanInfo, type WeeklyState, ONE_MONDAY_EMAIL, WEEKLY_CARRIES, browserZone, planLine, planRows, trialOffered, weeklyNote,
@@ -28,7 +29,7 @@ import { fetchPlan, loadWeekly, saveWeekly, startWebTrial } from "../accountApi.
 export const planInfoSignal = signal<PlanInfo | null>(null);
 const weeklySignal = signal<WeeklyState | null>(null);
 const horizonsSignal = signal<HorizonFull[] | "off" | null>(null);
-const themeSignal = signal<ThemeChoice>("system");
+const themeSignal = signal<ThemeChoice>("light");
 
 export type SettingsDeps = {
   supabase: SupabaseClient; url: string; anonKey: string;
@@ -47,6 +48,8 @@ export type SettingsHandle = {
 
 export function mountSettings(roots: { plan: HTMLElement; email: HTMLElement; appearance: HTMLElement }, deps: SettingsDeps): SettingsHandle {
   themeSignal.value = getTheme();
+  // the footer's control and another tab write the same choice: this one follows
+  document.addEventListener(THEME_EVENT, () => { themeSignal.value = getTheme(); });
   const refreshPlan = async () => { const info = await fetchPlan(deps.supabase, deps.url, deps.anonKey); planInfoSignal.value = info; return info; };
   const refreshEmail = async () => {
     const uid = deps.userId();
@@ -190,11 +193,11 @@ function AppearanceBlock() {
     <div class="flex flex-col gap-3">
       <div class="flex w-full gap-1 rounded-[10px] border border-border bg-alt p-1 sm:w-fit" role="radiogroup" aria-label="Appearance">
         {THEMES.map(([k, label]) => (
-          <button type="button" key={k} role="radio" aria-checked={now === k} onClick={() => { setTheme(k); themeSignal.value = k; }}
+          <button type="button" key={k} role="radio" aria-checked={now === k} onClick={() => setTheme(k)}
             class={`min-h-10 flex-1 rounded-[8px] px-5 text-[14px] font-medium sm:flex-none ${now === k ? "bg-accent-fill text-accent-text" : "text-text-2 hover:text-text"}`}>{label}</button>
         ))}
       </div>
-      <Quiet>System follows this device's light or dark. The choice is kept in this browser, for My health only; the public pages are always light.</Quiet>
+      <Quiet>One choice for every page of the site, kept in this browser. System follows this device's light or dark. The same control is in the footer of every page.</Quiet>
     </div>
   );
 }

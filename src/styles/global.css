@@ -5,20 +5,27 @@
 @import "@fontsource/jetbrains-mono/700.css";
 
 /*
- * Two sets of values on one set of names (11 November 2026, the canvas
- * "Verve on the web, rethought", boards 02, 07 and 08).
+ * Two sets of values on one set of names (11 November 2026: the canvas
+ * "Verve on the web, rethought", boards 02, 07 and 08, then "Verve on the
+ * web, refined", boards 01 and 02).
  *
- * LIGHT is the default: the public pages read dark on light, which reads
- * better at every age and more so in small type. DARK is the app's matte
- * set, the one the website took on 8 November. It applies in three places:
- *   :root[data-theme="dark"]     the person chose dark (My health's switch)
- *   :root[data-theme="system"]   My health, when the device prefers dark
+ * LIGHT is the default on every page, My health included, until a person
+ * chooses otherwise. Its ground is Oat: a warm off-white, with the card a
+ * step lighter and the inset panel a step darker, so nothing on the page is
+ * pure white. Three colours sit a shade darker than they did on white, so
+ * each still reads at 4.5:1 on every surface: text-3, good and concern.
+ * DARK is the app's matte set, the one the website took on 8 November. It
+ * applies in three places:
+ *   :root[data-theme="dark"]     the person chose dark (the footer's switch,
+ *                                or Settings, Appearance: one choice, every page)
+ *   :root[data-theme="system"]   the person chose System and the device prefers dark
  *   .theme-dark                  a scope class: an app frame, a product
  *                                glimpse or a dark section inside a light
  *                                page. The product is shown as it is.
  * The names never change, so `bg-canvas`, `text-text-2`, `border-border`
  * and every alias mean the right thing in each. Layout.astro sets the
- * attribute; src/lib/theme.ts reads and writes the choice.
+ * attribute before anything paints; src/lib/theme.ts reads and writes the
+ * choice.
  *
  * `well` is an inset panel's ground and `shade` a drop shadow's colour;
  * each carries its own alpha, so write `bg-well` and `shadow-shade` bare.
@@ -34,17 +41,17 @@
   --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
-  /* surfaces */
-  --color-canvas:        #F7F7F4;
-  --color-card:          #FFFFFF;
-  --color-alt:           #F1F1EE;
-  --color-border:        #E4E4E0;
-  --color-border-strong: #CFCFCA;
+  /* surfaces: Oat */
+  --color-canvas:        #EFE8DB;
+  --color-card:          #F8F4EB;
+  --color-alt:           #E7DFD0;
+  --color-border:        #D9D0BF;
+  --color-border-strong: #C4BAA6;
 
   /* text */
   --color-text:   #14141C;
   --color-text-2: #4C4C5C;
-  --color-text-3: #6B6B7E;   /* eyebrows, small labels: the smallest grey allowed on a card (4.9:1 on the canvas) */
+  --color-text-3: #5F5F73;   /* eyebrows, small labels: the smallest grey allowed (4.7:1 on the inset panel, 5.1:1 on the canvas) */
   --color-text-4: #A3A3B2;   /* never for words a person reads: rules, placeholders, 24 px and up */
   --color-ink:    #14141C;   /* what sits on the canvas; use at low alpha for hairlines and washes */
   --color-well:   rgb(20 20 28 / 0.045);   /* an inset panel: a table's ground, a code well (`bg-well`) */
@@ -57,28 +64,28 @@
   --color-accent-border: #B9BAF0;
 
   /* meaning */
-  --color-good:    #0B7A54;
+  --color-good:    #086E4B;
   --color-caution: #7A4C08;   /* dark gold, never orange */
-  --color-concern: #C23B3B;
+  --color-concern: #AE3030;
 
-  /* the zones: zone 1 is neutral, zone 2 the app's green, zone 3 its darker fill; z3-text passes 4.5:1 on white */
+  /* the zones: zone 1 is neutral, zone 2 the app's green, zone 3 its darker fill; z3-text passes 4.5:1 on every Oat surface */
   --color-z2:      #5E9A2A;
   --color-z3:      #3B6D11;
   --color-z3-text: #3B6D11;
 
   /* ── aliases: the names the pages were written with, on the same values ── */
-  --color-canvas-2: #F7F7F4;
-  --color-canvas-3: #F7F7F4;
+  --color-canvas-2: #EFE8DB;
+  --color-canvas-3: #EFE8DB;
   --color-text-primary:   #14141C;
   --color-text-secondary: #4C4C5C;
-  --color-text-tertiary:  #6B6B7E;
-  --color-text-muted:     #6B6B7E;   /* the old pages use this name for small notes a person reads: text-3's value, not text-4's */
+  --color-text-tertiary:  #5F5F73;
+  --color-text-muted:     #5F5F73;   /* the old pages use this name for small notes a person reads: text-3's value, not text-4's */
   --color-accent-light:   #35357E;
   --color-glow:           #4A4AA8;
-  --color-success:        #0B7A54;
-  --color-success-light:  #0B7A54;
+  --color-success:        #086E4B;
+  --color-success-light:  #086E4B;
   --color-warning:        #7A4C08;
-  --color-danger:         #C23B3B;
+  --color-danger:         #AE3030;
   --color-met-hero:       #4A4AA8;
   --color-cyan:           #4A4AA8;
   --color-violet:         #4A4AA8;
@@ -176,6 +183,14 @@
 :root.vrv-theme-switch *::before,
 :root.vrv-theme-switch *::after {
   transition: none !important;
+}
+
+/* The footer's Appearance control: the option that matches the page's own attribute is lit, before any script runs. */
+:root[data-theme="light"] .vrv-appearance [data-theme-choice="light"],
+:root[data-theme="dark"] .vrv-appearance [data-theme-choice="dark"],
+:root[data-theme="system"] .vrv-appearance [data-theme-choice="system"] {
+  background-color: var(--color-accent-fill);
+  color: var(--color-accent-text);
 }
 
 /* A dark scope is a surface of its own: its words and its ground follow its tokens, not the page's.

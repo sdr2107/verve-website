@@ -1,14 +1,19 @@
 /**
  * In depth (canvas "My health, redesigned", boards 13 and 5): the week that
- * closed on Sunday, then the longer view, then the same six cards as the
- * Overview, one chapter each with one chart and one table, in the same
- * units, then the week's every number. A coach sees exactly this page,
- * read-only. Every figure is from the derive layer; the working for "The
- * Guide's read" is still published on a signal for the page.
+ * closed on Sunday, then the longer view, then five of the Overview's cards,
+ * one chapter each with one chart and one table, in the same units, then the
+ * week's every number. A coach sees exactly this page, read-only. Every
+ * figure is from the derive layer; the working for "The Guide's read" is
+ * still published on a signal for the page.
+ *
+ * One section at a time (canvas "Verve on the web, refined", board 07): the
+ * sidebar lists the eight, a press shows that one and nothing else, and the
+ * arrows at its foot step to the one before and the one after. In depth has
+ * no page of its own: it opens on Last week.
  */
 import { render } from "preact";
 import { useEffect, useMemo, useState } from "preact/hooks";
-import { derived, person, depthLocked, depthWorking, actions, section, activeTab, fitUnit, setFitUnit, DEPTH_KEYS } from "../state.ts";
+import { derived, person, depthLocked, depthWorking, actions, section, setSection, sectionFor, fitUnit, setFitUnit, DEPTH_KEYS } from "../state.ts";
 import { depthEmpty, depthEmptyText, depthOf } from "../derive/depth.ts";
 import { addDays, dayWord, fmt1, fmtDay, medianOf, mondayOf, round0, todayStr } from "../derive/format.ts";
 import { eventsFrom, labRowsFrom, restingBPOf } from "../derive/markers.ts";
@@ -20,6 +25,12 @@ import { VO2_CAVEAT, metsOfTest, tierIndexFromCategory, tierIndexOf, tierRowFor,
 import { TIER_LABELS } from "../../data/fitness-tiers.ts";
 import { efficiencyOf, fmtHMin, fmtSigned1, latestWith, rowOn, stagesOf, writerOf } from "../derive/signals.ts";
 import { WeekTable } from "./Overview.tsx";
+import { Pager } from "./Pager.tsx";
+
+/** The eight sections, by the names the sidebar gives them. */
+const DEPTH_TITLE: Record<(typeof DEPTH_KEYS)[number], string> = {
+  lastweek: "Last week", snapshot: "Snapshot", fitness: "Fitness", vitals: "Vitals", sleep: "Sleep", exertion: "Exertion", movement: "Movement", everynumber: "The week, every number",
+};
 
 const DASH = "—";
 const TONE: Record<string, string> = { good: "text-good", caution: "text-caution", concern: "text-concern", neutral: "text-text-2" };
@@ -49,12 +60,10 @@ function Lock({ self, name }: { self: boolean; name: string }) {
   );
 }
 
-const Chapter = ({ id, title, sub, children }: { id: string; title: string; sub: string; children: any }) => (
-  <section id={`depth-${id}`} class="r-card scroll-mt-6 border border-border bg-card p-5 sm:p-6">
-    <div class="flex flex-wrap items-baseline justify-between gap-2">
-      <h3 class="t-title text-text">{title}</h3>
-      <span class="t-caption max-w-xl text-text-3">{sub}</span>
-    </div>
+/** A chapter's card: the page's heading names it, so the card opens with what its chart shows. */
+const Chapter = ({ id, sub, children }: { id: string; sub: string; children: any }) => (
+  <section id={`depth-${id}`} class="r-card border border-border bg-card p-5 sm:p-6">
+    <p class="t-caption max-w-3xl text-text-3">{sub}</p>
     {children}
   </section>
 );
@@ -71,15 +80,11 @@ export function Depth() {
   const locked = depthLocked.value;
   const today = todayStr();
   const unit = fitUnit.value;
-  const sec = section.value, tab = activeTab.value;
+  const cur = sectionFor("depth", section.value) as (typeof DEPTH_KEYS)[number];
   const [months, setMonths] = useState<3 | 6 | 12>(typeof localStorage === "undefined" ? 6 : storedSnap());
   const pickMonths = (m: 3 | 6 | 12) => { setMonths(m); try { localStorage.setItem(SNAP_KEY, String(m)); } catch { /* private mode */ } };
   const depth = useMemo(() => (d && p && !locked && !depthEmpty(d) ? depthOf(d, p, today) : null), [d, p, locked, today]);
   useEffect(() => { depthWorking.value = depth?.working ?? null; }, [depth]);
-  useEffect(() => {
-    if (tab !== "depth" || !(DEPTH_KEYS as readonly string[]).includes(sec)) return;
-    document.getElementById(`depth-${sec}`)?.scrollIntoView({ block: "start", behavior: "smooth" });
-  }, [sec, tab]);
   const last = useMemo(() => (d ? lastWeekOf(d, today) : null), [d, today]);
   const snap: Snapshot | null = useMemo(() => (d ? snapshotOf(d, months, today) : null), [d, months, today]);
   if (!d || !p) return null;
@@ -158,9 +163,11 @@ export function Depth() {
   const bars = byWeek.map(({ m, f }) => ({ label: dayMonth(m).replace(/ (\w+)$/, (_s, mo) => ` ${String(mo).slice(0, 3)}`), dose: f.dose, goal: f.goal, current: m === monday }));
   const cell = (v: number | null, dp = 0) => v == null ? DASH : dp ? fmt1(v) : Math.round(v).toLocaleString();
 
+  const at = DEPTH_KEYS.indexOf(cur);
+  const chapter = cur === "fitness" || cur === "vitals" || cur === "sleep" || cur === "exertion" || cur === "movement";
   const seg = (on: boolean) => `r-btn min-h-8 px-3 text-[13px] font-semibold transition-colors ${on ? "bg-accent-fill text-accent-text" : "text-text-3 hover:text-text"}`;
   const unitSwitch = (
-    <div class="r-btn flex gap-1 border border-border p-1" role="group" aria-label="Unit">
+    <div class="r-btn flex w-fit gap-1 border border-border p-1" role="group" aria-label="Unit">
       <button type="button" class={seg(unit === "mets")} onClick={() => setFitUnit("mets")}>METs</button>
       <button type="button" class={seg(unit === "vo2")} onClick={() => setFitUnit("vo2")}>VO₂max</button>
     </div>
@@ -170,14 +177,19 @@ export function Depth() {
     <div class="flex flex-col gap-5">
       {!p.self ? <p class="t-caption text-text-3">Viewing {p.name || "this person"} · read-only · synced {synced ? fmtDay(synced) : "—"} · the athlete's own words appear only in Messages</p> : null}
       <div>
-        <div class="t-eyebrow">In depth · the week that finished, and the longer view</div>
-        <h2 class="t-display mt-2 text-text">Last week, complete. Then three, six or twelve months.</h2>
-        <p class="t-body mt-3 max-w-3xl text-text-2">The Overview is this week so far. This page opens with the week that closed on Sunday, the one the Guide read, then puts the same markers and your blood work against the same date three, six or twelve months back.</p>
-        {events.length ? <div class="mt-4 flex flex-wrap gap-x-6 gap-y-1"><span class="t-eyebrow">What changed this week</span>{events.map((e) => <span key={e.d + e.text} class="t-small text-text-2"><span class="text-text-3">{dayWord(e.d)}</span> <span dangerouslySetInnerHTML={{ __html: e.text }} /></span>)}</div> : null}
+        <div class="t-eyebrow">In depth <span aria-hidden="true">&rsaquo;</span> {DEPTH_TITLE[cur]}</div>
+        {cur === "lastweek" ? <>
+          <h1 class="t-display mt-2 text-text">Last week, complete. Then three, six or twelve months.</h1>
+          <p class="t-body mt-3 max-w-3xl text-text-2">The Overview is this week so far. In depth opens with the week that closed on Sunday, the one the Guide read. The Snapshot puts the same markers and your blood work against the same date three, six or twelve months back, and each chapter after it is one chart and one table.</p>
+          {events.length ? <div class="mt-4 flex flex-wrap gap-x-6 gap-y-1"><span class="t-eyebrow">What changed this week</span>{events.map((e) => <span key={e.d + e.text} class="t-small text-text-2"><span class="text-text-3">{dayWord(e.d)}</span> <span dangerouslySetInnerHTML={{ __html: e.text }} /></span>)}</div> : null}
+        </> : cur === "everynumber" ? <h1 class="sr-only">{DEPTH_TITLE[cur]}</h1> : <>
+          <h1 class="t-display mt-2 text-text">{cur === "snapshot" ? "The snapshot" : DEPTH_TITLE[cur]}</h1>
+          {chapter ? <p class="t-small mt-2 max-w-3xl text-text-2">One chart and one table. Same order as the Overview, same units. METs stay METs, MET-minutes stay MET-minutes; VO₂max appears only as a second unit you choose.</p> : null}
+        </>}
       </div>
 
       {/* ── last week ── */}
-      <section id="depth-lastweek" class="r-card scroll-mt-6 border border-border bg-card p-5 sm:p-6">
+      {cur === "lastweek" ? <section id="depth-lastweek" class="r-card border border-border bg-card p-5 sm:p-6">
         <div class="flex flex-wrap items-baseline justify-between gap-2">
           <h3 class="t-title text-text">Last week · {weekSpanWords(last.week.start)}</h3>
           <span class="t-caption text-text-3">{last.counted}</span>
@@ -192,12 +204,11 @@ export function Depth() {
           ))}
         </div>
         {(last.compared || last.fitnessLine) ? <p class="t-small mt-4 max-w-3xl text-text-2">{last.compared} {last.fitnessLine}</p> : null}
-      </section>
+      </section> : null}
 
       {/* ── the snapshot ── */}
-      <section id="depth-snapshot" class="r-card scroll-mt-6 border border-border bg-card p-5 sm:p-6">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <h3 class="t-title text-text">The snapshot</h3>
+      {cur === "snapshot" ? <section id="depth-snapshot" class="r-card border border-border bg-card p-5 sm:p-6">
+        <div class="flex flex-wrap items-center gap-3">
           <div class="r-btn flex gap-1 border border-border p-1" role="group" aria-label="Window">
             {([3, 6, 12] as const).map((m) => <button key={m} type="button" class={seg(months === m)} aria-pressed={months === m ? "true" : "false"} onClick={() => pickMonths(m)}>{m} months</button>)}
           </div>
@@ -225,15 +236,10 @@ export function Depth() {
           </div>
         ) : <p class="t-small mt-4 text-text-3">Nothing measured twice in this window yet.</p>}
         <p class="t-caption mt-3 text-text-3">A marker measured once in the window shows its one value and date and no change. Lp(a) is never in this table. Units as on the Body page.</p>
-      </section>
+      </section> : null}
 
-      {/* ── the six chapters ── */}
-      <div>
-        <div class="t-eyebrow">The same six cards, over time</div>
-        <p class="t-small mt-1 max-w-3xl text-text-2">Each card, one chart and one table. Same order as the Overview, same units. METs stay METs, MET-minutes stay MET-minutes; VO₂max appears only as a second unit you choose.</p>
-      </div>
-
-      <Chapter id="fitness" title="Fitness" sub={`${fit.tests.length ? "Twelve months of tests" : "No test on file"} · the shaded band is above average for your age and sex${unit === "vo2" ? " · the estimate carries a 7 to 16 % error" : ""}`}>
+      {/* ── the five chapters, one on the page ── */}
+      {cur === "fitness" ? <Chapter id="fitness" sub={`${fit.tests.length ? "Twelve months of tests" : "No test on file"} · the shaded band is above average for your age and sex${unit === "vo2" ? " · the estimate carries a 7 to 16 % error" : ""}`}>
         <div class="mt-3">{unitSwitch}</div>
         <Svg w={560} h={160} inner={testsSvg(tests, { lo: inUnit(b[1]), hi: inUnit(b[2]) }, today, unit === "mets" ? "METs" : "mL/kg/min")} label="Fitness tests over twelve months" />
         {unit === "vo2" ? <p class="t-caption mt-2 text-text-3">{VO2_CAVEAT}</p> : null}
@@ -252,9 +258,9 @@ export function Depth() {
           </table>
           <p class="t-caption mt-2 text-text-3">Tiers for {row.age} · {String(d.profile?.sex ?? "").toLowerCase() === "female" ? "women" : "men"} · the app's table{fit.latest ? ` · last test ${fmtDay(fit.latest.measured_on)}` : ""}</p>
         </div>
-      </Chapter>
+      </Chapter> : null}
 
-      <Chapter id="vitals" title="Vitals" sub="Resting heart rate, 28 nights · the band is your own normal, not a population range · blood pressure is the cuff's 30-day mean, a crisis reading named on its own">
+      {cur === "vitals" ? <Chapter id="vitals" sub="Resting heart rate, 28 nights · the band is your own normal, not a population range · blood pressure is the cuff's 30-day mean, a crisis reading named on its own">
         <Svg w={560} h={150} inner={nightsSvg(nights, rhBand, rh?.baseline ?? null, addDays(today, -27), today, "bpm")} label="Resting heart rate over 28 mornings with the person's own band" />
         <div class="mt-4 overflow-x-auto">
           <table class="w-full min-w-[520px] border-collapse">
@@ -271,9 +277,9 @@ export function Depth() {
           {bp ? <p class="t-caption mt-2 text-text-3">Blood pressure, {bp.basis === "average" ? `the ${bp.days}-day mean of ${bp.n} readings` : bp.crisis ? "a crisis-level reading" : "one reading"}: {bp.sbp}/{bp.dbp} mmHg{bp.crisis ? ", acted on now, not averaged" : ""}.</p> : null}
           {depth.heartRows.length ? <button type="button" onClick={() => exportHeartRows(depth.heartRows, today, p.name)} class="t-caption mt-2 font-semibold text-accent-text hover:text-text">Export these {depth.heartRows.length} rows as CSV</button> : null}
         </div>
-      </Chapter>
+      </Chapter> : null}
 
-      <Chapter id="sleep" title="Sleep" sub="The last seven nights, bed to wake · the band is your usual window · a night that ran late is marked">
+      {cur === "sleep" ? <Chapter id="sleep" sub="The last seven nights, bed to wake · the band is your usual window · a night that ran late is marked">
         <Svg w={560} h={170} inner={bedWakeSvg(nightSpans, usual)} label="Seven nights from bedtime to waking, against the usual window" />
         <div class="mt-4 overflow-x-auto">
           <table class="w-full min-w-[420px] border-collapse">
@@ -281,9 +287,9 @@ export function Depth() {
             <tbody>{sleepRows.map(([l, v, w]) => <tr key={l} class="border-t border-border"><td class="t-small py-2 text-text-2">{l}</td><Td v={v} /><td class="t-small py-2 pl-3 text-text-3">{w}</td></tr>)}</tbody>
           </table>
         </div>
-      </Chapter>
+      </Chapter> : null}
 
-      <Chapter id="exertion" title="Exertion" sub="1-minute recovery after each session, 8 weeks · the band is your own middle half · the dotted line is the cited 12">
+      {cur === "exertion" ? <Chapter id="exertion" sub="1-minute recovery after each session, 8 weeks · the band is your own middle half · the dotted line is the cited 12">
         <Svg w={560} h={140} inner={recoverySvg(dots, hr?.band ?? null, hr?.median ?? null, today)} label="Heart rate recovery after each session over eight weeks" />
         <div class="mt-4 overflow-x-auto">
           <table class="w-full min-w-[520px] border-collapse">
@@ -304,9 +310,9 @@ export function Depth() {
             </tbody>
           </table>
         </div>
-      </Chapter>
+      </Chapter> : null}
 
-      <Chapter id="movement" title="Movement" sub={`The weekly dose, four weeks · the dashed line is the ${last.week.goal.toLocaleString()} MET-min goal · the zones and the rest in the table`}>
+      {cur === "movement" ? <Chapter id="movement" sub={`The weekly dose, four weeks · the dashed line is the ${last.week.goal.toLocaleString()} MET-min goal · the zones and the rest in the table`}>
         <Svg w={560} h={150} inner={weekBarsSvg(bars)} label="Weekly dose over four weeks against the goal" />
         <div class="mt-4 overflow-x-auto">
           <table class="w-full min-w-[520px] border-collapse">
@@ -326,15 +332,19 @@ export function Depth() {
           </table>
           <p class="t-caption mt-2 text-text-3">A week the app has written is its figures; a week it has not yet is counted here from the synced sessions. A dash is nothing to show, never a zero.</p>
         </div>
-      </Chapter>
+      </Chapter> : null}
 
-      <section id="depth-everynumber" class="scroll-mt-6">
+      {cur === "everynumber" ? <section id="depth-everynumber">
         {d.signals.length ? <>
           <WeekTable />
           <p class="t-caption mt-2 max-w-3xl text-text-3">The table that sat on the Overview, moved here whole. Monday to Sunday, one writer per day.</p>
           <p class="t-caption mt-1 max-w-3xl text-text-3">Where the readings come from: {writer ?? "the wearable"} writes heart rate, sleep and workouts to {store}; the iPhone writes steps; you enter labs. Verve reads the store, never the wearable.</p>
         </> : <p class="t-caption max-w-3xl text-text-3">The week, every number, fills in once the app's day rows arrive: in the app, Settings → Your data → Back up watch readings.</p>}
-      </section>
+      </section> : null}
+
+      <Pager at={at + 1} of={DEPTH_KEYS.length}
+        prev={at > 0 ? { label: DEPTH_TITLE[DEPTH_KEYS[at - 1]], go: () => setSection(DEPTH_KEYS[at - 1]) } : null}
+        next={at < DEPTH_KEYS.length - 1 ? { label: DEPTH_TITLE[DEPTH_KEYS[at + 1]], go: () => setSection(DEPTH_KEYS[at + 1]) } : null} />
     </div>
   );
 }

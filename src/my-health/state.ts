@@ -39,11 +39,23 @@ export const DEPTH_KEYS = ["lastweek", "snapshot", "fitness", "vitals", "sleep",
 /** Body: the app's three shelves and the reports on file. */
 export const BODY_KEYS = ["metabolic", "heart", "muscle", "reports"] as const;
 /**
- * The open section of the active tab: a card on the Overview (opened in
- * place), a chapter on In depth, a group on Body; "all" is the tab's own
- * page. The hash carries it: #overview-movement, #depth-sleep, #body-heart.
+ * The open section of the active tab (canvas "Verve on the web, refined",
+ * boards 04 and 07): one section is on the page at a time. On the Overview
+ * "all" is the six cards and a card's key is that section alone; In depth
+ * and Body have no page of their own, so they always hold one of their
+ * sections, the first when none is named. The hash carries it:
+ * #overview-movement, #depth-sleep, #body-heart.
  */
 export const section = signal<string>("all");
+/** The sections of each tab that has them, in the sidebar's order. */
+export const TAB_SECTIONS: Record<string, readonly string[]> = { overview: CARD_KEYS, depth: DEPTH_KEYS, body: BODY_KEYS };
+/** The section a tab shows for a wanted one: the wanted one when the tab has it; else the tab's first, or "all" on the Overview and on a tab with no sections. */
+export function sectionFor(tab: string, wanted: string): string {
+  const keys = TAB_SECTIONS[tab];
+  if (!keys) return "all";
+  if (keys.includes(wanted)) return wanted;
+  return tab === "overview" ? "all" : keys[0];
+}
 /** The name the Overview used before 8 Nov 2026; the same signal. */
 export const ovSection = section;
 export const openMarkerKey = signal("");
@@ -83,6 +95,8 @@ export const depthWorking = signal<Record<string, unknown> | null>(null);
 
 /** What the views ask the page to do: the page fills these in. */
 export const actions = {
+  /** A press that changes the page is a step in the browser's history, so Back returns to the page before it. */
+  step: () => {},
   goTab: (_t: string) => {},
   searchNote: (_text: string) => {},
   tabCount: (_tab: string, _text: string, _tone?: string) => {},
@@ -97,8 +111,9 @@ export function openLabs(sec: string, analyte = "") {
   actions.goTab("body");
 }
 
-/** Open a section of the active tab, as the sidebar and the cards do; "all" closes it. */
+/** Open a section of the active tab, as the sidebar, the cards and the arrows at a section's foot do; "all" is the Overview's six cards. */
 export function setSection(k: string) {
+  if (k !== section.value) actions.step();
   section.value = k;
   focusTile.value = false; openYear.value = null; openMarkerKey.value = "";
 }

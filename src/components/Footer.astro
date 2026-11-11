@@ -14,6 +14,12 @@
  * Then the company: name, CIN and registered office, as the Companies Act
  * asks and as anyone verifying the site expects to find, with the privacy
  * policy and the terms beside it. All addresses come from data/site.ts.
+ *
+ * Appearance (11 November 2026, canvas "Verve on the web, refined", board
+ * 02): Light, Dark or System, on every page, for someone who is not signed
+ * in. It is the same choice as Settings, Appearance: src/lib/theme.ts keeps
+ * it and both controls hear each other. The lit option is drawn from the
+ * page's own data-theme (global.css), so it is right from the first paint.
  */
 interface Props {
   /** Kept for the pages that pass it; the name at the left is the way home. */
@@ -27,6 +33,7 @@ import { FOOTER_LINKS, APP_SOCIAL, FOUNDER_SOCIAL, APP_HANDLE, APP_STORE_URL, PL
 import SocialIcon from "./SocialIcon.astro";
 import StoreBadge from "./StoreBadge.astro";
 
+const THEMES = [["light", "Light"], ["dark", "Dark"], ["system", "System"]] as const;
 const links = FOOTER_LINKS.filter((l) => showScience || l.href !== "/science");
 /** The app's accounts are Verve's; X and Substack are the founder's own, and the label says so. */
 const accounts = [
@@ -86,10 +93,36 @@ const accounts = [
         &copy; {new Date().getFullYear()} {COMPANY.name}, CIN {COMPANY.cin}. Registered office: {COMPANY.registeredOffice}.
         {" "}<a href={`mailto:${COMPANY.email}`} class="whitespace-nowrap hover:text-text-primary">{COMPANY.email}</a>
       </p>
-      <p class="flex shrink-0 gap-5 text-[13px] text-text-secondary">
-        <a href={PRIVACY_URL} class="inline-flex min-h-9 items-center transition-colors hover:text-text-primary md:min-h-0">Privacy</a>
-        <a href={TERMS_URL} class="inline-flex min-h-9 items-center transition-colors hover:text-text-primary md:min-h-0">Terms</a>
-      </p>
+      <div class="flex shrink-0 flex-col gap-3 md:items-end">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span id="vrv-appearance" class="text-[13px] text-text-secondary">Appearance</span>
+          <div role="radiogroup" aria-labelledby="vrv-appearance" class="vrv-appearance flex gap-1 rounded-[10px] border border-border bg-alt p-1">
+            {THEMES.map(([k, label]) => (
+              <button type="button" role="radio" aria-checked="false" data-theme-choice={k} class="min-h-10 rounded-[8px] px-3.5 text-[13px] font-medium text-text-2 transition-colors hover:text-text md:min-h-8">{label}</button>
+            ))}
+          </div>
+        </div>
+        <p class="flex gap-5 text-[13px] text-text-secondary">
+          <a href={PRIVACY_URL} class="inline-flex min-h-9 items-center transition-colors hover:text-text-primary md:min-h-0">Privacy</a>
+          <a href={TERMS_URL} class="inline-flex min-h-9 items-center transition-colors hover:text-text-primary md:min-h-0">Terms</a>
+        </p>
+      </div>
     </div>
   </div>
 </footer>
+
+<script>
+  import { getTheme, setTheme, THEME_EVENT, type ThemeChoice } from "../lib/theme.ts";
+  // One listener on the document, so it holds on the pages that arrive without a full load.
+  const mark = () => {
+    const now = getTheme();
+    document.querySelectorAll<HTMLElement>("[data-theme-choice]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.themeChoice === now)));
+  };
+  document.addEventListener("click", (e) => {
+    const b = (e.target as HTMLElement | null)?.closest?.<HTMLElement>("[data-theme-choice]");
+    if (b) setTheme(b.dataset.themeChoice as ThemeChoice);
+  });
+  document.addEventListener(THEME_EVENT, mark);
+  document.addEventListener("astro:page-load", mark);
+  mark();
+</script>

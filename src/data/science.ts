@@ -422,7 +422,7 @@ export const WEEKLY_VOLUME_SECTION: Citation[] = [
   {
     title: "Why Verve counts minutes as measured",
     summary:
-      "Public-health targets credit vigorous activity double — 150 moderate-equivalent minutes can be met with 75 vigorous ones. Those figures come from questionnaires. Verve counts what your device actually recorded, without doubling, which is the same way the study above measured activity. It is the more conservative reading: a vigorous week counts for less here than a guideline would allow, never more.",
+      "Public-health targets credit vigorous activity double — 150 moderate-equivalent minutes can be reached with 75 vigorous ones. Those figures come from questionnaires. Verve counts what your device actually recorded, without doubling, which is the same way the study above measured activity. It is the more conservative reading: a vigorous week counts for less here than a guideline would allow, never more.",
     url: "https://doi.org/10.1136/bjsports-2025-111351",
     color: "#0284c7",
     isCommentary: true,

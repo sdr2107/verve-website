@@ -16,13 +16,6 @@ interface Props {
   image?: string;
   /** "summary_large_image" gives the full-bleed card; "summary" the small square. */
   cardType?: "summary_large_image" | "summary";
-  /**
-   * Which set of colours the page wears (src/styles/global.css).
-   * "light" (the default): every public page, always light.
-   * "app": My health. It follows the device unless the person chose light
-   * or dark (localStorage "verve-theme"; src/lib/theme.ts writes it).
-   */
-  theme?: "light" | "app";
 }
 
 const SITE = "https://verve-app.health";
@@ -32,11 +25,11 @@ const {
   image = "/og-default.png",
   cardType = "summary_large_image",
   router = false,
-  theme = "light",
 } = Astro.props;
 
-// The two grounds, for the browser's own chrome (the address bar on a phone).
-const GROUND = { light: "#F7F7F4", dark: "#0D0D15" };
+// The two grounds, for the browser's own chrome (the address bar on a phone). The page's colours are
+// src/styles/global.css; which set a person sees is their one choice, read in the head below.
+const GROUND = { light: "#EFE8DB", dark: "#0D0D15" };
 
 // Absolute URLs — X and iMessage both refuse relative og:image paths.
 const canonical = new URL(Astro.url.pathname, SITE).href;
@@ -44,28 +37,36 @@ const imageAbs  = new URL(image, SITE).href;
 ---
 
 <!doctype html>
-<html lang="en" data-theme={theme === "app" ? "system" : "light"}>
+<html lang="en" data-theme="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content={GROUND.light} />
-    {theme === "app" && <script is:inline>
-      // Before anything paints: the person's choice, else the device's. Anything unreadable or unknown is "system".
+    <script is:inline>
+      // One choice for the whole site, read before anything paints (src/lib/theme.ts writes it). Until a
+      // person chooses, every page is light; anything unreadable or unknown is light too. "system" follows
+      // the device. A page reached without a full load (the Science pages) arrives with the markup's own
+      // attribute, so the choice is put back after every swap.
       (function () {
-        var c = "system";
-        try { var v = localStorage.getItem("verve-theme"); if (v === "light" || v === "dark" || v === "system") c = v; } catch (e) {}
-        document.documentElement.dataset.theme = c;
         var mq = window.matchMedia ? matchMedia("(prefers-color-scheme: dark)") : null;
-        function ground() {
-          var t = document.documentElement.dataset.theme;
-          var dark = t === "dark" || (t !== "light" && mq && mq.matches);
-          var m = document.querySelector('meta[name="theme-color"]');
-          if (m) m.setAttribute("content", dark ? "#0D0D15" : "#F7F7F4");
+        function choice() {
+          try { var v = localStorage.getItem("verve-theme"); if (v === "light" || v === "dark" || v === "system") return v; } catch (e) {}
+          return "light";
         }
-        ground();
-        if (mq && mq.addEventListener) mq.addEventListener("change", ground);
+        function apply() {
+          var c = choice();
+          document.documentElement.dataset.theme = c;
+          var dark = c === "dark" || (c === "system" && mq && mq.matches);
+          var m = document.querySelector('meta[name="theme-color"]');
+          if (m) m.setAttribute("content", dark ? "#0D0D15" : "#EFE8DB");
+        }
+        apply();
+        if (mq && mq.addEventListener) mq.addEventListener("change", apply);
+        document.addEventListener("astro:after-swap", apply);
+        // the choice made in another tab of this browser reaches this one
+        addEventListener("storage", function (e) { if (e.key === "verve-theme") { apply(); document.dispatchEvent(new CustomEvent("verve-theme")); } });
       })();
-    </script>}
+    </script>
     <meta name="description" content={description} />
     <link rel="icon" type="image/png" href="/app-icon.png" />
     <link rel="canonical" href={canonical} />

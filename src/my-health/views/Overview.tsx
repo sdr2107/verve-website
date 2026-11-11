@@ -7,15 +7,18 @@
  *   cards     Fitness · Vitals · Sleep · Exertion · Movement · Body, in the
  *             app's order; each a title, one figure in mono with its unit,
  *             the band in words, three to five rows, the writer line
- *   opened    a card opens IN PLACE: the other five shrink to a strip that
- *             stays put, the open one fills the width with its chapter rows,
- *             its markers as tiles and the chart of one of them. The hash
- *             carries the card (#overview-movement).
+ *   section   a card is the door to its own section (canvas "Verve on the
+ *             web, refined", boards 03 and 04): pressed, the section is the
+ *             page. The other five are not drawn; they are in the sidebar
+ *             and one step away at the foot. Its rows, its markers as tiles
+ *             with every chart closed until one is pressed, and one link to
+ *             its chapter on In depth. The hash carries it
+ *             (#overview-movement).
  *
  * Every figure comes from the derive layer: the app's week row where it
  * wrote one, the app's day rows, the app's helpers' rules. A row with
  * nothing reads a dash and a short reason, never a zero. Nothing animates
- * after load; a card opening slides once, 160 ms.
+ * after load; a section arriving slides once, 160 ms.
  */
 import { render } from "preact";
 import { derived, person, section, setSection, openMarkerKey, openRange, openYear, focusTile, fitUnit, setFitUnit, latestRead, actions, CARD_KEYS, type CardKey } from "../state.ts";
@@ -28,6 +31,7 @@ import { RANGE_LABEL, SHELVES, alongsideHtml, chartSvg, drawnFor, workoutsListHt
 import { backgroundOf, dayBars, efficiencyOf, fmtHMin, fmtSigned1, inBedWindow, latestWith, meanOver, rowOn, stagesOf, weekZones, wristTemp, writerLine, writerOf } from "../derive/signals.ts";
 import { VO2_CAVEAT, metsOfTest, tierIndexFromCategory, tierIndexOf, tierRangeWords, tierRowFor, tierShort, tierWords, vo2OfTest } from "../derive/fitness.ts";
 import { REMNANT_LABEL } from "../derive/lipids.ts";
+import { Pager } from "./Pager.tsx";
 
 /** The 14-day dots, the week table and the sources strip: off the Overview since 8 Nov 2026; the table goes to In depth in stage 2. */
 export const SHOW_OLD_OVERVIEW = false;
@@ -193,7 +197,7 @@ function cardsOf(d: NonNullable<typeof derived.value>, self: boolean, unit: "met
     const stepsWriter = latestWith(d.signals, "steps_source", today)?.steps_source ?? null;
     const daysIn = Math.min(7, daysBetween(monday, today) + 1), toGo = 7 - daysIn;
     const band: Card["band"] = dose == null ? { text: sentence(reason || "no sessions logged"), tone: "neutral" }
-      : dose >= goal ? { text: `Goal of ${goal.toLocaleString()} met`, tone: "good" }
+      : dose >= goal ? { text: `Goal of ${goal.toLocaleString()} reached`, tone: "good" }
       : dose >= (goal * daysIn) / 7 ? { text: `On track for ${goal.toLocaleString()}`, tone: "neutral" }
       : { text: `${(goal - dose).toLocaleString()} to go, ${toGo === 0 ? "the week is done" : plural(toGo, "day") + " left"}`, tone: "neutral" };
     const rows: Row[] = [
@@ -341,19 +345,9 @@ function CardFace({ c, d, on, onOpen }: { c: Card; d: NonNullable<typeof derived
       <span class="mt-3 flex flex-col">{c.rows.map((r) => <RowLine key={r.label} r={r} />)}</span>
       <span class="mt-auto flex items-baseline justify-between gap-3 pt-4">
         <span class="t-caption min-w-0 text-text-3">{c.writer}</span>
-        <span class="t-caption shrink-0 font-semibold text-accent-text">Open</span>
+        <span class="t-caption shrink-0 whitespace-nowrap font-semibold text-accent-text">Open {c.title} &rarr;</span>
       </span>
     </div>
-  );
-}
-
-/** While a card is open the other five shrink to one row each and stay in place. */
-function StripCard({ c, onOpen }: { c: Card; onOpen: () => void }) {
-  return (
-    <button type="button" onClick={onOpen} class="r-card flex items-baseline justify-between gap-3 border border-border bg-card px-4 py-3 text-left transition-colors hover:border-border-strong">
-      <span class="t-small text-text-2">{c.title}</span>
-      <span class="min-w-0 text-right"><span class="t-figure-row text-text">{c.figure}</span> <span class="t-unit">{c.figure === DASH ? c.unit : c.unit.split(" ")[0]}</span></span>
-    </button>
   );
 }
 
@@ -403,52 +397,72 @@ function movementRows(d: NonNullable<typeof derived.value>, c: Card): Row[] {
   ];
 }
 
-function OpenCard({ c, d }: { c: Card; d: NonNullable<typeof derived.value> }) {
+/** What a section's chapter on In depth adds, in a few words: the one link each section carries to it. */
+const CHAPTER_ADDS: Record<CardKey, string> = {
+  fitness: "Twelve months of tests, with the band for your age",
+  vitals: "Resting heart rate over 28 nights, with your own normal",
+  sleep: "The last seven nights, bed to wake",
+  exertion: "Recovery after each session, over 8 weeks",
+  movement: "The weekly dose over four weeks, against the goal",
+  body: "Every marker, with where it sits in its range",
+};
+
+/** One section of the Overview, alone on the page. */
+function SectionPage({ c, d, cards }: { c: Card; d: NonNullable<typeof derived.value>; cards: Card[] }) {
   const today = todayStr();
   const ms = c.key === "body" ? d.markers.filter((m) => m.section === "body" && m.key !== "bp") : c.markers.map((k) => d.markerByKey(k)).filter((m): m is Marker => !!m);
-  const have = ms.filter((m) => m.series().length);
-  const wanted = openMarkerKey.value && ms.some((m) => m.key === openMarkerKey.value) ? openMarkerKey.value : "";
-  const openKey = wanted || (ms.length && c.key !== "body" ? (have[0] ?? ms[0]).key : "");
+  // every chart is closed until its tile is pressed; pressing the open one closes it
+  const openKey = openMarkerKey.value && ms.some((m) => m.key === openMarkerKey.value) ? openMarkerKey.value : "";
   const open = openKey ? ms.find((m) => m.key === openKey) ?? null : null;
   const outKeys = new Set(labRowsFrom(d.by, today).filter((r) => r.out).map((r) => r.key));
   const rows = c.key === "movement" ? movementRows(d, c) : [...c.more, ...c.rows];
   const readAt = d.signals.length ? String(d.signals[d.signals.length - 1]?.day ?? "") : "";
-  const tap = (m: Marker) => { openMarkerKey.value = m.key; openRange.value = ""; openYear.value = null; focusTile.value = true; };
+  const tap = (m: Marker) => { openMarkerKey.value = m.key === openKey ? "" : m.key; openRange.value = ""; openYear.value = null; focusTile.value = true; };
   const tile = (m: Marker, i: number) => <Tile key={m.key} m={m} i={i} on={m.key === openKey} out={outKeys.has(m.key)} onTap={() => tap(m)} />;
+  const at = cards.findIndex((x) => x.key === c.key);
+  const before = cards[at - 1] ?? null, after = cards[at + 1] ?? null;
+  const toChapter = () => { if (c.key === "body") actions.goTab("body"); else { actions.goTab("depth"); setSection(c.key); } };
   return (
-    <div class="mh-slide r-card col-span-full border border-border-strong bg-card p-5 sm:p-6">
+    <div class="mh-slide col-span-full">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="min-w-0">
-          <div class="t-eyebrow">{c.eyebrow}</div>
-          <h2 class="t-heading mt-1.5 text-text">{c.heading}</h2>
+          <div class="t-eyebrow"><button type="button" onClick={() => setSection("all")} class="font-medium text-accent-text hover:text-text">Overview</button> <span aria-hidden="true">&rsaquo;</span> {c.eyebrow}</div>
+          <h1 class="t-display mt-2 text-text">{c.heading}</h1>
         </div>
-        <div class="flex items-center gap-2">
-          {c.key === "fitness" ? <UnitSwitch /> : null}
-          <button type="button" onClick={() => { actions.goTab("depth"); setSection(c.key); }} class="r-btn min-h-9 border border-border px-3.5 text-[13px] font-semibold text-text-2 transition-colors hover:border-border-strong hover:text-text">In depth</button>
-          <button type="button" onClick={() => setSection("all")} class="r-btn min-h-9 border border-border px-3.5 text-[13px] font-semibold text-text-2 transition-colors hover:border-border-strong hover:text-text">Close</button>
-        </div>
+        {c.key === "fitness" ? <UnitSwitch /> : null}
       </div>
-      <div class="mt-5 grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <div class="min-w-0">
-          {c.key === "movement" ? <><WeekBars d={d} /><p class="t-caption mt-2 text-text-3">Logged sessions only, moderate or vigorous, whole-session MET × minutes. One writer per session. The same rule the app uses.</p></> : null}
-          {c.key === "fitness" ? <><TierStrip d={d} />{fitUnit.value === "vo2" ? <p class="t-caption mt-2 text-text-3">{VO2_CAVEAT}</p> : null}</> : null}
-          <div class={`flex flex-col ${c.key === "movement" || c.key === "fitness" ? "mt-4" : ""}`}>{rows.filter(Boolean).map((r) => <RowLine key={r.label} r={r} />)}</div>
-          <p class="t-caption mt-3 text-text-3">{c.writer}{readAt ? ` · read ${readAt === today ? "today" : fmtDay(readAt)}` : ""}. A row with nothing to show reads a dash and the reason, never a zero.</p>
+      <div class="r-card mt-5 border border-border bg-card p-5 sm:p-6">
+        <div class="grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+          <div class="min-w-0">
+            {c.key === "movement" ? <><WeekBars d={d} /><p class="t-caption mt-2 text-text-3">Logged sessions only, moderate or vigorous, whole-session MET × minutes. One writer per session. The same rule the app uses.</p></> : null}
+            {c.key === "fitness" ? <><TierStrip d={d} />{fitUnit.value === "vo2" ? <p class="t-caption mt-2 text-text-3">{VO2_CAVEAT}</p> : null}</> : null}
+            <div class={`flex flex-col ${c.key === "movement" || c.key === "fitness" ? "mt-4" : ""}`}>{rows.filter(Boolean).map((r) => <RowLine key={r.label} r={r} />)}</div>
+            <p class="t-caption mt-3 text-text-3">{c.writer}{readAt ? ` · read ${readAt === today ? "today" : fmtDay(readAt)}` : ""}. A row with nothing to show reads a dash and the reason, never a zero.</p>
+          </div>
+          <div class="min-w-0">
+            {ms.length ? (
+              <>
+                <div class="t-eyebrow mb-2">Charts · closed until you press one</div>
+                <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {c.key === "body"
+                    ? SHELVES.map(([g, name]) => { const gm = ms.filter((m) => m.group === g); if (!gm.length) return null; return (<>
+                        <div key={`shelf:${g}`} class="col-span-full mt-2 flex items-baseline gap-2 first:mt-0"><span class="t-eyebrow">{name}</span><span class="t-caption text-text-3">{gm.filter((m) => m.series().length).length} of {gm.length} read</span></div>
+                        {gm.map((m) => tile(m, ms.indexOf(m)))}
+                      </>); })
+                    : ms.map(tile)}
+                </div>
+              </>
+            ) : null}
+          </div>
         </div>
-        <div class="min-w-0">
-          {ms.length ? (
-            <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {c.key === "body"
-                ? SHELVES.map(([g, name]) => { const gm = ms.filter((m) => m.group === g); if (!gm.length) return null; return (<>
-                    <div key={`shelf:${g}`} class="col-span-full mt-2 flex items-baseline gap-2 first:mt-0"><span class="t-eyebrow">{name}</span><span class="t-caption text-text-3">{gm.filter((m) => m.series().length).length} of {gm.length} read</span></div>
-                    {gm.map((m) => tile(m, ms.indexOf(m)))}
-                  </>); })
-                : ms.map(tile)}
-            </div>
-          ) : null}
-        </div>
+        {open ? <div class="mt-5"><OpenMarker open={open} markers={d.markers} acts={d.acts} out={outKeys.has(open.key)} /></div> : null}
+        <p class="t-small mt-5 border-t border-border pt-4 text-text-2">
+          {CHAPTER_ADDS[c.key]}: <button type="button" onClick={toChapter} class="font-semibold text-accent-text hover:text-text">{c.key === "body" ? "Body" : <>In depth <span aria-hidden="true">&rsaquo;</span> {c.title}</>} &rarr;</button>
+        </p>
       </div>
-      {open ? <div class="mt-5"><OpenMarker open={open} markers={d.markers} acts={d.acts} out={outKeys.has(open.key)} /></div> : null}
+      <Pager at={at + 1} of={cards.length}
+        prev={{ label: before ? before.title : "Overview", go: () => setSection(before ? before.key : "all") }}
+        next={after ? { label: after.title, go: () => setSection(after.key) } : null} />
     </div>
   );
 }
@@ -457,18 +471,9 @@ export function Glance() {
   const d = derived.value;
   if (!d) return <>{CARD_KEYS.map((k) => <Frame key={k} label={CARD_TITLE[k]} />)}</>;
   const { cards } = cardsOf(d, !!person.value?.self, fitUnit.value);
-  const sec = section.value;
-  const openCard = cards.find((c) => c.key === sec) ?? null;
-  const openOf = (c: Card) => () => { if (section.value === c.key) setSection("all"); else setSection(c.key); };
-  if (openCard) {
-    return (
-      <>
-        <div class="col-span-full grid gap-2 sm:grid-cols-5">{cards.filter((c) => c.key !== openCard.key).map((c) => <StripCard key={c.key} c={c} onOpen={openOf(c)} />)}</div>
-        <OpenCard c={openCard} d={d} />
-      </>
-    );
-  }
-  return <>{cards.map((c) => <CardFace key={c.key} c={c} d={d} on={false} onOpen={openOf(c)} />)}</>;
+  const openCard = cards.find((c) => c.key === section.value) ?? null;
+  if (openCard) return <SectionPage c={openCard} d={d} cards={cards} />;
+  return <>{cards.map((c) => <CardFace key={c.key} c={c} d={d} on={false} onOpen={() => setSection(c.key)} />)}</>;
 }
 
 function Frame({ label }: { label: string }) {

@@ -198,7 +198,7 @@ export function snapshotOf(d: PersonData, months: 3 | 6 | 12, today = new Date()
   const dT = doseAvg(anchor, 8), dN = doseAvg(today, 8);
   const goalOf = (w: WeekRow) => w.dose_goal_met_min ?? Math.round(d.goal * 60);
   const recent = weeks.slice(-weeksBack), met = recent.filter((w) => w.dose_met_min != null && w.dose_met_min >= goalOf(w)).length;
-  fh.push(row("Weekly dose, average", "MET-min", 0, dT ? { v: dT.v, d: anchor } : null, dN ? { v: dN.v, d: today } : null, () => ({ text: recent.length ? `goal met in ${met} of the last ${recent.length} weeks` : "the 8-week mean", tone: recent.length && met >= recent.length / 2 ? "good" : "neutral" })));
+  fh.push(row("Weekly dose, average", "MET-min", 0, dT ? { v: dT.v, d: anchor } : null, dN ? { v: dN.v, d: today } : null, () => ({ text: recent.length ? `goal reached in ${met} of the last ${recent.length} weeks` : "the 8-week mean", tone: recent.length && met >= recent.length / 2 ? "good" : "neutral" })));
   const slT = meanBetween("sleep_minutes", addDays(anchor, -14), anchor), slN = meanBetween("sleep_minutes", addDays(today, -14), today);
   fh.push(row("Sleep, average", "h", 2, slT != null ? { v: slT / 60, d: anchor } : null, slN != null ? { v: slN / 60, d: today } : null, (_t, n) => n! * 60 < 420 ? { text: "short nights", tone: "caution" } : n! * 60 > 540 ? { text: "long nights", tone: "neutral" } : { text: "inside the 7 to 9 hours", tone: "good" }));
   const sriAt = (day: string) => { const r = [...d.signals].reverse().find((x) => String(x.day) <= day && x.sri_30d != null); return r ? { v: Number(r.sri_30d), d: String(r.day) } : null; };

@@ -127,7 +127,7 @@ export function bigChartHtml(rsAll: any[]): string {
   const ticks = [0.15, 0.5, 0.85].map((f) => {
     const v = lo + (hi - lo) * (1 - f);
     const yy = T + f * (H - T - B);
-    return `<line x1="${L}" y1="${yy}" x2="${W - R}" y2="${yy}" stroke="#FFFFFF" opacity="0.05"/><text x="${L - 6}" y="${yy + 3}" text-anchor="end" font-size="9" fill="var(--color-text-3)" font-family="ui-monospace,monospace">${Number(v.toPrecision(3))}</text>`;
+    return `<line x1="${L}" y1="${yy}" x2="${W - R}" y2="${yy}" stroke="var(--color-ink)" opacity="0.05"/><text x="${L - 6}" y="${yy + 3}" text-anchor="end" font-size="9" fill="var(--color-text-3)" font-family="ui-monospace,monospace">${Number(v.toPrecision(3))}</text>`;
   }).join("");
 
   const unitLabel = rs[rs.length - 1].unit ? esc(String(rs[rs.length - 1].unit)) : "";
