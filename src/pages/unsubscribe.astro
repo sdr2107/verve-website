@@ -10,6 +10,12 @@
  * horizon's own token (?h=...), the page calls horizon_email_off with the
  * anon key, and says done. Check-ins go on appearing on the person's page;
  * only the email stops. The switch on the horizon page turns it back on.
+ *
+ * And the weekly email, "Your week": that link carries the account's own
+ * token (?w=...), the page calls weekly_email_off with the anon key, and
+ * says done. The page itself is unchanged; the switch in Settings, under
+ * Email and notifications, turns it back on. A second click on the same
+ * link is answered the same way.
  */
 import Layout from "../layouts/Layout.astro";
 import SiteHeader from "../components/SiteHeader.astro";
@@ -32,7 +38,28 @@ import Footer from "../components/Footer.astro";
   const token = new URLSearchParams(location.search).get("t") ?? "";
   // a horizon's check-in email: its own token, its own function; the newsletter's path below is untouched
   const horizonToken = new URLSearchParams(location.search).get("h") ?? "";
-  if (horizonToken) (async () => {
+  // the weekly email, "Your week": the account's own token, its own function
+  const weeklyToken = new URLSearchParams(location.search).get("w") ?? "";
+  if (weeklyToken) (async () => {
+    const back = document.getElementById("back") as HTMLAnchorElement;
+    back.href = "/my-health/#settings-email"; back.textContent = "Open Settings";
+    body.textContent = "Turning the weekly email off.";
+    let data: unknown = null, failed = false;
+    try { const res = await supabase.rpc("weekly_email_off", { token: weeklyToken }); data = res.data; failed = !!res.error; } catch { failed = true; }
+    if (failed) {
+      title.textContent = "Not done yet.";
+      body.textContent = "The weekly email could not be turned off just now. The same switch is in Settings on My health, under Email and notifications.";
+      return;
+    }
+    if (data !== true) {
+      title.textContent = "That link is not one of ours.";
+      body.textContent = "Nothing was changed. The switch for the weekly email is in Settings on My health, under Email and notifications.";
+      return;
+    }
+    title.textContent = "Done. No more weekly emails.";
+    body.textContent = "The weekly email is off. Your page is unchanged.";
+  })();
+  else if (horizonToken) (async () => {
     const back = document.getElementById("back") as HTMLAnchorElement;
     back.href = "/my-health/#horizon"; back.textContent = "Open your horizon";
     body.textContent = "Turning the check-in email off.";

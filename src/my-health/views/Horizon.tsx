@@ -380,7 +380,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
               <span class="col-span-2 md:col-span-1"><Track progress={p.progress} elapsed={p.elapsed} tone={p.tone} /></span>
               <span class={`col-span-2 flex items-center justify-between text-[13px] font-medium md:col-span-1 ${TONE_TEXT[p.tone]}`}>
                 {p.pace_word}
-                {owner && !closed && targets.length > 1 && <button type="button" onClick={async () => { const t = targets.find((x) => x.marker === p.marker); if (!t?.id) return; const err = await removeTarget(deps.supabase, t.id); if (err) setNotice(err); else await reload(); }} class="ml-2 text-[11px] font-normal text-text-4 hover:text-text" aria-label={`Remove ${p.label}`}>Remove</button>}
+                {owner && !closed && targets.length > 1 && <button type="button" onClick={async () => { const t = targets.find((x) => x.marker === p.marker); if (!t?.id) return; const err = await removeTarget(deps.supabase, t.id); if (err) setNotice(err); else await reload(); }} class="ml-2 text-[11px] font-normal text-text-3 hover:text-text" aria-label={`Remove ${p.label}`}>Remove</button>}
               </span>
             </div>
           ))}
@@ -499,7 +499,7 @@ type Prefill = {
   kind: "date" | 3 | 6 | 12; title: string; date: string;
   markers: MarkerKey[]; /** Beside each marker: what the last road did to it. */ lastRoad: Record<string, string>;
   planRows: PlanRow[]; planAuthor: PlanAuthor | null;
-  monday: boolean; month: boolean; toCoach: boolean; /** The email choice carries over; a horizon from before the email keeps the set-up's default, ticked. */ email: boolean;
+  monday: boolean; month: boolean; toCoach: boolean; /** Never carried over: the email is asked for afresh on each horizon, and its box starts empty. */ email: boolean;
   /** The complete weeks of the road just read. */ weeks: number;
 };
 
@@ -511,7 +511,9 @@ function prefillOf(h: HorizonFull, person: PersonData | null, today: string): Pr
     markers: targets.map((t) => t.marker).filter((k) => !!MARKER_BY_KEY[k]),
     lastRoad: person ? Object.fromEntries(targets.map((t) => [t.marker, lastRoadWords(t, h, person)])) : {},
     planRows: h.plan?.rows ?? [], planAuthor: h.plan?.author ?? null,
-    monday: h.checkin_monday, month: h.checkin_month, toCoach: h.send_to_coach, email: h.email_checkin ?? true,
+    monday: h.checkin_monday, month: h.checkin_month, toCoach: h.send_to_coach,
+    // the email is asked for afresh on every horizon: the box never arrives ticked, whatever the last one held
+    email: false,
     weeks: Math.max(1, horizonMondays(h).length),
   };
 }
@@ -658,7 +660,8 @@ function Setup({ deps, person, today, personId, hasOthers, nav, prefill, onStart
   const [monday, setMonday] = useState(prefill?.monday ?? true);
   const [month, setMonth] = useState(prefill?.month ?? true);
   const [toCoach, setToCoach] = useState(prefill?.toCoach ?? false);
-  const [email, setEmail] = useState(prefill?.email ?? true);
+  // off unless the person ticks it: an email that carries their figures is their own act, never a box found ticked
+  const [email, setEmail] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
 
@@ -800,7 +803,7 @@ function Setup({ deps, person, today, personId, hasOthers, nav, prefill, onStart
             </label>
           ))}
         </div>
-        <Quiet>The email carries the check-in's words and your figures. One click in any email turns it off.</Quiet>
+        <Quiet>Off unless you tick it. The email carries the check-in's words and your figures; one click in any email turns it off.</Quiet>
         <Quiet>Check-ins describe pace. They do not change the plan; your coach does, or you do.</Quiet>
       </Step>
 
