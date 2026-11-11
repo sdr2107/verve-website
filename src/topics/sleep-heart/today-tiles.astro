@@ -14,10 +14,10 @@ import VideoSlot from "../../components/VideoSlot.astro";
 
 <div class="mt-6"><VideoSlot topic="today-tiles" /></div>
 
-<div class="mt-[18px] rounded-2xl border border-white/8 bg-white/4 p-5 sm:px-[22px]">
+<div class="theme-dark mt-[18px] rounded-2xl border border-ink/8 bg-card p-5 sm:px-[22px]">
   <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
     {todayTiles.map((t) => (
-      <div class="rounded-xl border border-white/8 bg-white/[0.03] p-3">
+      <div class="rounded-xl border border-ink/8 bg-ink/[0.03] p-3">
         <div class="text-[11px] text-text-secondary">{t.label}</div>
         <div class={`mt-1 text-[19px] font-extrabold ${t.tone}`}>{t.value}</div>
         <div class="mt-[7px] font-mono text-[9.5px] text-text-tertiary">{t.rule}</div>
@@ -31,7 +31,7 @@ import VideoSlot from "../../components/VideoSlot.astro";
   </p>
 </div>
 
-<div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+<div class="mt-6 rounded-2xl border border-ink/8 bg-ink/4 p-6">
   <p class="text-sm leading-relaxed text-text-secondary">
     Each tile takes its colour from the figure it shows. Green means the
     reading is inside the range its evidence calls ordinary, amber that it

@@ -96,10 +96,10 @@ const figures = [
           id="q" type="search" autocomplete="off" spellcheck="false"
           placeholder="Search a marker, a topic, a section, a study…"
           aria-controls="results" aria-expanded="false"
-          class="w-full rounded-2xl border border-white/10 bg-white/[0.04] py-3.5 pl-11 pr-12 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent/60 focus:outline-none"
+          class="w-full rounded-2xl border border-ink/10 bg-ink/[0.04] py-3.5 pl-11 pr-12 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent/60 focus:outline-none"
         />
-        <kbd class="pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 rounded-md border border-white/10 px-1.5 py-0.5 font-mono text-[10px] text-text-muted sm:block" aria-hidden="true">/</kbd>
-        <div id="results" role="listbox" class="absolute left-0 right-0 top-full z-20 mt-2 hidden overflow-hidden rounded-2xl border border-white/10 bg-canvas-2 shadow-2xl shadow-black/40"></div>
+        <kbd class="pointer-events-none absolute right-4 top-1/2 hidden -translate-y-1/2 rounded-md border border-ink/10 px-1.5 py-0.5 font-mono text-[10px] text-text-muted sm:block" aria-hidden="true">/</kbd>
+        <div id="results" role="listbox" class="absolute left-0 right-0 top-full z-20 mt-2 hidden overflow-hidden rounded-2xl border border-ink/10 bg-canvas-2 shadow-2xl shadow-shade"></div>
       </div>
 
       <!-- the search, shown: twenty-four seconds, in place of a paragraph about it -->
@@ -108,7 +108,7 @@ const figures = [
       <dl class="vrv-rise mx-auto mt-8 flex items-center justify-center gap-6 sm:gap-10" style="--i: 4">
         {figures.map((f, i) => (
           <>
-            {i > 0 && <div class="h-10 w-px shrink-0 bg-white/10" aria-hidden="true"></div>}
+            {i > 0 && <div class="h-10 w-px shrink-0 bg-ink/10" aria-hidden="true"></div>}
             <div>
               <dt class="sr-only">{f.label}</dt>
               <dd>
@@ -178,9 +178,9 @@ const figures = [
           box.innerHTML = '<p class="px-4 py-3.5 text-[13px] text-text-tertiary">Nothing for “' + esc(query) + '”. Try a marker’s name, a topic, or an author.</p>';
         } else {
           box.innerHTML = list.map(function (e) {
-            return '<a href="' + esc(e.u) + '" role="option" class="block border-b border-white/[0.06] px-4 py-3 transition-colors last:border-b-0 hover:bg-white/[0.05]">' +
+            return '<a href="' + esc(e.u) + '" role="option" class="block border-b border-ink/[0.06] px-4 py-3 transition-colors last:border-b-0 hover:bg-ink/[0.05]">' +
               '<span class="flex items-center gap-2"><span class="text-sm font-semibold text-text-primary">' + esc(e.t) + '</span>' +
-              '<span class="rounded-md bg-white/[0.06] px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-text-secondary">' + KIND[e.k] + '</span>' +
+              '<span class="rounded-md bg-ink/[0.06] px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-text-secondary">' + KIND[e.k] + '</span>' +
               '<span class="ml-auto shrink-0 text-[11px] text-text-tertiary">' + esc(e.s) + '</span></span>' +
               '<span class="mt-1 block text-[12.5px] leading-relaxed text-text-tertiary">' + snippet(e, e._terms) + '</span></a>';
           }).join("");
@@ -250,7 +250,7 @@ const figures = [
           </span>
         </span>
 
-        <span class="shrink-0 border-t border-white/8 bg-black/25 p-5 sm:p-6 lg:w-[420px] lg:border-l lg:border-t-0">
+        <span class="theme-dark shrink-0 border-t border-ink/8 bg-canvas p-5 sm:p-6 lg:w-[420px] lg:border-l lg:border-t-0">
           <CrfMapPreview />
           <span class="mt-3.5 flex items-center gap-2">
             <span class="h-[9px] w-[9px] rounded-sm border border-success/60 bg-success/35" aria-hidden="true"></span>
@@ -264,14 +264,14 @@ const figures = [
            has somewhere to begin before the index of topics. -->
       <a
         href="/sheet"
-        class="group mt-4 flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-6 transition-colors hover:border-white/20 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-7"
+        class="group mt-4 flex flex-col gap-3 rounded-2xl border border-ink/10 bg-ink/[0.03] p-6 transition-colors hover:border-ink/20 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-7"
       >
         <span class="flex flex-col gap-1.5">
           <span class="font-mono text-xs font-semibold uppercase tracking-widest text-accent-light">No number yet?</span>
           <span class="text-lg font-bold tracking-tight text-text-primary sm:text-xl">Your first fitness number, a free sheet</span>
           <span class="text-sm leading-relaxed text-text-secondary">Six minutes of walking or twelve of running, one line of arithmetic, and the same tier tables the app uses, with the study named. No app needed.</span>
         </span>
-        <span class="shrink-0 rounded-full border border-white/14 px-5 py-2.5 text-sm font-semibold text-text-primary transition-colors group-hover:border-white/30">Open the sheet</span>
+        <span class="shrink-0 rounded-full border border-ink/14 px-5 py-2.5 text-sm font-semibold text-text-primary transition-colors group-hover:border-ink/30">Open the sheet</span>
       </a>
     </div>
   </section>
@@ -298,10 +298,10 @@ const figures = [
           const counts = subjectCounts(s.slug);
           const topics = topicsFor(s.slug);
           return (
-            <div class="vrv-rise flex flex-col rounded-2xl border border-white/10 bg-white/4 p-[18px] pb-3.5" style={`--i: ${si}`}>
+            <div class="vrv-rise flex flex-col rounded-2xl border border-ink/10 bg-ink/4 p-[18px] pb-3.5" style={`--i: ${si}`}>
               <a
                 href={`/science/${s.slug}`}
-                class="group flex items-center gap-2.5 border-b border-white/[0.07] pb-3 transition-colors"
+                class="group flex items-center gap-2.5 border-b border-ink/[0.07] pb-3 transition-colors"
               >
                 <span
                   class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px]"
@@ -329,7 +329,7 @@ const figures = [
                   <li>
                     <a
                       href={topicHref(t.slug)}
-                      class="flex gap-2.5 rounded-[10px] px-1.5 py-2 transition-colors hover:bg-white/[0.05]"
+                      class="flex gap-2.5 rounded-[10px] px-1.5 py-2 transition-colors hover:bg-ink/[0.05]"
                     >
                       <span class="w-3 shrink-0 pt-[3px] font-mono text-[10.5px] text-text-tertiary">{i + 1}</span>
                       <span class="min-w-0">
@@ -341,7 +341,7 @@ const figures = [
                 ))}
               </ol>
               {s.slug === "body" && (
-                <p class="mt-auto border-t border-white/[0.07] pt-3.5 text-xs leading-relaxed text-text-muted">
+                <p class="mt-auto border-t border-ink/[0.07] pt-3.5 text-xs leading-relaxed text-text-muted">
                   Inside Body phenotyping: the {COUNTS.markers} body markers, each with its bands and how to measure it.
                 </p>
               )}

@@ -39,7 +39,7 @@ const onTopics = VIDEOS.filter((v) => v.topic).length;
       const vs = videosInGroup(g.key);
       if (!vs.length) return null;
       return (
-        <section class="mt-14 border-t border-white/[0.07] pt-10" id={g.key}>
+        <section class="mt-14 border-t border-ink/[0.07] pt-10" id={g.key}>
           <div class="flex flex-wrap items-baseline justify-between gap-3">
             <h2 class="text-[24px] font-extrabold tracking-[-0.02em] text-text-primary">{g.label}</h2>
             <p class="text-sm text-text-tertiary">{g.blurb} &middot; {vs.length}</p>

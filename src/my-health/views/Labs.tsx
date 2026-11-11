@@ -26,7 +26,7 @@ function Row({ name, rs }: { name: string; rs: any[] }) {
           <span class="min-w-0 truncate text-[13px] font-semibold text-text-primary" title={name}>{name}</span>
           {/* What kind of number this is: worked out here rather than printed, and for an LDL, how the lab got it. */}
           {tags.map((t) => (
-            <span key={t} class={`shrink-0 rounded-[5px] border px-1.5 py-px font-mono text-[9px] font-semibold uppercase tracking-[0.5px] ${t === "computed" ? "border-accent-light/40 text-accent-light" : "border-white/[0.14] text-text-secondary"}`}>{t}</span>
+            <span key={t} class={`shrink-0 rounded-[5px] border px-1.5 py-px font-mono text-[9px] font-semibold uppercase tracking-[0.5px] ${t === "computed" ? "border-accent-light/40 text-accent-light" : "border-ink/[0.14] text-text-secondary"}`}>{t}</span>
           ))}
         </span>
         <svg class="hidden shrink-0 sm:block" width="120" height="28" viewBox="0 0 120 28" dangerouslySetInnerHTML={{ __html: sparkSvg(rs) }} />
@@ -36,7 +36,7 @@ function Row({ name, rs }: { name: string; rs: any[] }) {
       </button>
       {/* A computed figure that needs a sentence: the arithmetic in the report's own numbers, then what it means. */}
       {open && explain ? (
-        <div class="mb-2 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+        <div class="mb-2 rounded-xl border border-ink/[0.07] bg-ink/[0.02] p-3">
           <div class="font-mono text-[11px] text-text-secondary">{explain.formula}</div>
           <p class="mt-1.5 text-[12.5px] leading-[1.55] text-text-secondary">{explain.body}</p>
           <a href={explain.link.href} class="mt-2 inline-block text-[12.5px] font-bold text-accent-light hover:underline">{explain.link.label} &rarr;</a>
@@ -63,13 +63,13 @@ export function Labs() {
 
   if (!labs.length) {
     return (
-      <div class="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-text-tertiary">
+      <div class="mt-6 rounded-2xl border border-ink/10 bg-ink/[0.03] p-6 text-sm text-text-tertiary">
         Nothing here yet — drop a report on the <button type="button" onClick={() => actions.goTab("reports")} class="font-semibold text-accent-light hover:underline">Reports</button> tab and every value in it lands here.
       </div>
     );
   }
   if (terms.length && matches === 0) {
-    return <p class="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-sm text-text-tertiary">No marker matches "{query}". Try a section, like liver, or part of a name.</p>;
+    return <p class="mt-6 rounded-2xl border border-ink/10 bg-ink/[0.03] p-6 text-sm text-text-tertiary">No marker matches "{query}". Try a section, like liver, or part of a name.</p>;
   }
   const current = view.has(labSection.value) ? labSection.value : (SECTION_ORDER.find((x) => view.has(x)) ?? "");
   const sec = view.get(current);
@@ -86,15 +86,15 @@ export function Labs() {
           const on = s === current;
           return (
             <button key={s} type="button" onClick={() => { labSection.value = s; expandedAnalyte.value = ""; mobileSectionOpen.value = true; }}
-              class={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[13px] transition-colors ${on ? "bg-accent/15 font-bold text-text-primary" : "text-text-secondary hover:bg-white/[0.05]"}`}>
+              class={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[13px] transition-colors ${on ? "bg-accent/15 font-bold text-text-primary" : "text-text-secondary hover:bg-ink/[0.05]"}`}>
               <span class="flex-1">{SECTIONS[s]}</span>
-              <span class={`rounded-md ${flagged ? "bg-warning/15 text-warning" : "bg-white/[0.06] text-text-tertiary"} px-1.5 py-0.5 font-mono text-[9px] font-semibold tracking-wider`}>{rows.length}{flagged ? ` · ${flagged}!` : ""}</span>
+              <span class={`rounded-md ${flagged ? "bg-warning/15 text-warning" : "bg-ink/[0.06] text-text-tertiary"} px-1.5 py-0.5 font-mono text-[9px] font-semibold tracking-wider`}>{rows.length}{flagged ? ` · ${flagged}!` : ""}</span>
               <span class="text-text-muted md:hidden">›</span>
             </button>
           );
         })}
       </nav>
-      <div class={`${mobileOpen ? "" : "hidden md:block"} min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/[0.03] p-5`}>
+      <div class={`${mobileOpen ? "" : "hidden md:block"} min-w-0 flex-1 rounded-2xl border border-ink/10 bg-ink/[0.03] p-5`}>
         {sec ? (
           <>
             <button type="button" onClick={() => { mobileSectionOpen.value = false; }} class="mb-2 flex items-center gap-1 text-sm font-semibold text-accent-light md:hidden">‹ All sections</button>
@@ -103,12 +103,12 @@ export function Labs() {
               <span class="font-mono text-[10px] text-text-tertiary">{analytes.length} MARKER{analytes.length === 1 ? "" : "S"}</span>
               {flaggedIn ? <span class="rounded-md bg-warning/15 px-2 py-0.5 font-mono text-[9px] tracking-wider text-warning">{flaggedIn} OUT OF RANGE</span> : null}
             </div>
-            <div class="mt-2 divide-y divide-white/[0.05]">{analytes.map(([name, rs]) => <Row key={name} name={name} rs={rs} />)}</div>
+            <div class="mt-2 divide-y divide-ink/[0.05]">{analytes.map(([name, rs]) => <Row key={name} name={name} rs={rs} />)}</div>
             {current === "imaging" && imaging.length ? (
               <>
                 <div class="mt-5 font-mono text-[10px] font-semibold uppercase tracking-widest text-text-tertiary">The reports' own conclusions</div>
                 {[...imaging].reverse().map((im, i) => (
-                  <div key={`${im.report_path}:${i}`} class="mt-2 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+                  <div key={`${im.report_path}:${i}`} class="mt-2 rounded-xl border border-ink/[0.07] bg-ink/[0.02] p-3">
                     <div class="flex items-center gap-2">
                       <span class="rounded-md bg-accent/15 px-1.5 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-accent-light">{String(im.modality).toUpperCase()}</span>
                       <span class="font-mono text-[10px] text-text-tertiary">{fmtDay(im.report_date)}</span>

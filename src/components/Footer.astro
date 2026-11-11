@@ -25,7 +25,7 @@ import { NAV, SOCIAL, PRIVACY_URL, TERMS_URL, COMPANY } from "../data/site";
 import SocialIcon from "./SocialIcon.astro";
 ---
 
-<footer class="border-t border-white/7 px-6 py-12 sm:px-10">
+<footer class="border-t border-ink/7 px-6 py-12 sm:px-10">
   <div class="mx-auto max-w-6xl">
     <section class="vrv-social-footer" data-social-footer aria-labelledby="vrv-social-heading">
       <h2 id="vrv-social-heading" class="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-text-tertiary">Social</h2>
@@ -36,9 +36,9 @@ import SocialIcon from "./SocialIcon.astro";
               href={s.href}
               target="_blank"
               rel="noopener noreferrer"
-              class="group flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.02] px-3 py-3 transition-colors hover:border-white/20 hover:bg-white/[0.05]"
+              class="group flex items-center gap-3 rounded-2xl border border-ink/8 bg-ink/[0.02] px-3 py-3 transition-colors hover:border-ink/20 hover:bg-ink/[0.05]"
             >
-              <span class="vrv-social-glyph flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-text-secondary transition-colors group-hover:text-text-primary">
+              <span class="vrv-social-glyph flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-ink/[0.06] text-text-secondary transition-colors group-hover:text-text-primary">
                 <SocialIcon name={s.key} size={16} />
               </span>
               <span class="min-w-0">

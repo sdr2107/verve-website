@@ -472,7 +472,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
               ...("email_checkin" in h ? [["email_checkin", "Email me each check-in"] as const] : [])] as const).map(([key, label], i) => (
               <label class={`flex items-center justify-between gap-3 py-3 text-[15px] text-text ${i ? "border-t border-border" : ""}`} key={key}>
                 <span>{label}</span>
-                <input type="checkbox" checked={!!h[key]} disabled={closed} onChange={(e) => void toggle(key, (e.currentTarget as HTMLInputElement).checked)} class="h-5 w-5 accent-[#A9ABF7]" />
+                <input type="checkbox" checked={!!h[key]} disabled={closed} onChange={(e) => void toggle(key, (e.currentTarget as HTMLInputElement).checked)} class="h-5 w-5 accent-accent" />
               </label>
             ))}
           </div>
@@ -748,7 +748,7 @@ function Setup({ deps, person, today, personId, hasOthers, nav, prefill, onStart
               : d.ticked ? `${lastRoad ? `${lastRoad} ` : ""}Set the number.` : def.how;
             return (
               <div class={`grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 py-3 md:grid-cols-[auto_minmax(0,1.6fr)_minmax(0,.7fr)_auto] ${i ? "border-t border-border" : ""}`} key={k}>
-                <input type="checkbox" checked={d.ticked} onChange={(e) => setDraft(k, { ticked: (e.currentTarget as HTMLInputElement).checked })} aria-label={def.label} class="h-5 w-5 accent-[#A9ABF7]" />
+                <input type="checkbox" checked={d.ticked} onChange={(e) => setDraft(k, { ticked: (e.currentTarget as HTMLInputElement).checked })} aria-label={def.label} class="h-5 w-5 accent-accent" />
                 <span class="text-[15px] text-text">{def.label} <span class="text-[12px] text-text-3">{now ? `${def.kind === "blood" ? "" : "now "}${now.display ?? fmtValue(def, now.value)} ${unit}${def.kind === "blood" ? ` on ${dayMonthLong(now.on)}` : ""}` : "no reading yet"}</span></span>
                 <input type="number" step={10 ** -def.decimals} value={d.value} placeholder="—" disabled={!d.ticked} onInput={(e) => setDraft(k, { value: (e.currentTarget as HTMLInputElement).value })} aria-label={`${def.label} target`} class={`${inputClass} col-start-2 w-28 font-mono md:col-start-auto`} />
                 <span class="font-mono text-[11px] text-text-3">{unit}</span>
@@ -796,7 +796,7 @@ function Setup({ deps, person, today, personId, hasOthers, nav, prefill, onStart
           {([["Monday morning check-in against the targets", monday, setMonday], ["A Guide read at each month's end", month, setMonth], ["Send each check-in to my coach", toCoach, setToCoach], ["Email me each check-in", email, setEmail]] as const).map(([label, on, set], i) => (
             <label class={`flex items-center justify-between gap-3 py-3 text-[15px] text-text ${i ? "border-t border-border" : ""}`} key={label}>
               <span>{label}</span>
-              <input type="checkbox" checked={on} onChange={(e) => (set as (v: boolean) => void)((e.currentTarget as HTMLInputElement).checked)} class="h-5 w-5 accent-[#A9ABF7]" />
+              <input type="checkbox" checked={on} onChange={(e) => (set as (v: boolean) => void)((e.currentTarget as HTMLInputElement).checked)} class="h-5 w-5 accent-accent" />
             </label>
           ))}
         </div>

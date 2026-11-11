@@ -13,7 +13,7 @@ const RC = LR.remnantCholesterol;
 ---
 
 <div class="mt-6"><VideoSlot topic="heart-health" /></div>
-<div class="mt-6 rounded-2xl border border-white/8 bg-white/4 p-6">
+<div class="mt-6 rounded-2xl border border-ink/8 bg-ink/4 p-6">
   <p class="text-sm leading-relaxed text-text-secondary">
     For ApoB and LDL-C in particular, clinical targets are set by a
     person's overall cardiovascular risk category &mdash; a value in the
@@ -37,13 +37,13 @@ const RC = LR.remnantCholesterol;
   sub="TG/HDL as an insulin-resistance screen, ApoB/ApoA1 as the balance of particles in and out, and where each line comes from"
 >
   <div class="mt-[18px] grid gap-4 text-[13.5px] leading-relaxed text-text-secondary sm:grid-cols-2">
-    <div id="tg-hdl-ratio" class="scroll-mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+    <div id="tg-hdl-ratio" class="scroll-mt-8 rounded-2xl border border-ink/10 bg-ink/[0.03] p-4 sm:p-5">
       <h4 class="text-[15px] font-semibold text-text-primary">TG/HDL ratio</h4>
       <p class="mt-2">Triglycerides divided by HDL cholesterol, both in mg/dL. Below {LR.tgHdl.inRangeBelow.toFixed(1)} reads in range, {LR.tgHdl.inRangeBelow.toFixed(1)} to {(LR.tgHdl.elevatedFrom - 0.1).toFixed(1)} borderline, {LR.tgHdl.elevatedFrom.toFixed(1)} and above elevated. A report in mmol/L is converted first (triglycerides &times; 88.57, HDL &times; 38.67), so the same blood gives the same ratio whichever unit the lab printed.</p>
       <p class="mt-2">It is a screen for insulin resistance, read beside HOMA-IR, waist and fasting insulin rather than alone. The cut-points were found in mostly white, overweight adults; in African-American adults the ratio does not track insulin resistance, so for that ancestry setting Verve shows the number and draws no band. South Asian cut-points are not settled.</p>
       <p class="mt-2 text-text-tertiary">On the Triglycerides card, with its own trend. It pairs the newest triglyceride with the newest HDL and says when the two are from different days.</p>
     </div>
-    <div id="apob-apoa1-ratio" class="scroll-mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+    <div id="apob-apoa1-ratio" class="scroll-mt-8 rounded-2xl border border-ink/10 bg-ink/[0.03] p-4 sm:p-5">
       <h4 class="text-[15px] font-semibold text-text-primary">ApoB/ApoA1 ratio</h4>
       <p class="mt-2">One ApoB sits on every particle that carries cholesterol into an artery wall; ApoA1 sits on the particles that carry it out. The ratio is the balance. Verve reads {LR.apoBApoA1.elevatedFromMale.toFixed(1)} and above as elevated for men and {LR.apoBApoA1.elevatedFromFemale.toFixed(1)} and above for women; the units cancel, so a g/L report gives the same ratio as a mg/dL one.</p>
       <p class="mt-2">ApoA1 is not on a standard lipid panel. It is printed beside ApoB on an advanced one, which is why the app asks for it on the ApoB card rather than on a card of its own, and why the ratio appears only when both are there.</p>
@@ -67,13 +67,13 @@ const RC = LR.remnantCholesterol;
   sub="The cholesterol in triglyceride-rich particles, how Verve computes it from three printed numbers, and why the LDL's method decides what the figure means"
 >
   <div class="mt-[18px] grid gap-4 text-[13.5px] leading-relaxed text-text-secondary sm:grid-cols-2">
-    <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+    <div class="rounded-2xl border border-ink/10 bg-ink/[0.03] p-4 sm:p-5">
       <h4 class="text-[15px] font-semibold text-text-primary">What it is, and the arithmetic</h4>
       <p class="mt-2">Remnant cholesterol is the cholesterol carried in VLDL, IDL and chylomicron remnants: everything on the panel that is neither LDL nor HDL. Verve takes total cholesterol minus HDL minus LDL, the three from one report date. A mmol/L report stays in mmol/L and the line converts ({RC.elevatedFrom} mg/dL is {RC.elevatedFromMmol} mmol/L).</p>
       <p class="mt-2">Below {RC.elevatedFrom} mg/dL reads in range; {RC.elevatedFrom} and above reads elevated. One line, because the studies draw one: PREDIMED at {RC.elevatedFrom} mg/dL, Copenhagen at 1 mmol/L (39 mg/dL). A pooled primary-prevention cohort found the risk held after adjusting for LDL cholesterol and ApoB.</p>
       <p class="mt-2 text-text-tertiary">On the LDL card in the app, with total cholesterol as its second field; in the Labs tab on My health as a computed row. With no total cholesterol or no HDL there is no figure: nothing is estimated from triglycerides alone. A screening line, not a treatment target.</p>
     </div>
-    <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+    <div class="rounded-2xl border border-ink/10 bg-ink/[0.03] p-4 sm:p-5">
       <h4 class="text-[15px] font-semibold text-text-primary">Measured or calculated: the method decides the meaning</h4>
       <p class="mt-2">Most labs do not measure LDL. They calculate it: Friedewald sets VLDL cholesterol at triglycerides &divide; {RC.friedewald.tgDivisor} and subtracts; Martin-Hopkins and Sampson refine the divisor. Subtract a Friedewald LDL from total minus HDL and the remnant comes back as triglycerides &divide; {RC.friedewald.tgDivisor}, an echo of a number already on the panel.</p>
       <p class="mt-2">Verve reads the method off the report (&ldquo;Direct&rdquo; or &ldquo;Homogeneous&rdquo; against &ldquo;Calc&rdquo;, &ldquo;Friedewald&rdquo;, &ldquo;Martin-Hopkins&rdquo;, &ldquo;Sampson&rdquo;) and labels the figure. A direct LDL makes the remnant a measurement. A calculated LDL makes it a triglyceride share, still worth watching, honestly named. Where no method came with the LDL and the arithmetic matches triglycerides &divide; {RC.friedewald.tgDivisor}, the label says so; where nothing matches, it says the method is not known.</p>

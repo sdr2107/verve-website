@@ -53,7 +53,7 @@ const link = (key: NavKey) =>
   key === current ? "text-text-primary" : "text-text-secondary";
 ---
 
-<header class="relative z-40 border-b border-white/[0.06]" transition:name="site-header" transition:animate="none">
+<header class="relative z-40 border-b border-ink/[0.06]" transition:name="site-header" transition:animate="none">
   <div class="mx-auto max-w-6xl px-6 sm:px-10">
     <div class="flex items-center justify-between gap-6 py-4 md:py-5">
       <div class:list={["min-w-0 items-center gap-2.5 text-sm", back ? "hidden md:flex" : "flex"]}>
@@ -109,16 +109,16 @@ const link = (key: NavKey) =>
               Social
               <svg class="vrv-social-chevron h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
             </button>
-            <div id="vrv-social-desktop" class="vrv-social-panel absolute right-0 top-full z-30 mt-3 w-60 rounded-2xl border border-white/10 bg-canvas/95 p-1.5 shadow-2xl shadow-black/50 backdrop-blur">
+            <div id="vrv-social-desktop" class="vrv-social-panel absolute right-0 top-full z-30 mt-3 w-60 rounded-2xl border border-ink/10 bg-canvas/95 p-1.5 shadow-2xl shadow-shade backdrop-blur">
               {SOCIAL.map((s, i) => (
                 <a
                   href={s.href}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={`--i: ${i}`}
-                  class="vrv-social-item group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-white/[0.06]"
+                  class="vrv-social-item group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-ink/[0.06]"
                 >
-                  <span class="vrv-social-glyph flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-text-secondary transition-colors group-hover:text-text-primary">
+                  <span class="vrv-social-glyph flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink/[0.06] text-text-secondary transition-colors group-hover:text-text-primary">
                     <SocialIcon name={s.key} />
                   </span>
                   <span class="min-w-0">
@@ -137,7 +137,7 @@ const link = (key: NavKey) =>
           rel="noopener"
           data-nav="app"
           class:list={[
-            "whitespace-nowrap rounded-full border border-white/14 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-white/25",
+            "whitespace-nowrap rounded-full border border-ink/14 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-ink/25",
             back && "hidden md:inline-block",
           ]}
         >
@@ -184,9 +184,9 @@ const link = (key: NavKey) =>
                   target="_blank"
                   rel="noopener noreferrer"
                   style={`--i: ${i}`}
-                  class="vrv-social-item flex items-center gap-2.5 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2"
+                  class="vrv-social-item flex items-center gap-2.5 rounded-xl border border-ink/8 bg-ink/[0.03] px-3 py-2"
                 >
-                  <span class="vrv-social-glyph flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-text-secondary">
+                  <span class="vrv-social-glyph flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-ink/[0.06] text-text-secondary">
                     <SocialIcon name={s.key} size={13} />
                   </span>
                   <span class="text-[13px] font-medium text-text-primary">{s.label}</span>

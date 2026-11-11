@@ -23,7 +23,7 @@ interface Props {
 const { eyebrow, wide = false } = Astro.props;
 ---
 
-<div class="mt-[18px] flex flex-col overflow-hidden rounded-2xl border border-white/8 bg-white/4 lg:flex-row">
+<div class="theme-dark mt-[18px] flex flex-col overflow-hidden rounded-2xl border border-ink/8 bg-card lg:flex-row">
   <div class="flex-1 p-5 sm:px-[22px]">
     {eyebrow && (
       <p class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">
@@ -37,7 +37,7 @@ const { eyebrow, wide = false } = Astro.props;
 
   <div
     class:list={[
-      "shrink-0 border-t border-white/[0.07] bg-black/20 p-[18px] lg:border-l lg:border-t-0",
+      "shrink-0 border-t border-ink/[0.07] bg-well p-[18px] lg:border-l lg:border-t-0",
       wide ? "lg:w-[340px]" : "lg:w-[268px]",
     ]}
   >

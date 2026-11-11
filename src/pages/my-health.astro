@@ -31,6 +31,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   title="My health — Verve"
   description="Sign in with your Verve account, drop old lab reports, and their values file themselves into your app and your own lab dashboard."
   cardType="summary"
+  theme="app"
 >
   <!-- The head start (docs/my-health-architecture.md, step 4). Inline, so
        it runs as the HTML is parsed, before the page's bundle has arrived:
@@ -70,7 +71,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     <button
       slot="extra"
       id="signout"
-      class="hidden rounded-full border border-white/14 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-white/25"
+      class="hidden rounded-full border border-ink/14 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-ink/25"
     >Sign out</button>
   </SiteHeader>
 
@@ -129,8 +130,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       </div>
 
       <!-- the card: one primary action, the alternative under a rule -->
-      <div class="mt-6 rounded-[20px] border border-white/10 bg-white/[0.03] p-5 sm:p-7 lg:mt-0">
-        <div class="flex w-full gap-1 rounded-full border border-white/10 bg-white/[0.04] p-1 sm:w-fit">
+      <div class="mt-6 rounded-[20px] border border-ink/10 bg-ink/[0.03] p-5 sm:p-7 lg:mt-0">
+        <div class="flex w-full gap-1 rounded-full border border-ink/10 bg-ink/[0.04] p-1 sm:w-fit">
           <button type="button" data-mode="signin" class="min-h-10 flex-1 rounded-full px-4 py-1.5 text-[13px] font-bold sm:flex-none">Sign in</button>
           <button type="button" data-mode="signup" class="min-h-10 flex-1 rounded-full px-4 py-1.5 text-[13px] font-semibold sm:flex-none">Create account</button>
         </div>
@@ -154,27 +155,27 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <!-- Google: the same door for a Gmail address. Supabase joins it to an
                existing email-and-password account with the same address. -->
           <button type="button" id="google" data-provider="google"
-            class="flex min-h-11 w-full items-center justify-center gap-2.5 rounded-xl border border-white/14 bg-white/[0.04] px-4 py-3 text-sm font-bold text-text-primary transition-colors hover:border-white/25">
+            class="flex min-h-11 w-full items-center justify-center gap-2.5 rounded-xl border border-ink/14 bg-ink/[0.04] px-4 py-3 text-sm font-bold text-text-primary transition-colors hover:border-ink/25">
             <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5a5.6 5.6 0 0 1-2.4 3.7v3h3.9c2.3-2.1 3.5-5.2 3.5-8.8z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3a7.2 7.2 0 0 1-10.8-3.8H1.3v3.1A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6H1.3a12 12 0 0 0 0 10.8l4-3.1z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.4.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1A7.2 7.2 0 0 1 12 4.8z"/></svg>
             <span data-oauthlabel>Sign in with Google</span>
           </button>
         </div>
         <div id="appleor" class="mt-4 flex items-center gap-3">
-          <div class="h-px flex-1 bg-white/10"></div>
+          <div class="h-px flex-1 bg-ink/10"></div>
           <span class="text-xs text-text-muted">or with email</span>
-          <div class="h-px flex-1 bg-white/10"></div>
+          <div class="h-px flex-1 bg-ink/10"></div>
         </div>
 
         <form id="pwform" class="mt-4 flex flex-col gap-4">
           <div id="namerow" class="hidden">
             <label for="fullname" class="mb-1.5 block text-xs font-semibold text-text-secondary">Your name</label>
             <input id="fullname" type="text" autocomplete="name" placeholder="How the app should greet you"
-              class="w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-3 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none sm:text-sm" />
+              class="w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-3 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none sm:text-sm" />
           </div>
           <div>
             <label for="email" class="mb-1.5 block text-xs font-semibold text-text-secondary">Email</label>
             <input id="email" type="email" required placeholder="you@example.com" autocomplete="email"
-              class="w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-3 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none sm:text-sm" />
+              class="w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-3 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none sm:text-sm" />
           </div>
           <div>
             <div class="mb-1.5 flex items-baseline justify-between">
@@ -183,7 +184,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
             </div>
             <div class="relative">
               <input id="password" type="password" placeholder="Password" autocomplete="current-password"
-                class="w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-3 pr-12 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none sm:text-sm" />
+                class="w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-3 pr-12 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none sm:text-sm" />
               <button type="button" data-eye="password" aria-label="Show password"
                 class="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-text-tertiary hover:text-text-primary">
                 <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -202,13 +203,13 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         </form>
 
         <div id="ordiv" class="mt-4 flex items-center gap-3">
-          <div class="h-px flex-1 bg-white/10"></div>
+          <div class="h-px flex-1 bg-ink/10"></div>
           <span class="text-xs text-text-muted">or</span>
-          <div class="h-px flex-1 bg-white/10"></div>
+          <div class="h-px flex-1 bg-ink/10"></div>
         </div>
 
         <button id="magic"
-          class="mt-4 min-h-11 w-full rounded-xl border border-white/14 px-4 py-3 text-sm font-semibold text-text-primary transition-colors hover:border-white/25">
+          class="mt-4 min-h-11 w-full rounded-xl border border-ink/14 px-4 py-3 text-sm font-semibold text-text-primary transition-colors hover:border-ink/25">
           Email me a code
         </button>
         <p id="applenote" class="mt-3 text-xs leading-relaxed text-text-tertiary">
@@ -226,7 +227,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <form id="codeform" class="mt-4 flex flex-col gap-4">
             <label for="code" class="sr-only">Sign-in code</label>
             <input id="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="10"
-              class="w-full rounded-xl border border-white/12 bg-white/[0.04] px-4 py-3 text-center font-mono text-[26px] font-bold tracking-[0.25em] text-text-primary focus:border-accent focus:outline-none" />
+              class="w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-4 py-3 text-center font-mono text-[26px] font-bold tracking-[0.25em] text-text-primary focus:border-accent focus:outline-none" />
             <button type="submit" id="verify"
               class="min-h-11 rounded-xl bg-accent px-4 py-3 text-sm font-bold text-canvas transition-opacity hover:opacity-90 disabled:opacity-50">
               Sign in
@@ -245,7 +246,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     </section>
 
     <!-- ── set a new password (arrived from a reset email) ──────────────── -->
-    <section id="pwreset" class="mt-6 hidden max-w-md rounded-[20px] border border-white/10 bg-white/[0.03] p-5 sm:p-7 lg:mt-8">
+    <section id="pwreset" class="mt-6 hidden max-w-md rounded-[20px] border border-ink/10 bg-ink/[0.03] p-5 sm:p-7 lg:mt-8">
       <span class="font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-accent-light">Reset your password</span>
       <h2 class="mt-2 text-[22px] font-bold tracking-[-0.02em] text-text-primary">Choose a new password</h2>
       <p class="mt-2 text-[13px] leading-relaxed text-text-secondary">It works here and in the Verve app. Eight characters or more.</p>
@@ -254,7 +255,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <label for="newpw" class="mb-1.5 block text-xs font-semibold text-text-secondary">New password</label>
           <div class="relative">
             <input id="newpw" type="password" autocomplete="new-password"
-              class="w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-3 pr-12 text-[15px] text-text-primary focus:border-accent focus:outline-none sm:text-sm" />
+              class="w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-3 pr-12 text-[15px] text-text-primary focus:border-accent focus:outline-none sm:text-sm" />
             <button type="button" data-eye="newpw" aria-label="Show password"
               class="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-text-tertiary hover:text-text-primary">
               <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -264,7 +265,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         <div>
           <label for="newpw2" class="mb-1.5 block text-xs font-semibold text-text-secondary">Repeat it</label>
           <input id="newpw2" type="password" autocomplete="new-password"
-            class="w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-3 text-[15px] text-text-primary focus:border-accent focus:outline-none sm:text-sm" />
+            class="w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-3 text-[15px] text-text-primary focus:border-accent focus:outline-none sm:text-sm" />
         </div>
         <button type="submit" id="savepw" class="min-h-11 rounded-xl bg-accent px-4 py-3 text-sm font-bold text-canvas transition-opacity hover:opacity-90 disabled:opacity-50">
           Save password
@@ -370,7 +371,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <form id="nameform" class="mt-3 hidden flex-wrap items-center gap-2">
             <label for="namein" class="text-[13px] text-text-secondary">What should we call you?</label>
             <input id="namein" type="text" autocomplete="given-name" placeholder="Your first name"
-              class="w-44 max-w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none sm:text-sm" />
+              class="w-44 max-w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none sm:text-sm" />
             <button type="submit" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Save</button>
             <button type="button" id="namelater" class="text-xs font-medium text-text-tertiary hover:text-text-primary">Not now</button>
           </form>
@@ -383,7 +384,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
                  forwards only senders Apple has on file, so the letter needs one it can reach -->
             <span id="newsrelay" class="hidden basis-full text-[13px] text-text-secondary">Apple hides your address from Verve, so the letter needs one it can reach: where should it go?</span>
             <input id="newsemail" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" aria-label="The address to send the newsletter to"
-              class="hidden w-60 max-w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none sm:text-sm" />
+              class="hidden w-60 max-w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none sm:text-sm" />
             <button type="button" id="newsyes" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas transition-opacity hover:opacity-90 disabled:opacity-60">Yes, send it</button>
             <button type="button" id="newsno" class="text-xs font-medium text-text-tertiary hover:text-text-primary">No thanks</button>
             <span id="newsmsg" class="hidden basis-full text-[12.5px] leading-snug text-text-primary" role="status" aria-live="polite"></span>
@@ -397,22 +398,22 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
            follows is about the one picked: adding or editing them, the
            note only you see, invitations, and who can see this page. -->
       <div id="personwrap" class="mt-3 hidden">
-        <form id="personform" class="mt-3 hidden max-w-3xl flex-wrap items-end gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+        <form id="personform" class="mt-3 hidden max-w-3xl flex-wrap items-end gap-2 rounded-2xl border border-ink/10 bg-ink/[0.03] p-4">
           <div id="personmodes" class="flex basis-full flex-wrap gap-1.5" role="group" aria-label="Who is this">
             <button type="button" data-pmode="care" class="min-h-9 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold">Someone I look after</button>
             <button type="button" data-pmode="ask" class="min-h-9 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold">Someone with their own email</button>
           </div>
           <label id="personnamewrap" class="flex flex-col gap-1 text-[12px] text-text-secondary">Their name
             <input id="personname" type="text" autocomplete="off" placeholder="Amma" maxlength="60" required
-              class="w-48 max-w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
+              class="w-48 max-w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
           </label>
           <label id="personbornwrap" class="flex flex-col gap-1 text-[12px] text-text-secondary">Born, year (optional)
             <input id="personborn" type="number" inputmode="numeric" min="1900" max="2100" placeholder="1958"
-              class="w-28 rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
+              class="w-28 rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
           </label>
           <label id="personemailwrap" class="hidden flex-col gap-1 text-[12px] text-text-secondary">Their email
             <input id="personemail" type="email" autocomplete="off" placeholder="umar@example.com"
-              class="w-64 max-w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
+              class="w-64 max-w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
           </label>
           <button type="submit" id="personsave" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Add</button>
           <button type="button" id="personcancel" class="min-h-10 px-2 text-xs font-medium text-text-tertiary hover:text-text-primary">Cancel</button>
@@ -423,7 +424,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         <div id="personnotewrap" class="mt-3 hidden max-w-3xl">
           <label for="personnote" class="font-mono text-[10px] font-semibold tracking-wider text-text-tertiary">NOTE &middot; ONLY YOU SEE THIS</label>
           <textarea id="personnote" rows="2" placeholder="On metformin since June. Next HbA1c due December."
-            class="mt-1 w-full resize-none rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[14px] leading-relaxed text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"></textarea>
+            class="mt-1 w-full resize-none rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[14px] leading-relaxed text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"></textarea>
         </div>
         <!-- the note a coach or clinician keeps on a page shared with them: a
              copy for their convenience, exportable, and gone from here when
@@ -434,7 +435,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
             <button type="button" id="notesexport" class="text-[12px] font-medium text-text-tertiary hover:text-text-primary">Export all my notes</button>
           </div>
           <textarea id="viewernote" rows="2" placeholder="Seen 7 Oct. Walk test 540 m. Retest in eight weeks."
-            class="mt-1 w-full resize-none rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[14px] leading-relaxed text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"></textarea>
+            class="mt-1 w-full resize-none rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[14px] leading-relaxed text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"></textarea>
         </div>
         <!-- the message count rides on the Messages tab and the plan on the Account group (board 1): nothing pops in here -->
         <!-- over the plan's people: the next person is not added, and this says why -->
@@ -452,7 +453,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         <span class="min-w-0 flex-1">
           <span id="busytext" class="block text-[13px] font-semibold text-text-primary"></span>
           <span id="busysub" class="block text-xs text-text-tertiary"></span>
-          <span class="mt-2 block h-1 w-full overflow-hidden rounded-full bg-white/[0.07]"><span id="busybar" class="block h-1 rounded-full bg-accent" style="width: 0%"></span></span>
+          <span class="mt-2 block h-1 w-full overflow-hidden rounded-full bg-ink/[0.07]"><span id="busybar" class="block h-1 rounded-full bg-accent" style="width: 0%"></span></span>
         </span>
       </button>
 
@@ -461,7 +462,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
            on Labs, a marker by name or section. Every word typed must land. -->
       <div id="mhsearchwrap" class="mt-3 hidden max-w-3xl">
         <label for="mhsearch" class="sr-only">Search reports and markers</label>
-        <div class="flex items-center gap-2 rounded-xl border border-white/12 bg-white/[0.04] px-3 focus-within:border-accent/60">
+        <div class="flex items-center gap-2 rounded-xl border border-ink/12 bg-ink/[0.04] px-3 focus-within:border-accent/60">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="shrink-0 text-text-muted" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
           <input id="mhsearch" type="search" autocomplete="off" spellcheck="false" placeholder="Search: ApoB, echo, March 2024, a report's name…"
             class="min-h-10 w-full bg-transparent text-[14px] text-text-primary placeholder:text-text-muted focus:outline-none" />
@@ -485,7 +486,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <p class="mt-2 text-[13.5px] leading-relaxed text-text-secondary">Ask someone by email. They choose what you see, labs, imaging, activity, body or notes, and can stop at any time. Once they say yes they appear here, ranked by the week's movement.</p>
           <div class="mt-4 flex flex-wrap gap-3">
             <button type="button" id="glanceask" class="min-h-11 rounded-xl bg-accent px-5 py-2.5 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Ask someone to share</button>
-            <button type="button" id="glanceself" class="min-h-11 rounded-xl border border-white/14 px-5 py-2.5 text-sm font-semibold text-text-primary transition-colors hover:border-white/25">Your own page</button>
+            <button type="button" id="glanceself" class="min-h-11 rounded-xl border border-ink/14 px-5 py-2.5 text-sm font-semibold text-text-primary transition-colors hover:border-ink/25">Your own page</button>
           </div>
         </div>
         <section id="glance" class="hidden">
@@ -497,7 +498,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
             </div>
             <p class="text-[12px] text-text-tertiary">People share with you at <span id="glanceaddr" class="font-mono text-[11px] text-text-secondary"></span></p>
           </div>
-          <div class="mt-5 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03]">
+          <div class="mt-5 overflow-x-auto rounded-2xl border border-ink/10 bg-ink/[0.03]">
             <table class="w-full min-w-[880px] text-[13px]">
               <thead>
                 <tr class="text-left font-mono text-[10px] tracking-wider text-text-tertiary">
@@ -512,17 +513,17 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
                   <th class="px-3 py-2.5 font-semibold">AT GOAL</th>
                 </tr>
               </thead>
-              <tbody id="glancerows" class="divide-y divide-white/[0.06]"></tbody>
+              <tbody id="glancerows" class="divide-y divide-ink/[0.06]"></tbody>
             </table>
           </div>
           <!-- Clients: each client's latest Guide's read, doctor and coach items (Reads, 26 Oct) -->
-          <div id="glancereads" class="mt-3 hidden rounded-2xl border border-violet-400/35 bg-white/[0.03] p-4"></div>
+          <div id="glancereads" class="mt-3 hidden rounded-2xl border border-violet-400/35 bg-ink/[0.03] p-4"></div>
           <div class="mt-3 grid gap-3 lg:grid-cols-[7fr_5fr]">
-            <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <div class="rounded-2xl border border-ink/10 bg-ink/[0.03] p-4">
               <h3 class="text-[15px] font-extrabold text-text-primary">This week</h3>
               <div id="glanceweek" class="mt-2 flex flex-col gap-1.5 text-[13px] leading-relaxed text-text-secondary"></div>
             </div>
-            <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <div class="rounded-2xl border border-ink/10 bg-ink/[0.03] p-4">
               <h3 class="text-[15px] font-extrabold text-text-primary">Retest due</h3>
               <div id="glancedue" class="mt-2 flex flex-col gap-1.5 text-[13px] leading-relaxed text-text-secondary"></div>
               <p class="mt-2 text-[12px] text-text-muted">Lab cadences are the cited ones on the marker pages. A person sees the same due dates on their own In depth tab.</p>
@@ -568,16 +569,16 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         <div id="ovold" class="hidden">
           <div id="ovdays" class="mt-4"></div>
           <div id="ovweek" class="mt-[18px]"></div>
-        <div class="mt-[18px] rounded-[20px] border border-white/10 bg-white/[0.03] p-5 sm:px-6">
+        <div class="mt-[18px] rounded-[20px] border border-ink/10 bg-ink/[0.03] p-5 sm:px-6">
           <div class="font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">Where the readings come from</div>
           <div class="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] sm:items-center">
-            <div class="rounded-2xl border border-white/14 px-4 py-3 text-center"><span class="block text-sm font-extrabold text-text-primary">Whatever you wear</span><span class="mt-0.5 block text-[11.5px] text-text-tertiary">Apple Watch, Garmin, Oura, WHOOP, Samsung, a phone alone</span></div>
+            <div class="rounded-2xl border border-ink/14 px-4 py-3 text-center"><span class="block text-sm font-extrabold text-text-primary">Whatever you wear</span><span class="mt-0.5 block text-[11.5px] text-text-tertiary">Apple Watch, Garmin, Oura, WHOOP, Samsung, a phone alone</span></div>
             <span class="hidden text-center text-xl text-text-muted sm:block" aria-hidden="true">&rarr;</span>
-            <div class="rounded-2xl border border-white/14 px-4 py-3 text-center"><span class="block text-sm font-extrabold text-text-primary">Apple Health &middot; Health Connect</span><span class="mt-0.5 block text-[11.5px] text-text-tertiary">the phone's own store; the wearable's app writes to it</span></div>
+            <div class="rounded-2xl border border-ink/14 px-4 py-3 text-center"><span class="block text-sm font-extrabold text-text-primary">Apple Health &middot; Health Connect</span><span class="mt-0.5 block text-[11.5px] text-text-tertiary">the phone's own store; the wearable's app writes to it</span></div>
             <span class="hidden text-center text-xl text-text-muted sm:block" aria-hidden="true">&rarr;</span>
-            <div class="rounded-2xl border border-white/14 px-4 py-3 text-center"><span class="block text-sm font-extrabold text-text-primary">Verve on the phone</span><span class="mt-0.5 block text-[11.5px] text-text-tertiary">reads the store, never one maker's cloud</span></div>
+            <div class="rounded-2xl border border-ink/14 px-4 py-3 text-center"><span class="block text-sm font-extrabold text-text-primary">Verve on the phone</span><span class="mt-0.5 block text-[11.5px] text-text-tertiary">reads the store, never one maker's cloud</span></div>
             <span class="hidden text-center text-xl text-text-muted sm:block" aria-hidden="true">&rarr;</span>
-            <div class="rounded-2xl border border-white/14 px-4 py-3 text-center"><span class="block text-sm font-extrabold text-text-primary">This page</span><span class="mt-0.5 block text-[11.5px] text-text-tertiary">the same daily signals, with the writer's name</span></div>
+            <div class="rounded-2xl border border-ink/14 px-4 py-3 text-center"><span class="block text-sm font-extrabold text-text-primary">This page</span><span class="mt-0.5 block text-[11.5px] text-text-tertiary">the same daily signals, with the writer's name</span></div>
           </div>
           <p class="mt-3 text-[12.5px] leading-relaxed text-text-secondary">Verve depends on the store, not on any wearable. What reaches this page is what your device's app chose to write there, and each card says who wrote it and what that writer leaves out, so a missing stage or a missing HRV is named, never guessed.</p>
         </div>
@@ -684,21 +685,21 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <div class="flex flex-wrap items-center gap-3">
             <h2 id="rvtitle" class="text-base font-extrabold"></h2>
             <span id="rvcount" class="rounded-md bg-warning/15 px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wider text-warning"></span>
-            <span id="rvpos" class="hidden rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wider text-text-secondary"></span>
+            <span id="rvpos" class="hidden rounded-md bg-ink/[0.06] px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wider text-text-secondary"></span>
             <div class="ml-auto flex items-center gap-2">
               <span class="font-mono text-[10px] uppercase tracking-wider text-text-tertiary">Report date</span>
               <input id="rvdate" type="date"
-                class="rounded-lg border border-white/12 bg-white/[0.04] px-3 py-1.5 text-sm text-text-primary focus:border-accent focus:outline-none" />
+                class="rounded-lg border border-ink/12 bg-ink/[0.04] px-3 py-1.5 text-sm text-text-primary focus:border-accent focus:outline-none" />
             </div>
           </div>
 
           <!-- tier 1: app-bound -->
-          <div class="rounded-2xl border border-accent/40 bg-white/[0.03] p-5">
+          <div class="rounded-2xl border border-accent/40 bg-ink/[0.03] p-5">
             <div class="flex items-baseline gap-3">
               <span class="font-mono text-[10px] font-semibold tracking-widest text-accent-light">GOES TO YOUR APP</span>
               <span class="text-xs text-text-tertiary">Metabolic · Heart · Muscle — check anything Verve misread</span>
             </div>
-            <div id="rvapp" class="mt-2 divide-y divide-white/[0.06]"></div>
+            <div id="rvapp" class="mt-2 divide-y divide-ink/[0.06]"></div>
             <div class="mt-4 flex flex-wrap items-center gap-3">
               <button id="confirm"
                 class="rounded-xl bg-accent px-5 py-3 text-sm font-bold text-canvas transition-opacity hover:opacity-90 disabled:opacity-50"></button>
@@ -710,7 +711,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           </div>
 
           <!-- tier 2: website archive -->
-          <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+          <div class="rounded-2xl border border-ink/10 bg-ink/[0.03] p-5">
             <div class="flex items-baseline gap-3">
               <span class="font-mono text-[10px] font-semibold tracking-widest text-text-secondary">STAYS ON THE WEBSITE</span>
               <span id="rvwebnote" class="text-xs text-text-tertiary"></span>
@@ -719,7 +720,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           </div>
 
           <div class="flex items-center gap-3">
-            <button id="discard" class="rounded-xl border border-white/14 px-4 py-2.5 text-sm font-semibold text-text-secondary transition-colors hover:border-white/25">
+            <button id="discard" class="rounded-xl border border-ink/14 px-4 py-2.5 text-sm font-semibold text-text-secondary transition-colors hover:border-ink/25">
               Close review
             </button>
             <span class="text-xs text-text-muted">Everything above is already on your Labs tab — closing loses nothing.</span>
@@ -727,10 +728,10 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         </div>
 
         <!-- ── echo review: numbers → Labs, the doctor's words kept apart ── -->
-        <div id="echoreview" class="mt-6 hidden rounded-2xl border border-accent/40 bg-white/[0.03] p-5"></div>
+        <div id="echoreview" class="mt-6 hidden rounded-2xl border border-accent/40 bg-ink/[0.03] p-5"></div>
 
         <!-- the next step in the chain: picture, what moved, values, paper -->
-        <button type="button" data-goto="overview" class="mt-8 flex w-full max-w-3xl items-center justify-between gap-4 rounded-2xl border border-white/12 bg-white/[0.03] px-5 py-4 text-left transition-colors hover:border-white/25 hover:bg-white/[0.05]">
+        <button type="button" data-goto="overview" class="mt-8 flex w-full max-w-3xl items-center justify-between gap-4 rounded-2xl border border-ink/12 bg-ink/[0.03] px-5 py-4 text-left transition-colors hover:border-ink/25 hover:bg-ink/[0.05]">
           <span class="min-w-0"><span class="block font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary">BACK</span><span class="mt-1 block text-[14.5px] font-bold text-text-primary">Overview: this week so far, in six cards</span></span>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </button>
@@ -741,7 +742,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         why you confirm app-bound values. Reports and values are private to your account.
       </p>
       <p class="mt-3 text-xs leading-5 text-text-muted">
-        <button type="button" id="deleteaccount" class="underline decoration-white/25 underline-offset-2 transition-colors hover:text-text-primary">Delete my account</button>
+        <button type="button" id="deleteaccount" class="underline decoration-ink/25 underline-offset-2 transition-colors hover:text-text-primary">Delete my account</button>
         <span id="deletemsg" class="ml-2"></span>
       </p>
       </div>
@@ -758,14 +759,14 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
        rather than about any one tab. Each grant can be changed here, not
        only stopped: the ticks are re-saved on the same row. -->
   <div id="sharewrap" class="fixed inset-0 z-40 hidden items-start justify-center overflow-y-auto bg-canvas-3/70 p-4 backdrop-blur-sm sm:p-8" role="dialog" aria-modal="true" aria-labelledby="sharetitle">
-    <div class="mh-open mt-4 w-full max-w-2xl rounded-[20px] border border-white/12 bg-[#15151f] p-5 shadow-2xl shadow-black/50 sm:mt-8 sm:p-7">
+    <div class="mh-open mt-4 w-full max-w-2xl rounded-[20px] border border-ink/12 bg-card p-5 shadow-2xl shadow-shade sm:mt-8 sm:p-7">
       <div class="flex items-start justify-between gap-4">
         <div class="min-w-0">
           <span id="sharekick" class="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-accent-light">Access · your page</span>
           <h2 id="sharetitle" class="mt-2 text-[22px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-2xl">Give access to your page</h2>
           <p class="mt-1.5 text-[13px] leading-relaxed text-text-secondary">They can look, not change. You choose what they see, and you can stop, or change it, at any time.</p>
         </div>
-        <button type="button" id="shareclose" aria-label="Close" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/12 text-text-secondary transition-colors hover:border-white/25 hover:text-text-primary">
+        <button type="button" id="shareclose" aria-label="Close" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ink/12 text-text-secondary transition-colors hover:border-ink/25 hover:text-text-primary">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
       </div>
@@ -775,17 +776,17 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         <div id="sharelist" class="mt-2 flex flex-col gap-2"></div>
       </div>
 
-      <form id="shareform" class="mt-5 flex flex-col gap-3 border-t border-white/[0.07] pt-5">
+      <form id="shareform" class="mt-5 flex flex-col gap-3 border-t border-ink/[0.07] pt-5">
         <div class="font-mono text-[10px] font-semibold tracking-[0.14em] text-text-tertiary">GIVE ACCESS TO SOMEONE NEW</div>
         <label class="flex flex-col gap-1 text-[12px] text-text-secondary">Their email
           <input id="shareemail" type="email" required autocomplete="off" placeholder="coach@example.com"
-            class="w-80 max-w-full rounded-xl border border-white/12 bg-white/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
+            class="w-80 max-w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none" />
         </label>
         <fieldset class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13.5px] text-text-primary">
           <legend class="mb-1 text-[12px] text-text-secondary">What they see</legend>
           <div class="mb-1 flex w-full flex-wrap items-center gap-2 text-[12px] text-text-tertiary">Tick for
-            <button type="button" data-preset="coach" class="min-h-8 rounded-lg border border-white/12 px-2.5 text-[12px] font-semibold text-text-secondary transition-colors hover:border-white/25 hover:text-text-primary">a coach</button>
-            <button type="button" data-preset="clinician" class="min-h-8 rounded-lg border border-white/12 px-2.5 text-[12px] font-semibold text-text-secondary transition-colors hover:border-white/25 hover:text-text-primary">a clinician</button>
+            <button type="button" data-preset="coach" class="min-h-8 rounded-lg border border-ink/12 px-2.5 text-[12px] font-semibold text-text-secondary transition-colors hover:border-ink/25 hover:text-text-primary">a coach</button>
+            <button type="button" data-preset="clinician" class="min-h-8 rounded-lg border border-ink/12 px-2.5 text-[12px] font-semibold text-text-secondary transition-colors hover:border-ink/25 hover:text-text-primary">a clinician</button>
             <span>or choose yourself.</span>
           </div>
           <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-scope="labs" class="h-4 w-4 accent-[#818cf8]" />Labs</label>
@@ -1245,7 +1246,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     $("personform").querySelectorAll<HTMLButtonElement>("[data-pmode]").forEach((b) => {
       const on = b.dataset.pmode === mode;
       b.className = `min-h-9 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition-colors ${
-        on ? "border-accent/70 bg-accent/15 text-text-primary" : "border-white/14 text-text-secondary hover:text-text-primary"}`;
+        on ? "border-accent/70 bg-accent/15 text-text-primary" : "border-ink/14 text-text-secondary hover:text-text-primary"}`;
     });
     const care = mode === "care";
     show("personnamewrap", care); $("personnamewrap").classList.toggle("flex", care);
@@ -1490,8 +1491,8 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       <p class="text-[13px] leading-relaxed text-text-secondary">${esc(fileName)} was read but not filed. Nothing has gone to any timeline. Whose is it?</p>
       <div class="flex flex-wrap gap-2">
         <button type="button" data-whose="add" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas">Add ${esc(first)} as a person</button>
-        <button type="button" data-whose="file" class="min-h-10 rounded-xl border border-white/14 px-4 py-2 text-sm font-semibold text-text-primary">It is ${esc(who.self ? "mine" : who.name + "'s")}, file it</button>
-        <button type="button" data-whose="remove" class="min-h-10 rounded-xl border border-white/14 px-4 py-2 text-sm font-semibold text-text-tertiary">Remove it</button>
+        <button type="button" data-whose="file" class="min-h-10 rounded-xl border border-ink/14 px-4 py-2 text-sm font-semibold text-text-primary">It is ${esc(who.self ? "mine" : who.name + "'s")}, file it</button>
+        <button type="button" data-whose="remove" class="min-h-10 rounded-xl border border-ink/14 px-4 py-2 text-sm font-semibold text-text-tertiary">Remove it</button>
       </div>`;
     show("namecheck", true); $("namecheck").classList.add("flex");
     $("namecheck").scrollIntoView({ block: "center", behavior: "smooth" });
@@ -1626,7 +1627,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     const APP_SCOPES = new Set(["activity", "body", "heart"]);
     const offered = Object.keys(SCOPE_LABEL).filter((k) => k !== "notes" && (p.account_id || !APP_SCOPES.has(k)));
     $("sharelist").innerHTML = rows.length ? rows.map((g: any) => `
-      <div class="rounded-xl border border-white/[0.08] px-3.5 py-2.5 text-[13px]" data-grant="${g.id}">
+      <div class="rounded-xl border border-ink/[0.08] px-3.5 py-2.5 text-[13px]" data-grant="${g.id}">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/20 text-[11px] font-bold text-accent-light">${esc(String(g.viewer_email).charAt(0).toUpperCase())}</span>
           <span class="min-w-0 flex-1">
@@ -1636,10 +1637,10 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
               ? `since ${dayOf(g.accepted_at ?? g.invited_at)}${g.last_viewed_at ? `, last looked ${dayOf(g.last_viewed_at)}` : ", has not looked yet"}`
               : `invited ${dayOf(g.invited_at)}`}</span>
           </span>
-          <button type="button" data-change="${g.id}" class="min-h-9 rounded-lg border border-white/12 px-3 text-[12px] font-semibold text-text-secondary transition-colors hover:border-white/25 hover:text-text-primary">Change</button>
+          <button type="button" data-change="${g.id}" class="min-h-9 rounded-lg border border-ink/12 px-3 text-[12px] font-semibold text-text-secondary transition-colors hover:border-ink/25 hover:text-text-primary">Change</button>
           <button type="button" data-stop="${g.id}" class="min-h-9 rounded-lg border border-danger/35 px-3 text-[12px] font-semibold text-danger/90 transition-colors hover:border-danger/60 hover:text-danger">${g.status === "active" ? "Stop" : "Cancel"}</button>
         </div>
-        <form data-edit="${g.id}" class="mt-3 hidden flex-wrap items-center gap-x-4 gap-y-1 border-t border-white/[0.06] pt-3 text-[13px] text-text-primary">
+        <form data-edit="${g.id}" class="mt-3 hidden flex-wrap items-center gap-x-4 gap-y-1 border-t border-ink/[0.06] pt-3 text-[13px] text-text-primary">
           ${offered.map((k) => `<label class="flex min-h-9 items-center gap-2"><input type="checkbox" value="${k}" ${(g.scopes ?? []).includes(k) ? "checked" : ""} class="h-4 w-4 accent-[#818cf8]" />${esc(SCOPE_LABEL[k])}</label>`).join("")}
           <span class="ml-auto flex items-center gap-3">
             <button type="button" data-editcancel class="text-[12px] font-medium text-text-tertiary hover:text-text-primary">Cancel</button>
@@ -1773,7 +1774,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         </div>
         <div class="flex gap-2">
           <button type="submit" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas">Allow</button>
-          <button type="button" data-rdecline class="min-h-10 rounded-xl border border-white/14 px-4 py-2 text-sm font-semibold text-text-secondary">Decline</button>
+          <button type="button" data-rdecline class="min-h-10 rounded-xl border border-ink/14 px-4 py-2 text-sm font-semibold text-text-secondary">Decline</button>
         </div>
         <p data-rmsg class="hidden text-[12.5px] text-danger"></p>
       </form>`).join("");
@@ -1815,7 +1816,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         <p class="text-[12.5px] text-text-tertiary">You can look, not change. They can stop at any time, and see when you last looked.</p>
         <div class="flex gap-2">
           <button type="button" data-accept="${g.id}" data-open="${g.person_id}" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas">Accept</button>
-          <button type="button" data-decline="${g.id}" class="min-h-10 rounded-xl border border-white/14 px-4 py-2 text-sm font-semibold text-text-secondary">Decline</button>
+          <button type="button" data-decline="${g.id}" class="min-h-10 rounded-xl border border-ink/14 px-4 py-2 text-sm font-semibold text-text-secondary">Decline</button>
         </div>
       </div>`).join("");
     refreshMessagesBadge();
@@ -1934,7 +1935,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     const parts = [`${weeks.length} week${weeks.length === 1 ? "" : "s"} of activity`, `${crf.length} fitness test${crf.length === 1 ? "" : "s"}`, `${body.length} waist reading${body.length === 1 ? "" : "s"}`, `${freshLabs.length} lab value${freshLabs.length === 1 ? "" : "s"}${labRows.length > freshLabs.length ? ` (${labRows.length - freshLabs.length} already here)` : ""}`];
     qset(rid, "IMPORTED ✓", "ok", `Verve export from ${fmtDay(exportedOn)} · ${parts.join(" · ")}${under}`);
     $("importcard").innerHTML = `<span class="min-w-0 flex-1">Imported the app's export from ${esc(fmtDay(exportedOn))}${esc(under)}: ${esc(parts.join(", "))}. The Overview has the weeks; this tab lists the export under From the Verve app.</span>
-      <button type="button" data-undo="${tag}" class="min-h-9 rounded-lg border border-white/14 px-3 py-1.5 text-xs font-semibold text-text-secondary hover:text-danger">Undo this import</button>`;
+      <button type="button" data-undo="${tag}" class="min-h-9 rounded-lg border border-ink/14 px-3 py-1.5 text-xs font-semibold text-text-secondary hover:text-danger">Undo this import</button>`;
     show("importcard", true); $("importcard").classList.add("flex");
     $("importcard").querySelector("[data-undo]")!.addEventListener("click", async () => {
       await removeImport(tag, who);
@@ -2023,7 +2024,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     const under = who.self ? "" : ` · under ${who.name}`;
     qset(rid, "IMPORTED ✓", "ok", `${sessions.length} sessions in ${weeks.length} week${weeks.length === 1 ? "" : "s"}, ${fmtDay(first)} to ${fmtDay(last)}${withHr ? ` · ${withHr} with heart rate` : " · no heart rate, so no MET-hours"}${under}`);
     $("importcard").innerHTML = `<span class="min-w-0 flex-1">Imported ${sessions.length} workouts from ${esc(file.name)}${esc(under)}: ${weeks.length} week${weeks.length === 1 ? "" : "s"}, ${esc(fmtDay(first))} to ${esc(fmtDay(last))}. The Overview's Years lens lists every year; this tab lists the file under From the Verve app.</span>
-      <button type="button" data-undo="${tag}" class="min-h-9 rounded-lg border border-white/14 px-3 py-1.5 text-xs font-semibold text-text-secondary hover:text-danger">Undo this import</button>`;
+      <button type="button" data-undo="${tag}" class="min-h-9 rounded-lg border border-ink/14 px-3 py-1.5 text-xs font-semibold text-text-secondary hover:text-danger">Undo this import</button>`;
     show("importcard", true); $("importcard").classList.add("flex");
     $("importcard").querySelector("[data-undo]")!.addEventListener("click", async () => {
       await removeImport(tag, who);
@@ -2210,7 +2211,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         <div class="mt-1 text-[12.5px] text-text-tertiary">Only what each client shares is read. Open a client for the full read and share it into their Messages.</div></div>
         <button type="button" id="readall" class="rounded-xl border border-violet-400/50 px-3.5 py-1.5 text-[13px] font-bold text-accent-light">Read every client's week</button></div>
       <div class="mt-3 overflow-x-auto"><table class="w-full min-w-[720px] text-[13px]"><thead><tr class="text-left font-mono text-[10px] tracking-wider text-text-tertiary"><th class="px-2 py-2">CLIENT</th><th class="px-2 py-2">DOCTOR</th><th class="px-2 py-2">COACH</th><th class="px-2 py-2">READ</th></tr></thead>
-      <tbody class="divide-y divide-white/[0.06]">${clients.map((p) => { const r = latest.get(p.id); return `<tr data-openread="${p.id}" class="cursor-pointer hover:bg-white/[0.03]"><td class="px-2 py-2.5 font-semibold text-text-primary">${esc(p.name || "Unnamed")}</td>
+      <tbody class="divide-y divide-ink/[0.06]">${clients.map((p) => { const r = latest.get(p.id); return `<tr data-openread="${p.id}" class="cursor-pointer hover:bg-ink/[0.03]"><td class="px-2 py-2.5 font-semibold text-text-primary">${esc(p.name || "Unnamed")}</td>
         <td class="px-2 py-2.5 text-danger">${r ? item(r, "doctor") : `<span class="text-text-muted">not read yet</span>`}</td><td class="px-2 py-2.5 text-success-light">${r ? item(r, "coach") : ""}</td>
         <td class="px-2 py-2.5 font-mono text-[11.5px] ${r && day0(r.created_at) >= monday ? "text-accent-light" : "text-text-tertiary"}">${r ? esc(fmtDay(day0(r.created_at))) : "—"}</td></tr>`; }).join("")}</tbody></table></div>
       <p id="readallmsg" class="mt-2 text-[12.5px] text-text-tertiary"></p>`;
@@ -2314,11 +2315,11 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       const tw = l.act.thisWeek?.dose_met_min != null ? String(Math.round(l.act.thisWeek.dose_met_min)) : null;
       const fitTone = l.fit.trendWord === "rising" ? "text-success-light" : l.fit.trendWord === "falling" ? "text-danger" : "text-text-tertiary";
       const labText = l.labRows.length
-        ? `${esc(fmtDay(l.latestLabDay))} · ${l.outRows.length ? `<span class="text-warning font-semibold">${esc(l.outRows[0].label)} outside</span>${l.outRows.length > 1 ? ` <span class="text-text-tertiary">+${l.outRows.length - 1}</span>` : ""}` : "all in range"}${l.unchecked ? ` <span class="rounded-md bg-white/[0.06] px-1.5 py-0.5 font-mono text-[9px] tracking-wider text-text-secondary">${l.unchecked} UNCHECKED</span>` : ""}`
+        ? `${esc(fmtDay(l.latestLabDay))} · ${l.outRows.length ? `<span class="text-warning font-semibold">${esc(l.outRows[0].label)} outside</span>${l.outRows.length > 1 ? ` <span class="text-text-tertiary">+${l.outRows.length - 1}</span>` : ""}` : "all in range"}${l.unchecked ? ` <span class="rounded-md bg-ink/[0.06] px-1.5 py-0.5 font-mono text-[9px] tracking-wider text-text-secondary">${l.unchecked} UNCHECKED</span>` : ""}`
         : canSeeLabs(l.p) ? "—" : "not shared";
       const due = l.dues[0] ?? null;
       const q = l.act.quietDays;
-      return `<tr data-open="${l.p.id}" class="cursor-pointer transition-colors hover:bg-white/[0.03]">
+      return `<tr data-open="${l.p.id}" class="cursor-pointer transition-colors hover:bg-ink/[0.03]">
         <td class="px-3 py-2.5 font-semibold text-text-primary">${l.p.self ? "You" : esc(l.p.name || "Unnamed")}</td>
         <td class="px-3 py-2.5 text-text-tertiary">${esc(l.p.self ? "you" : l.p.mine ? "you look after" : scopeList(l.p.scopes).toLowerCase() || "nothing yet")}</td>
         <td class="px-3 py-2.5 font-bold ${chTone}">${ch == null ? "—" : `${signed(ch * 100, 0)}%`}</td>
@@ -3304,7 +3305,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     const row = document.getElementById(id);
     if (!row) return;
     const tones = {
-      wait: "bg-white/[0.06] text-text-tertiary",
+      wait: "bg-ink/[0.06] text-text-tertiary",
       busy: "bg-accent/15 text-accent-light animate-pulse",
       ok: "bg-success/15 text-success",
       bad: "bg-danger/15 text-danger",
@@ -3334,12 +3335,12 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <button data-clearqueue class="text-xs font-medium text-text-tertiary hover:text-text-primary">Clear</button>
         </div>
         ${files.map((f, i) => `
-        <div id="${rowId(i)}" class="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+        <div id="${rowId(i)}" class="flex items-center gap-3 rounded-2xl border border-ink/10 bg-ink/[0.03] px-4 py-3">
           <div class="min-w-0 flex-1">
             <div class="truncate text-[13px] font-bold">${esc(f.name)}</div>
             <div data-qcap class="mt-0.5 text-[11px] leading-relaxed text-text-tertiary">Waiting its turn</div>
           </div>
-          <span data-qchip class="shrink-0 rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-text-tertiary">QUEUED</span>
+          <span data-qchip class="shrink-0 rounded-md bg-ink/[0.06] px-2 py-0.5 font-mono text-[9px] font-semibold tracking-wider text-text-tertiary">QUEUED</span>
         </div>`).join("")}
         <p data-summary class="hidden text-xs text-text-tertiary"></p>
       </div>`);
@@ -3732,7 +3733,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         <div class="flex items-center gap-3 py-2 opacity-50">
           <span class="w-20 font-mono text-[10px] uppercase tracking-wider text-text-tertiary">${meta.section}</span>
           <span class="flex-1 text-sm font-semibold line-through">${esc(meta.label)} · ${v.value} ${esc(unit)}</span>
-          <span class="rounded-md bg-white/[0.06] px-2 py-0.5 font-mono text-[9px] tracking-wider text-text-tertiary">ALREADY IN YOUR APP</span>
+          <span class="rounded-md bg-ink/[0.06] px-2 py-0.5 font-mono text-[9px] tracking-wider text-text-tertiary">ALREADY IN YOUR APP</span>
         </div>`;
       const near = nearDays.get(v.key);
       const nearChip = near != null
@@ -3743,7 +3744,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
           <span class="w-20 font-mono text-[10px] uppercase tracking-wider text-text-tertiary">${meta.section}</span>
           <span class="min-w-0 flex-1 text-sm font-semibold">${esc(meta.label)} ${nearChip}</span>
           <input data-key="${v.key}" type="number" step="any" value="${v.value}"
-            class="w-28 rounded-lg border border-white/12 bg-white/[0.04] px-3 py-1.5 text-right font-mono text-sm text-text-primary focus:border-accent focus:outline-none" />
+            class="w-28 rounded-lg border border-ink/12 bg-ink/[0.04] px-3 py-1.5 text-right font-mono text-sm text-text-primary focus:border-accent focus:outline-none" />
           <span class="w-14 text-xs text-text-tertiary">${esc(unit)}</span>
           <input data-drop="${v.key}" type="checkbox" ${near != null ? "" : "checked"} title="${near != null ? "Unticked — the same value sits nearby in your app; tick to send anyway" : "Untick to leave this value out"}" class="h-4 w-4 accent-[#818cf8]" />
         </div>`;
@@ -3769,7 +3770,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       : `${webOnly.length} values · ${fresh.length} new saved to your dashboard${allValues.length - fresh.length > 0 ? ` · ${allValues.length - fresh.length} already there` : ""}`;
     $("rvweb").innerHTML = SECTION_ORDER.filter((s) => bySec.has(s)).map((s) => `
       <div class="mt-3 font-mono text-[10px] uppercase tracking-widest text-text-tertiary">${SECTIONS[s]}</div>
-      <div class="divide-y divide-white/[0.05]">
+      <div class="divide-y divide-ink/[0.05]">
         ${bySec.get(s)!.map((v: any) => `
           <div class="flex items-baseline gap-3 py-1.5">
             <span class="flex-1 text-[13px] text-text-primary">${esc(v.name)}</span>
@@ -3839,7 +3840,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
       </div>
       ${values.length ? `
         <div class="mt-3 font-mono text-[10px] font-semibold uppercase tracking-widest text-text-tertiary">Measurements → Labs · Imaging</div>
-        <div class="mt-1 divide-y divide-white/[0.05]">
+        <div class="mt-1 divide-y divide-ink/[0.05]">
           ${values.map((v: any) => `
             <div class="flex items-baseline gap-3 py-1.5">
               <span class="flex-1 text-[13px] text-text-primary">${esc(v.name)}</span>
@@ -3849,10 +3850,10 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
         </div>` : ""}
       ${out.impression ? `
         <div class="mt-4 font-mono text-[10px] font-semibold uppercase tracking-widest text-text-tertiary">Impression — the report's own words</div>
-        <p class="mt-1 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3 text-sm leading-6 text-text-secondary">${esc(out.impression)}</p>` : ""}
+        <p class="mt-1 rounded-xl border border-ink/[0.07] bg-ink/[0.02] p-3 text-sm leading-6 text-text-secondary">${esc(out.impression)}</p>` : ""}
       ${findings.length ? `
         <div class="mt-4 font-mono text-[10px] font-semibold uppercase tracking-widest text-text-tertiary">Findings</div>
-        <div class="mt-1 divide-y divide-white/[0.05]">
+        <div class="mt-1 divide-y divide-ink/[0.05]">
           ${findings.map((f: any) => `
             <div class="flex gap-3 py-1.5 text-[13px]">
               <span class="w-32 shrink-0 font-semibold text-text-primary">${esc(String(f.structure ?? ""))}</span>
@@ -3860,7 +3861,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
             </div>`).join("")}
         </div>` : ""}
       <div class="mt-4 flex flex-wrap items-center gap-3">
-        <button id="echoclose" class="rounded-xl border border-white/14 px-4 py-2.5 text-sm font-semibold text-text-secondary transition-colors hover:border-white/25">Close</button>
+        <button id="echoclose" class="rounded-xl border border-ink/14 px-4 py-2.5 text-sm font-semibold text-text-secondary transition-colors hover:border-ink/25">Close</button>
         <span class="text-xs text-text-muted">Numbers are read from the report's printed text — never measured from images. Ranges shown only when the report prints them.</span>
       </div>`;
     show("echoreview", true);

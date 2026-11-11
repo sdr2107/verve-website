@@ -102,7 +102,7 @@ const bandTone = ["text-success-light", "text-warning", "text-danger"];
         </p>
         <div class="vrv-rise flex flex-wrap gap-3" style="--i: 2">
           <a href={GET_APP_PATH} class="inline-flex min-h-11 items-center justify-center rounded-xl bg-accent px-5 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Get the app</a>
-          <a href="/start" class="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/14 px-5 text-sm font-bold text-text-primary transition-colors hover:border-white/25">No number yet? Start here</a>
+          <a href="/start" class="inline-flex min-h-11 items-center justify-center rounded-xl border border-ink/14 px-5 text-sm font-bold text-text-primary transition-colors hover:border-ink/25">No number yet? Start here</a>
         </div>
         <p class="vrv-rise text-[13px] text-text-tertiary" style="--i: 3">Six minutes on flat ground, no app needed.</p>
       </div>
@@ -115,7 +115,7 @@ const bandTone = ["text-success-light", "text-warning", "text-danger"];
 
   <!-- ── What the evidence says: three figures on one line, set below the hero with room ── -->
   <section class="px-6 sm:px-10">
-    <div class="mx-auto grid max-w-6xl gap-10 border-y border-white/[0.07] py-10 sm:grid-cols-3 sm:gap-12">
+    <div class="mx-auto grid max-w-6xl gap-10 border-y border-ink/[0.07] py-10 sm:grid-cols-3 sm:gap-12">
       {evidence.map((e) => (
         <div>
           <p class="text-[44px] font-extrabold leading-none tracking-[-0.03em] text-text-primary sm:text-[52px]">{e.value}</p>
@@ -145,7 +145,7 @@ const bandTone = ["text-success-light", "text-warning", "text-danger"];
       </div>
       <ul class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {RETURNS.map((r) => (
-          <li class="flex flex-col gap-3 rounded-[20px] border border-white/10 bg-white/[0.03] p-6">
+          <li class="flex flex-col gap-3 rounded-[20px] border border-ink/10 bg-ink/[0.03] p-6">
             <span class="font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-accent-light">{r.cadence}</span>
             <p class="text-[18px] font-bold leading-[1.2] tracking-[-0.01em] text-text-primary">{r.title}</p>
             <p class="text-[14px] leading-[1.55] text-text-secondary">{r.body}</p>
@@ -167,14 +167,14 @@ const bandTone = ["text-success-light", "text-warning", "text-danger"];
           </h2>
         </div>
         <div class="flex shrink-0 items-center gap-2">
-          <span class="rounded-xl border border-white/14 px-4 py-2 text-xs font-bold text-text-primary">iPhone</span>
-          <span class="rounded-xl border border-white/8 px-4 py-2 text-xs font-bold text-text-tertiary">Android &middot; soon</span>
+          <span class="rounded-xl border border-ink/14 px-4 py-2 text-xs font-bold text-text-primary">iPhone</span>
+          <span class="rounded-xl border border-ink/8 px-4 py-2 text-xs font-bold text-text-tertiary">Android &middot; soon</span>
         </div>
       </div>
 
       <ul class="grid gap-5 sm:grid-cols-3">
         {pages.map((p) => (
-          <li class="flex flex-col gap-4 rounded-[20px] border border-white/10 bg-white/[0.03] p-6">
+          <li class="theme-dark flex flex-col gap-4 rounded-[20px] border border-ink/10 bg-card p-6">
             <span class="flex items-center gap-2">
               <span class="h-2 w-2 rounded-full" style={`background: ${p.dot}`}></span>
               <span class="font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-text-tertiary">{p.label}</span>
@@ -203,7 +203,7 @@ const bandTone = ["text-success-light", "text-warning", "text-danger"];
 
   <!-- ── Every number named: the promise, kept, with one marker as the proof ── -->
   <section class="px-6 pt-16 pb-20 sm:px-10 lg:pt-[88px] sm:pb-28">
-    <div class="mx-auto grid max-w-6xl items-center gap-10 border-t border-white/[0.07] pt-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-16">
+    <div class="mx-auto grid max-w-6xl items-center gap-10 border-t border-ink/[0.07] pt-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-16">
       <div class="flex flex-col gap-3.5">
         <span class="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-text-tertiary">Every number named</span>
         <h2 class="text-[28px] font-extrabold leading-[1.1] tracking-[-0.03em] text-text-primary sm:text-[34px]">
@@ -217,7 +217,7 @@ const bandTone = ["text-success-light", "text-warning", "text-danger"];
           Read the full evidence base &rarr;
         </a>
       </div>
-      <div class="rounded-[20px] border border-white/10 bg-white/[0.03] p-6">
+      <div class="rounded-[20px] border border-ink/10 bg-ink/[0.03] p-6">
         <div class="flex items-baseline justify-between">
           <span class="text-lg font-extrabold text-text-primary">{apoB.label}</span>
           <span class="font-mono text-[11px] text-text-tertiary">{apoB.units[0]}</span>

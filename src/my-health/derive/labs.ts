@@ -132,7 +132,7 @@ export function bigChartHtml(rsAll: any[]): string {
 
   const unitLabel = rs[rs.length - 1].unit ? esc(String(rs[rs.length - 1].unit)) : "";
   return `
-    <div class="mh-open mb-3 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+    <div class="mh-open mb-3 rounded-xl border border-ink/[0.07] bg-ink/[0.02] p-3">
       <svg viewBox="0 0 ${W} ${H}" class="w-full">${ticks}${bands}${line}${dots}${diamonds}${xlabels}</svg>
       <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-text-tertiary">
         <span><span class="text-success">●</span> in its lab's range</span>
@@ -143,7 +143,7 @@ export function bigChartHtml(rsAll: any[]): string {
       ${offLine.length ? `
         <div class="mt-1.5 text-[10px] font-semibold text-warning">⚠ UNIT CHANGED — ${offLine.length} earlier reading${offLine.length === 1 ? "" : "s"} in a different unit, listed below, not on this line</div>
         ${offLine.map((r) => `<div class="mt-0.5 font-mono text-[10px] text-text-tertiary">${fmtDay(r.measured_on)} · ${r.value}${r.unit ? " " + esc(r.unit) : ""} (range ${esc(rangeLabel(r) || "—")})</div>`).join("")}` : ""}
-      <div class="mt-2 divide-y divide-white/[0.04]">
+      <div class="mt-2 divide-y divide-ink/[0.04]">
         ${[...rs].reverse().map((r) => {
           const own = inRange(r);
           return `<div class="flex items-baseline gap-3 py-1">

@@ -563,14 +563,14 @@ export function workoutsListHtml(acts: any[], range: Rng): string {
   const t = todayStr();
   const from = range === "week" ? mondayOf(new Date()) : range === "4w" ? addDays(mondayOf(new Date()), -21) : range === "months" ? addDays(t, -365) : "0000";
   const rows = acts.filter((a) => a?.timestamp && localDay(a.timestamp) >= from).sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)));
-  if (!rows.length) return `<div class="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-[13px] text-text-tertiary">No session in this range.</div>`;
+  if (!rows.length) return `<div class="mt-3 rounded-2xl border border-ink/10 bg-ink/[0.03] p-4 text-[13px] text-text-tertiary">No session in this range.</div>`;
   const dot: Record<string, string> = { light: "#38bdf8", moderate: "#fbbf24", vigorous: "#f87171" };
   const srcWord = (a: any) => a.source === "healthkit" ? "Apple Health" : a.source === "hr-estimated" ? "heart rate" : "logged by hand";
   const shown = rows.slice(0, 40);
-  return `<div class="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+  return `<div class="mt-3 rounded-2xl border border-ink/10 bg-ink/[0.03] p-4">
     ${kicker(`THE SESSIONS · ${rows.length}`)}
     <div class="mt-2 flex flex-col">${shown.map((a) => `
-      <div class="flex items-center gap-3 border-t border-white/[0.06] py-2.5 first:border-t-0">
+      <div class="flex items-center gap-3 border-t border-ink/[0.06] py-2.5 first:border-t-0">
         <span class="h-2 w-2 shrink-0 rounded-full" style="background: ${dot[String(a.intensity_category)] ?? "#64748b"}"></span>
         <span class="min-w-0 flex-1"><span class="block truncate text-[13.5px] font-semibold text-text-primary">${esc(String(a.activity_name || "Workout"))}</span><span class="block text-[11.5px] text-text-tertiary">${esc(fmtDay(localDay(a.timestamp)))} · ${round0(Number(a.duration_minutes) || 0)} min · ${esc(srcWord(a))}${a.activity_type === "strength" ? " · strength" : ""}</span></span>
         <span class="font-mono text-[13px] font-bold text-text-primary">${fmt1(Number(a.met_hours) || 0)} <span class="text-[10px] font-medium text-text-tertiary">MET-h</span></span>
