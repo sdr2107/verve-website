@@ -13,7 +13,7 @@
  * scienceTopics.ts); a video without one lives on /videos alone, under its
  * group. The order here is the order on the page.
  */
-import { YOUTUBE_URL } from "./site";
+import { YOUTUBE_URL } from "./site.ts";
 
 export type VideoGroup = "how-verve-works" | "fitness" | "movement" | "sleep-heart" | "body" | "wider-picture";
 

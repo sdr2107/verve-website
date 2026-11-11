@@ -18,11 +18,11 @@ const CURRENCIES = ["inr", "usd"] as const;
 ---
 
 <Layout
-  title="Plans"
+  title="Plans · Verve"
   description="One login, three plans. A plan on whoever pays decides how many people they can see, and how deep. Consent is free on every plan."
   cardType="summary"
 >
-  <SiteHeader crumb={[{ label: "Plans" }]} />
+  <SiteHeader current="plans" />
 
   <main class="mx-auto max-w-6xl px-4 pb-20 pt-8 sm:px-6" data-period="yearly" data-currency="inr" data-open={PLANS_OPEN ? "" : undefined}>
     <div class="flex flex-wrap items-end justify-between gap-4">
