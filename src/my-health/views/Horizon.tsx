@@ -355,7 +355,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
           <div class="mt-1">{nav}</div>
         </div>
         <div class="flex min-w-[180px] flex-col items-end gap-1 rounded-[16px] border border-border-strong bg-card px-5 py-4">
-          <span class="font-mono text-[28px] font-semibold leading-none text-text">{togo}</span>
+          <span class="t-figure leading-none text-text">{togo}</span>
           <span class="font-mono text-[11px] font-medium text-text-3">days to go</span>
           <span class="text-[12px] text-text-2">{weeks} weeks · {Math.max(0, week - 1)} behind you</span>
         </div>
@@ -543,7 +543,7 @@ function FinalView({ deps, h, person, today, owner, nav, personId, hasOpen, onSt
           <div class="mt-1">{nav}</div>
         </div>
         <div class="flex min-w-[180px] flex-col items-end gap-1 rounded-[16px] border border-border-strong bg-card px-5 py-4">
-          <span class="font-mono text-[28px] font-semibold leading-none text-text">{weeksBehind}</span>
+          <span class="t-figure leading-none text-text">{weeksBehind}</span>
           <span class="font-mono text-[11px] font-medium text-text-3">{weeksBehind === 1 ? "week" : "weeks"} behind {owner ? "you" : "them"}</span>
           <span class="text-[12px] text-text-2">{weekly} check-in{weekly === 1 ? "" : "s"} · {monthly} month read{monthly === 1 ? "" : "s"}</span>
         </div>

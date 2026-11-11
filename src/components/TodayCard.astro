@@ -23,7 +23,7 @@ const tiles = [
     {tiles.map((t) => (
       <div class={`flex flex-col items-center gap-1 rounded-2xl border ${t.ring} bg-ink/[0.04] px-3.5 py-4`}>
         <span class="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-text-tertiary">{t.label}</span>
-        <span class={`text-[30px] font-extrabold leading-[1.1] tracking-[-0.6px] ${t.color}`}>{t.value}</span>
+        <span class={`t-figure ${t.color}`}>{t.value}</span>
         <span class="text-[11px] font-bold text-text-tertiary">{t.unit}</span>
       </div>
     ))}

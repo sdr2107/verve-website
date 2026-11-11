@@ -49,7 +49,7 @@ const CURRENCIES = ["inr", "usd"] as const;
           <div class="text-[12.5px] text-text-tertiary">{p.tagline}</div>
           <div class="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             {CURRENCIES.map((c) => (
-              <span data-price data-currency={c} data-monthly={priceText(p, "monthly", c)} data-yearly={priceText(p, "yearly", c)} class="text-[26px] font-extrabold tracking-[-0.01em] text-text-primary">{priceText(p, "yearly", c)}</span>
+              <span data-price data-currency={c} data-monthly={priceText(p, "monthly", c)} data-yearly={priceText(p, "yearly", c)} class={/\d/.test(priceText(p, "yearly", c)) ? "t-figure text-text-primary" : "text-[18px] font-semibold text-text-primary"}>{priceText(p, "yearly", c)}</span>
             ))}
             <span data-per class="text-[12px] text-text-tertiary">{p.monthly.inr === 0 ? "always" : "a year"}</span>
           </div>
