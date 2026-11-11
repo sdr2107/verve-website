@@ -24,10 +24,20 @@ test("the bar holds three places; what left it is still reachable from the foote
   assert.ok(!NAV.some((l) => ["/start", "/videos", "/my-health"].includes(l.href)));
 });
 
-test("the footer writes the app's handle once, and names the founder's accounts as his", () => {
+test("the footer's five accounts: the app's three under one handle, then the founder's two", () => {
   assert.deepEqual(APP_SOCIAL.map((s) => s.label), ["Instagram", "TikTok", "YouTube"]);
   assert.ok(APP_SOCIAL.every((s) => s.handle === APP_HANDLE));
   assert.deepEqual(FOUNDER_SOCIAL.map((s) => s.label), ["X", "Substack"]);
+  assert.deepEqual([...APP_SOCIAL, ...FOUNDER_SOCIAL].map((s) => s.key), ["instagram", "tiktok", "youtube", "x", "substack"]);
+});
+
+test("a store's link shows the official badge only when its file is in the repo; no artwork is drawn in its place", () => {
+  const badge = readFileSync(join(SRC, "components/StoreBadge.astro"), "utf8");
+  assert.match(badge, /import\.meta\.glob\("\.\.\/assets\/badges\/\*\.svg"/, "the badge is whatever official file is in src/assets/badges at build time");
+  assert.ok(!/<svg|<path/.test(badge), "the component holds no drawn mark");
+  const footer = readFileSync(join(SRC, "components/Footer.astro"), "utf8");
+  assert.match(footer, /Android &middot; soon/);
+  assert.ok(!/AppGallery/i.test(footer));
 });
 
 test("every video has a home: a topic page, How it works, or the full list", () => {
