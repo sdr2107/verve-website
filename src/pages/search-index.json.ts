@@ -6,8 +6,10 @@
  * from: every topic (its heading, its one-line answer, its sub-headings and
  * its prose, read from the topic's own file), every heading inside a topic
  * as a hit of its own that lands on that heading, every subject, every body
- * marker with its bands and how-to, and every cited study. A topic added to
- * the registry is searchable the moment it exists; nothing is typed twice.
+ * marker with its bands and how-to, every cited study, the fitness tier
+ * tables, and every video (11 November 2026: Videos left the top bar and
+ * sit here, under Watch). A topic added to the registry is searchable the
+ * moment it exists; nothing is typed twice.
  *
  * The prose is lifted from the .astro source with the tags and the
  * expressions stripped, which is rough but honest: what is searched is what
@@ -17,6 +19,8 @@
 import type { APIRoute } from "astro";
 import { SUBJECTS, TOPICS, subjectFor, topicHref } from "../data/scienceTopics";
 import { BODY_MARKERS } from "../data/bodyMarkers";
+import { VIDEOS, GROUPS, fmtSeconds } from "../data/videos";
+import { TIERS_MEN, TIERS_WOMEN, TIER_LABELS, tierRanges, TIER_SOURCES } from "../data/fitness-tiers";
 
 export const prerender = true;
 
@@ -56,15 +60,23 @@ function textOf(src: string, where: string): { sections: Section[]; text: string
 }
 
 export interface SearchEntry {
-  /** topic · section (a heading inside a topic) · subject · marker · study */
-  k: "topic" | "section" | "subject" | "marker" | "study";
+  /** topic · section (a heading inside a topic) · subject · marker · study · threshold (a table of cut-points) · video */
+  k: "topic" | "section" | "subject" | "marker" | "study" | "threshold" | "video";
   t: string;   // title
   s: string;   // where it sits
   u: string;   // address
   d: string;   // one line
   h: string[]; // sub-headings
   x: string;   // the prose
+  /** A threshold's own numbers, so the answer is in the list: "Optimal: ≤ 79 · Borderline: 80–99 · Elevated: > 99". */
+  b?: string;
+  /** A video's length and form: "14 s · captions". */
+  m?: string;
 }
+
+/** Where a video is played: on the topic page it explains, on How it works for the product's own, else in the full list. */
+export const videoHref = (v: { slug: string; topic?: string; group: string }): string =>
+  v.topic ? `${topicHref(v.topic)}#video-${v.slug}` : v.group === "how-verve-works" ? `/how-it-works#video-${v.slug}` : `/videos#video-${v.slug}`;
 
 export const GET: APIRoute = () => {
   const entries: SearchEntry[] = [];
@@ -89,6 +101,25 @@ export const GET: APIRoute = () => {
     entries.push({
       k: "marker", t: m.label, s: "Body marker", u: `/science/body/body-phenotyping#${m.slug}`, d: m.purpose, h: [],
       x: [m.note, ...m.bands, ...m.howTo, m.citation].join(" "),
+      b: m.bands.join(" · "),
+    });
+  }
+  // the fitness tier tables: the cut-points a first number is read against
+  for (const [who, rows] of [["men", TIERS_MEN], ["women", TIERS_WOMEN]] as const) {
+    entries.push({
+      k: "threshold", t: `Fitness tiers, ${who}`, s: "Fitness", u: topicHref("crf"), d: `${TIER_LABELS.join(", ")}: five tiers in METs, read against your age.`, h: [],
+      x: [rows.map((r) => `${r.age}: ${tierRanges(r).map((x, i) => `${TIER_LABELS[i]} ${x}`).join(", ")}`).join(". "), TIER_SOURCES.over40, TIER_SOURCES.under40, "cardiorespiratory fitness CRF METs tier category"].join(" "),
+      b: `${rows[2].age}: ${tierRanges(rows[2]).map((x, i) => `${TIER_LABELS[i]} ${x}`).join(" · ")}`,
+    });
+  }
+  // every video, landing where it is played
+  for (const v of VIDEOS) {
+    const topic = TOPICS.find((t) => t.slug === v.topic);
+    const group = GROUPS.find((g) => g.key === v.group)!;
+    entries.push({
+      k: "video", t: v.title, s: topic ? `On the ${topic.label} page.` : v.group === "how-verve-works" ? "On How it works." : `In the videos, under ${group.label}.`,
+      u: videoHref(v), d: "", h: [], x: [topic?.label ?? "", topic?.sub ?? "", group.label, group.blurb].join(" "),
+      m: `${fmtSeconds(v.seconds)} · captions`,
     });
   }
 

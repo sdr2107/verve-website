@@ -16,6 +16,8 @@ import Footer from "../components/Footer.astro";
 import { topicHref } from "../data/scienceTopics";
 import { WEARABLE_ROWS, WEARABLE_COLS, WEARABLE_COL_IDS } from "../data/wearables";
 import { GET_APP_PATH } from "../data/site";
+import VideoSlot from "../components/VideoSlot.astro";
+import { videosInGroup } from "../data/videos";
 
 const weeklyVolume = topicHref("weekly-volume");
 const crf = topicHref("crf");
@@ -39,7 +41,11 @@ const BACKGROUND_HRR_ROWS: [string | null, string, string][] = [
   ["Climbing stairs", "54%", "51%"],
 ];
 
+/** The product's own videos: what the app does, screen by screen. They left the Videos heading for this page (11 Nov 2026). */
+const productVideos = videosInGroup("how-verve-works");
+
 const sections = [
+  { id: "watch", label: "Watch it" },
   { id: "tabs", label: "The four tabs" },
   { id: "guide", label: "The Guide" },
   { id: "free-and-pro", label: "Free and Pro" },
@@ -73,7 +79,7 @@ const gates: [string, string, string][] = [
 ---
 
 <Layout
-  title="How it works — Verve"
+  title="How it works · Verve"
   description="The app section by section: the four tabs, how the Guide reads your week, what is free and what Pro opens, how Verve counts the weekly dose and the resting MET, and what each wearable writes."
   cardType="summary"
 >
@@ -92,6 +98,13 @@ const gates: [string, string, string][] = [
           <a href={`#${s.id}`} class="rounded-xl border border-ink/10 bg-ink/[0.03] px-3.5 py-2 text-[13px] font-semibold text-text-secondary transition-colors hover:border-ink/20 hover:text-text-primary">{s.label}</a>
         ))}
       </nav>
+    </section>
+
+    <!-- ── the product, shown: its own short videos ── -->
+    <section id="watch" class="scroll-mt-24 flex flex-col gap-6">
+      <h2 class="text-[28px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[32px]">Watch it</h2>
+      <p class="max-w-[820px] text-[15.5px] leading-[1.6] text-text-secondary">{productVideos.length} short videos of the app itself. Captions, no sound; nothing plays until you press it. The videos on the science sit on the topic each explains, and <a href="/science?show=watch" class="font-semibold text-accent-light underline-offset-4 hover:underline">the Science search lists them under Watch</a>.</p>
+      <VideoSlot slugs={productVideos.map((v) => v.slug)} />
     </section>
 
     <!-- ── 1 · the four tabs ── -->
