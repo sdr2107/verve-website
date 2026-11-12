@@ -15,6 +15,7 @@ import { restingBPOf, type Pt } from "../derive/markers.ts";
 import { isWorkout } from "../derive/activity.ts";
 import { weightSeries, sppbSeries } from "../derive/lenses.ts";
 import { REMNANT_LABEL } from "../derive/lipids.ts";
+import { swingOf, type SwingKey } from "../derive/swing.ts";
 
 // ── the markers a target can be set on ──
 
@@ -292,6 +293,79 @@ export function amountWords(def: MarkerDef, amount: number): string {
   }
 }
 
+// ── the guards on a blood target (12 November 2026) ──
+//
+// Blood results stay as targets on three conditions. The person sets every number: none is suggested and no
+// guideline's figure is filled in (the page's rule since Horizon was built). A report at the number is called reached
+// only when the move from the target's start is more than that marker's usual swing: inside the swing two results
+// cannot be told apart, so the row reads "At your number" and says why. And a medicine the person has told the app
+// they take for the marker is shown beside the target, so nobody reads a medicine's effect as the effect of the plan.
+// Nothing here suggests a number, names a cause, or asks for another test.
+
+const SWING_KEY: Partial<Record<MarkerKey, SwingKey>> = { ldl: "ldlC", apob: "apoB", hba1c: "hba1c", fasting_glucose: "fastingGlucose", hs_crp: "hsCRP" };
+/** A marker's name inside a sentence, where its label would carry a capital it does not need. */
+const SAID: Partial<Record<MarkerKey, string>> = { remnant: "remnant cholesterol", non_hdl: "non-HDL", triglycerides: "triglycerides", fasting_glucose: "fasting glucose" };
+const saidName = (def: MarkerDef) => SAID[def.key] ?? def.label;
+
+export type SwingRead = {
+  /** "none": no usual swing is on file for the marker, so its number is read as it stands. */
+  state: "inside" | "edge" | "more" | "none";
+  /** The swing in words, when one is on file: "about 26 to 27%". */
+  range: string | null;
+  /** One sentence for the row. */
+  words: string;
+};
+/** A blood figure's move from a starting figure, read against the marker's usual swing (derive/swing.ts, the rule In depth reads). Null for a marker that is not blood, and when either figure is missing. */
+export function swingRead(marker: MarkerKey, start: number | null | undefined, value: number | null | undefined): SwingRead | null {
+  const def = MARKER_BY_KEY[marker];
+  if (!def || def.kind !== "blood" || start == null || value == null || !(start > 0) || !Number.isFinite(value)) return null;
+  const from = plainValue(def, start), name = saidName(def), key = SWING_KEY[marker] ?? null;
+  const s = swingOf(key, start, value);
+  if (!s) return { state: "none", range: null, words: `No usual swing is on file for ${name}, so the number is read as it stands.` };
+  if (round(value - start, def.decimals) === 0) return { state: "inside", range: key === "hsCRP" ? s.range : `about ${s.range}`, words: `It has not moved from ${from}.` };
+  if (key === "hsCRP") return s.state === "more"
+    ? { state: "more", range: s.range, words: `The move from ${from} is more than ${name}'s usual swing: ${s.range}.` }
+    : { state: "inside", range: s.range, words: `The move from ${from} is inside ${name}'s usual swing. It takes ${s.range}, to be more than that.` };
+  const range = `about ${s.range}`;
+  return s.state === "inside" ? { state: "inside", range, words: `The move from ${from} is inside ${name}'s usual swing, ${range}.` }
+    : s.state === "edge" ? { state: "edge", range, words: `The move from ${from} is at the edge of ${name}'s usual swing, ${range}.` }
+    : { state: "more", range, words: `The move from ${from} is more than ${name}'s usual swing of ${range}.` };
+}
+/** A move that cannot be told from no change: inside the usual swing, or at its edge. */
+const withinSwing = (s: SwingRead | null | undefined) => !!s && (s.state === "inside" || s.state === "edge");
+
+type MedCol = "on_cholesterol_med" | "on_diabetes_med" | "on_bp_med";
+const CHOLESTEROL = { col: "on_cholesterol_med" as MedCol, words: "On cholesterol medication" };
+const DIABETES = { col: "on_diabetes_med" as MedCol, words: "On diabetes medication" };
+const PRESSURE = { col: "on_bp_med" as MedCol, words: "On blood pressure medication" };
+/** The app's three switches, and the targets each bears on: every lipid marker, the two sugar markers, the cuff. */
+const MEDICINE_OF: Partial<Record<MarkerKey, { col: MedCol; words: string }>> = {
+  ldl: CHOLESTEROL, apob: CHOLESTEROL, remnant: CHOLESTEROL, non_hdl: CHOLESTEROL, triglycerides: CHOLESTEROL, hdl: CHOLESTEROL,
+  hba1c: DIABETES, fasting_glucose: DIABETES, bp: PRESSURE,
+};
+export type Medicine = { words: string; said_on: string; /** "On cholesterol medication, as last said in the app on 5 November." */ line: string };
+/**
+ * The medicine on file for a marker on a day: the newest answer the person gave the app, on a row of its Metabolic
+ * section dated on or before that day (the app's own rule, lib/markers medStatedBy: a medication is a standing fact
+ * and not a property of one blood draw; a row with no answer on it says nothing). Null when the newest answer is "no",
+ * when nothing was ever said, and for a marker with no switch. Verve never asks which medicine, and never reads one
+ * as the cause of a change: the line is a fact beside the target, for whoever reads the row.
+ */
+export function medicineOf(marker: MarkerKey, person: Person, day: string): Medicine | null {
+  const m = MEDICINE_OF[marker];
+  if (!m) return null;
+  let best: { t: number; on: string; v: boolean } | null = null;
+  for (const r of person.doc.app_labs ?? []) {
+    if (r?.source !== "metabolic" || typeof r[m.col] !== "boolean" || !r.measured_at) continue;
+    const t = new Date(r.measured_at).getTime(), on = localDay(r.measured_at);
+    if (!Number.isFinite(t) || on > day) continue;
+    if (!best || t > best.t) best = { t, on, v: r[m.col] };
+  }
+  if (!best?.v) return null;
+  const when = best.on.slice(0, 4) === day.slice(0, 4) ? dayMonthLong(best.on) : dayMonthYear(best.on);
+  return { words: m.words, said_on: best.on, line: `${m.words}, as last said in the app on ${when}.` };
+}
+
 // ── pace ──
 
 export type Tone = "good" | "caution" | "neutral";
@@ -306,6 +380,10 @@ export type Pace = {
   /** The figures as words, for the table. */ startText: string; nowText: string; targetText: string;
   /** Where a blood reading came from, once a report newer than the start has landed: "from the report of 3 December". Null for every other row. */
   source?: string | null;
+  /** A blood row read from a report newer than its start: where the move from the start sits against the marker's usual swing. Null for every other row. */
+  swing?: SwingRead | null;
+  /** A medicine the person has told the app they take for this marker, as the line beside the target; null when there is none on file. */
+  medicine?: string | null;
 };
 
 const monthName = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-GB", { month: "long" });
@@ -316,7 +394,8 @@ export const elapsedShare = (h: HorizonLike, today: string) => { const total = d
  * Pace: what has moved against what the date needs. Within five per cent of the whole way either side is on pace;
  * further ahead is ahead; further behind is behind by the gap in the marker's words. A marker that has not moved from
  * its start after four weeks is not yet moving; one within five per cent of the target is nearly there. A standing
- * weekly figure (the dose) reads as the weeks that reached it; a blood marker is known only when a report lands.
+ * weekly figure (the dose) reads as the weeks that reached it; a blood marker is known only when a report lands, and
+ * a report at its number reads "At your number", not "Reached", while the move is inside the marker's usual swing.
  */
 export function paceOf(target: Target, horizon: HorizonLike, now: Reading | null, today: string, weekly?: { week_start: string; v: number | null }[]): Pace {
   const def = MARKER_BY_KEY[target.marker] ?? { key: target.marker, label: target.label, unit: target.unit ?? "", decimals: 1, kind: "measured", cadence: "monthly", group: "body", how: "" } as MarkerDef;
@@ -328,6 +407,8 @@ export function paceOf(target: Target, horizon: HorizonLike, now: Reading | null
     startText: fmtValue(def, start), nowText: now?.display ?? fmtValue(def, cur), targetText: fmtValue(def, goal),
     // a blood marker says which report it is read from once one newer than the start is on file (board 04)
     source: def.kind === "blood" && now && target.start_on && now.on > target.start_on ? `from the report of ${dayMonthLong(now.on)}` : null,
+    // the same report's move from the start, against the marker's usual swing
+    swing: def.kind === "blood" && now && target.start_on && now.on > target.start_on ? swingRead(target.marker, start, cur) : null,
   };
   const dir = start != null && goal < start ? -1 : 1;
   const needed = start != null ? Math.abs(goal - start) : null;
@@ -348,7 +429,8 @@ export function paceOf(target: Target, horizon: HorizonLike, now: Reading | null
   }
   if (start == null || needed == null) return { ...base, expected_today, progress, pace_word: "No starting value", tone: "neutral" };
   if (needed === 0) return { ...base, expected_today, progress: 1, pace_word: "Already there", tone: "good" };
-  if (progress >= 1) return { ...base, expected_today, progress, pace_word: "Reached", tone: "good" };
+  // a blood figure at its number is reached only when the move is more than its usual swing (or none is on file)
+  if (progress >= 1) return withinSwing(base.swing) ? { ...base, expected_today, progress, pace_word: "At your number", tone: "neutral" } : { ...base, expected_today, progress, pace_word: "Reached", tone: "good" };
   // nearly there: within one step of the marker's own precision, or five per cent of the whole way, whichever is wider
   const step = 10 ** -def.decimals;
   if (progress > 0 && (1 - progress) * needed <= Math.max(step, 0.05 * needed) + 1e-9) return { ...base, expected_today, progress, pace_word: "Nearly there", tone: "good" };
@@ -391,8 +473,8 @@ export function horizonLinesByCard(h: HorizonLike, targets: Target[], person: Pe
 
 /** A blood reading that arrived since the last check-in, as the function notes it beside the check-in's figures. */
 export type Landed = { marker: string; label: string; value: number; unit: string | null; on: string; previous: number | null };
-/** A figure in a sentence: the marker's own precision, without a trailing ".0". */
-const plainValue = (def: MarkerDef | undefined, v: number) => (def ? fmtValue(def, v).replace(/\.0+$/, "") : String(round(v, 1)));
+/** A figure in a sentence: the marker's own precision, without trailing zeros ("92", "5.4", "1.4"). */
+const plainValue = (def: MarkerDef | undefined, v: number) => (def ? fmtValue(def, v).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "") : String(round(v, 1)));
 /** Whether a reading has reached a target, read in the target's own direction: down for one set below its start, up otherwise. */
 export function reachedTarget(target: Pick<Target, "start_value" | "target_value">, value: number): boolean {
   const down = target.start_value != null && target.target_value < target.start_value;
@@ -400,19 +482,28 @@ export function reachedTarget(target: Pick<Target, "start_value" | "target_value
 }
 /**
  * The line a landed report writes on the horizon: what the report said and what it said before. "Reached" is said only
- * of the measured value; a reached blood target stays as a floor to hold, and nothing here asks for another test.
+ * of the measured value, and only when its move from the start is more than the marker's usual swing (or the marker has
+ * none on file); inside the swing the line says the report is at the number and why the horizon does not call it
+ * reached. A reached blood target stays as a floor to hold, and nothing here asks for another test.
  */
 export function landedLine(l: Landed, target?: Pick<Target, "start_value" | "target_value"> | null): string {
   const def = MARKER_BY_KEY[l.marker];
   const lead = `A report landed: ${l.label} ${plainValue(def, l.value)}${l.previous != null ? `, from ${plainValue(def, l.previous)}` : ""}.`;
   if (!target) return lead;
   const t = target.start_value == null && l.previous != null ? { ...target, start_value: l.previous } : target;
-  return reachedTarget(t, l.value) ? `${lead} The target of ${plainValue(def, target.target_value)} is reached; the horizon keeps it as a floor to hold.` : lead;
+  if (!reachedTarget(t, l.value)) return lead;
+  const goal = plainValue(def, target.target_value);
+  const swing = swingRead(l.marker as MarkerKey, t.start_value, l.value);
+  if (withinSwing(swing)) return `${lead} It is at your number of ${goal}. ${swing!.words} So the horizon does not call it reached.`;
+  return `${lead} The target of ${goal} is reached${swing ? `. ${swing.words} The` : "; the"} horizon keeps it as a floor to hold.`;
 }
 
 /** Every target's pace, with the readings looked up in the person's document. */
 export function pacesOf(targets: Target[], horizon: HorizonLike, person: Person, today: string): Pace[] {
-  return targets.map((t) => paceOf(t, horizon, latestOf(t.marker, person, today), today, MARKER_BY_KEY[t.marker]?.standing ? weeklyHistory(person, t.marker, today, 13) : undefined));
+  return targets.map((t) => ({
+    ...paceOf(t, horizon, latestOf(t.marker, person, today), today, MARKER_BY_KEY[t.marker]?.standing ? weeklyHistory(person, t.marker, today, 13) : undefined),
+    medicine: medicineOf(t.marker, person, today)?.line ?? null,
+  }));
 }
 
 // ── the setup's note under a ticked marker: the pace the number implies, against the person's own six months ──
@@ -430,7 +521,15 @@ export function impliedPace(def: MarkerDef, now: Reading | null, target: number,
     const met = read.filter((w) => w.v! >= target).length;
     return read.length ? `Every week from here. You have reached it in ${met} of the last ${read.length}.` : "Every week from here. No complete week on file yet.";
   }
-  if (def.kind === "blood") return "A blood target is known only when you measure. Choose the week you will, and the report lands here.";
+  if (def.kind === "blood") {
+    const lead = "A blood target is known only when you measure. Choose the week you will, and the report lands here.";
+    // the number as the next report would read it: one inside the usual swing of today's figure could not be called reached
+    const s = now ? swingRead(def.key, now.value, target) : null;
+    if (!withinSwing(s) || round(target - now!.value, def.decimals) === 0) return lead;
+    const where = s!.state === "edge" ? "at the edge of" : "inside";
+    return def.key === "hs_crp" ? `${lead} Your number is ${where} ${saidName(def)}'s usual swing from ${plainValue(def, now!.value)}: it takes ${s!.range}, to be more than that. A report at your number will not be called reached.`
+      : `${lead} Your number is ${where} ${saidName(def)}'s usual swing from ${plainValue(def, now!.value)}, which is ${s!.range}. A report at your number will not be called reached.`;
+  }
   if (!now) return "No reading yet; the first one becomes the start.";
   const needed = target - now.value;
   if (Math.abs(round(needed, def.decimals)) === 0) return "Already there; the horizon keeps it in view.";
@@ -591,18 +690,22 @@ export function horizonWeeks(person: Person, key: MarkerKey, h: HorizonLike): { 
   return horizonMondays(h).map((m) => ({ week_start: m, v: weeklyValue(weekFigures(person, m), key) }));
 }
 
-export type Outcome = { marker: MarkerKey; label: string; how: string; unit: string; startText: string; endText: string; targetText: string; word: string; tone: Tone };
+export type Outcome = { marker: MarkerKey; label: string; how: string; unit: string; startText: string; endText: string; targetText: string; word: string; tone: Tone;
+  /** A blood target's move against its usual swing, and a medicine on file on the date: the lines under the row. */
+  swing?: string | null; medicine?: string | null };
 /**
  * What a target came to on the date, by the same pace rule read at the end of the line: a standing weekly figure is
  * the weeks of the whole road that reached it; a weekly marker names the week it first reached its number (and says so if
- * it did not hold); everything else is reached, nearly there, or short by the gap in the marker's own words.
+ * it did not hold); everything else is reached, nearly there, or short by the gap in the marker's own words. A blood
+ * target at its number is reached only when the move is more than the marker's usual swing.
  */
 export function outcomeOf(target: Target, h: HorizonLike, person: Person): Outcome {
   const def = MARKER_BY_KEY[target.marker] ?? ({ key: target.marker, label: target.label, unit: target.unit ?? "", decimals: 1, kind: "measured", cadence: "monthly", group: "body", how: "" } as MarkerDef);
   const then = upTo(person, h.ends_on);
   const end = latestOf(target.marker, then, addDays(h.ends_on, 1));
   const p = paceOf(target, h, end, h.ends_on);
-  const base = { marker: target.marker, label: p.label, how: def.how, unit: p.unit, startText: p.startText, endText: end?.display ?? fmtValue(def, end?.value), targetText: p.targetText };
+  const base = { marker: target.marker, label: p.label, how: def.how, unit: p.unit, startText: p.startText, endText: end?.display ?? fmtValue(def, end?.value), targetText: p.targetText,
+    swing: p.swing?.words ?? null, medicine: medicineOf(target.marker, then, h.ends_on)?.line ?? null };
   const goal = target.target_value;
   if (def.standing) {
     const read = horizonWeeks(then, target.marker, h).filter((w) => w.v != null);
@@ -620,6 +723,7 @@ export function outcomeOf(target: Target, h: HorizonLike, person: Person): Outco
   }
   const w = p.pace_word;
   if (w === "Reached" || w === "Nearly there" || w === "Already there") return { ...base, word: w, tone: "good" };
+  if (w === "At your number") return { ...base, word: p.swing?.state === "edge" ? "At the number, at the edge of its usual swing" : "At the number, inside its usual swing", tone: "neutral" };
   if (w === "No reading yet") return { ...base, word: "No reading", tone: "neutral" };
   if (w === "No starting value") return { ...base, word: w, tone: "neutral" };
   if (def.kind === "blood" && end && target.start_on && end.on <= target.start_on) return { ...base, word: "No report since the start", tone: "neutral" };
@@ -661,7 +765,13 @@ export function nextSpan(h: HorizonLike & { months?: number | null }, today: str
 // ── the figures the check-in is written from ──
 
 export type CheckinInputs = {
-  pace: { marker: string; label: string; unit: string; start: number | null; now: number | null; target: number; expected_today: number | null; pace_word: string; measured_on: string | null }[];
+  pace: { marker: string; label: string; unit: string; start: number | null; now: number | null; target: number; expected_today: number | null; pace_word: string; measured_on: string | null;
+    /**
+     * A blood target read from a report newer than its start: where the move sits against the marker's usual swing, in
+     * the page's own sentence. The medicine on file is NOT here, on purpose: these inputs go to the model, into the
+     * stored check-in, into its email and to a coach's thread, and a person's medication has never left the page.
+     */
+    swing?: string }[];
   plan: { kind: string; label: string; n: number | null }[];
   adherence: { label: string; done: number | null; of: number | null; word: string }[];
   week: { dose: number | null; goal: number | null; sessions: number; zone2: number | null; zone3: number | null; strength: number; sleep_avg: number | null; rhr: number | null; hrv: number | null };
@@ -674,7 +784,8 @@ export function checkinInputs(h: HorizonLike & { title: string }, targets: Targe
   const avg = (col: string) => { const xs = person.signals.filter((s) => s?.[col] != null && inLast(s)).map((s) => Number(s[col])); return xs.length ? round(mean(xs)!, 0) : null; };
   const { week, weeks } = weekOf(h, today);
   return {
-    pace: pacesOf(targets, h, person, today).map((p) => ({ marker: p.marker, label: p.label, unit: p.unit, start: p.start, now: p.now != null ? round(p.now, 2) : null, target: p.target, expected_today: p.expected_today != null ? round(p.expected_today, 2) : null, pace_word: p.pace_word, measured_on: p.measured_on })),
+    pace: pacesOf(targets, h, person, today).map((p) => ({ marker: p.marker, label: p.label, unit: p.unit, start: p.start, now: p.now != null ? round(p.now, 2) : null, target: p.target, expected_today: p.expected_today != null ? round(p.expected_today, 2) : null, pace_word: p.pace_word, measured_on: p.measured_on,
+      ...(p.swing ? { swing: p.swing.words } : {}) })),
     plan: plan.map((r) => ({ kind: r.kind, label: r.label, n: r.n ?? null })),
     adherence: adherenceOf(plan, person, lastWeek, addDays(lastWeek, 6)).map((a) => ({ label: a.label, done: a.done, of: a.of, word: a.word })),
     week: { dose: f.dose, goal: f.goal, sessions: f.sessions, zone2: f.zone2, zone3: f.zone3, strength: f.strength, sleep_avg: avg("sleep_minutes"), rhr: avg("resting_hr"), hrv: avg("hrv_night_ms") },

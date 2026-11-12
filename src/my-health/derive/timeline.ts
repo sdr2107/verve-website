@@ -56,6 +56,10 @@ import { metsOfTest } from "./fitness.ts";
 import { LABELS, methodLabel, type Pt } from "./markers.ts";
 import { weightSeries } from "./lenses.ts";
 import SWING from "../../data/usual-swing.ts";
+import { swingOf } from "./swing.ts";
+
+/** Where a change between two results sits against a marker's usual swing (derive/swing.ts: Horizon reads the same rule). */
+export { swingOf };
 
 // ── the windows ─────────────────────────────────────────────────────────────
 
@@ -730,22 +734,6 @@ function pairOf<T extends { d: string }>(pts: T[], from: string, today: string):
   const firstIn = inside[0] !== now ? inside[0] : null;
   const then = before && firstIn ? (daysBetween(before.d, from) <= daysBetween(from, firstIn.d) ? before : firstIn) : (before ?? firstIn);
   return { then, now };
-}
-
-/** Where a change between two results sits against the marker's usual swing: inside it, at its edge, or more than it. */
-export function swingOf(swingKey: keyof typeof SWING.markers | null, thenV: number, nowV: number): { state: "inside" | "edge" | "more"; range: string } | null {
-  if (!swingKey || !(thenV > 0)) return null;
-  const m = SWING.markers[swingKey] as Record<string, unknown>;
-  if (m.logScale) {
-    const rise = Number(m.risePct), fall = Number(m.fallPct), ratio = nowV / thenV;
-    const more = ratio > 1 + rise / 100 || ratio < 1 - fall / 100;
-    return { state: more ? "more" : "inside", range: `a rise to more than ${trim(1 + rise / 100, 1)} times, or a fall of more than ${Math.round(fall)}%` };
-  }
-  if (m.swingLowPct == null) return null;
-  const lo = Number(m.swingLowPct), hi = Number(m.swingHighPct), pct = (Math.abs(nowV - thenV) / thenV) * 100;
-  const range = swingKey === "hba1c" ? `${trim((thenV * lo) / 100, 1)} to ${trim((thenV * hi) / 100, 1)} points at this level`
-    : Math.round(lo) === Math.round(hi) ? `${Math.round(lo)}%` : `${Math.round(lo)} to ${Math.round(hi)}%`;
-  return { state: pct < lo ? "inside" : pct <= hi ? "edge" : "more", range };
 }
 
 function bloodRow(b: (typeof BLOOD)[number], pts: Pt[], from: string, today: string, unit: string): MoveRow {

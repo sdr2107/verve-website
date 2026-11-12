@@ -7,6 +7,7 @@ import {
   MARKERS, MARKER_BY_KEY, latestOf, historyOf, paceOf, pacesOf, impliedPace, amountWords, fmtValue,
   adherenceOf, guideDraftPlan, weekOf, daysToGo, roadOf, nextCheckins, checkinInputs, weekFigures, weeklyHistory, dedupeSessions, addMonths, clockOf,
   landedLine, reachedTarget, upTo, horizonMondays, horizonWeeks, outcomeOf, outcomesOf, lastRoadWords, nextSpan,
+  swingRead, medicineOf,
 } from "../src/my-health/horizon/derive.ts";
 
 const TODAY = "2026-11-08";                      // a Sunday; the last complete week is 26 October
@@ -175,6 +176,12 @@ test("the setup's note says the pace a number implies, against the person's own 
   assert.match(w, /^2\.2 kg in 23 weeks is under 0\.1 kg a week\./);
   assert.match(w, /About your recent pace: your last six months moved 2\.6 kg/);
   assert.match(impliedPace(MARKER_BY_KEY.ldl, read(131), 100, 23, [], TODAY), /known only when you measure/);
+  // a blood number inside the usual swing of today's figure says so when it is set; one beyond it says nothing more
+  assert.equal(impliedPace(MARKER_BY_KEY.ldl, read(131), 100, 23, [], TODAY), "A blood target is known only when you measure. Choose the week you will, and the report lands here. Your number is inside LDL's usual swing from 131, which is about 26 to 27%. A report at your number will not be called reached.");
+  assert.equal(impliedPace(MARKER_BY_KEY.ldl, read(131), 80, 23, [], TODAY), "A blood target is known only when you measure. Choose the week you will, and the report lands here.");
+  assert.equal(impliedPace(MARKER_BY_KEY.triglycerides, read(190), 150, 23, [], TODAY), "A blood target is known only when you measure. Choose the week you will, and the report lands here.", "no swing on file: nothing is said at set-up");
+  assert.equal(impliedPace(MARKER_BY_KEY.ldl, null, 100, 23, [], TODAY), "A blood target is known only when you measure. Choose the week you will, and the report lands here.");
+  assert.match(impliedPace(MARKER_BY_KEY.hs_crp, read(1.4), 1.0, 23, [], TODAY), /inside hs-CRP's usual swing from 1\.4: it takes a rise to more than 3\.2 times, or a fall of more than 69%, to be more than that\. A report at your number will not be called reached\.$/);
   assert.match(impliedPace(MARKER_BY_KEY.dose, read(880), 1000, 23, [], TODAY, [{ week_start: "a", v: 1040 }, { week_start: "b", v: 880 }]), /reached it in 1 of the last 2/);
   assert.match(impliedPace(MARKER_BY_KEY.grip, null, 46, 23, [], TODAY), /No reading yet/);
   assert.match(impliedPace(MARKER_BY_KEY.waist, read(96), 90, 23, [{ d: "2026-05-03", v: 99 }, { d: "2026-11-03", v: 96 }], TODAY), /^Six centimetres in 23 weeks\. Twice your recent pace/);
@@ -257,9 +264,15 @@ test("a blood target says which report it is read from once one newer than the s
   // set on October's report itself: nothing newer, so the row waits and names no source
   const waiting = paceOf(tgt("ldl", 131, 100, { start_on: "2026-10-12" }), H, ldl, TODAY);
   assert.equal(waiting.source, null); assert.equal(waiting.pace_word, "October's report");
-  // reached, by the measured value only
-  const reached = paceOf(tgt("ldl", 143, 135, { start_on: "2026-04-14" }), H, ldl, TODAY);
-  assert.equal(reached.pace_word, "Reached"); assert.equal(reached.source, "from the report of 12 October");
+  // at the number, by the measured value: but a move inside LDL's usual swing is not called reached
+  const at = paceOf(tgt("ldl", 143, 135, { start_on: "2026-04-14" }), H, ldl, TODAY);
+  assert.equal(at.pace_word, "At your number"); assert.equal(at.tone, "neutral"); assert.equal(at.source, "from the report of 12 October");
+  assert.equal(at.swing.words, "The move from 143 is inside LDL's usual swing, about 26 to 27%.");
+  // a move of more than the swing is reached
+  const reached = paceOf(tgt("ldl", 200, 135, { start_on: "2026-04-14" }), H, ldl, TODAY);
+  assert.equal(reached.pace_word, "Reached"); assert.equal(reached.tone, "good"); assert.equal(reached.swing.state, "more");
+  // the row waiting on its first report carries no swing, and neither does a marker that is not blood
+  assert.equal(waiting.swing, null); assert.equal(paceOf(tgt("mets", 8.6, 9.6), H, read(8.9), TODAY).swing, null);
   // a marker that is not blood never carries a source
   assert.equal(paceOf(tgt("mets", 8.6, 9.6), H, read(8.9), TODAY).source, null);
 });
@@ -267,14 +280,21 @@ test("a blood target says which report it is read from once one newer than the s
 test("a landed report writes one line: what it said, what it said before, and whether the target is reached", () => {
   const landed = { marker: "ldl", label: "LDL", value: 92, unit: "mg/dL", on: "2026-12-03", previous: 118 };
   assert.equal(landedLine(landed), "A report landed: LDL 92, from 118.");
-  assert.equal(landedLine(landed, { start_value: 118, target_value: 100 }), "A report landed: LDL 92, from 118. The target of 100 is reached; the horizon keeps it as a floor to hold.");
+  // at the number, but 118 to 92 is inside LDL's usual swing: the line says so and does not call it reached
+  assert.equal(landedLine(landed, { start_value: 118, target_value: 100 }), "A report landed: LDL 92, from 118. It is at your number of 100. The move from 118 is inside LDL's usual swing, about 26 to 27%. So the horizon does not call it reached.");
+  // a move of more than the swing is reached, and the line says why
+  assert.equal(landedLine({ ...landed, previous: 160 }, { start_value: 160, target_value: 100 }), "A report landed: LDL 92, from 160. The target of 100 is reached. The move from 160 is more than LDL's usual swing of about 26 to 27%. The horizon keeps it as a floor to hold.");
+  // a marker with no swing on file is read as it stands, and the line says that too
+  assert.equal(landedLine({ marker: "triglycerides", label: "Triglycerides", value: 140, unit: "mg/dL", on: "2026-12-03", previous: 190 }, { start_value: 190, target_value: 150 }), "A report landed: Triglycerides 140, from 190. The target of 150 is reached. No usual swing is on file for triglycerides, so the number is read as it stands. The horizon keeps it as a floor to hold.");
   assert.equal(landedLine({ ...landed, value: 109 }, { start_value: 118, target_value: 100 }), "A report landed: LDL 109, from 118.");
   assert.equal(landedLine({ ...landed, previous: null }), "A report landed: LDL 92.");
-  assert.equal(landedLine({ marker: "hba1c", label: "HbA1c", value: 5.4, unit: "%", on: "2026-12-03", previous: 5.7 }, { start_value: 5.7, target_value: 5.5 }), "A report landed: HbA1c 5.4, from 5.7. The target of 5.5 is reached; the horizon keeps it as a floor to hold.");
-  // a target with no start reads its direction from the reading before
-  assert.ok(landedLine(landed, { start_value: null, target_value: 100 }).includes("is reached"));
+  assert.equal(landedLine({ marker: "hba1c", label: "HbA1c", value: 5.4, unit: "%", on: "2026-12-03", previous: 5.7 }, { start_value: 5.7, target_value: 5.5 }), "A report landed: HbA1c 5.4, from 5.7. It is at your number of 5.5. The move from 5.7 is at the edge of HbA1c's usual swing, about 0.2 to 0.5 points at this level. So the horizon does not call it reached.");
+  // a target with no start reads its direction, and its swing, from the reading before
+  assert.ok(landedLine(landed, { start_value: null, target_value: 100 }).includes("It is at your number of 100"));
+  // with no start and no reading before, there is nothing to read a swing from: the number is reached as it stands
+  assert.equal(landedLine({ ...landed, previous: null }, { start_value: null, target_value: 90 }), "A report landed: LDL 92. The target of 90 is reached; the horizon keeps it as a floor to hold.");
   assert.equal(reachedTarget({ start_value: 49, target_value: 150 }, 152), true); assert.equal(reachedTarget({ start_value: 49, target_value: 150 }, 120), false);
-  assert.ok(!/retest|test again|next test/i.test(landedLine(landed, { start_value: 118, target_value: 100 })));
+  for (const start of [118, 160]) assert.ok(!/retest|test again|next test|another test/i.test(landedLine({ ...landed, previous: start }, { start_value: start, target_value: 100 })), "nothing asks for another test");
 });
 
 
@@ -311,6 +331,12 @@ test("an outcome is the pace rule read on the date: weeks met, the week a number
   assert.equal(outcomeOf(tgt("mets", 8.4, 8.9, { start_on: "2026-05-08" }), DONE, person).word, "Reached");
   assert.equal(outcomeOf(tgt("ldl", 131, 100, { start_on: "2026-10-12" }), DONE, person).word, "No report since the start");
   assert.equal(outcomeOf(tgt("ldl", 143, 100, { start_on: "2026-04-14" }), DONE, person).word, "31 mg/dL short");
+  // a blood target at its number on the date is reached only when the move is more than its usual swing
+  const atNumber = outcomeOf(tgt("ldl", 143, 135, { start_on: "2026-04-14" }), DONE, person);
+  assert.equal(atNumber.word, "At the number, inside its usual swing"); assert.equal(atNumber.tone, "neutral");
+  assert.equal(atNumber.swing, "The move from 143 is inside LDL's usual swing, about 26 to 27%.");
+  assert.equal(outcomeOf(tgt("ldl", 200, 135, { start_on: "2026-04-14" }), DONE, person).word, "Reached");
+  assert.equal(mets.swing, null); assert.equal(mets.medicine, null);
   assert.equal(outcomeOf(tgt("grip", null, 40), DONE, person).word, "No reading");
   assert.equal(outcomesOf([tgt("mets", 8.4, 9.5), tgt("dose", 1040, 1000)], DONE, person).length, 2);
   for (const o of outcomesOf([tgt("mets", 8.4, 9.5, { start_on: "2026-05-08" }), tgt("dose", 1040, 1000), tgt("zone2_week", 90, 150)], DONE, person)) assert.ok(!/behind/.test(o.word), "the road is over: short, not behind");
@@ -324,4 +350,70 @@ test("the next horizon opens on the same span, and each row carries what the las
   assert.equal(lastRoadWords(tgt("grip", null, 40), DONE, person), "No reading to compare");
   assert.deepEqual(nextSpan({ starts_on: "2026-11-09", ends_on: "2027-02-09", title: "3 months", months: 3 }, "2027-02-09"), { kind: 3, title: "", date: "" });
   assert.deepEqual(nextSpan({ starts_on: "2026-09-01", ends_on: "2027-04-18", title: "Boston Marathon", months: null }, "2027-04-18"), { kind: "date", title: "Boston Marathon", date: addDays("2027-04-18", 229) });
+});
+
+// ── the guards on a blood target (12 Nov 2026): every figure here is invented ──
+
+test("a blood move is read against the marker's usual swing: inside, at its edge, more than, or none on file", () => {
+  assert.deepEqual(swingRead("ldl", 110, 99), { state: "inside", range: "about 26 to 27%", words: "The move from 110 is inside LDL's usual swing, about 26 to 27%." });
+  assert.equal(swingRead("ldl", 100, 74).state, "edge");
+  assert.equal(swingRead("ldl", 100, 74).words, "The move from 100 is at the edge of LDL's usual swing, about 26 to 27%.");
+  assert.equal(swingRead("apob", 100, 78).words, "The move from 100 is more than ApoB's usual swing of about 19%.");
+  assert.equal(swingRead("fasting_glucose", 100, 92).words, "The move from 100 is inside fasting glucose's usual swing, about 15%.");
+  assert.equal(swingRead("hba1c", 6.0, 5.2).state, "more");
+  assert.equal(swingRead("hs_crp", 2.0, 1.2).words, "The move from 2 is inside hs-CRP's usual swing. It takes a rise to more than 3.2 times, or a fall of more than 69%, to be more than that.");
+  assert.equal(swingRead("hs_crp", 2.0, 0.5).state, "more");
+  // the four with no swing on file say so: the number is read as it stands
+  for (const [k, name] of [["triglycerides", "triglycerides"], ["hdl", "HDL"], ["non_hdl", "non-HDL"], ["remnant", "remnant cholesterol"]]) assert.deepEqual(swingRead(k, 150, 120), { state: "none", range: null, words: `No usual swing is on file for ${name}, so the number is read as it stands.` });
+  assert.equal(swingRead("ldl", 110, 110).words, "It has not moved from 110.");
+  // only blood has a swing, and only two figures make a move
+  assert.equal(swingRead("weight", 80, 70), null); assert.equal(swingRead("bp", 130, 110), null);
+  assert.equal(swingRead("ldl", null, 99), null); assert.equal(swingRead("ldl", 110, null), null);
+});
+
+/** The same person, having told the app about a medicine: rows of the app's Metabolic section carry the answers. */
+function withMedicine(rows) {
+  const d = document();
+  d.app_labs = [...d.app_labs, ...rows];
+  return derivePerson(d);
+}
+
+test("a medicine on file is the newest answer given in the app, on a Metabolic row on or before the day", () => {
+  const p = withMedicine([
+    { measured_at: "2026-09-02T08:00:00", source: "metabolic", on_cholesterol_med: true, on_diabetes_med: false },
+    { measured_at: "2026-10-12T08:00:00", source: "metabolic", waist_cm: 96 },                       // says nothing about a medicine
+    { measured_at: "2026-10-20T08:00:00", source: "heart", on_cholesterol_med: false },               // not a row of the section that asks
+  ]);
+  const m = medicineOf("ldl", p, TODAY);
+  assert.deepEqual(m, { words: "On cholesterol medication", said_on: "2026-09-02", line: "On cholesterol medication, as last said in the app on 2 September." });
+  // every lipid target reads the one switch; the sugar markers and the cuff read their own
+  for (const k of ["apob", "remnant", "non_hdl", "triglycerides", "hdl"]) assert.equal(medicineOf(k, p, TODAY)?.words, "On cholesterol medication", k);
+  assert.equal(medicineOf("hba1c", p, TODAY), null, "the newest answer about diabetes medication is no");
+  assert.equal(medicineOf("bp", p, TODAY), null, "nothing was ever said about blood pressure medication");
+  assert.equal(medicineOf("hs_crp", p, TODAY), null); assert.equal(medicineOf("weight", p, TODAY), null);
+  // as of a day before the answer, there is none; a later "no" ends it; another year is named
+  assert.equal(medicineOf("ldl", p, "2026-09-01"), null);
+  assert.equal(medicineOf("ldl", withMedicine([{ measured_at: "2026-09-02T08:00:00", source: "metabolic", on_cholesterol_med: true }, { measured_at: "2026-10-30T08:00:00", source: "metabolic", on_cholesterol_med: false }]), TODAY), null);
+  assert.equal(medicineOf("fasting_glucose", withMedicine([{ measured_at: "2025-12-03T08:00:00", source: "metabolic", on_diabetes_med: true }]), TODAY).line, "On diabetes medication, as last said in the app on 3 December 2025.");
+  assert.equal(medicineOf("bp", withMedicine([{ measured_at: "2026-11-01T08:00:00", source: "metabolic", on_bp_med: true }]), TODAY).line, "On blood pressure medication, as last said in the app on 1 November.");
+  assert.equal(medicineOf("ldl", person, TODAY), null, "a person who has said nothing has no line");
+});
+
+test("the row carries both guards in the page's own sentences; the check-in's inputs carry the swing alone", () => {
+  const p = withMedicine([{ measured_at: "2026-09-02T08:00:00", source: "metabolic", on_cholesterol_med: true }]);
+  const targets = [tgt("ldl", 143, 135, { start_on: "2026-04-14" }), tgt("mets", 8.6, 9.6), tgt("dose", 820, 1000)];
+  const [ldl, mets, dose] = pacesOf(targets, H, p, TODAY);
+  assert.equal(ldl.pace_word, "At your number");
+  assert.equal(ldl.medicine, "On cholesterol medication, as last said in the app on 2 September.");
+  assert.equal(mets.medicine, null); assert.equal(dose.medicine, null); assert.equal(mets.swing, null);
+  const inputs = checkinInputs(H, targets, [], p, TODAY);
+  // the check-in's inputs carry the swing's sentence; the medicine stays on the page (the inputs go to the model, the email and a coach's thread)
+  assert.deepEqual(Object.keys(inputs.pace[0]).sort(), ["expected_today", "label", "marker", "measured_on", "now", "pace_word", "start", "swing", "target", "unit"]);
+  assert.equal(inputs.pace[0].swing, "The move from 143 is inside LDL's usual swing, about 26 to 27%.");
+  assert.ok(!/medic/i.test(JSON.stringify(inputs)), "nothing about a medicine leaves the page");
+  assert.deepEqual(Object.keys(inputs.pace[1]).sort(), ["expected_today", "label", "marker", "measured_on", "now", "pace_word", "start", "target", "unit"], "a row with no swing carries no such key");
+  // on the date, the outcome carries the medicine on file by then
+  assert.equal(outcomeOf(tgt("ldl", 143, 135, { start_on: "2026-04-14" }), DONE, p).medicine, "On cholesterol medication, as last said in the app on 2 September.");
+  // no sentence the guards write names a cause, suggests a number or asks for a test
+  for (const text of [ldl.swing.words, ldl.medicine, landedLine({ marker: "ldl", label: "LDL", value: 131, unit: "mg/dL", on: "2026-10-12", previous: 143 }, { start_value: 143, target_value: 135 })]) assert.ok(!/because|due to|thanks to|should|aim for|recommend|retest|test again|another test/i.test(text), text);
 });
