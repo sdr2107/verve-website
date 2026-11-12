@@ -33,7 +33,7 @@ import { fmtHMin } from "../derive/signals.ts";
 import { restingBPOf } from "../derive/markers.ts";
 import { LANE_FOR, WINDOWS, DEFAULT_WINDOW, isWindowKey, timelineOf, usualSwingForGuide, type WindowKey } from "../derive/timeline.ts";
 import { MARKER_BY_KEY, latestOf, upTo, fmtValue, type MarkerKey } from "../horizon/derive.ts";
-import { MARKER_KEYS, WILL_NOT, markerOf, standOut } from "../derive/guideLines.ts";
+import { MARKER_KEYS, WILL_NOT, markerOf, standOut, studyOf } from "../derive/guideLines.ts";
 
 export type ReadsContext = {
   personId: string;
@@ -54,18 +54,6 @@ export type ReadsContext = {
 
 type Read = { id: string; title: string; summary: any; facts: any; note: string; shared_at: string | null; downloaded_at: string | null; created_at: string; model: string };
 
-const LEARN: [RegExp, string, string][] = [
-  [/triglycer/i, "/science/labs", "what triglycerides tell you"],
-  [/ldl|apob|cholesterol|lipid|lp\(a\)|lpa/i, "/science/labs", "what the lipid markers tell you"],
-  [/glucose|hba1c|insulin|homa/i, "/science/labs", "what blood sugar markers tell you"],
-  [/blood pressure|\bbp\b|systolic/i, "/science/labs", "how to read blood pressure"],
-  [/strength|resistance/i, "/science", "why strength sits beside aerobic"],
-  [/fitness|vo2|met\b|mets|cooper|walk test/i, "/science", "what your fitness number means"],
-  [/zone 2|dose|met-min|activity|volume|workout/i, "/science", "how the weekly dose works"],
-  [/sleep|hrv|resting heart|recovery/i, "/science/sleep-heart/resting-heart-rate", "how your heart readings are judged"],
-  [/waist|weight|body fat|muscle/i, "/science", "what body measurements show"],
-];
-const learnFor = (t: string) => LEARN.find(([re]) => re.test(t)) ?? null;
 /** The window a read covers, when it read one; null for a read of the week. */
 const windowOf = (r: { summary?: any } | null): WindowKey | null => { const w = String(r?.summary?.window ?? ""); return isWindowKey(w) ? w : null; };
 const day = (iso: string) => String(iso).slice(0, 10);
@@ -116,7 +104,7 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
     if (r && win) {
       const t = timelineOf(d, win, day(r.created_at));
       const rows = t.rows.filter((x) => x.now !== DASH).slice(0, 9);
-      return card(`<div class="t-eyebrow">What the Guide read</div><div class="mt-2 flex flex-col">${rows.map((x) => figureRow(esc(x.label), esc(x.then !== DASH ? `${x.then} → ${x.now}` : x.now), esc(x.unit))).join("")}</div>
+      return card(`<div class="t-eyebrow">What the Guide read</div><div class="mt-2 flex flex-col">${rows.map((x) => figureRow(esc(x.label), esc(x.then !== DASH && x.change !== DASH ? `${x.then} → ${x.now}` : x.now), esc(x.unit))).join("")}</div>
         <p class="t-caption mt-2 text-text-3">${esc(WINDOWS[win].name)} on In depth, as it stood on ${esc(dayMonth(day(r.created_at)))}. Counted by the app and the page before the Guide saw them.</p>`);
     }
     const monday = r ? weekCoveredBy(r) : addDays(mondayOf(new Date()), -7);
@@ -192,14 +180,14 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
   }
   /** A line's foot: the study behind it, then its two doors, into time and onto Horizon. */
   function doorsFor(c: any, marker: MarkerKey | null, r: Read): string {
-    const l = learnFor(`${c.topic ?? ""} ${c.headline ?? ""} ${c.text ?? ""}`);
+    const l = studyOf(marker, `${c.topic ?? ""} ${c.headline ?? ""} ${c.text ?? ""}`);
     const door = "min-h-8 font-semibold text-accent-text hover:text-text";
     const onHorizon = !!marker && (horizons.value ?? []).some((h) => !h.closed_at && h.targets.some((t) => t.marker === marker));
     const over = `<button type="button" data-over="${marker ? esc(LANE_FOR[marker] ?? "") : ""}" data-window="${windowOf(r) ?? DEFAULT_WINDOW}" class="${door}">See it over time &rarr;</button>`;
     const target = !marker ? "" : onHorizon ? `<button type="button" data-onhorizon class="${door}">On ${ctx!.self ? "your" : "their"} horizon already &rarr;</button>`
       : ctx!.owner ? `<button type="button" data-target="${esc(marker)}" data-on="${esc(day(r.created_at))}" class="${door}">Make it a target &rarr;</button>` : "";
     return `<div class="t-small mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-border pt-2.5">
-      ${l ? `<a href="${l[1]}" class="t-caption mr-auto text-text-3 hover:text-text">Study: ${l[2]}</a>` : `<span class="mr-auto"></span>`}${over}${target}</div>`;
+      ${l ? `<a href="${l.href}" class="t-caption mr-auto text-text-3 hover:text-text">Study: ${l.label}</a>` : `<span class="mr-auto"></span>`}${over}${target}</div>`;
   }
 
   function readPage(r: Read): string {
@@ -232,10 +220,29 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
       <aside class="flex flex-col gap-3">${readRows(r)}${notCard()}${earlierReads(r)}${allowanceCard(r)}</aside></section>`;
   }
 
+  /**
+   * While the Guide writes (a few seconds): the read before this one is not on the page, so nobody reads an old
+   * read as the answer to what they just asked (the founder, 12 Nov 2026). It says what is being read; the earlier
+   * reads stay one press away in the aside. Nothing moves: the page's rule is no motion after load.
+   */
+  function writingPage(): string {
+    const what = pendingAsk ? WINDOWS[pendingAsk.window].name.toLowerCase() : "the week that closed";
+    const bar = (w: string) => `<span class="block h-3.5 rounded bg-alt" style="width:${w}"></span>`;
+    const ghost = `<div class="r-card flex flex-col gap-2.5 border border-border bg-card p-5">${bar("58%")}${bar("92%")}${bar("74%")}</div>`;
+    return `<section class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <article class="min-w-0" aria-live="polite" aria-busy="true">
+        <div class="t-eyebrow">The Guide · reading now</div>
+        <h2 class="t-display mt-2 text-text">Reading ${esc(what)}</h2>
+        <p class="t-small mt-2 text-text-2">The figures are counted on this page first, then sent to the writer. It takes a few seconds.${reads.length ? " The read before this one is kept under Earlier reads." : ""}</p>
+        <div class="mt-4 flex flex-col gap-3" aria-hidden="true">${ghost}${ghost}${ghost}</div>
+      </article>
+      <aside class="flex flex-col gap-3">${notCard()}${earlierReads(null)}</aside></section>`;
+  }
+
   function drawTab() {
     if (!ctx) { tab.innerHTML = ""; return; }
     const r = open ?? reads[0] ?? null;
-    tab.innerHTML = state === "premium" ? premium() : !r ? firstRead() : readPage(r);
+    tab.innerHTML = state === "premium" ? premium() : state === "writing" ? writingPage() : !r ? firstRead() : readPage(r);
     const note = tab.querySelector("[data-r=notebox]") as HTMLTextAreaElement | null;
     note?.addEventListener("blur", async () => {
       if (!r) return;

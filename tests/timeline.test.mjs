@@ -2,7 +2,7 @@
 // window shows what, the lanes, and the table "what moved, and what held". `npm test`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { WINDOW_KEYS, WINDOWS, DEFAULT_WINDOW, LANE_FOR, isWindowKey, timelineOf, swingOf, writerChanges, windowWorking, addMonths } from "../src/my-health/derive/timeline.ts";
+import { WINDOW_KEYS, WINDOWS, DEFAULT_WINDOW, LANE_FOR, isWindowKey, timelineOf, swingOf, writerChanges, windowWorking, addMonths, distinctResults } from "../src/my-health/derive/timeline.ts";
 import { mergeWeeks } from "../src/my-health/derive/activity.ts";
 import { addDays } from "../src/my-health/derive/format.ts";
 import SWING from "../src/data/usual-swing.ts";
@@ -218,4 +218,31 @@ test("every Overview section and the Horizon markers that have one lead to a lan
   for (const k of ["fitness", "vitals", "sleep", "exertion", "movement", "body"]) assert.ok(LANE_FOR[k], k);
   assert.equal(LANE_FOR.ldl, "ldl_mgdl");
   assert.equal(addMonths("2026-03-31", -1), "2026-02-28");
+});
+
+test("a result filed more than once is one result: drawn once, at its first date, and never compared with itself", () => {
+  // the app's entry form saves the figures already on file with every new entry, and a report's value is typed again
+  // on the day it arrives: here one LDL result sits on three dates, and three triglyceride results on seven
+  const p = person();
+  p.by.set("ldl_mgdl", [
+    { d: "2024-10-12", v: 131, lo: null, hi: null, unit: "mg/dL" },
+    { d: "2026-07-20", v: 104, lo: null, hi: null, unit: "mg/dL" }, { d: "2026-07-24", v: 104, lo: null, hi: null, unit: "mg/dL" }, { d: "2026-11-02", v: 104, lo: null, hi: null, unit: "mg/dL" },
+  ]);
+  p.by.set("triglycerides_mgdl", [["2026-05-10", 150], ["2026-05-14", 150], ["2026-06-02", 150], ["2026-07-20", 190], ["2026-07-21", 190], ["2026-07-24", 190], ["2026-11-01", 141]].map(([d, v]) => ({ d, v, lo: null, hi: null, unit: "mg/dL" })));
+  const t = timelineOf(p, "1y", TODAY);
+  assert.deepEqual(lane(t, "ldl_mgdl").dots.map((q) => q.label), ["104"], "one mark, not three");
+  assert.equal(row(t, "ldl_mgdl").words, "Measured once in this window.");
+  assert.equal(row(t, "ldl_mgdl").nowOn, "2026-07-20", "at its first date");
+  assert.deepEqual(lane(t, "triglycerides_mgdl").values.map((x) => x.v), [150, 190, 141]);
+  const tg = row(t, "triglycerides_mgdl");
+  assert.deepEqual([tg.then, tg.now], ["150", "141"]);
+  assert.ok(t.notes.some((n) => n.startsWith("A blood result that repeats unchanged")));
+  // three years: the 2024 result and the 2026 one are two results, 21 % apart
+  const y3 = row(timelineOf(p, "3y", TODAY), "ldl_mgdl");
+  assert.deepEqual([y3.then, y3.now, y3.change, y3.swing], ["131", "104", "−21%", "inside"]);
+  // a different unit is a different result; a value that returns after another is a new one
+  assert.equal(distinctResults([{ v: 3.3, unit: "mmol/L" }, { v: 3.3, unit: "mg/dL" }]).length, 2);
+  assert.deepEqual(distinctResults([{ v: 5.6 }, { v: 5.4 }, { v: 5.6 }]).map((x) => x.v), [5.6, 5.4, 5.6]);
+  // without a repeat, nothing is said about one
+  assert.ok(!timelineOf(person(), "1y", TODAY).notes.some((n) => n.startsWith("A blood result that repeats")));
 });
