@@ -41,8 +41,8 @@ export const STORY: StoryPart[] = [
   },
   {
     key: "depth", name: "In depth", question: "How did I get here?",
-    line: "A year on one line of time, with blood work beside fitness.",
-    more: "Five windows, one month to three years; one year opens first, because it sets the same season against itself. Each marker has its own lane and its own scale. Blood work is drawn from six months up, and a change between two reports is said to be inside, at the edge of, or more than that marker's usual swing. A new wearable is marked on the line; a stretch with nothing logged is left empty.",
+    line: "Each marker across a year, against where you started, blood work beside fitness.",
+    more: "Five windows, one month to three years; one year opens first, because it sets the same season against itself. Each marker has a card of its own: where you stood when the window began, your average across it and where you stand now, over a chart with its own scale. Blood work is drawn from six months up, and a change between two reports is said to be inside, at the edge of, or more than that marker's usual swing. A new wearable is marked on the line; a stretch with nothing logged is left empty.",
     plan: "Pro",
     sample: { figure: "8.1 → 8.9", unit: "" },
   },

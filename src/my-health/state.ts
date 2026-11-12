@@ -46,7 +46,8 @@ export const BODY_KEYS = ["metabolic", "heart", "muscle", "reports"] as const;
  * "all" is the six cards and a card's key is that section alone; In depth
  * and Body have no page of their own, so they always hold one of their
  * sections: Body its first, In depth the one-year window, when none is
- * named. The hash carries it: #overview-movement, #depth-1y, #body-heart.
+ * named. In depth's window is picked on the page, by a switch, not in the
+ * sidebar (12 Nov 2026). The hash carries it: #overview-movement, #depth-1y, #body-heart.
  * An address from before 11 Nov 2026 (#depth-sleep) lands on one year.
  */
 export const section = signal<string>("all");
@@ -95,13 +96,13 @@ export const searchQuery = signal("");
 export const depthLocked = signal(false);
 /** The page's working, for "The Guide's read"; the Depth view publishes it, the page's AI card reads it. */
 export const depthWorking = signal<Record<string, unknown> | null>(null);
-/** The lane a link elsewhere on the page asked for ("See Fitness over the last year"): In depth brings it into view and lights it once. */
+/** The marker's card a link elsewhere on the page asked for ("See Fitness over the last year"): In depth brings it into view and lights it once. */
 export const depthLane = signal("");
 /** A window the person asked the Guide to read, from In depth's head: the page's Guide view writes it and clears this. */
 export const guideAsk = signal<{ window: WindowKey; working: Record<string, unknown> } | null>(null);
 
 // ── Horizon, for the pages beside it ──
-/** The person's horizons, open and closed, as the Horizon view last read them; null before it has. The Overview's cards, In depth's line of time and the Guide's doors read it. */
+/** The person's horizons, open and closed, as the Horizon view last read them; null before it has. The Overview's cards and the Guide's doors read it. */
 export const horizons = signal<HorizonFull[] | null>(null);
 /**
  * A line the Guide wrote, carried to Horizon as a draft: "Make it a target".
@@ -135,7 +136,7 @@ export function openLabs(sec: string, analyte = "") {
   actions.goTab("body");
 }
 
-/** Follow a figure into time: In depth at a window (one year unless named), with that marker's lane in view. */
+/** Follow a figure into time: In depth at a window (one year unless named), with that marker's card in view. */
 export function openOverTime(lane: string, window: string = DEFAULT_WINDOW) {
   actions.step();
   depthLane.value = lane;

@@ -3,14 +3,19 @@
  * parts", board 05, 11 Nov 2026; the tab since "My health, redesigned",
  * board 4; the read itself since 26 Oct 2026, docs/design/guides-read/README.md).
  *
- *   the read     who wrote it and when; how many things stand out; then each
- *                thing: one line, a sentence or two, the figures it rests on
- *                (the page's own, counted as they stood on the day of the
- *                read, never the model's), the study behind it from a fixed
- *                shelf of Science pages, and two doors: into time on In
- *                depth, or onto Horizon as a draft target
- *   the aside    what the Guide read; what it will not do; earlier reads;
- *                the allowance, true to the server
+ *   the read     a short label in the label face ("The Guide · Thursday 12
+ *                November"); how many things stand out; who wrote it and
+ *                from what, in the text face (canvas "In depth redrawn",
+ *                board 06: two sentences in the label face read as code);
+ *                then each thing: one line, a sentence or two, the figures
+ *                it rests on (the page's own, counted as they stood on the
+ *                day of the read, never the model's), the study behind it
+ *                from a fixed shelf of Science pages, and two doors: into
+ *                time on In depth, or onto Horizon as a draft target
+ *   the aside    your reads, one list, newest first, the read on the page
+ *                marked, Open and Delete on every row (board 06); what the
+ *                Guide read; what it will not do; the allowance, true to
+ *                the server
  *   a window     In depth's head can ask for a read of the window in view
  *                (state.guideAsk): the same form, the same function
  *   premium      shown when the function answers pro_required
@@ -77,6 +82,10 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
   let error = "";
   /** A window In depth asked the Guide to read; held until it is written, so a consent box ticked in between does not lose it. */
   let pendingAsk: { window: WindowKey; working: Record<string, unknown> } | null = null;
+  /** The read whose row is asking "Delete it, or keep it?"; one at a time. */
+  let confirming: string | null = null;
+  /** Your reads shows the newest eight until the older ones are asked for. */
+  let showOlder = false;
 
   // the band on Overview is the page's own one line now (board 2): nothing is drawn here
   function drawBand() { band.innerHTML = ""; }
@@ -129,19 +138,40 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
   /** What a read covers, in a few words: the week it read, or the window. */
   const coverOf = (x: Read) => { const w = windowOf(x); return w ? WINDOWS[w].name : `Week of ${dayMonth(weekCoveredBy(x))}`; };
 
-  function earlierReads(r: Read | null): string {
-    const others = reads.filter((x) => x.id !== r?.id);
-    if (!others.length) return "";
-    return card(`<div class="t-eyebrow">Earlier reads</div><div class="mt-2 flex flex-col">${others.slice(0, 8).map((x) =>
-      `<button type="button" data-open="${x.id}" class="flex items-baseline justify-between gap-3 border-t border-border py-2 text-left first:border-t-0"><span class="t-small min-w-0 truncate text-text">${esc(coverOf(x))}</span><span class="t-caption shrink-0 text-text-3">${esc(fmtDay(day(x.created_at)))}</span></button>`).join("")}</div>`);
+  /** The day a read was written, as its row says it: the year only when it is not this one. */
+  const readOn = (x: Read) => { const d = day(x.created_at); return d.slice(0, 4) === todayStr().slice(0, 4) ? dayMonth(d) : fmtDay(d); };
+  /**
+   * Your reads: one list, newest first, the read on the page marked, and every row opens and deletes (canvas "In depth
+   * redrawn", board 06; the founder asked on 12 Nov 2026 where the earlier reads are and how one is deleted). Delete
+   * asks in the row itself, never in a browser dialog. The newest eight show; the older ones are one press away.
+   */
+  const READS_SHOWN = 8;
+  function yourReads(r: Read | null): string {
+    if (!reads.length) return "";
+    const b = "min-h-8 px-1 text-[12.5px] font-semibold";
+    const rows = (showOlder ? reads : reads.slice(0, READS_SHOWN)).map((x) => {
+      // a read is named by what it covers ("the week of 26 October"), never by the day it was written alone: that day is another row's week
+      const when = esc(readOn(x)), cover = esc(coverOf(x)), what = `the read of ${cover.charAt(0).toLowerCase()}${cover.slice(1)}`;
+      if (confirming === x.id) return `<div class="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 rounded-[10px] border border-accent-border bg-accent-fill px-2.5 py-2">
+        <span class="t-small text-text">Delete ${what}?</span>
+        <button type="button" data-delete-yes="${x.id}" class="${b} text-text-2 hover:text-concern">Delete it</button>
+        <button type="button" data-delete-no class="${b} text-accent-text hover:text-text">Keep it</button>
+        <span class="t-caption col-span-3 text-text-3">Written ${when}. A copy you shared into Messages stays there.</span></div>`;
+      return `<div class="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 border-t border-border pt-1.5 first:border-t-0 first:pt-0">
+        <span class="t-small min-w-0 truncate text-text">${cover}</span>
+        ${x.id === r?.id ? `<span class="t-caption font-semibold text-accent-text">on the page</span>` : `<button type="button" data-open="${x.id}" aria-label="Open ${what}, written ${when}" class="${b} text-accent-text hover:text-text">Open</button>`}
+        <button type="button" data-delete-ask="${x.id}" aria-label="Delete ${what}, written ${when}" class="${b} text-text-2 hover:text-concern">Delete</button>
+        <span class="t-caption col-span-3 -mt-1 text-text-3">read ${when}</span></div>`;
+    }).join("");
+    const older = reads.length > READS_SHOWN && !showOlder ? `<button type="button" data-older class="t-small mt-2 min-h-8 w-full border-t border-border pt-2 text-left font-semibold text-accent-text hover:text-text">Show older reads</button>` : "";
+    return card(`<div class="flex items-baseline justify-between gap-3"><div class="t-eyebrow">Your reads</div><span class="t-caption text-text-3">${reads.length} on file</span></div><div class="mt-2 flex flex-col gap-1.5">${rows}</div>${older}`);
   }
 
   function allowanceCard(r: Read | null): string {
     const shares = r && ctx!.threads.length ? ctx!.threads.map((t) => btn(`share:${t.id}`, r.shared_at ? `Shared · share again with ${esc(t.label)}` : `Share with ${esc(t.label)}`)).join("") : "";
     return card(`<div class="t-eyebrow">Allowance</div><p class="t-small mt-2 text-text-2">${ALLOWANCE_LINE}</p>${consentBox()}
       <div class="mt-3 flex flex-col gap-2">${btn("write", writeLabel(), true, state === "writing")}${shares}${r ? btn("pdf", "Download as PDF") : ""}</div>
-      ${r ? `<label class="t-eyebrow mt-4 block">My note</label><textarea data-r="notebox" rows="3" maxlength="2000" placeholder="What I will do about it…" class="r-btn mt-1 w-full resize-none border border-border bg-alt px-3 py-2 text-[13px] text-text placeholder:text-text-3 focus:border-accent-border focus:outline-none">${esc(r.note ?? "")}</textarea><span data-r="notemsg" class="t-caption text-text-3"></span><span data-r="msg" class="t-caption block text-text-3"></span>
-      <button type="button" data-r="delete" class="t-caption mt-2 text-left text-text-3 hover:text-concern">Delete this read</button>` : ""}`);
+      ${r ? `<label class="t-eyebrow mt-4 block">My note</label><textarea data-r="notebox" rows="3" maxlength="2000" placeholder="What I will do about it…" class="r-btn mt-1 w-full resize-none border border-border bg-alt px-3 py-2 text-[13px] text-text placeholder:text-text-3 focus:border-accent-border focus:outline-none">${esc(r.note ?? "")}</textarea><span data-r="notemsg" class="t-caption text-text-3"></span><span data-r="msg" class="t-caption block text-text-3"></span>` : ""}`);
   }
 
   function firstRead(): string {
@@ -203,13 +233,14 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
     }).join("");
     const due = dueLineOf(sm.due, r.created_at);
     const whose = ctx!.self ? "your" : "their";
-    const from = win ? `Read from ${esc(WINDOWS[win].name.toLowerCase())} on In depth, as it stood on ${esc(longDay(day(r.created_at)))}.`
+    // the label face holds the short label alone; who wrote the read, and from what, is said in the text face under the heading
+    const from = win ? `Read from ${esc(WINDOWS[win].name.toLowerCase())} on In depth, as it stood that day.`
       : `Read from ${whose} Overview and the week of ${esc(dayMonth(weekCoveredBy(r)))}, counted the way the app counts it.`;
     return `<section class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
       <article class="min-w-0">
-        <div class="t-eyebrow">The Guide · read on ${esc(longDay(day(r.created_at)))} · written by an AI model from ${whose} own figures${ctx!.self ? "" : ` · ${esc(ctx!.personName)}`}</div>
+        <div class="t-eyebrow">The Guide · ${esc(longDay(day(r.created_at)))}${ctx!.self ? "" : ` · ${esc(ctx!.personName)}`}</div>
         <h2 class="t-display mt-2 text-text">${standOut(things.length)}</h2>
-        <p class="t-small mt-2 text-text-2">${from}</p>
+        <p class="t-small mt-2 text-text-2">Written by an AI model from ${whose} own figures. ${from}</p>
         ${sm.lead ? `<p class="t-read mt-4 text-text">${esc(String(sm.lead))}</p>` : ""}
         ${items}
         ${due ? `<section class="mt-5"><h3 class="t-title text-text">Due</h3><p class="t-read mt-1.5 text-text-2">${esc(due)}</p></section>` : ""}
@@ -217,13 +248,13 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
         <p class="t-caption mt-6 max-w-2xl text-text-3">The Guide describes; it does not advise. The figures under each line are the page's own, as they stood on the day of the read, and the study is one of the Science pages.${sm.dropped ? ` ${sm.dropped} sentence${sm.dropped === 1 ? "" : "s"} with a number not on the page ${sm.dropped === 1 ? "was" : "were"} dropped.` : ""}</p>
         ${errorLine()}
       </article>
-      <aside class="flex flex-col gap-3">${readRows(r)}${notCard()}${earlierReads(r)}${allowanceCard(r)}</aside></section>`;
+      <aside class="flex flex-col gap-3">${yourReads(r)}${readRows(r)}${notCard()}${allowanceCard(r)}</aside></section>`;
   }
 
   /**
    * While the Guide writes (a few seconds): the read before this one is not on the page, so nobody reads an old
-   * read as the answer to what they just asked (the founder, 12 Nov 2026). It says what is being read; the earlier
-   * reads stay one press away in the aside. Nothing moves: the page's rule is no motion after load.
+   * read as the answer to what they just asked (the founder, 12 Nov 2026). It says what is being read; every read
+   * on file stays one press away, under Your reads. Nothing moves: the page's rule is no motion after load.
    */
   function writingPage(): string {
     const what = pendingAsk ? WINDOWS[pendingAsk.window].name.toLowerCase() : "the week that closed";
@@ -233,10 +264,10 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
       <article class="min-w-0" aria-live="polite" aria-busy="true">
         <div class="t-eyebrow">The Guide · reading now</div>
         <h2 class="t-display mt-2 text-text">Reading ${esc(what)}</h2>
-        <p class="t-small mt-2 text-text-2">The figures are counted on this page first, then sent to the writer. It takes a few seconds.${reads.length ? " The read before this one is kept under Earlier reads." : ""}</p>
+        <p class="t-small mt-2 text-text-2">The figures are counted on this page first, then sent to the writer. It takes a few seconds.${reads.length ? " The read before this one is kept under Your reads." : ""}</p>
         <div class="mt-4 flex flex-col gap-3" aria-hidden="true">${ghost}${ghost}${ghost}</div>
       </article>
-      <aside class="flex flex-col gap-3">${notCard()}${earlierReads(null)}</aside></section>`;
+      <aside class="flex flex-col gap-3">${yourReads(null)}${notCard()}</aside></section>`;
   }
 
   function drawTab() {
@@ -337,25 +368,34 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
     if (k === "write") { await write(); return; }
     if (k === "pdf" && cur) { pdf(cur); return; }
     if (k.startsWith("share:") && cur) { await share(cur, k.slice(6)); return; }
-    if (k === "delete" && cur) {
-      if (!confirm("Delete this read? It is removed from your reads; a copy you shared into Messages stays there.")) return;
-      await supabase.from("web_reads").delete().eq("id", cur.id);
-      await loadReads(); open = null; draw(); return;
+    // Your reads: Delete asks in the row; "Delete it" removes that read, "Keep it" puts the row back
+    const ask = t.closest("[data-delete-ask]") as HTMLElement | null;
+    if (ask) { confirming = ask.dataset.deleteAsk ?? null; drawTab(); return; }
+    if (t.closest("[data-delete-no]")) { confirming = null; drawTab(); return; }
+    const yes = t.closest("[data-delete-yes]") as HTMLElement | null;
+    if (yes) {
+      const id = yes.dataset.deleteYes ?? "";
+      confirming = null;
+      const { error: e } = await supabase.from("web_reads").delete().eq("id", id);
+      if (e) { state = "error"; error = `Could not delete it: ${e.message}`; drawTab(); return; }
+      if (open?.id === id) open = null;
+      await loadReads(); draw(); return;
     }
+    if (t.closest("[data-older]")) { showOlder = true; drawTab(); return; }
     const over = t.closest("[data-over]") as HTMLElement | null;
     if (over) { openOverTime(over.dataset.over ?? "", over.dataset.window); return; }
     const target = t.closest("[data-target]") as HTMLElement | null;
     if (target && ctx) { setGuideDraft({ personId: ctx.personId, marker: target.dataset.target!, readOn: target.dataset.on ?? todayStr() }); goTab("horizon"); return; }
     if (t.closest("[data-onhorizon]")) { goTab("horizon"); return; }
     const o = t.closest("[data-open]") as HTMLElement | null;
-    if (o) { open = reads.find((x) => x.id === o.dataset.open) ?? null; state = "idle"; drawTab(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+    if (o) { open = reads.find((x) => x.id === o.dataset.open) ?? null; state = "idle"; confirming = null; drawTab(); window.scrollTo({ top: 0, behavior: "smooth" }); }
   };
   tab.addEventListener("click", onClick);
 
   return {
     async load(next: ReadsContext | null) {
       if (next?.personId !== ctx?.personId) pendingAsk = null;   // a window asked for on one person's page is not read on another's
-      ctx = next; open = null; state = "idle"; error = "";
+      ctx = next; open = null; state = "idle"; error = ""; confirming = null; showOlder = false;
       await loadReads();
       draw();
     },

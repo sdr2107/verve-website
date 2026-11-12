@@ -483,11 +483,11 @@ function SectionPage({ c, d, cards, horizon }: { c: Card; d: NonNullable<typeof 
           </div>
         </div>
         {open ? <div class="mt-5"><OpenMarker open={open} markers={d.markers} acts={d.acts} out={outKeys.has(open.key)} /></div> : null}
-        {/* Overview to In depth: the section's one link into time, at one year, with its marker's lane in view */}
+        {/* Overview to In depth: the section's one link into time, at one year, with its marker's card in view */}
         <p class="t-small mt-5 flex flex-wrap items-baseline gap-x-6 gap-y-1 border-t border-border pt-4 text-text-2">
           <button type="button" onClick={() => openOverTime(LANE_FOR[c.key] ?? "")} class="font-semibold text-accent-text hover:text-text">See {c.title} over the last year &rarr;</button>
           {c.key === "body" ? <button type="button" onClick={() => actions.goTab("body")} class="font-semibold text-accent-text hover:text-text">Every marker, with where it sits in its range &rarr;</button> : null}
-          <span class="t-caption text-text-3">In depth, on one line of time with {person.value?.self ? "your" : "their"} other markers.</span>
+          <span class="t-caption text-text-3">In depth, against where {person.value?.self ? "you" : "they"} stood a year ago, beside {person.value?.self ? "your" : "their"} other markers.</span>
         </p>
       </div>
       <Pager at={at + 1} of={cards.length}
