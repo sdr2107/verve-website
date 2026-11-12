@@ -8,6 +8,8 @@ import { signal, computed } from "@preact/signals";
 import type { MyHealthDocument } from "./document.ts";
 import { derivePerson } from "./derive/person.ts";
 import type { Rng } from "./derive/lenses.ts";
+import { WINDOW_KEYS, DEFAULT_WINDOW, isWindowKey, type WindowKey } from "./derive/timeline.ts";
+import type { HorizonFull } from "./horizon/api.ts";
 
 export type PersonLite = { id: string; owner_id: string; account_id: string | null; name: string; born_year: number | null; mine: boolean; self: boolean; scopes: string[];
   /** A page shared with you: the day the share began (the grant's accepted_at), when the page could read it. */
@@ -34,8 +36,8 @@ export const activeTab = signal("overview");
 /** The six cards of the Overview, in the app's order. */
 export const CARD_KEYS = ["fitness", "vitals", "sleep", "exertion", "movement", "body"] as const;
 export type CardKey = (typeof CARD_KEYS)[number];
-/** In depth: the week that closed, the longer view, then the six chapters and the table that left the Overview. */
-export const DEPTH_KEYS = ["lastweek", "snapshot", "fitness", "vitals", "sleep", "exertion", "movement", "everynumber"] as const;
+/** In depth: five windows of time, not chapters by topic (canvas "Verve, one story in four parts", board 04). One year opens first. */
+export const DEPTH_KEYS = WINDOW_KEYS;
 /** Body: the app's three shelves and the reports on file. */
 export const BODY_KEYS = ["metabolic", "heart", "muscle", "reports"] as const;
 /**
@@ -43,18 +45,19 @@ export const BODY_KEYS = ["metabolic", "heart", "muscle", "reports"] as const;
  * boards 04 and 07): one section is on the page at a time. On the Overview
  * "all" is the six cards and a card's key is that section alone; In depth
  * and Body have no page of their own, so they always hold one of their
- * sections, the first when none is named. The hash carries it:
- * #overview-movement, #depth-sleep, #body-heart.
+ * sections: Body its first, In depth the one-year window, when none is
+ * named. The hash carries it: #overview-movement, #depth-1y, #body-heart.
+ * An address from before 11 Nov 2026 (#depth-sleep) lands on one year.
  */
 export const section = signal<string>("all");
 /** The sections of each tab that has them, in the sidebar's order. */
 export const TAB_SECTIONS: Record<string, readonly string[]> = { overview: CARD_KEYS, depth: DEPTH_KEYS, body: BODY_KEYS };
-/** The section a tab shows for a wanted one: the wanted one when the tab has it; else the tab's first, or "all" on the Overview and on a tab with no sections. */
+/** The section a tab shows for a wanted one: the wanted one when the tab has it; else In depth's one year, Body's first, or "all" on the Overview and on a tab with no sections. */
 export function sectionFor(tab: string, wanted: string): string {
   const keys = TAB_SECTIONS[tab];
   if (!keys) return "all";
   if (keys.includes(wanted)) return wanted;
-  return tab === "overview" ? "all" : keys[0];
+  return tab === "overview" ? "all" : tab === "depth" ? DEFAULT_WINDOW : keys[0];
 }
 /** The name the Overview used before 8 Nov 2026; the same signal. */
 export const ovSection = section;
@@ -92,6 +95,27 @@ export const searchQuery = signal("");
 export const depthLocked = signal(false);
 /** The page's working, for "The Guide's read"; the Depth view publishes it, the page's AI card reads it. */
 export const depthWorking = signal<Record<string, unknown> | null>(null);
+/** The lane a link elsewhere on the page asked for ("See Fitness over the last year"): In depth brings it into view and lights it once. */
+export const depthLane = signal("");
+/** A window the person asked the Guide to read, from In depth's head: the page's Guide view writes it and clears this. */
+export const guideAsk = signal<{ window: WindowKey; working: Record<string, unknown> } | null>(null);
+
+// ── Horizon, for the pages beside it ──
+/** The person's horizons, open and closed, as the Horizon view last read them; null before it has. The Overview's cards, In depth's line of time and the Guide's doors read it. */
+export const horizons = signal<HorizonFull[] | null>(null);
+/**
+ * A line the Guide wrote, carried to Horizon as a draft: "Make it a target".
+ * It is not a target until the person sets a number; "Leave it" clears it. Kept
+ * for the tab's life only, per person, so it never follows someone to another page.
+ */
+export type GuideDraft = { personId: string; marker: string; readOn: string };
+const DRAFT_KEY = "mh-guide-draft";
+const storedDraft = (): GuideDraft | null => { try { const v = JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? "null"); return v && typeof v.marker === "string" && typeof v.personId === "string" ? v : null; } catch { return null; } };
+export const guideDraft = signal<GuideDraft | null>(typeof sessionStorage === "undefined" ? null : storedDraft());
+export function setGuideDraft(d: GuideDraft | null) {
+  guideDraft.value = d;
+  try { if (d) sessionStorage.setItem(DRAFT_KEY, JSON.stringify(d)); else sessionStorage.removeItem(DRAFT_KEY); } catch { /* private mode */ }
+}
 
 /** What the views ask the page to do: the page fills these in. */
 export const actions = {
@@ -109,6 +133,14 @@ export const actions = {
 export function openLabs(sec: string, analyte = "") {
   labSection.value = sec; expandedAnalyte.value = analyte; mobileSectionOpen.value = true;
   actions.goTab("body");
+}
+
+/** Follow a figure into time: In depth at a window (one year unless named), with that marker's lane in view. */
+export function openOverTime(lane: string, window: string = DEFAULT_WINDOW) {
+  actions.step();
+  depthLane.value = lane;
+  section.value = isWindowKey(window) ? window : DEFAULT_WINDOW;
+  actions.goTab("depth");
 }
 
 /** Open a section of the active tab, as the sidebar, the cards and the arrows at a section's foot do; "all" is the Overview's six cards. */

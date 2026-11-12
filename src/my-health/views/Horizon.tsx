@@ -8,6 +8,12 @@
  * the rows and the writer are ../horizon/api. A coach sees everything
  * read-only except the plan, which is theirs to write.
  *
+ * Where am I going? (canvas "Verve, one story in four parts", board 06,
+ * 11 Nov 2026): the page states what the person wants first and today
+ * second, and a line the Guide wrote can arrive as a draft: not a target
+ * until the person sets its number. The horizons it reads are published on a
+ * signal for the Overview's cards, In depth's line of time and the Guide's doors.
+ *
  * Pace is arithmetic on the person's own readings; nothing here recommends
  * a number. The plan is intent for a week, not a session for each day; what
  * the week did comes from the sessions and the nights, never a tick box.
@@ -18,10 +24,11 @@ import { signal } from "@preact/signals";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PersonData } from "../derive/person.ts";
 import { addDays, daysBetween, todayStr } from "../derive/format.ts";
+import { horizons as horizonsSignal, guideDraft, setGuideDraft } from "../state.ts";
 import {
-  MARKERS, MARKER_BY_KEY, GROUP_LABEL, FIRST_MARKERS, type MarkerKey, type Target, type PlanRow, type PlanKind, type Tone,
+  MARKERS, MARKER_BY_KEY, GROUP_LABEL, FIRST_MARKERS, type MarkerKey, type PlanRow, type PlanKind, type Tone,
   latestOf, historyOf, weeklyHistory, pacesOf, impliedPace, adherenceOf, guideDraftPlan, roadOf, weekOf, daysToGo, nextCheckins, checkinInputs, landedLine,
-  outcomesOf, lastRoadWords, nextSpan, horizonMondays,
+  outcomesOf, lastRoadWords, nextSpan, horizonMondays, toTarget,
   fmtValue, addMonths, longDate, dayMonth, dayMonthLong, dayMonthYear, weekdayDayMonth, clockOf, round, numberWord,
 } from "../horizon/derive.ts";
 import {
@@ -77,7 +84,7 @@ function ProCard({ goTab }: { goTab: (t: string) => void }) {
     <Card>
       <Eyebrow>Pro</Eyebrow>
       <div class="text-[18px] font-semibold text-text">Horizon is part of Pro on the website.</div>
-      <p class="m-0 text-[15px] leading-relaxed text-text-2">A horizon is a date, the markers you want different by then, and the week that gets you there. Free keeps Overview, In depth, Body and the Guide's read. A horizon can be stopped any time; the readings stay.</p>
+      <p class="m-0 text-[15px] leading-relaxed text-text-2">A horizon is a date, the markers you want different by then, and the week that gets you there. Free keeps the Overview, Body, Reports and the Guide's first read. A horizon can be stopped any time; the readings stay.</p>
       <div class="flex flex-wrap gap-2">
         <a href="/plans" class="inline-flex min-h-10 items-center rounded-[10px] bg-accent px-4 text-[13px] font-semibold text-canvas">See the plans</a>
         <button type="button" onClick={() => goTab("overview")} class="min-h-10 px-3 text-[13px] font-semibold text-text-2 hover:text-text">Not now</button>
@@ -127,8 +134,6 @@ const shortTitle = (t: string) => t.split(",")[0].split(" ").slice(0, 2).join(" 
 const isDone = (h: HorizonFull) => !!h.closed_at && h.checkins.some((c) => c.kind === "final");
 /** The horizons read to their date, newest first; the sidebar and the chips keep the last three. */
 const doneOf = (list: HorizonFull[]) => list.filter(isDone).sort((a, b) => b.ends_on.localeCompare(a.ends_on)).slice(0, 3);
-const toTarget = (t: { marker: string; label: string; unit: string | null; start_value: number | null; start_on: string | null; target_value: number; cadence: any; id?: string }): Target =>
-  ({ id: t.id, marker: t.marker as MarkerKey, label: t.label, unit: t.unit, start_value: t.start_value != null ? Number(t.start_value) : null, start_on: t.start_on, target_value: Number(t.target_value), cadence: t.cadence ?? MARKER_BY_KEY[t.marker]?.cadence ?? "monthly" });
 
 // ── the plan's rows, editable ──
 
@@ -200,14 +205,15 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
   const userId = async () => deps.userId?.() ?? (await deps.supabase.auth.getSession()).data.session?.user.id ?? null;
 
   async function load() {
-    if (!personId) { setList([]); return; }
+    if (!personId) { setList([]); horizonsSignal.value = []; return; }
     try {
       // the closed ones come too: a horizon read to its date stays reachable, with the next one prefilled under it
       const hs = await listHorizons(deps.supabase, personId, true);
-      setList(hs); setLoadError(""); setOff(false); deps.onOff?.(false);
+      setList(hs); horizonsSignal.value = hs; setLoadError(""); setOff(false); deps.onOff?.(false);
       if (hs.length) setPro("yes");
       deps.onHorizons?.([...hs.filter((h) => !h.closed_at), ...doneOf(hs)].map((h) => ({ id: h.id, title: h.title, ends_on: h.ends_on, done: !!h.closed_at })));
     } catch (e: any) {
+      horizonsSignal.value = [];
       if (e?.name === "HorizonOff") { setOff(true); setList([]); setLoadError(""); deps.onOff?.(true); deps.onHorizons?.([]); return; }
       setLoadError(e?.message ?? "Could not read the horizons."); setList([]);
     }
@@ -242,6 +248,9 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
   // no open horizon: the last one read to its date is the page, with the next one prefilled beneath it
   const current = r && r !== "new" ? list.find((h) => h.id === r) ?? null : open[0] ?? done[0] ?? null;
   const showSetup = owner && (r === "new" || (!current && !open.length));
+  // a line the Guide wrote, carried here as a draft for this person
+  const gd = guideDraft.value;
+  const draftMarker = gd && gd.personId === personId && MARKER_BY_KEY[gd.marker] ? (gd.marker as MarkerKey) : null;
 
   const nav = open.length || done.length || owner ? (
     <div class="flex flex-wrap gap-2" role="tablist" aria-label="Your horizons">
@@ -263,7 +272,7 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
       {loadError && <Quiet>{loadError}</Quiet>}
       {consent && <ConsentBox onAgree={() => void agreeConsent()} busy={busy === "consent"} />}
       {showSetup
-        ? <Setup deps={deps} person={person} today={today} personId={personId} hasOthers={open.length > 0 || done.length > 0} nav={nav}
+        ? <Setup deps={deps} person={person} today={today} personId={personId} hasOthers={open.length > 0 || done.length > 0} nav={nav} draftMarker={draftMarker}
             prefill={!open.length && done[0] ? prefillOf(done[0], person, today) : undefined} key={!open.length && done[0] ? `next-${done[0].id}` : "new"}
             onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); }}
             onError={onApiError} onCancel={() => { route.value = ""; history.replaceState(null, "", "#horizon"); }} />
@@ -306,6 +315,10 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
     ? (c.pace.as_of ? `Figures as of ${new Date(c.pace.as_of).toLocaleDateString("en-GB", { weekday: "long" })}, before the week's last sync.` : "Written before the app had synced the week.")
     : null;
   const authorWords = h.plan?.author === "coach" ? "written by your coach" : h.plan?.author === "guide" ? "drafted by the Guide" : h.plan ? "written by you" : "";
+  // a line the Guide wrote, carried here: a draft until the person sets its number, and gone when they leave it
+  const gd = guideDraft.value;
+  const draftDef = gd && owner && !closed && gd.personId === h.person_id && !targets.some((t) => t.marker === gd.marker) ? MARKER_BY_KEY[gd.marker] ?? null : null;
+  const draft = draftDef && gd ? { def: draftDef, readOn: gd.readOn, now: person ? latestOf(draftDef.key, person, today) : null } : null;
 
   // the horizon set before the zone column existed learns its zone on the owner's visit; the scheduled check-in needs it
   useEffect(() => {
@@ -368,29 +381,37 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
         </div>
         {!person && <Quiet>Reading your numbers…</Quiet>}
         <div class="flex flex-col">
-          <div class="hidden grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,.8fr))_minmax(0,1.6fr)_minmax(0,1.6fr)] gap-3 border-b border-border pb-2 font-mono text-[11px] text-text-3 md:grid">
-            <span>Marker</span><span class="text-right">{dayMonth(h.starts_on)}</span><span class="text-right">Now</span><span class="text-right">{dayMonth(h.ends_on)}</span><span>Track</span><span>Pace</span>
+          <div class="hidden grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_repeat(2,minmax(0,.8fr))_minmax(0,1.5fr)_minmax(0,1.6fr)] gap-3 border-b border-border pb-2 font-mono text-[11px] text-text-3 md:grid">
+            <span>Marker</span><span class="text-right">I want, by {dayMonth(h.ends_on)}</span><span class="text-right">Today</span><span class="text-right">On {dayMonth(h.starts_on)}</span><span>Track</span><span>Pace</span>
           </div>
           {paces.map((p) => (
-            <div class="grid grid-cols-2 items-center gap-x-3 gap-y-1 border-b border-border py-3 last:border-b-0 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,.8fr))_minmax(0,1.6fr)_minmax(0,1.6fr)]" key={p.marker}>
-              <span class="col-span-2 flex flex-col md:col-span-1"><span class="text-[15px] text-text">{p.label}</span><span class="text-[12px] text-text-3">{MARKER_BY_KEY[p.marker]?.how ?? ""}{p.source ? ` · ${p.source}` : ""}</span></span>
-              <span class="font-mono text-[15px] font-semibold text-text-3 md:text-right">{p.startText}</span>
-              <span class="font-mono text-[15px] font-semibold text-text md:text-right">{p.nowText}{p.unit && p.now != null ? <span class="ml-1 font-mono text-[11px] font-medium text-text-3">{p.unit}</span> : null}</span>
-              <span class="font-mono text-[15px] font-semibold text-accent-text md:text-right">{p.targetText}</span>
-              <span class="col-span-2 md:col-span-1"><Track progress={p.progress} elapsed={p.elapsed} tone={p.tone} /></span>
-              <span class={`col-span-2 flex items-center justify-between text-[13px] font-medium md:col-span-1 ${TONE_TEXT[p.tone]}`}>
+            <div class="grid grid-cols-3 items-center gap-x-3 gap-y-1 border-b border-border py-3 last:border-b-0 md:grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_repeat(2,minmax(0,.8fr))_minmax(0,1.5fr)_minmax(0,1.6fr)]" key={p.marker}>
+              <span class="col-span-3 flex flex-col md:col-span-1"><span class="text-[15px] text-text">{p.label}</span><span class="text-[12px] text-text-3">{MARKER_BY_KEY[p.marker]?.how ?? ""}{p.source ? ` · ${p.source}` : ""}</span></span>
+              <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">I want</span><span class="font-mono text-[15px] font-semibold text-accent-text">{MARKER_BY_KEY[p.marker]?.standing ? <span class="mr-1 font-sans text-[12px] font-normal text-text-2">at least</span> : null}{p.targetText}</span></span>
+              <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">Today</span><span class="font-mono text-[15px] font-semibold text-text">{p.nowText}{p.unit && p.now != null ? <span class="ml-1 font-mono text-[11px] font-medium text-text-3">{p.unit}</span> : null}</span></span>
+              <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">On {dayMonth(h.starts_on)}</span><span class="font-mono text-[15px] font-semibold text-text-3">{p.startText}</span></span>
+              <span class="col-span-3 md:col-span-1"><Track progress={p.progress} elapsed={p.elapsed} tone={p.tone} /></span>
+              <span class={`col-span-3 flex items-center justify-between text-[13px] font-medium md:col-span-1 ${TONE_TEXT[p.tone]}`}>
                 {p.pace_word}
                 {owner && !closed && targets.length > 1 && <button type="button" onClick={async () => { const t = targets.find((x) => x.marker === p.marker); if (!t?.id) return; const err = await removeTarget(deps.supabase, t.id); if (err) setNotice(err); else await reload(); }} class="ml-2 text-[11px] font-normal text-text-3 hover:text-text" aria-label={`Remove ${p.label}`}>Remove</button>}
               </span>
             </div>
           ))}
         </div>
+        {draft && !adding ? (
+          <div class="flex flex-col gap-2 rounded-[12px] border border-accent-border bg-accent-fill p-4">
+            <div class="font-mono text-[11px] font-medium text-accent-text">From the Guide · a draft, not a target</div>
+            <div class="text-[15px] font-semibold text-text">{draft.def.label}</div>
+            <p class="m-0 text-[13px] leading-relaxed text-accent-text">You chose "Make it a target" on a line the Guide wrote on {dayMonthLong(draft.readOn)}. {draft.now ? `Today it reads ${draft.now.display ?? fmtValue(draft.def, draft.now.value)} ${draft.now.unit ?? draft.def.unit}.` : "There is no reading of it yet."}</p>
+            <div class="flex flex-wrap gap-x-5 gap-y-1 text-[13px] font-semibold"><button type="button" onClick={() => setAdding(true)} class="text-accent-text hover:text-text">Set my number</button><button type="button" onClick={() => setGuideDraft(null)} class="text-text-2 hover:text-text">Leave it</button></div>
+          </div>
+        ) : null}
         {owner && !closed && person && (adding
-          ? <AddTarget person={person} today={today} taken={targets.map((t) => t.marker)} weeks={Math.max(1, Math.ceil(daysBetween(today, h.ends_on) / 7))}
-              onAdd={async (t) => { const uid = await userId(); if (!uid) return; const res = await addTarget(deps.supabase, { horizon_id: h.id, user_id: uid, ...t }); if (!res.ok) setNotice(res.detail || ERROR_WORDS.unknown); else { setAdding(false); await reload(); } }}
+          ? <AddTarget person={person} today={today} taken={targets.map((t) => t.marker)} weeks={Math.max(1, Math.ceil(daysBetween(today, h.ends_on) / 7))} preset={draft?.def.key}
+              onAdd={async (t) => { const uid = await userId(); if (!uid) return; const res = await addTarget(deps.supabase, { horizon_id: h.id, user_id: uid, ...t }); if (!res.ok) setNotice(res.detail || ERROR_WORDS.unknown); else { if (draft && t.marker === draft.def.key) setGuideDraft(null); setAdding(false); await reload(); } }}
               onCancel={() => setAdding(false)} />
           : <div><button type="button" onClick={() => setAdding(true)} class="rounded-full border border-border px-3 py-1 text-[12px] text-text-2 hover:border-accent-border">Add a target</button></div>)}
-        <Quiet>Any of the {MARKERS.length} markers on this page can be a target. Verve does not set the number; it tells you the pace it implies and whether the weeks are keeping it.</Quiet>
+        <Quiet>You set every number under "I want". Verve sets none, and promises none: it tells you the pace your number implies and whether the weeks are keeping it. Any of the {MARKERS.length} markers on this page can be a target.</Quiet>
       </Card>
 
       <Card id="horizon-plan">
@@ -486,7 +507,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
 
       <div class="flex flex-wrap items-center gap-3 rounded-[16px] border border-accent-border bg-accent-fill px-5 py-4 text-[13px] text-text-2">
         <span class="font-mono text-[11px] font-medium text-accent-text">Pro</span>
-        <span>Horizon is part of Pro on the website. Free keeps Overview, In depth, Body and the Guide's read. A horizon can be stopped any time; the readings stay.</span>
+        <span>Horizon is part of Pro on the website. Free keeps the Overview, Body, Reports and the Guide's first read. A horizon can be stopped any time; the readings stay.</span>
       </div>
     </>
   );
@@ -599,9 +620,9 @@ function FinalView({ deps, h, person, today, owner, nav, personId, hasOpen, onSt
 }
 
 /** One more target on a running horizon: the marker, its reading now, the number, the pace it implies. */
-function AddTarget({ person, today, taken, weeks, onAdd, onCancel }: { person: PersonData; today: string; taken: MarkerKey[]; weeks: number; onAdd: (t: Omit<StartTarget, "cadence"> & { cadence: any }) => void; onCancel: () => void }) {
+function AddTarget({ person, today, taken, weeks, preset, onAdd, onCancel }: { person: PersonData; today: string; taken: MarkerKey[]; weeks: number; /** The marker the form opens on: a draft from the Guide. */ preset?: MarkerKey; onAdd: (t: Omit<StartTarget, "cadence"> & { cadence: any }) => void; onCancel: () => void }) {
   const free = MARKERS.filter((m) => !taken.includes(m.key));
-  const [key, setKey] = useState<MarkerKey>(free[0]?.key ?? "mets");
+  const [key, setKey] = useState<MarkerKey>(preset && free.some((m) => m.key === preset) ? preset : free[0]?.key ?? "mets");
   const [value, setValue] = useState("");
   const def = MARKER_BY_KEY[key];
   const now = latestOf(key, person, today);
@@ -614,9 +635,9 @@ function AddTarget({ person, today, taken, weeks, onAdd, onCancel }: { person: P
         <select value={key} onChange={(e) => { setKey((e.currentTarget as HTMLSelectElement).value as MarkerKey); setValue(""); }} class={`${inputClass} text-[13px]`}>
           {free.map((m) => <option value={m.key}>{m.label}</option>)}
         </select>
-        <span class="text-[12px] text-text-3">{now ? `now ${now.display ?? fmtValue(def, now.value)} ${unit}` : "no reading yet"}</span>
-        <input type="number" step={10 ** -def.decimals} value={value} onInput={(e) => setValue((e.currentTarget as HTMLInputElement).value)} placeholder="—" class={`${inputClass} w-28 font-mono`} aria-label={`${def.label} target`} />
+        <input type="number" step={10 ** -def.decimals} value={value} onInput={(e) => setValue((e.currentTarget as HTMLInputElement).value)} placeholder="I want" class={`${inputClass} w-28 font-mono`} aria-label={`${def.label}: the number you want`} />
         <span class="font-mono text-[11px] text-text-3">{unit}</span>
+        <span class="text-[12px] text-text-3">{now ? `today ${now.display ?? fmtValue(def, now.value)} ${unit}` : "no reading yet"}</span>
       </div>
       <Quiet>{note}</Quiet>
       <div class="flex gap-2"><Button onClick={onCancel}>Cancel</Button><Button primary disabled={!value || !Number.isFinite(n)} onClick={() => onAdd({ marker: key, label: def.label, unit, start_value: now?.value != null ? round(now.value, def.decimals + 1) : null, start_on: now?.on ?? today, target_value: n, cadence: def.cadence })}>Add</Button></div>
@@ -639,8 +660,17 @@ const Step = ({ n, title, children }: { n: number; title: string; children: any 
   <Card><div class="flex items-center gap-3"><span class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-accent-border bg-accent-fill font-mono text-[12px] font-semibold text-accent-text">{n}</span><H2>{title}</H2></div>{children}</Card>
 );
 
-function Setup({ deps, person, today, personId, hasOthers, nav, prefill, onStarted, onError, onCancel }: {
+/** What each length is long enough for. Blood work rarely moves beyond its usual swing in three months (the founder, 11 Nov 2026). */
+const LENGTH_WORDS: Record<3 | 6 | 12, string> = {
+  3: "Three months: long enough for a fitness test to show a change. Two blood reports this close together rarely differ by more than their usual swing.",
+  6: "Six months: room for two blood reports. It ends in the opposite season, which shifts some markers a little by itself.",
+  12: "Twelve months: the same season at both ends, and room for a marker that moves slowly.",
+};
+
+function Setup({ deps, person, today, personId, hasOthers, nav, prefill, draftMarker, onStarted, onError, onCancel }: {
   deps: HorizonDeps; person: PersonData | null; today: string; personId: string; hasOthers: boolean; nav: any;
+  /** A line the Guide wrote, carried here: its marker is listed and ticked, the number left for the person. */
+  draftMarker?: MarkerKey | null;
   /** The next horizon after one read to its date: the same span, markers, plan and check-in choices, the numbers left empty. */
   prefill?: Prefill;
   onStarted: (id: string) => Promise<void>; onError: (e: ApiError, retry: () => void) => boolean; onCancel: () => void;
@@ -649,8 +679,8 @@ function Setup({ deps, person, today, personId, hasOthers, nav, prefill, onStart
   const [kind, setKind] = useState<"date" | 3 | 6 | 12>(prefill?.kind ?? "date");
   const [title, setTitle] = useState(prefill?.title ?? "");
   const [date, setDate] = useState(prefill?.date ?? "");
-  const [drafts, setDrafts] = useState<Record<string, Draft>>(prefill ? Object.fromEntries(prefill.markers.map((k) => [k, { ticked: true, value: "" }])) : {});
-  const [shown, setShown] = useState<MarkerKey[]>(prefill?.markers.length ? prefill.markers : FIRST_MARKERS);
+  const [drafts, setDrafts] = useState<Record<string, Draft>>({ ...(prefill ? Object.fromEntries(prefill.markers.map((k) => [k, { ticked: true, value: "" }])) : {}), ...(draftMarker ? { [draftMarker]: { ticked: true, value: "" } } : {}) });
+  const [shown, setShown] = useState<MarkerKey[]>(() => { const base = prefill?.markers.length ? prefill.markers : FIRST_MARKERS; return draftMarker && !base.includes(draftMarker) ? [draftMarker, ...base] : base; });
   const [allShown, setAllShown] = useState(false);
   // "carry": the last horizon's plan, as it stands, until it is edited or a fresh draft is asked for
   const [planChoice, setPlanChoice] = useState<"coach" | "guide" | "carry">(prefill?.planRows.length ? "carry" : "coach");
@@ -700,6 +730,7 @@ function Setup({ deps, person, today, personId, hasOthers, nav, prefill, onStart
       });
       setBusy(false);
       if (!res.ok) { if (!onError(res.error, () => void go())) setProblem(res.detail ? `${ERROR_WORDS[res.error]} ${res.detail}` : ERROR_WORDS[res.error]); return; }
+      if (draftMarker) setGuideDraft(null);   // the draft is a target now, or was unticked: either way it is settled
       await onStarted(res.data.id);
     };
     await go();
@@ -725,6 +756,7 @@ function Setup({ deps, person, today, personId, hasOthers, nav, prefill, onStart
           <Opt on={kind === "date"} onPick={() => setKind("date")} title="A date" sub="A race, an event, a check-up" />
           {([3, 6, 12] as const).map((m) => <Opt key={m} on={kind === m} onPick={() => setKind(m)} title={`${m} months`} sub={`to ${dayMonthYear(addMonths(today, m))}`} />)}
         </div>
+        {kind !== "date" && <Quiet>{LENGTH_WORDS[kind]}</Quiet>}
         {kind === "date" && (
           <div class="flex flex-wrap items-end gap-3">
             <label class="flex flex-1 basis-[260px] flex-col gap-1"><Eyebrow>Name</Eyebrow><input type="text" value={title} maxLength={80} onInput={(e) => setTitle((e.currentTarget as HTMLInputElement).value)} placeholder="Boston Marathon" class={inputClass} /></label>
@@ -739,6 +771,7 @@ function Setup({ deps, person, today, personId, hasOthers, nav, prefill, onStart
           ? "The same markers, each starting from today's figure. Set the number; under each, what the last road did and the pace the new number implies. Nothing here is a recommendation; it is arithmetic on your own readings."
           : "Tick a marker and set the number. Under each, the pace it implies from where you are today. Nothing here is a recommendation; it is arithmetic on your own readings."}</p>
         {!person && <Quiet>Reading your numbers…</Quiet>}
+        {draftMarker && <p class="m-0 rounded-[10px] border border-accent-border bg-accent-fill px-4 py-3 text-[13px] leading-relaxed text-accent-text">From the Guide, a draft: {MARKER_BY_KEY[draftMarker].label} is ticked. Set its number, or untick it. <button type="button" onClick={() => { setGuideDraft(null); setDraft(draftMarker, { ticked: false, value: "" }); }} class="font-semibold underline-offset-2 hover:underline">Leave it</button></p>}
         <div class="flex flex-col">
           {rowsShown.map((k, i) => {
             const def = MARKER_BY_KEY[k]; const d = draft(k);
@@ -750,11 +783,12 @@ function Setup({ deps, person, today, personId, hasOthers, nav, prefill, onStart
               ? `${impliedPace(def, now, n, weeks, historyOf(k, person, today), today, def.standing ? weeklyHistory(person, k, today, 13) : undefined)}${lastRoad ? ` ${lastRoad}` : ""}`
               : d.ticked ? `${lastRoad ? `${lastRoad} ` : ""}Set the number.` : def.how;
             return (
-              <div class={`grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 py-3 md:grid-cols-[auto_minmax(0,1.6fr)_minmax(0,.7fr)_auto] ${i ? "border-t border-border" : ""}`} key={k}>
+              <div class={`grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 py-3 md:grid-cols-[auto_minmax(0,1.1fr)_auto_minmax(0,1.5fr)] ${i ? "border-t border-border" : ""}`} key={k}>
                 <input type="checkbox" checked={d.ticked} onChange={(e) => setDraft(k, { ticked: (e.currentTarget as HTMLInputElement).checked })} aria-label={def.label} class="h-5 w-5 accent-accent" />
-                <span class="text-[15px] text-text">{def.label} <span class="text-[12px] text-text-3">{now ? `${def.kind === "blood" ? "" : "now "}${now.display ?? fmtValue(def, now.value)} ${unit}${def.kind === "blood" ? ` on ${dayMonthLong(now.on)}` : ""}` : "no reading yet"}</span></span>
-                <input type="number" step={10 ** -def.decimals} value={d.value} placeholder="—" disabled={!d.ticked} onInput={(e) => setDraft(k, { value: (e.currentTarget as HTMLInputElement).value })} aria-label={`${def.label} target`} class={`${inputClass} col-start-2 w-28 font-mono md:col-start-auto`} />
-                <span class="font-mono text-[11px] text-text-3">{unit}</span>
+                <span class="text-[15px] text-text">{def.label}</span>
+                {/* what you want first, today beside it */}
+                <input type="number" step={10 ** -def.decimals} value={d.value} placeholder="I want" disabled={!d.ticked} onInput={(e) => setDraft(k, { value: (e.currentTarget as HTMLInputElement).value })} aria-label={`${def.label}: the number you want`} class={`${inputClass} col-start-2 w-28 font-mono md:col-start-auto`} />
+                <span class="col-start-2 text-[12px] text-text-3 md:col-start-auto"><span class="font-mono text-[11px]">{unit}</span>{now ? ` · ${def.kind === "blood" ? "" : "today "}${now.display ?? fmtValue(def, now.value)}${def.kind === "blood" ? ` on ${dayMonthLong(now.on)}` : ""}` : " · no reading yet"}</span>
                 <span class={`col-span-2 text-[12px] leading-relaxed md:col-span-4 md:pl-8 ${d.ticked ? "text-text-2" : "text-text-3"}`}>{note}</span>
               </div>
             );

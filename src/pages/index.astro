@@ -13,11 +13,16 @@
  *   what Verve reads: the four tabs as four dark frames, the product as it
  *   is, inside the light page;
  *   every threshold named, with one marker's bands as the proof;
- *   who it is for; what you come back for; the plans. (The line on who
- *   built it came out on 11 November 2026, at the founder's word.)
+ *   who it is for; your health in four questions; the plans. (The line on
+ *   who built it came out on 11 November 2026, at the founder's word.)
  *
- * Start here is folded in: the first number, who it is for and what you
- * come back for used to be a page of their own. No line on this page, or
+ * The four questions (canvas "Verve, one story in four parts", board 09) took
+ * the place of "What you come back for" on 11 November 2026: the same thing,
+ * told as a story and not by how often a person returns. The lines are
+ * data/story.ts, the ones My health itself reads.
+ *
+ * Start here is folded in: the first number and who it is for used to be a
+ * page of their own. No line on this page, or
  * on the site, promises anything about how long a person will live; the
  * two cohort findings are cited as findings.
  *
@@ -33,7 +38,7 @@ import LandingGlimpses from "../components/LandingGlimpses.astro";
 import { COUNTS } from "../data/scienceTopics";
 import { BODY_MARKERS } from "../data/bodyMarkers";
 import { GET_APP_PATH, PRO_PAGES } from "../data/site";
-import { RETURNS } from "../data/returns";
+import { STORY, STORY_TITLE, STORY_LINE } from "../data/story";
 import { planOf, isPriced, priceText } from "../data/plans";
 
 /** The name line and the one sentence, as board 11 sets them. The title and the cards for X and iMessage read the same. */
@@ -185,19 +190,30 @@ const quiet = "inline-flex min-h-11 items-center text-[15px] font-semibold text-
     </div>
   </section>
 
-  <!-- ── What you come back for: the four returns, one per cadence ── -->
-  <section id="what-you-come-back-for" class="scroll-mt-6 border-t border-border bg-card px-6 py-14 sm:px-10">
+  <!-- ── Your health, in four questions: the story My health tells, in its own order ── -->
+  <section id="four-questions" class="scroll-mt-6 border-t border-border bg-card px-6 py-14 sm:px-10">
     <div class="mx-auto flex max-w-6xl flex-col gap-7">
-      <h2 class={h2}>What you come back for</h2>
-      <ul class="grid gap-x-5 gap-y-7 sm:grid-cols-2 lg:grid-cols-4" role="list">
-        {RETURNS.map((r) => (
+      <div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <div class="flex max-w-3xl flex-col gap-3">
+          <h2 class={h2}>{STORY_TITLE}</h2>
+          <p class="text-[17px] leading-[1.5] text-text-secondary">{STORY_LINE}</p>
+        </div>
+        <span class="inline-flex h-6 items-center rounded-full border border-border-strong bg-alt px-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.04em] text-text-2">Sample figures</span>
+      </div>
+      <ol class="grid list-none gap-x-5 gap-y-7 p-0 sm:grid-cols-2 lg:grid-cols-4">
+        {STORY.map((s) => (
           <li class="flex flex-col gap-2 border-t-2 border-text pt-4">
-            <span class={eyebrow}>{r.cadence}</span>
-            <h3 class="text-[17px] font-semibold text-text-primary">{r.title}</h3>
-            <p class="text-[15px] leading-[1.5] text-text-secondary">{r.line}</p>
+            <span class={eyebrow}>{s.name}</span>
+            <h3 class="text-[18px] font-semibold tracking-[-0.01em] text-text-primary">{s.question}</h3>
+            <p class="t-figure text-text-primary">{s.sample.figure}{s.sample.unit ? <span class="t-unit ml-1.5">{s.sample.unit}</span> : null}</p>
+            <p class="text-[15px] leading-[1.5] text-text-secondary">{s.line}</p>
           </li>
         ))}
-      </ul>
+      </ol>
+      <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+        <a href="#find-your-number" class="inline-flex min-h-12 items-center justify-center rounded-full bg-accent px-6 text-[15px] font-semibold text-canvas transition-colors hover:bg-accent-text">Find your number</a>
+        <a href="/plans" class={quiet}>See what is free and what is Pro</a>
+      </div>
     </div>
   </section>
 
