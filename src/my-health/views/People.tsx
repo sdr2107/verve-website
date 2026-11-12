@@ -82,12 +82,13 @@ export function SpaceSwitch() {
 /**
  * The line under the greeting (board 08): whose page this is and who else sees it. On your own page, who it is
  * shared with and the way to Access; on a page shared with you, whose it is, since when and what the share covers;
- * on a page you keep for someone, that you look after it. A sentence in mono, never a stamp beside the name.
+ * on a page you keep for someone, that you look after it. A sentence in the label face, at the size of every
+ * other label on the page (11 px; it was 12 with its own letter spacing until 12 Nov 2026), never a stamp beside the name.
  */
 export function PersonHead() {
   const p = person.value, d = doc.value;
   if (!p) return null;
-  const line = "font-mono text-[12px] font-medium tracking-[0.02em] text-text-3";
+  const line = "t-eyebrow";
   if (p.self) {
     // the document in hand has to be this person's before its shares are read
     const own = d && (d.person?.id ?? "") === p.id ? ownerLine(d.sharing ?? [], d.sharing_pros ?? []) : null;
