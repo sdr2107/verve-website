@@ -15,7 +15,7 @@ const MARKER_WORDS: [RegExp, MarkerKey][] = [
   [/\bdose\b|met-min|volume|sessions?|workouts?|activity/i, "dose"], [/hrv/i, "hrv"], [/resting heart|resting rate/i, "rhr"], [/recovery/i, "hrr"], [/sleep|bedtime/i, "sleep"],
   [/steps/i, "steps"], [/waist/i, "waist"], [/body fat/i, "body_fat"], [/weight/i, "weight"], [/muscle|lean mass/i, "almi"],
 ];
-/** The keys the function may tag a line with: the markers a target can be set on. Sent with the working, so the tag is one of a fixed list. */
+/** The keys the function may tag a line with: Horizon's catalogue of markers. Sent with the working, so the tag is one of a fixed list. A blood marker is still a tag (its line leads into time and to its study) though it is not a target while blood is out of Horizon (horizon/derive isTargetable). */
 export const MARKER_KEYS = MARKERS.map((m) => m.key).join(" ");
 /** The marker a line is about: the function's own tag when it is one of the list, else the first marker its words name, else none. */
 export const markerOf = (c: { marker?: unknown; topic?: unknown; text?: unknown; headline?: unknown } | null | undefined): MarkerKey | null => {

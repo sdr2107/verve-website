@@ -7,7 +7,7 @@ import {
   MARKERS, MARKER_BY_KEY, latestOf, historyOf, paceOf, pacesOf, impliedPace, amountWords, fmtValue,
   adherenceOf, guideDraftPlan, weekOf, daysToGo, roadOf, nextCheckins, checkinInputs, weekFigures, weeklyHistory, dedupeSessions, addMonths, clockOf,
   landedLine, reachedTarget, upTo, horizonMondays, horizonWeeks, outcomeOf, outcomesOf, lastRoadWords, nextSpan,
-  swingRead, medicineOf,
+  swingRead, medicineOf, BLOOD_TARGETS_OPEN, isTargetable, TARGET_MARKERS, FIRST_MARKERS, openTargets, horizonLinesByCard,
 } from "../src/my-health/horizon/derive.ts";
 
 const TODAY = "2026-11-08";                      // a Sunday; the last complete week is 26 October
@@ -250,9 +250,10 @@ test("history gives the readings a six-month comparison needs", () => {
   assert.equal(historyOf("ldl", person, TODAY)[0].v, 143);
 });
 
-test("the markers a target can be set on are 36, the count the page names", () => {
+test("the catalogue holds 36 markers; a target can be set on 27 of them while blood is out of Horizon", () => {
   assert.equal(MARKERS.length, 36);
   assert.equal(new Set(MARKERS.map((m) => m.key)).size, 36);
+  assert.equal(TARGET_MARKERS.length, 27, "the count the page names");
 });
 
 test("a blood target says which report it is read from once one newer than the start lands (board 04)", () => {
@@ -399,21 +400,41 @@ test("a medicine on file is the newest answer given in the app, on a Metabolic r
   assert.equal(medicineOf("ldl", person, TODAY), null, "a person who has said nothing has no line");
 });
 
-test("the row carries both guards in the page's own sentences; the check-in's inputs carry the swing alone", () => {
+test("a blood row carries both guards in the page's own sentences, and no guard names a cause, a number or a test", () => {
+  // read from the row's own functions: while blood is out of Horizon no blood row reaches the page (the test after this one)
   const p = withMedicine([{ measured_at: "2026-09-02T08:00:00", source: "metabolic", on_cholesterol_med: true }]);
-  const targets = [tgt("ldl", 143, 135, { start_on: "2026-04-14" }), tgt("mets", 8.6, 9.6), tgt("dose", 820, 1000)];
-  const [ldl, mets, dose] = pacesOf(targets, H, p, TODAY);
+  const target = tgt("ldl", 143, 135, { start_on: "2026-04-14" });
+  const ldl = paceOf(target, H, latestOf("ldl", p, TODAY), TODAY);
+  const medicine = medicineOf("ldl", p, TODAY).line;
   assert.equal(ldl.pace_word, "At your number");
-  assert.equal(ldl.medicine, "On cholesterol medication, as last said in the app on 2 September.");
-  assert.equal(mets.medicine, null); assert.equal(dose.medicine, null); assert.equal(mets.swing, null);
-  const inputs = checkinInputs(H, targets, [], p, TODAY);
-  // the check-in's inputs carry the swing's sentence; the medicine stays on the page (the inputs go to the model, the email and a coach's thread)
-  assert.deepEqual(Object.keys(inputs.pace[0]).sort(), ["expected_today", "label", "marker", "measured_on", "now", "pace_word", "start", "swing", "target", "unit"]);
-  assert.equal(inputs.pace[0].swing, "The move from 143 is inside LDL's usual swing, about 26 to 27%.");
-  assert.ok(!/medic/i.test(JSON.stringify(inputs)), "nothing about a medicine leaves the page");
-  assert.deepEqual(Object.keys(inputs.pace[1]).sort(), ["expected_today", "label", "marker", "measured_on", "now", "pace_word", "start", "target", "unit"], "a row with no swing carries no such key");
+  assert.equal(ldl.swing.words, "The move from 143 is inside LDL's usual swing, about 26 to 27%.");
+  assert.equal(medicine, "On cholesterol medication, as last said in the app on 2 September.");
   // on the date, the outcome carries the medicine on file by then
-  assert.equal(outcomeOf(tgt("ldl", 143, 135, { start_on: "2026-04-14" }), DONE, p).medicine, "On cholesterol medication, as last said in the app on 2 September.");
-  // no sentence the guards write names a cause, suggests a number or asks for a test
-  for (const text of [ldl.swing.words, ldl.medicine, landedLine({ marker: "ldl", label: "LDL", value: 131, unit: "mg/dL", on: "2026-10-12", previous: 143 }, { start_value: 143, target_value: 135 })]) assert.ok(!/because|due to|thanks to|should|aim for|recommend|retest|test again|another test/i.test(text), text);
+  assert.equal(outcomeOf(target, DONE, p).medicine, medicine);
+  for (const text of [ldl.swing.words, medicine, landedLine({ marker: "ldl", label: "LDL", value: 131, unit: "mg/dL", on: "2026-10-12", previous: 143 }, { start_value: 143, target_value: 135 })]) assert.ok(!/because|due to|thanks to|should|aim for|recommend|retest|test again|another test/i.test(text), text);
+});
+
+// ── blood markers are out of Horizon, pending the lawyers' review (the founder's word, 12 Nov 2026) ──
+
+test("no blood marker can be a target: not offered, not paced, not on the Overview's card, not in the check-in", () => {
+  assert.equal(BLOOD_TARGETS_OPEN, false, "reopening is the founder's word, after the review");
+  const blood = MARKERS.filter((m) => m.kind === "blood").map((m) => m.key);
+  assert.deepEqual(blood, ["ldl", "apob", "remnant", "non_hdl", "triglycerides", "hdl", "hba1c", "fasting_glucose", "hs_crp"]);
+  for (const k of blood) assert.equal(isTargetable(k), false, k);
+  for (const k of ["mets", "dose", "weight", "bp", "rhr", "a_marker_the_catalogue_does_not_know"]) assert.equal(isTargetable(k), true, k);
+  // not offered: the set-up's lists hold none, and the first seven are six
+  assert.ok(TARGET_MARKERS.every((m) => m.kind !== "blood"));
+  assert.deepEqual(FIRST_MARKERS, ["mets", "weight", "waist", "almi", "dose", "rhr"]);
+  // a blood target already on file is left where it is and is not read
+  const p = withMedicine([{ measured_at: "2026-09-02T08:00:00", source: "metabolic", on_cholesterol_med: true }]);
+  const targets = [tgt("ldl", 143, 135, { start_on: "2026-04-14" }), tgt("mets", 8.6, 9.6), tgt("triglycerides", 97, 140, { start_on: "2026-10-12" }), tgt("dose", 820, 1000)];
+  assert.deepEqual(openTargets(targets).map((t) => t.marker), ["mets", "dose"]);
+  assert.deepEqual(pacesOf(targets, H, p, TODAY).map((x) => x.marker), ["mets", "dose"]);
+  assert.deepEqual(outcomesOf(targets, DONE, p).map((x) => x.marker), ["mets", "dose"]);
+  assert.deepEqual(Object.keys(horizonLinesByCard(H, targets, p, TODAY)).sort(), ["fitness", "movement"], "no line on the Body card");
+  // and the check-in's inputs carry no blood row, no swing and nothing about a medicine
+  const inputs = checkinInputs(H, targets, [], p, TODAY);
+  assert.deepEqual(inputs.pace.map((x) => x.marker), ["mets", "dose"]);
+  assert.ok(!/medic|swing|LDL|triglycer/i.test(JSON.stringify(inputs)));
+  for (const row of inputs.pace) assert.deepEqual(Object.keys(row).sort(), ["expected_today", "label", "marker", "measured_on", "now", "pace_word", "start", "target", "unit"]);
 });
