@@ -298,7 +298,7 @@ import { lastWeekOf, snapshotOf, weekFiguresOf, addMonths, kindOf } from "../src
 import { storeOf } from "../src/my-health/derive/activity.ts";
 import { derivePerson } from "../src/my-health/derive/person.ts";
 
-const emptyDoc = (over = {}) => ({ person: { id: "p", account_id: "u" }, labs: [], imaging: [], reports: [], files: [], weeks: [], web_crf: [], web_body: [], app_labs: [], activities: [], app_crf: [], waist: [], profile: { sex: "male", age: 50, height_cm: 175, weekly_met_hours_goal: 16.67 }, signals: [], weights: [], ai: { summary: null, consent: null }, ...over });
+const emptyDoc = (over = {}) => ({ person: { id: "p", account_id: "u" }, labs: [], imaging: [], reports: [], files: [], weeks: [], web_crf: [], web_body: [], app_labs: [], activities: [], app_crf: [], waist: [], profile: { sex: "male", age: 50, height_cm: 168, weekly_met_hours_goal: 16.67 }, signals: [], weights: [], ai: { summary: null, consent: null }, ...over });
 
 test("the Body list is the app's 22 rows in the app's order, blood pressure left to Vitals", () => {
   assert.equal(BODY_DEFS.length, 22);
@@ -335,7 +335,7 @@ test("Lp(a) is judged in its own unit and never to watch; hs-CRP at 10 is not a 
 });
 
 test("the track lays the bands on one line with the value on it", () => {
-  const t = rangeTrack(BODY_DEFS.find((d) => d.key === "waist_cm").bands({ sex: "male", age: 50, heightCm: 175, weightKg: 74, ethnicity: null }), 96);
+  const t = rangeTrack(BODY_DEFS.find((d) => d.key === "waist_cm").bands({ sex: "male", age: 50, heightCm: 168, weightKg: 74, ethnicity: null }), 96);
   assert.equal(t.segments.length, 2);
   assert.ok(t.position > 0.5 && t.position < 1, "96 cm sits past the 94 cm cut for a man");
   assert.equal(judgeValue(derivePerson(emptyDoc()), "waist_cm", 96, "cm").label, "Elevated");

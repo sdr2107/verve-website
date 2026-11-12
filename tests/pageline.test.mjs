@@ -22,8 +22,8 @@ test("the owner's line names the other side, counts several, and says nothing wh
 test("no line carries the word client, and a role is only ever coach or clinician", () => {
   const all = [
     JSON.stringify(ownerLine([{ viewer_email: "x@y", status: "active" }], [{ email: "x@y", role: "coach", title: "Verve" }])),
-    JSON.stringify(viewerLine("Sudeep", "2026-11-03T09:00:00Z", ["activity"], new Date("2026-11-10"))),
-    JSON.stringify(careLine("Amma", 1950)),
+    JSON.stringify(viewerLine("Asha", "2026-11-03T09:00:00Z", ["activity"], new Date("2026-11-10"))),
+    JSON.stringify(careLine("Leela", 1948)),
   ].join(" ");
   assert.equal(/client/i.test(all), false);
   assert.equal(roleChip("coach"), "Coach"); assert.equal(roleChip("clinician"), "Clinician"); assert.equal(roleChip("client"), ""); assert.equal(roleChip(null), "");
@@ -31,8 +31,8 @@ test("no line carries the word client, and a role is only ever coach or clinicia
 
 test("a viewer reads whose page it is, since when, and what the share covers", () => {
   const today = new Date("2026-11-10T08:00:00");
-  assert.deepEqual(viewerLine("Sudeep", "2026-11-03T09:00:00", ["labs", "imaging", "activity", "body"], today), { whose: "Sudeep’s page", rest: "shared with you since 3 November · activity, body and reports" });
-  assert.equal(viewerLine("Sudeep", null, ["activity"], today).rest, "shared with you · activity");
-  assert.equal(viewerLine("Sudeep", "2025-12-30T09:00:00", ["activity"], today).rest, "shared with you since 30 December 2025 · activity");
-  assert.deepEqual(careLine("Amma", 1950), { whose: "Amma’s page", rest: "you look after it · born 1950" });
+  assert.deepEqual(viewerLine("Asha", "2026-11-03T09:00:00", ["labs", "imaging", "activity", "body"], today), { whose: "Asha’s page", rest: "shared with you since 3 November · activity, body and reports" });
+  assert.equal(viewerLine("Asha", null, ["activity"], today).rest, "shared with you · activity");
+  assert.equal(viewerLine("Asha", "2025-12-30T09:00:00", ["activity"], today).rest, "shared with you since 30 December 2025 · activity");
+  assert.deepEqual(careLine("Leela", 1948), { whose: "Leela’s page", rest: "you look after it · born 1948" });
 });
