@@ -23,6 +23,9 @@
  *     thresholds file); a marker with no figure on file says so
  *   · a change of wearable is marked on the line and nothing is compared across it
  *   · a stretch with nothing logged is left empty, never drawn as zero
+ *   · a blood result that repeats unchanged from one entry to the next is one result, drawn and compared once, at
+ *     its first date: the app's entry form saves the figures already on file with every new entry, and a report's
+ *     value is often typed again on the day it arrives (12 Nov 2026: one result read as two, "0%, inside its usual swing")
  *   · Lp(a) is shown once and never as a trend
  *   · no colour and no word marks a change as good or bad
  *
@@ -396,9 +399,11 @@ export function timelineOf(d: TimelinePerson, key: WindowKey, today: string, opt
 
   // ── blood work: each report a mark, never a line; from six months up ──
   if (def.blood) {
-    let anyBefore: string | null = null;
+    let anyBefore: string | null = null, repeated = false;
     for (const b of BLOOD) {
-      const pts = (d.by.get(b.key) ?? []).filter((p) => p.d <= today).slice().sort((a, c) => a.d.localeCompare(c.d));
+      const all = (d.by.get(b.key) ?? []).filter((p) => p.d <= today).slice().sort((a, c) => a.d.localeCompare(c.d));
+      const pts = distinctResults(all);
+      if (all.some((p) => inWin(p.d) && !pts.includes(p))) repeated = true;
       const shown = pts.filter((p) => inWin(p.d));
       if (!shown.length) { const last = pts[pts.length - 1]; if (last && (!anyBefore || last.d > anyBefore)) anyBefore = last.d; continue; }
       const unit = shown[shown.length - 1].unit ?? LABELS[b.key]?.unit ?? "";
@@ -410,6 +415,7 @@ export function timelineOf(d: TimelinePerson, key: WindowKey, today: string, opt
       rows.push(bloodRow(b, pts, from, today, unit));
     }
     if (anyBefore && !lanes.some((l) => BLOOD.some((b) => b.key === l.key))) notes.push(`Blood work: the latest report is from ${dayMonthYear(anyBefore)}, before this window.`);
+    if (repeated) notes.push("A blood result that repeats unchanged from one entry to the next is drawn once, at its first date.");
     const lpa = (d.by.get("lpa_value") ?? []).filter((p) => p.d <= today).slice().sort((a, c) => a.d.localeCompare(c.d)).pop();
     if (lpa) rows.push({ ...single("Lp(a)", lpa.unit ?? "", trim(lpa.v, 1), lpa.d, "Shown once. It is largely inherited and is not drawn as a trend."), key: "lpa_value" });
   } else notes.push("Blood work is drawn from six months up: two reports closer together than that rarely differ by more than their usual swing.");
@@ -431,6 +437,16 @@ export function timelineOf(d: TimelinePerson, key: WindowKey, today: string, opt
   const stretches = (opts.horizons ?? []).filter((h) => h.to > from && h.from < today).map((h) => ({ x0: xOf(h.from < from ? from : h.from), x1: xOf(h.to > today ? today : h.to), label: h.label }));
 
   return { def, from, to: today, custom, lanes, axis, stretches, rows, notes, gap: custom ? null : gap, changes, empty: !lanes.length };
+}
+
+/**
+ * Each result once. The app's entry form saves the figures already on file with every new entry, a report's value is
+ * typed again on the day it arrives, and an export carries both: so the same value on the next entry is the same
+ * result, not a second one. A run of one value (in one unit) is its first reading. A repeat test that came back
+ * identical to the last is folded into it too; nothing is lost, since the page would have said it held.
+ */
+export function distinctResults<T extends { v: number; unit?: string | null }>(pts: T[]): T[] {
+  return pts.filter((p, i) => i === 0 || p.v !== pts[i - 1].v || (p.unit ?? "") !== (pts[i - 1].unit ?? ""));
 }
 
 /** The reading at the window's start and the latest one inside it: the earliest inside the window, or one up to 45 days before it when that is nearer the start. */

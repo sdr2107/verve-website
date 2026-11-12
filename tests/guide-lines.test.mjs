@@ -2,7 +2,7 @@
 // carries for a horizon (horizon/derive horizonLinesByCard). `npm test`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { markerOf, standOut, MARKER_KEYS, WILL_NOT } from "../src/my-health/derive/guideLines.ts";
+import { markerOf, standOut, studyOf, MARKER_KEYS, WILL_NOT } from "../src/my-health/derive/guideLines.ts";
 import { horizonLinesByCard, toTarget, MARKER_BY_KEY } from "../src/my-health/horizon/derive.ts";
 import { LANE_FOR } from "../src/my-health/derive/timeline.ts";
 
@@ -49,4 +49,18 @@ test("a card carries one line for the horizon: the aim, the date, the pace", () 
   assert.equal(lines.body, "On your horizon: LDL 100.0 mg/dL by 9 February · October's report");
   assert.equal(lines.sleep, undefined, "a card with no target carries no line");
   assert.match(horizonLinesByCard(h, targets, person, "2026-11-11", false).fitness, /^On their horizon/);
+});
+
+test("a line's study is its marker's: a line about the dose cites the dose, whatever units its words mention", () => {
+  // 12 Nov 2026: a line about the weekly dose was given the fitness page, by the word MET in "MET-min"
+  assert.equal(studyOf("dose", "Average weekly dose went from 600 MET-min to 900 MET-min.").label, "how the weekly dose works");
+  assert.equal(studyOf("mets", "8.7 on the test before, 8.9 now.").label, "what your fitness number means");
+  assert.equal(studyOf("ldl", "128 in March, 112 in October.").label, "what the lipid markers tell you");
+  assert.equal(studyOf("weight", "Weight down 2 kg.").label, "what body measurements show");
+  assert.equal(studyOf("hba1c", "5.7 then 5.4").href, "/science/labs");
+  // no marker: the words decide, the dose before the fitness page
+  assert.equal(studyOf(null, "No workouts are recorded against a weekly goal of 10 MET-hours of training volume.").label, "how the weekly dose works");
+  assert.equal(studyOf(null, "The six-minute walk test gave 19.").label, "what your fitness number means");
+  assert.equal(studyOf(null, "Nothing here names a marker."), null);
+  assert.equal(studyOf("steps", "About 1,200 more a day."), null, "a marker with no page on the shelf carries no study");
 });
