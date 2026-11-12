@@ -395,6 +395,8 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
                 {p.pace_word}
                 {owner && !closed && targets.length > 1 && <button type="button" onClick={async () => { const t = targets.find((x) => x.marker === p.marker); if (!t?.id) return; const err = await removeTarget(deps.supabase, t.id); if (err) setNotice(err); else await reload(); }} class="ml-2 text-[11px] font-normal text-text-3 hover:text-text" aria-label={`Remove ${p.label}`}>Remove</button>}
               </span>
+              {/* a blood target's two guards, under its row: where the move sits against the marker's usual swing, and a medicine on file */}
+              {p.swing || p.medicine ? <span class="col-span-3 text-[12px] leading-relaxed text-text-3 md:col-span-6">{[p.swing?.words, p.medicine].filter(Boolean).join(" ")}</span> : null}
             </div>
           ))}
         </div>
@@ -412,6 +414,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
               onCancel={() => setAdding(false)} />
           : <div><button type="button" onClick={() => setAdding(true)} class="rounded-full border border-border px-3 py-1 text-[12px] text-text-2 hover:border-accent-border">Add a target</button></div>)}
         <Quiet>You set every number under "I want". Verve sets none, and promises none: it tells you the pace your number implies and whether the weeks are keeping it. Any of the {MARKERS.length} markers on this page can be a target.</Quiet>
+        {paces.some((p) => MARKER_BY_KEY[p.marker]?.kind === "blood") && <Quiet>A blood target is called reached only when the move from its start is more than that marker's usual swing: two reports can differ by that much with nothing having changed. A medicine you have told the app you take is shown beside its target, and is never read as the cause of a change.</Quiet>}
       </Card>
 
       <Card id="horizon-plan">
@@ -599,6 +602,7 @@ function FinalView({ deps, h, person, today, owner, nav, personId, hasOpen, onSt
               <span class="font-mono text-[15px] font-semibold text-text md:text-right">{o.endText}</span>
               <span class="font-mono text-[15px] font-semibold text-accent-text md:text-right">{o.targetText}</span>
               <span class={`col-span-3 text-[13px] font-medium md:col-span-1 ${TONE_TEXT[o.tone]}`}>{o.word}</span>
+              {o.swing || o.medicine ? <span class="col-span-3 text-[12px] leading-relaxed text-text-3 md:col-span-5">{[o.swing, o.medicine].filter(Boolean).join(" ")}</span> : null}
             </div>
           ))}
         </div>
