@@ -81,8 +81,25 @@ export const MARKERS: MarkerDef[] = [
 ];
 export const MARKER_BY_KEY: Record<string, MarkerDef> = Object.fromEntries(MARKERS.map((m) => [m.key, m]));
 export const GROUP_LABEL: Record<MarkerGroup, string> = { fitness: "Fitness", movement: "Movement", sleep: "Sleep", vitals: "Vitals", body: "Body", blood: "Blood" };
+
+/**
+ * Blood markers are OUT of Horizon, pending the lawyers' review (the founder's word, 12 November 2026: "keep all
+ * blood markers out of horizon for now pending a legal review"). While this is false, no blood marker is offered
+ * as a target, a blood target already on file is not shown, paced, checked in on or announced, and the Guide's
+ * "Make it a target" is not offered on a blood line. Nothing is deleted: a target set before the pause stays in its
+ * row and returns if this is switched back on. The guards a blood target carries (the usual swing, a medicine on
+ * file; below) stay in the code and under test, so reopening is this one line. The horizon function copies this
+ * file, so the check-in and its email follow the same switch.
+ */
+export const BLOOD_TARGETS_OPEN = false;
+/** Whether a target can be held on a marker today. A marker the catalogue does not know is left to its row. */
+export const isTargetable = (marker: string): boolean => BLOOD_TARGETS_OPEN || MARKER_BY_KEY[marker]?.kind !== "blood";
+/** The markers a target can be set on today: the catalogue, less the blood markers while they are out. */
+export const TARGET_MARKERS: MarkerDef[] = MARKERS.filter((m) => isTargetable(m.key));
+/** A horizon's targets as the page and the check-in read them: one on a marker that is out is left where it is, unread. */
+export const openTargets = <T extends { marker: string }>(targets: T[]): T[] => targets.filter((t) => isTargetable(t.marker));
 /** The markers the setup offers first; the rest sit behind "Add another". */
-export const FIRST_MARKERS: MarkerKey[] = ["mets", "weight", "waist", "almi", "ldl", "dose", "rhr"];
+export const FIRST_MARKERS: MarkerKey[] = (["mets", "weight", "waist", "almi", "ldl", "dose", "rhr"] as MarkerKey[]).filter(isTargetable);
 
 /** What a lab marker is read from in the person's rows (markers.ts chart keys). */
 const LAB_KEY: Partial<Record<MarkerKey, string>> = {
@@ -295,6 +312,9 @@ export function amountWords(def: MarkerDef, amount: number): string {
 
 // ── the guards on a blood target (12 November 2026) ──
 //
+// DORMANT while BLOOD_TARGETS_OPEN is false: blood markers are out of Horizon pending the lawyers' review, so no row
+// reaches these functions through the page or the check-in. They are kept, and tested, for the day it reopens.
+//
 // Blood results stay as targets on three conditions. The person sets every number: none is suggested and no
 // guideline's figure is filled in (the page's rule since Horizon was built). A report at the number is called reached
 // only when the move from the target's start is more than that marker's usual swing: inside the swing two results
@@ -500,7 +520,9 @@ export function landedLine(l: Landed, target?: Pick<Target, "start_value" | "tar
 
 /** Every target's pace, with the readings looked up in the person's document. */
 export function pacesOf(targets: Target[], horizon: HorizonLike, person: Person, today: string): Pace[] {
-  return targets.map((t) => ({
+  // a target on a marker that is out of Horizon (blood, pending review) is not paced: the page, the Overview's card
+  // and the check-in's inputs all read their rows from here
+  return openTargets(targets).map((t) => ({
     ...paceOf(t, horizon, latestOf(t.marker, person, today), today, MARKER_BY_KEY[t.marker]?.standing ? weeklyHistory(person, t.marker, today, 13) : undefined),
     medicine: medicineOf(t.marker, person, today)?.line ?? null,
   }));
@@ -732,7 +754,7 @@ export function outcomeOf(target: Target, h: HorizonLike, person: Person): Outco
   if (/ behind$/.test(w)) return { ...base, word: w.replace(/ behind$/, " short"), tone: "caution" };
   return { ...base, word: w, tone: p.tone };
 }
-export const outcomesOf = (targets: Target[], h: HorizonLike, person: Person): Outcome[] => targets.map((t) => outcomeOf(t, h, person));
+export const outcomesOf = (targets: Target[], h: HorizonLike, person: Person): Outcome[] => openTargets(targets).map((t) => outcomeOf(t, h, person));
 
 const trimZeros = (s: string) => (s.includes(".") ? s.replace(/0+$/, "").replace(/\.$/, "") : s);
 /** What the last road did to a marker, beside its row on the next horizon's set-up: "+0.55 METs in 13 weeks", "49 → 152 in 13 weeks", "1,000 held in 11 of 13". */

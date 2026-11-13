@@ -26,7 +26,7 @@ import type { PersonData } from "../derive/person.ts";
 import { addDays, daysBetween, todayStr } from "../derive/format.ts";
 import { horizons as horizonsSignal, guideDraft, setGuideDraft } from "../state.ts";
 import {
-  MARKERS, MARKER_BY_KEY, GROUP_LABEL, FIRST_MARKERS, type MarkerKey, type PlanRow, type PlanKind, type Tone,
+  TARGET_MARKERS, isTargetable, openTargets, MARKER_BY_KEY, GROUP_LABEL, FIRST_MARKERS, type MarkerKey, type PlanRow, type PlanKind, type Tone,
   latestOf, historyOf, weeklyHistory, pacesOf, impliedPace, adherenceOf, guideDraftPlan, roadOf, weekOf, daysToGo, nextCheckins, checkinInputs, landedLine,
   outcomesOf, lastRoadWords, nextSpan, horizonMondays, toTarget,
   fmtValue, addMonths, longDate, dayMonth, dayMonthLong, dayMonthYear, weekdayDayMonth, clockOf, round, numberWord,
@@ -250,7 +250,7 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
   const showSetup = owner && (r === "new" || (!current && !open.length));
   // a line the Guide wrote, carried here as a draft for this person
   const gd = guideDraft.value;
-  const draftMarker = gd && gd.personId === personId && MARKER_BY_KEY[gd.marker] ? (gd.marker as MarkerKey) : null;
+  const draftMarker = gd && gd.personId === personId && MARKER_BY_KEY[gd.marker] && isTargetable(gd.marker) ? (gd.marker as MarkerKey) : null;
 
   const nav = open.length || done.length || owner ? (
     <div class="flex flex-wrap gap-2" role="tablist" aria-label="Your horizons">
@@ -296,7 +296,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   const [adding, setAdding] = useState(false);
   const { week, weeks } = weekOf(h, today);
   const togo = daysToGo(h, today);
-  const targets = h.targets.map(toTarget);
+  const targets = openTargets(h.targets).map(toTarget);
   const paces = useMemo(() => (person ? pacesOf(targets, h, person, today) : []), [person, h, today]);
   const planRows = h.plan?.rows ?? [];
   const thisMonday = nextCheckins(h, today).thisMonday;
@@ -317,7 +317,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   const authorWords = h.plan?.author === "coach" ? "written by your coach" : h.plan?.author === "guide" ? "drafted by the Guide" : h.plan ? "written by you" : "";
   // a line the Guide wrote, carried here: a draft until the person sets its number, and gone when they leave it
   const gd = guideDraft.value;
-  const draftDef = gd && owner && !closed && gd.personId === h.person_id && !targets.some((t) => t.marker === gd.marker) ? MARKER_BY_KEY[gd.marker] ?? null : null;
+  const draftDef = gd && owner && !closed && gd.personId === h.person_id && isTargetable(gd.marker) && !targets.some((t) => t.marker === gd.marker) ? MARKER_BY_KEY[gd.marker] ?? null : null;
   const draft = draftDef && gd ? { def: draftDef, readOn: gd.readOn, now: person ? latestOf(draftDef.key, person, today) : null } : null;
 
   // the horizon set before the zone column existed learns its zone on the owner's visit; the scheduled check-in needs it
@@ -413,7 +413,9 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
               onAdd={async (t) => { const uid = await userId(); if (!uid) return; const res = await addTarget(deps.supabase, { horizon_id: h.id, user_id: uid, ...t }); if (!res.ok) setNotice(res.detail || ERROR_WORDS.unknown); else { if (draft && t.marker === draft.def.key) setGuideDraft(null); setAdding(false); await reload(); } }}
               onCancel={() => setAdding(false)} />
           : <div><button type="button" onClick={() => setAdding(true)} class="rounded-full border border-border px-3 py-1 text-[12px] text-text-2 hover:border-accent-border">Add a target</button></div>)}
-        <Quiet>You set every number under "I want". Verve sets none, and promises none: it tells you the pace your number implies and whether the weeks are keeping it. Any of the {MARKERS.length} markers on this page can be a target.</Quiet>
+        <Quiet>You set every number under "I want". Verve sets none, and promises none: it tells you the pace your number implies and whether the weeks are keeping it. Any of the {TARGET_MARKERS.length} markers on this page can be a target.</Quiet>
+        {/* blood markers are out of Horizon pending the lawyers' review: a target set before that is kept in its row, unread, and the page says so */}
+        {h.targets.length > targets.length && <Quiet>Blood markers are not offered as targets for now. The {h.targets.length - targets.length === 1 ? "one you set is" : `${numberWord(h.targets.length - targets.length)} you set are`} kept, and not shown or checked while this stands.</Quiet>}
         {paces.some((p) => MARKER_BY_KEY[p.marker]?.kind === "blood") && <Quiet>A blood target is called reached only when the move from its start is more than that marker's usual swing: two reports can differ by that much with nothing having changed. A medicine you have told the app you take is shown beside its target, and is never read as the cause of a change.</Quiet>}
       </Card>
 
@@ -450,7 +452,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
           {!closed && <span class="text-[12px] text-text-3">Next: Monday {dayMonthLong(next.nextMonday)}{next.monthReview ? ` · month review ${dayMonthLong(next.monthReview)}` : ""}</span>}
         </div>
         {/* a report filed since the last check-in: what it said, above the words that mention it (board 04) */}
-        {(latest?.pace?.landed ?? []).map((l) => (
+        {(latest?.pace?.landed ?? []).filter((l) => isTargetable(l.marker)).map((l) => (
           <p class="m-0 max-w-[640px] rounded-[10px] border border-border-strong bg-alt px-4 py-3 text-[13px] leading-relaxed text-text-2" key={`${l.marker}-${l.on}`}>{landedLine(l, targets.find((t) => t.marker === l.marker))}</p>
         ))}
         {latest
@@ -529,7 +531,7 @@ type Prefill = {
 
 /** The next horizon's opening state, from one read to its date. */
 function prefillOf(h: HorizonFull, person: PersonData | null, today: string): Prefill {
-  const targets = h.targets.map(toTarget);
+  const targets = openTargets(h.targets).map(toTarget);
   return {
     ...nextSpan(h, today),
     markers: targets.map((t) => t.marker).filter((k) => !!MARKER_BY_KEY[k]),
@@ -549,7 +551,7 @@ function FinalView({ deps, h, person, today, owner, nav, personId, hasOpen, onSt
   // with another horizon already running, the next one waits behind a button
   const [later, setLater] = useState(hasOpen);
   const final = h.checkins.find((c) => c.kind === "final")!;
-  const targets = h.targets.map(toTarget);
+  const targets = openTargets(h.targets).map(toTarget);
   const outcomes = useMemo(() => (person ? outcomesOf(targets, h, person) : []), [person, h]);
   const weeksBehind = Math.max(1, horizonMondays(h).length);
   const weekly = h.checkins.filter((c) => c.kind === "week").length, monthly = h.checkins.filter((c) => c.kind === "month").length;
@@ -625,7 +627,7 @@ function FinalView({ deps, h, person, today, owner, nav, personId, hasOpen, onSt
 
 /** One more target on a running horizon: the marker, its reading now, the number, the pace it implies. */
 function AddTarget({ person, today, taken, weeks, preset, onAdd, onCancel }: { person: PersonData; today: string; taken: MarkerKey[]; weeks: number; /** The marker the form opens on: a draft from the Guide. */ preset?: MarkerKey; onAdd: (t: Omit<StartTarget, "cadence"> & { cadence: any }) => void; onCancel: () => void }) {
-  const free = MARKERS.filter((m) => !taken.includes(m.key));
+  const free = TARGET_MARKERS.filter((m) => !taken.includes(m.key));
   const [key, setKey] = useState<MarkerKey>(preset && free.some((m) => m.key === preset) ? preset : free[0]?.key ?? "mets");
   const [value, setValue] = useState("");
   const def = MARKER_BY_KEY[key];
@@ -707,8 +709,8 @@ function Setup({ deps, person, today, personId, hasOthers, nav, prefill, draftMa
 
   const draft = (k: MarkerKey): Draft => drafts[k] ?? { ticked: false, value: "" };
   const setDraft = (k: MarkerKey, patch: Partial<Draft>) => setDrafts((d) => ({ ...d, [k]: { ...draft(k), ...patch } }));
-  const rowsShown = allShown ? MARKERS.map((m) => m.key) : shown;
-  const rest = MARKERS.filter((m) => !rowsShown.includes(m.key));
+  const rowsShown = allShown ? TARGET_MARKERS.map((m) => m.key) : shown;
+  const rest = TARGET_MARKERS.filter((m) => !rowsShown.includes(m.key));
 
   const targetsChosen = (): StartTarget[] => rowsShown.filter((k) => draft(k).ticked && draft(k).value !== "" && Number.isFinite(Number(draft(k).value))).map((k) => {
     const def = MARKER_BY_KEY[k]; const now = person ? latestOf(k, person, today) : null;
@@ -802,10 +804,10 @@ function Setup({ deps, person, today, personId, hasOthers, nav, prefill, draftMa
           <div class="flex flex-wrap items-center gap-2">
             <span class="text-[12px] text-text-3">Add another:</span>
             {rest.slice(0, 6).map((m) => <button type="button" key={m.key} onClick={() => setShown((s) => [...s, m.key])} class="rounded-full border border-border px-3 py-1 text-[12px] text-text-2 hover:border-accent-border">{m.label}</button>)}
-            {!allShown && <button type="button" onClick={() => setAllShown(true)} class="rounded-full border border-accent-border bg-accent-fill px-3 py-1 text-[12px] text-accent-text">Any of the {MARKERS.length}</button>}
+            {!allShown && <button type="button" onClick={() => setAllShown(true)} class="rounded-full border border-accent-border bg-accent-fill px-3 py-1 text-[12px] text-accent-text">Any of the {TARGET_MARKERS.length}</button>}
           </div>
         )}
-        {allShown && <Quiet>{Object.entries(GROUP_LABEL).map(([g, l]) => `${l}: ${MARKERS.filter((m) => m.group === g).map((m) => m.label).join(", ")}`).join(" · ")}</Quiet>}
+        {allShown && <Quiet>{Object.entries(GROUP_LABEL).filter(([g]) => TARGET_MARKERS.some((m) => m.group === g)).map(([g, l]) => `${l}: ${TARGET_MARKERS.filter((m) => m.group === g).map((m) => m.label).join(", ")}`).join(" · ")}</Quiet>}
       </Step>
 
       <Step n={3} title="The week that gets you there">

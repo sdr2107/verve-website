@@ -35,18 +35,22 @@ test("a card carries one line for the horizon: the aim, the date, the pace", () 
   const h = { starts_on: "2026-11-09", ends_on: "2027-02-09" };
   const person = {
     doc: { weeks: [0, 1, 2, 3].map((i) => ({ week_start: ["2026-10-12", "2026-10-19", "2026-10-26", "2026-11-02"][i], source: "sync", synced_at: "2026-11-09T00:00:00Z", workouts: 3, dose_met_min: [1316, 1081, 900, 1132][i], dose_goal_met_min: 1000 })) },
-    acts: [], signals: [], weights: [], profile: null, by: new Map([["ldl_mgdl", [{ d: "2026-10-20", v: 112, lo: null, hi: null, unit: "mg/dL" }]]]),
+    acts: [], signals: [], weights: [], profile: null, by: new Map([["ldl_mgdl", [{ d: "2026-10-20", v: 112, lo: null, hi: null, unit: "mg/dL" }]], ["waist_cm", [{ d: "2026-11-03", v: 96, lo: null, hi: null, unit: "cm" }]]]),
     crf: [{ measured_on: "2026-11-06", vo2max: 31.15, met_capacity: 8.9, method: "cooper" }],
   };
   const targets = [
     { marker: "mets", label: "Fitness", unit: "METs", start_value: 8.9, start_on: "2026-11-06", target_value: 9.5, cadence: "monthly" },
     { marker: "dose", label: "Weekly dose", unit: "MET-min", start_value: 1132, start_on: "2026-11-08", target_value: 1000, cadence: "weekly" },
     { marker: "ldl", label: "LDL", unit: "mg/dL", start_value: 112, start_on: "2026-10-20", target_value: 100, cadence: "when-measured" },
+    { marker: "waist", label: "Waist", unit: "cm", start_value: 96, start_on: "2026-11-03", target_value: 90, cadence: "monthly" },
   ].map(toTarget);
   const lines = horizonLinesByCard(h, targets, person, "2026-11-11");
   assert.equal(lines.fitness, "On your horizon: 9.5 by 9 February · on pace");
   assert.equal(lines.movement, "On your horizon: at least 1,000 a week · reached in 3 of the last 4");
-  assert.equal(lines.body, "On your horizon: LDL 100.0 mg/dL by 9 February · October's report");
+  // the Body card names its target. Blood markers are out of Horizon pending the lawyers' review (12 Nov 2026), so the
+  // LDL target on file is not read: the card's line is the waist's, and it does not count "one more"
+  assert.equal(lines.body, "On your horizon: Waist 90 cm by 9 February · on pace");
+  assert.equal(horizonLinesByCard(h, targets.filter((t) => t.marker === "ldl"), person, "2026-11-11").body, undefined, "a blood target alone leaves the Body card with no line");
   assert.equal(lines.sleep, undefined, "a card with no target carries no line");
   assert.match(horizonLinesByCard(h, targets, person, "2026-11-11", false).fitness, /^On their horizon/);
 });
