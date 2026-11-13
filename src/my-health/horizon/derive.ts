@@ -570,7 +570,12 @@ export function impliedPace(def: MarkerDef, now: Reading | null, target: number,
 
 // ── the plan: intent for a week, and what the week did ──
 
-export type PlanKind = "sessions_week" | "long_session" | "strength_week" | "zone2_most" | "bedtime_by" | "weigh_in" | "custom";
+/**
+ * The last three came with the Guide's plan (13 November 2026; ./guidePlan.ts): a week's minutes in zone 2, its harder
+ * minutes, and its steps a day. Harder minutes and steps are counted and never judged: the plan's harder figure is not
+ * one to chase.
+ */
+export type PlanKind = "sessions_week" | "long_session" | "strength_week" | "zone2_most" | "bedtime_by" | "weigh_in" | "custom" | "zone2_min" | "harder_min" | "steps_day";
 export type PlanRow = { kind: PlanKind; label: string; n?: number | null; note?: string | null };
 export type Adherence = { kind: PlanKind; label: string; done: number | null; of: number | null; word: string; tone: Tone };
 
@@ -617,6 +622,21 @@ export function adherenceOf(rows: PlanRow[], person: Person, weekStart: string, 
         const w = weightSeries(person.weights).find((p) => p.d === weekStart);
         if (w) return { kind: r.kind, label: r.label, done: 1, of: 1, word: `Done, ${w.v.toFixed(1)} kg`, tone: "good" };
         return { kind: r.kind, label: r.label, done: 0, of: 1, word: today > weekStart ? "Missed this Monday" : "Monday", tone: today > weekStart ? "caution" : "neutral" };
+      }
+      case "zone2_min": {
+        const done = Math.round(f.zone2 ?? 0);
+        if (n == null) return { kind: r.kind, label: r.label, done, of: null, word: "", tone: "neutral" };
+        return { kind: r.kind, label: r.label, done, of: n, word: done >= n ? "Done" : `${n - done} min to go`, tone: done >= n ? "good" : daysLeft ? "neutral" : "caution" };
+      }
+      case "harder_min": {
+        const done = Math.round(f.zone3 ?? Math.max(0, (f.zoned ?? 0) - (f.zone2 ?? 0)));
+        return { kind: r.kind, label: r.label, done, of: n, word: n != null ? `${done} of ${n} min` : `${done} min`, tone: "neutral" };
+      }
+      case "steps_day": {
+        const days = person.signals.filter((s) => s?.steps != null && String(s.day).slice(0, 10) >= weekStart && String(s.day).slice(0, 10) < addDays(weekStart, 7)).map((s) => Number(s.steps));
+        if (!days.length) return { kind: r.kind, label: r.label, done: null, of: n, word: "No days yet", tone: "neutral" };
+        const done = Math.round(days.reduce((t, v) => t + v, 0) / days.length);
+        return { kind: r.kind, label: r.label, done, of: n, word: `${done.toLocaleString("en-GB")} a day so far`, tone: "neutral" };
       }
       default: return { kind: "custom", label: r.label, done: null, of: null, word: r.note ?? "", tone: "neutral" };
     }

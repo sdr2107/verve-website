@@ -3,11 +3,14 @@
  * not being in place yet (the tables unrun, the function undeployed). Pure, so
  * tests/horizon-errors.test.mjs can read it without a client.
  */
-export type ApiError = "pro_required" | "consent_required" | "allowance" | "forbidden" | "horizon_closed" | "not_open" | "not_switched_on" | "bad_request" | "offline" | "unknown";
+export type ApiError = "pro_required" | "consent_required" | "allowance" | "week_limit" | "no_plan" | "forbidden" | "horizon_closed" | "not_open" | "not_switched_on" | "bad_request" | "offline" | "unknown";
 
 /** What a status and body from the function mean, in the page's words. */
 export function mapError(status: number, out: any): ApiError {
   const code = String(out?.error ?? "");
+  // the chat about the plan: the week's questions are used up, or there is no plan in use to ask about
+  if (code === "weekly_limit") return "week_limit";
+  if (code === "no_plan") return "no_plan";
   if (status === 402 || code === "pro_required") return "pro_required";
   if (status === 412 || code === "consent_required") return "consent_required";
   if (status === 429) return "allowance";
@@ -24,6 +27,8 @@ export const ERROR_WORDS: Record<ApiError, string> = {
   pro_required: "Horizon is part of Pro on the website.",
   consent_required: "Tick the consent box first: it says what is sent, and what is not.",
   allowance: "Today's allowance of Guide writing is used up; try tomorrow.",
+  week_limit: "This week's questions about the plan are used up. They come back on Monday.",
+  no_plan: "There is no plan in use to ask about yet.",
   forbidden: "Only the person whose horizon this is can ask for a check-in.",
   horizon_closed: "This horizon is closed. A final read is still possible.",
   not_open: "The Guide is not available right now.",

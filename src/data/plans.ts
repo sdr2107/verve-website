@@ -104,7 +104,9 @@ export const FEATURE_ROWS: { section: string; rows: { label: string; cells: [boo
     { label: "Overview: where you are today, with Body and Reports", cells: [true, true, true, true] },
     { label: "In depth: how you got here, one month to three years", cells: [false, true, true, true] },
     { label: "The Guide: what stands out", cells: ["the first read", "every read", "every read", "every read"] },
-    { label: "Horizon: where you are going, with a check-in each Monday", cells: [false, true, true, true] },
+    // Free has one week of Horizon on the first horizon set, with the Guide's plan and one question about it (13 Nov 2026); the horizon function decides
+    { label: "Horizon: where you are going, with a check-in each Monday", cells: ["one week", true, true, true] },
+    { label: "The Guide's plan for the week, and questions about it", cells: ["one week, one question", true, true, true] },
     { label: "In depth on everyone you see", cells: [false, false, true, true] },
     { label: "The group, ranked by movement", cells: [false, false, true, true] },
     { label: "This week and retest due, across everyone", cells: [false, false, true, true] },
@@ -149,7 +151,7 @@ export function tillsOf(p: Plan, period: Period): Till[] {
 }
 /** What Pro adds on the website, as the sheet lists it. Each line is something the page already holds behind Pro. */
 export const PRO_ON_THE_WEB: { lead: string; rest: string }[] = [
-  { lead: "Horizon.", rest: "A date, the targets, the plan, the Guide's check-in each Monday." },
+  { lead: "Horizon.", rest: "A date, the targets, the Guide's plan for the week, its check-in each Monday, and questions about the plan." },
   { lead: "The Guide, every period.", rest: "Weeks, months and years read in prose; the free plan keeps the first read." },
   { lead: "The month read.", rest: "On the first of each month, the month on your horizon, read once." },
 ];
