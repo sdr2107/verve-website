@@ -4,7 +4,8 @@
  * canvas "Verve on the web, rethought", boards 01 and 03).
  *
  * A six-minute walk or a twelve-minute run, a distance, an age, a sex and,
- * for the walk, a weight: out comes the fitness figure in METs and the tier
+ * for the walk, a weight: out comes the fitness figure in METs, the VO₂max
+ * it was derived from (the unit the studies use, one MET = 3.5) and the tier
  * it lands in for that age and sex, with the study named. Nothing is sent
  * anywhere and no account is asked for: the sum is the printed sheet's own
  * (src/data/first-number.ts) and the tables are the app's
@@ -79,10 +80,17 @@ const seg = "min-h-10 flex-1 whitespace-nowrap rounded-[8px] px-1.5 text-[12.5px
   <div class="flex flex-col gap-3.5 border-t border-border pt-4" data-fn-result aria-live="polite">
     <p data-fn-summary class="font-mono text-[12px] text-text-2">Six-minute walk &middot; {sample.metres} m &middot; a man of {sample.age}, {sample.weightKg} kg</p>
     <div class="flex items-end justify-between gap-4">
-      <p class="flex items-baseline gap-2">
-        <span data-fn-mets class="t-figure text-text-primary">{sample.mets.toFixed(1)}</span>
-        <span class="t-unit">METs</span>
-      </p>
+      <div class="flex flex-col gap-0.5">
+        <p class="flex items-baseline gap-2">
+          <span data-fn-mets class="t-figure text-text-primary">{sample.mets.toFixed(1)}</span>
+          <span class="t-unit">METs</span>
+        </p>
+        <p class="flex items-baseline gap-1.5 whitespace-nowrap">
+          <span class="t-unit">VO&#8322;max</span>
+          <span data-fn-vo2 class="t-figure-row text-text-2">{sample.vo2.toFixed(1)}</span>
+          <span class="t-unit">mL/kg/min</span>
+        </p>
+      </div>
       <p class="text-right">
         <span data-fn-tier class="block text-[16px] font-semibold text-text-primary">{tier.label}</span>
         <span data-fn-for class="block text-[13px] text-text-2">for a man of {sample.age}</span>
@@ -154,7 +162,7 @@ const seg = "min-h-10 flex-1 whitespace-nowrap rounded-[8px] px-1.5 text-[12.5px
     const form = q<HTMLFormElement>("[data-fn-form]");
     const inputs = { metres: form.elements.namedItem("metres") as HTMLInputElement, age: form.elements.namedItem("age") as HTMLInputElement, weight: form.elements.namedItem("weight") as HTMLInputElement };
     const el = {
-      chip: q("[data-fn-chip]"), summary: q("[data-fn-summary]"), mets: q("[data-fn-mets]"), tier: q("[data-fn-tier]"), forWhom: q("[data-fn-for]"),
+      chip: q("[data-fn-chip]"), summary: q("[data-fn-summary]"), mets: q("[data-fn-mets]"), vo2: q("[data-fn-vo2]"), tier: q("[data-fn-tier]"), forWhom: q("[data-fn-for]"),
       ladder: q("[data-fn-ladder]"), here: q("[data-fn-here]"), bar: q("[data-fn-bar]"), marker: q("[data-fn-marker]"), names: q("[data-fn-names]"),
       next: q("[data-fn-next]"), notes: q("[data-fn-notes]"), working: q("[data-fn-working]"), source: q("[data-fn-source]"), limit: q("[data-fn-limit]"),
       keep: q("[data-fn-keep]"), weekly: q<HTMLInputElement>("[data-fn-weekly]"), go: q<HTMLButtonElement>("[data-fn-keep-go]"), hint: q("[data-fn-hint]"), error: q("[data-fn-error]"),
@@ -201,7 +209,7 @@ const seg = "min-h-10 flex-1 whitespace-nowrap rounded-[8px] px-1.5 text-[12.5px
       cancelAnimationFrame(frame); clearTimeout(guard);
       shown = 0; kept = null;
       el.chip.textContent = "No number";
-      el.mets.textContent = "—";
+      el.mets.textContent = "—"; el.vo2.textContent = "—";
       el.tier.textContent = ""; el.forWhom.textContent = "";
       el.ladder.classList.add("hidden"); el.next.textContent = ""; el.next.classList.add("hidden");
       el.notes.classList.add("hidden");
@@ -227,6 +235,7 @@ const seg = "min-h-10 flex-1 whitespace-nowrap rounded-[8px] px-1.5 text-[12.5px
       el.next.classList.remove("hidden"); el.notes.classList.remove("hidden");
       el.chip.textContent = "Yours";
       count(r.mets);
+      el.vo2.textContent = r.vo2.toFixed(1);
       const t = tierFor(r.sex, r.age, r.mets);
       const who = `for ${person}`;
       if (t) {
