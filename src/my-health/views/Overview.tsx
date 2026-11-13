@@ -177,11 +177,17 @@ function cardsOf(d: NonNullable<typeof derived.value>, self: boolean, unit: "met
     const h = heart?.hrr;
     const pal = latestWith(d.signals, "pal", today);
     const sit = meanOver(d.signals, "sedentary_minutes", 7, today);
+    // No sitting figure (13 Nov 2026): the app judges sitting only from steps a worn device placed by the hour, and
+    // sends null otherwise. The day's step writer says why when it is a band that writes one total for the day.
+    const sitWriter = latestWith(d.signals, "steps_source", today)?.steps_source ?? null;
+    const sitWhy = sit != null ? "" : !d.synced ? "no sedentary hours from the app yet"
+      : sitWriter && !/iphone|ipad|phone$/i.test(String(sitWriter)) ? `${sitWriter} writes steps as a day total; sitting needs them by the hour, from a watch`
+      : "needs steps placed by the hour by a watch; a phone alone would count an idle hour as sitting";
     const lastAct = [...d.acts].filter((a) => a?.timestamp).sort((x, y) => String(x.timestamp).localeCompare(String(y.timestamp))).pop() ?? null;
     const rows: Row[] = [
       { label: "1-min recovery", value: h?.latest != null ? String(h.latest) : DASH, unit: h?.latest != null ? "bpm" : "", note: h?.latest == null ? "after a session that ends above the band" : h.latest <= 12 ? "at or under the line, 12" : "", tone: h?.latest != null && h.latest <= 12 ? "concern" : "neutral" },
       { label: "Activity level", value: pal ? Number(pal.pal).toFixed(1) : DASH, unit: pal ? "PAL" : "", note: pal ? "" : "needs a week of energy data" },
-      { label: "Sitting, average day", value: sit != null ? fmtHMin(sit) : DASH, note: sit == null ? "no sedentary hours from the app yet" : sit >= 600 ? "a long day, past ten hours" : "", tone: sit != null && sit >= 600 ? "caution" : "neutral" },
+      { label: "Sitting, average day", value: sit != null ? fmtHMin(sit) : DASH, note: sit == null ? sitWhy : sit >= 600 ? "a long day, past ten hours" : "", tone: sit != null && sit >= 600 ? "caution" : "neutral" },
     ];
     if (lastAct?.effort) rows.push({ label: "Last session's effort", value: sentence(String(lastAct.effort)), note: lastAct.effort_source === "apple" ? "the wearable's rating" : lastAct.effort_source === "manual" ? "yours" : "estimated" });
     cards.push({
