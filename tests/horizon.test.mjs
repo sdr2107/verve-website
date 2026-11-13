@@ -13,7 +13,8 @@ import {
 const TODAY = "2026-11-08";                      // a Sunday; the last complete week is 26 October
 const H = { starts_on: "2026-09-01", ends_on: "2027-04-18", title: "Boston Marathon" };
 
-/** A synced person's document: eight weeks of sessions, nights, mornings, weighings, two lipid reports, a waist. */
+/** A synced person's document: eight weeks of sessions, nights, mornings, weighings, two lipid reports, a waist.
+ *  The person is invented: the name, the birth year, the age and the height are no one's. Keep it so; this repo is public. */
 function document() {
   const activities = [], weeks = [], signals = [], weights = [];
   // weeks from 14 Sep to 2 Nov (eight complete + the current one): two runs, a cycle, one strength session; the long run on Saturday
@@ -48,13 +49,13 @@ function document() {
   ];
   return {
     generated_at: TODAY, me: { id: "u1", email: "x@y", profile: null, role: null }, people: [], grants_to_me: [],
-    person: { id: "p1", owner_id: "u1", account_id: "u1", name: "Sudeep", born_year: 1981 },
+    person: { id: "p1", owner_id: "u1", account_id: "u1", name: "Asha", born_year: 1974 },
     labs, imaging: [], reports: [], files: [], weeks, web_crf: [], web_body: [],
     app_labs: [{ measured_at: "2026-11-07T08:00:00", alm_kg: 24.8, ffm_kg: 60.6, body_fat_pct: 18.4 }, { measured_at: "2026-05-08T08:00:00", alm_kg: 24.5 }],
     activities,
     app_crf: [{ timestamp: "2026-05-08T08:00:00", met_capacity: 8.4, vo2_max_estimate: 29.4, estimation_method: "wearable", performance_category: "below-average" }, { timestamp: "2026-11-01T08:00:00", met_capacity: 8.9, vo2_max_estimate: 31.2, estimation_method: "wearable", performance_category: "above-average" }],
     waist: [{ measured_at: "2026-05-03T08:00:00", waist_cm: 99 }, { measured_at: "2026-11-03T08:00:00", waist_cm: 96 }],
-    profile: { weekly_met_hours_goal: 16.67, height_cm: 175, sex: "male", age: 45 },
+    profile: { weekly_met_hours_goal: 16.67, height_cm: 168, sex: "male", age: 52 },
     signals, weights, note: null, sharing: [], sharing_pros: [], invites: [], asked: [], requests: [], ai: { summary: null, consent: null },
   };
 }
@@ -80,7 +81,7 @@ test("latestOf reads each kind from the document: tests, the app's week row, the
   const ldl = latestOf("ldl", person, TODAY);
   assert.equal(ldl.value, 131); assert.equal(ldl.unit, "mg/dL"); assert.equal(ldl.on, "2026-10-12");
   assert.equal(latestOf("non_hdl", person, TODAY).value, 139);
-  assert.equal(Math.round(latestOf("almi", person, TODAY).value * 10) / 10, 8.1);
+  assert.equal(Math.round(latestOf("almi", person, TODAY).value * 10) / 10, 8.8, "24.8 kg over 1.68 m squared");
   const bp = latestOf("bp", person, TODAY);
   assert.equal(bp.value, 118); assert.equal(bp.display, "118/76");
   assert.equal(Math.round(latestOf("rhr", person, TODAY).value * 100) / 100, 52.43, "the mean of the last seven mornings");
