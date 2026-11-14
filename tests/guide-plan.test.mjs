@@ -110,6 +110,20 @@ test("nothing to climb: the plan holds the week", () => {
   assert.match(v.lead, /The plan holds the week as it is\./);
 });
 
+test("a figure is rounded as the targets table rounds it, and a move smaller than half a step is not called a step", () => {
+  // 7.35 is one of the figures toFixed reads a tenth low; the table shows 7.4, so the plan says 7.4
+  const v = plan({ mets: 7.35 });
+  assert.equal(v.why[0].head, "Your fitness is 7.4 METs.");
+  assert.match(v.climbNote, /from your fitness of 7\.4 METs/);
+  // a typical week of 38 minutes is planned as 40 (the plan's figures are in fives): that is rounding, and the tile does not say "Up from 38"
+  const held = guidePlan({ horizon: H, targets: [{ marker: "dose", target_value: 900 }], person: person({ zone2: 38 }), today: TODAY });
+  const tile = held.tiles.find((t) => t.key === "zone2");
+  assert.equal(tile.big, "40 minutes in zone 2");
+  assert.doesNotMatch(tile.text, /Up from/);
+  // a real step is still said
+  assert.match(plan().tiles.find((t) => t.key === "zone2").text, /Up from 40\./);
+});
+
 test("the second tier keeps its harder minutes; no test on file starts as the first", () => {
   const two = plan({ mets: 10.2 });
   assert.ok(two.climb.every((w) => w.harder === 120), "harder minutes are not eased from 9 METs up");

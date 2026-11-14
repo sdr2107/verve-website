@@ -173,6 +173,8 @@ test("the setup's note says the pace a number implies, against the person's own 
   const note = impliedPace(MARKER_BY_KEY.mets, read(8.9, "2026-11-01"), 9.6, 23, hist, TODAY);
   assert.match(note, /^0\.7 METs in 23 weeks/);
   assert.match(note, /last six months, which moved 0\.5 METs/);
+  // the gap is between the figures as the row shows them: a reading of 7.35 is shown as 7.4, and 9.0 is 1.6 from it, not 1.7
+  assert.match(impliedPace(MARKER_BY_KEY.mets, read(7.35, "2026-11-01"), 9.0, 13, [], TODAY), /^1\.6 METs in 13 weeks/);
   const w = impliedPace(MARKER_BY_KEY.weight, read(74.2), 72.0, 23, [{ d: "2026-05-04", v: 76.8 }, { d: "2026-11-02", v: 74.2 }], TODAY);
   assert.match(w, /^2\.2 kg in 23 weeks is under 0\.1 kg a week\./);
   assert.match(w, /About your recent pace: your last six months moved 2\.6 kg/);
