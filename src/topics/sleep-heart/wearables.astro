@@ -139,9 +139,41 @@ import { WEARABLE_ROWS as rows, WEARABLE_COLS as cols, WEARABLE_COL_IDS as colId
 </p>
 
 <h3 id="gaps" class="scroll-mt-8 vrv-anchor mt-10 pt-2 text-lg font-semibold text-text-primary">What Verve does with a gap</h3>
-<p class="mt-3 text-sm leading-relaxed text-text-secondary">
-  A reading no writer on your phone supplies shows as a dash, never a zero, and the card says why
-  when it can: &ldquo;WHOOP keeps HRV in its own app&rdquo;. Where two wearables write the same
+<div id="only-what-arrives" class="mt-3 scroll-mt-8 rounded-2xl border border-ink/8 bg-ink/4 p-6">
+  <p class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-accent-light">Only what your device shares</p>
+  <p class="mt-2 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">A row is on the screen only while something sends it.</strong>
+    Until 14 November 2026 a reading no device supplied sat on its card as a dash with a reason, so
+    a person wearing a band that writes six readings looked at nine dashes every day. Now the app
+    decides, reading by reading, by what has actually arrived in the health store, never by the
+    name of the device:
+  </p>
+  <ul class="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-text-secondary">
+    <li><strong class="text-text-primary">Arrives.</strong> The reading has come in during the last 30 days, from any device or app. Its row is shown.</li>
+    <li><strong class="text-text-primary">Usually arrives, missing now.</strong> A night not worn, a flat battery, a sync not yet done. The row stays, with a dash and the reason: a gap is shown as a gap.</li>
+    <li><strong class="text-text-primary">Does not arrive.</strong> Nothing has sent it in 30 days. The row leaves the app&rsquo;s Activity and Trends pages, and is listed once, with the reason, under Settings &rarr; Devices.</li>
+  </ul>
+  <p class="mt-3 text-sm leading-relaxed text-text-secondary">
+    The day a reading first arrives, from a new watch or a maker that starts sharing more, its row
+    returns by itself. Nothing is left off before the app has finished its first look at the store,
+    because an empty store and a slow one look the same. A switch in Settings &rarr; Devices, Show
+    them anyway, puts every row back as a dash with its reason.
+  </p>
+  <p class="mt-3 text-sm leading-relaxed text-text-secondary">
+    What you supply is never left off: the fitness test, blood pressure, weight, blood results and
+    logged sessions wait for you, not for a device. Verve does not put an estimate in a missing
+    reading&rsquo;s place, and does not suggest another device.
+  </p>
+  <p class="mt-3 text-xs leading-relaxed text-text-tertiary">
+    The table above is what to expect from each maker; the app does not use it. Thirty days is a
+    display rule of Verve&rsquo;s own. Where Back up watch readings is on in the app, the list
+    travels with the week&rsquo;s figures, so My health and the Monday email leave off the same
+    rows; where it is off, they hold what you typed in and the reports you uploaded.
+  </p>
+</div>
+<p class="mt-4 text-sm leading-relaxed text-text-secondary">
+  A reading that arrives and is missing today shows as a dash, never a zero, and the row says why
+  when it can. Where two wearables write the same
   reading, one leads and the other counts where it is alone; Settings &rarr; Data sources names
   which, per reading, and lets you choose. Steps and energy are one writer&rsquo;s count a day,
   never two added together. Workout energy is read for what the writer&rsquo;s figure holds, rest

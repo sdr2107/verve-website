@@ -29,6 +29,7 @@
 import { render } from "preact";
 import { derived, person, section, setSection, openMarkerKey, openRange, openYear, focusTile, fitUnit, setFitUnit, latestRead, horizons, openOverTime, actions, CARD_KEYS, type CardKey } from "../state.ts";
 import { horizonLinesByCard, toTarget } from "../horizon/derive.ts";
+import { arrivalsOf, dropUnsent, leftOff, ROW_READING } from "../derive/arrivals.ts";
 import { LANE_FOR } from "../derive/timeline.ts";
 import { STORY } from "../../data/story.ts";
 import { addDays, daysBetween, dayWord, esc, fmt1, fmtDay, fmtSleepMin, mondayOf, monthOf, plural, round0, todayStr } from "../derive/format.ts";
@@ -263,7 +264,29 @@ function cardsOf(d: NonNullable<typeof derived.value>, self: boolean, unit: "met
   else if (d.synced) bits.push("no sessions logged this week yet");
   if (heart?.sleep.last) bits.push(`${sc.figure} of sleep ${sc.unit}`);
   const line = bits.length ? bits.map(sentence).join(". ") + "." : "";
-  return { cards, line };
+
+  // ── Only what your device shares (derive/arrivals): the app's list decides. A row with no figure, for a
+  //    reading the person's devices do not send, is not drawn; a card left with nothing to say is not drawn
+  //    either. With no list from the app nothing changes. ──
+  const off = leftOff(arrivalsOf(d.doc.weeks));
+  if (off.size === 0) return { cards, line };
+  for (const c of cards) { c.rows = dropUnsent(c.rows, off); c.more = dropUnsent(c.more, off); }
+  const vit = cards.find((c) => c.key === "vitals");
+  if (vit && vit.figure === DASH && off.has("rhr")) {
+    // No resting heart rate arrives: blood pressure, the person's own reading, leads the card when there is one.
+    const bp = vit.rows.find((r) => r.label.startsWith("Blood pressure") && r.value !== DASH);
+    if (bp) {
+      vit.figure = bp.value; vit.unit = "mmHg, 30-day mean";
+      vit.band = { text: bp.note || `${your} cuff readings`, tone: bp.tone ?? "neutral" };
+      vit.rows = vit.rows.filter((r) => r !== bp);
+      vit.heading = `${bp.value} mmHg, the 30-day mean`; vit.eyebrow = "Vitals · blood pressure";
+    }
+  }
+  const shown = cards.filter((c) =>
+    c.key === "sleep" ? c.figure !== DASH || !off.has("sleepHours")
+    : c.key === "vitals" ? c.figure !== DASH || c.rows.some((r) => r.value !== DASH)
+    : true);
+  return { cards: shown, line };
 }
 
 // ── the pieces ──────────────────────────────────────────────────────────
@@ -421,6 +444,22 @@ function horizonLines(d: NonNullable<typeof derived.value>, self: boolean): Reco
 }
 
 /** The other three parts of the story, as doors: shown under the cards to a person the Guide has not read for yet. */
+/**
+ * Only what your device shares: the one line under the cards that says rows were left off, in the app's own words
+ * ("Ten readings your WHOOP does not send are left off these cards."), and where they are listed. Nothing when the
+ * app sent no list, or left nothing off.
+ */
+function LeftOffLine({ d, self }: { d: NonNullable<typeof derived.value>; self: boolean }) {
+  const list = arrivalsOf(d.doc.weeks);
+  if (!list || list.show_all || !list.foot) return null;
+  return (
+    <p class="col-span-full m-0 mt-1 text-[12.5px] leading-relaxed text-text-3">
+      {list.foot}{" "}
+      {self ? <button type="button" onClick={() => actions.goSettings("devices")} class="font-semibold text-accent-text underline-offset-2 hover:underline">Settings › Devices</button> : null}
+    </p>
+  );
+}
+
 function StoryDoors() {
   // the same four lines the landing page and the sign-in card read (data/story.ts); this page is the first of them
   const doors = STORY.filter((s) => s.key !== "overview");
@@ -448,7 +487,8 @@ function SectionPage({ c, d, cards, horizon }: { c: Card; d: NonNullable<typeof 
   const openKey = openMarkerKey.value && ms.some((m) => m.key === openMarkerKey.value) ? openMarkerKey.value : "";
   const open = openKey ? ms.find((m) => m.key === openKey) ?? null : null;
   const outKeys = new Set(labRowsFrom(d.by, today).filter((r) => r.out).map((r) => r.key));
-  const rows = c.key === "movement" ? movementRows(d, c) : [...c.more, ...c.rows];
+  // the opened card's rows follow the same list as its face (derive/arrivals): Cadence is added here, so it is asked here
+  const rows = dropUnsent(c.key === "movement" ? movementRows(d, c) : [...c.more, ...c.rows], leftOff(arrivalsOf(d.doc.weeks)));
   const readAt = d.signals.length ? String(d.signals[d.signals.length - 1]?.day ?? "") : "";
   const tap = (m: Marker) => { openMarkerKey.value = m.key === openKey ? "" : m.key; openRange.value = ""; openYear.value = null; focusTile.value = true; };
   const tile = (m: Marker, i: number) => <Tile key={m.key} m={m} i={i} on={m.key === openKey} out={outKeys.has(m.key)} onTap={() => tap(m)} />;
@@ -513,6 +553,7 @@ export function Glance() {
   if (openCard) return <SectionPage c={openCard} d={d} cards={cards} horizon={hz[openCard.key]} />;
   return <>
     {cards.map((c) => <CardFace key={c.key} c={c} d={d} on={false} onOpen={() => setSection(c.key)} horizon={hz[c.key]} />)}
+    <LeftOffLine d={d} self={self} />
     {self && !latestRead.value ? <StoryDoors /> : null}
   </>;
 }
@@ -688,6 +729,9 @@ export function WeekTable() {
     { label: "Sitting", unit: "h", of: (x) => byDay.get(x)?.sedentary_minutes != null ? byDay.get(x).sedentary_minutes / 60 : null, fmt: (v) => v.toFixed(1), tone: (v) => v >= 12 ? "text-concern" : v >= 10.6 ? "text-caution" : "" },
   ];
   const wd = (x: string) => new Date(x + "T00:00:00").toLocaleDateString(undefined, { weekday: "short" });
+  // Only what your device shares (derive/arrivals): a line with no day in it, for a reading the person's devices do not send, is not drawn.
+  const off = leftOff(arrivalsOf(d.doc.weeks));
+  const lines = off.size === 0 ? rows : rows.filter((r) => { const key = ROW_READING[r.label]; return !key || !off.has(key) || days.some((x) => r.of(x) != null); });
   return (
     <div class="r-card border border-border bg-card p-5 sm:px-6">
       <div class="flex flex-wrap items-baseline justify-between gap-2">
@@ -701,7 +745,7 @@ export function WeekTable() {
             {days.map((x) => <th key={x} class={`t-eyebrow pb-2 text-center ${x === today ? "rounded-t-md bg-accent-fill text-accent-text" : ""}`}>{wd(x)}</th>)}
           </tr></thead>
           <tbody>
-            {rows.map((r) => (
+            {lines.map((r) => (
               <tr key={r.label} class="border-t border-border">
                 <td class="t-small py-2 pr-2 text-text-2">{r.label} <span class="t-unit">{r.unit}</span></td>
                 {days.map((x) => { const v = r.of(x); const future = x > today; return <td key={x} class={`py-2 text-center font-mono text-[13px] ${x === today ? "bg-accent-fill" : ""} ${v == null ? "text-text-3" : `font-semibold ${r.tone(v) || "text-text"}`}`}>{future ? "·" : v == null ? DASH : r.fmt(v)}</td>; })}
