@@ -42,6 +42,15 @@ const whatWritesWhat: Array<[string, string, string, string, string, string]> = 
   ["Body fat, fat-free mass", "BodyFatPercentage, LeanBodyMass", "No; a scale writes them", "No; a scale writes them", "BodyFat, LeanBodyMass", "Body, read live from the store's log from 1.7"],
   ["Waist", "WaistCircumference", "No; typed, or a tape app", "No", "No record type", "Body, read live on iPhone from 1.7; typed on Android"],
 ];
+
+/** The Vitals page's watched sides (the app: data/met-thresholds.json, vitals.watch). */
+const vitalsWatch: Array<[string, string, string]> = [
+  ["Resting heart rate", "above your usual range", "a low morning is named, without colour"],
+  ["Night HRV", "under your usual range", "a high night is named, without colour"],
+  ["Breathing rate", "above your usual range", "a slow night is named, without colour"],
+  ["Blood oxygen", "under your usual range", "a high night is named, without colour"],
+  ["Wrist temperature", "above your usual range", "a cool night is named, without colour"],
+];
 ---
 
 <SplitCard eyebrow="In the app" wide>
@@ -587,13 +596,127 @@ const whatWritesWhat: Array<[string, string, string, string, string, string]> = 
   </div>
   <p class="mt-3 text-xs leading-relaxed text-text-tertiary">
     In the app every one of these is read against your own last 30 nights,
-    never a population range: the middle half of your nights is your range,
-    and the Vitals card says how many of the night&rsquo;s readings sat inside
-    it. WHOOP&rsquo;s Health Connect list is not published; on an Android
+    never a population range: where 9 of your nights in 10 fell is your usual
+    range, and the Vitals card colours only a reading that sits outside it
+    (<a href="#vitals-read">how Verve reads vitals</a>, below).
+    WHOOP&rsquo;s Health Connect list is not published; on an Android
     phone, Health Connect &rarr; App permissions &rarr; WHOOP shows it. Blood
     pressure comes from a cuff that syncs to the store, or from the readings
     you type into Body; Verve stores none of the store&rsquo;s readings and
     reads its log when a page opens.
+  </p>
+</div>
+
+<!-- ── How Verve reads vitals: the usual range, the watched side, six months, the Guide's read ── -->
+<div id="vitals-read" class="mt-4 scroll-mt-8 rounded-2xl border border-ink/8 bg-ink/4 p-6">
+  <p class="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-accent-light">How Verve reads vitals</p>
+  <p class="mt-2 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">Your usual range, and the one side of it that is watched.</strong>
+    The Vitals page reads each of last night&rsquo;s five readings (resting
+    heart rate, night HRV, breathing rate, blood oxygen, wrist temperature)
+    against your own usual range: where 9 of your nights in 10 fell over the
+    30 nights before, one device at a time. It waits for 7 nights before it
+    draws a range. This is a display rule of Verve&rsquo;s own, not a clinical
+    threshold.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    Until 14 November 2026 the range was the middle half of those nights. A
+    night falls outside the middle half about one time in two, whatever the
+    reading, so with four or five readings most mornings showed something
+    amber and the colour said nothing. The wider range keeps colour for the
+    night that stands out. Night HRV&rsquo;s own page keeps the middle half:
+    it reads a whole week against it, which is a different question
+    (<a href="/science/sleep-heart/night-hrv">Night HRV</a>).
+  </p>
+  <div class="mt-3 overflow-x-auto rounded-xl border border-ink/10 bg-well">
+    <table class="w-full min-w-[520px] text-[12.5px]">
+      <thead>
+        <tr class="text-left font-mono text-[10px] uppercase tracking-wider text-text-tertiary">
+          <th class="px-3 py-2.5 font-semibold">Reading</th>
+          <th class="px-3 py-2.5 font-semibold">Takes colour when it is</th>
+          <th class="px-3 py-2.5 font-semibold">The other side</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-ink/[0.06]">
+        {vitalsWatch.map(([r, side, other]) => (
+          <tr class="align-top">
+            <td class="px-3 py-2.5 font-semibold text-text-primary">{r}</td>
+            <td class="px-3 py-2.5 text-text-secondary">{side}</td>
+            <td class="px-3 py-2.5 text-text-tertiary">{other}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p class="mt-3 text-sm leading-relaxed text-text-secondary">
+    The sides come from the wearable cohorts that followed people through
+    illness: respiration rate and heart rate were typically raised and HRV
+    lowered
+    (<a href="https://doi.org/10.1038/s41746-020-00363-7" target="_blank" rel="noopener">Natarajan 2020</a>;
+    <a href="https://doi.org/10.1016/S2589-7500(19)30222-5" target="_blank" rel="noopener">Radin 2020</a>).
+    Amber is the only colour, with one exception the app already held: a
+    resting heart rate 10 or more beats above your normal is red
+    (<a href="/science/sleep-heart/resting-heart-rate">Resting heart rate</a>).
+    Two or more readings outside on the same morning is the pattern worth a
+    second look; one alone is a night. Blood pressure is yours to measure: it
+    sits on its own card, opens its page in Body, and is never counted with
+    the night&rsquo;s readings.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">The last six months, one line a reading.</strong>
+    The median of your last 30 nights against the median of the 30 nights that
+    began six months ago, or, with less history, your earliest 30 nights once
+    they are 60 days back. The line says lower or higher only when the recent
+    median lies outside the middle half of those earlier nights; otherwise it
+    says steady. Wrist temperature has no six-month line: it is shown as a
+    difference from your own median, so a month of it is always near zero.
+    The app draws no chart here; every night and month is in
+    <a href="/my-health">My health</a>.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">What the Guide may say, and what it may not.</strong>
+    On a morning when a reading stands out, the page states what the day and
+    the night before held: minutes in zone 3, when the session ended, hours
+    asleep against your usual. Those are figures, shown to everyone. The
+    Guide&rsquo;s read is two sentences written from them, only when you ask
+    for it and only with Pro. It is given what the page shows and the findings
+    below, each one only when its own condition holds:
+  </p>
+  <ul class="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-text-secondary">
+    <li>
+      <strong class="text-text-primary">A vigorous session that ended within 3 hours of sleep.</strong>
+      In 11 fit young adults, exercise to exhaustion about 2 hours before bed
+      left heart rate during sleep higher that night, with no difference in
+      HRV across the night
+      (<a href="https://doi.org/10.1111/j.1365-2869.2010.00874.x" target="_blank" rel="noopener">Myllym&auml;ki 2011</a>).
+      So it is said beside a raised resting heart rate, never beside a low HRV.
+    </li>
+    <li>
+      <strong class="text-text-primary">A night of under 5 hours.</strong>
+      Five nights under 5 hours raised sympathetic activity
+      (<a href="https://doi.org/10.1152/japplphysiol.01604.2011" target="_blank" rel="noopener">Dettoni 2012</a>),
+      and across 11 trials rMSSD was lower after sleep deprivation while the
+      fall in SDNN was not significant
+      (<a href="https://doi.org/10.3389/fneur.2025.1556784" target="_blank" rel="noopener">Zhang 2025</a>).
+      So it is said only when your device writes rMSSD, never for the SDNN an
+      Apple Watch writes.
+    </li>
+    <li>
+      <strong class="text-text-primary">Over months.</strong>
+      Endurance training lowers resting heart rate
+      (<a href="https://doi.org/10.3390/jcm7120503" target="_blank" rel="noopener">Reimers 2018</a>, 191 studies)
+      and raises vagal HRV
+      (<a href="https://doi.org/10.1249/01.mss.0000155388.39002.9d" target="_blank" rel="noopener">Sandercock 2005</a>).
+      Said only when your weekly dose or your fitness test rose over the same
+      months and the reading moved the same way.
+    </li>
+  </ul>
+  <p class="mt-3 text-xs leading-relaxed text-text-tertiary">
+    The Guide says what else was different, never what caused a reading, and
+    never how long a change will last: no study here measured that. Its text
+    is checked before it is shown. A sentence that names a cause, an illness
+    or an instruction, or a number the page does not hold, is dropped and the
+    findings above are shown as written. Nothing on this page is a diagnosis.
   </p>
 </div>
 
