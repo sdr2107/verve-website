@@ -34,6 +34,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PersonData } from "../derive/person.ts";
 import { addDays, daysBetween, todayStr } from "../derive/format.ts";
 import { horizons as horizonsSignal, guideDraft, setGuideDraft } from "../state.ts";
+import { arrivalsOf, followable, leftOff, pausedWords } from "../derive/arrivals.ts";
 import {
   TARGET_MARKERS, isTargetable, openTargets, MARKER_BY_KEY, GROUP_LABEL, FIRST_MARKERS, type MarkerKey, type PlanRow, type PlanKind, type Tone,
   latestOf, historyOf, weeklyHistory, pacesOf, impliedPace, adherenceOf, guideDraftPlan, roadOf, weekOf, daysToGo, nextCheckins, checkinInputs, landedLine,
@@ -324,6 +325,9 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   const togo = daysToGo(h, today);
   const targets = openTargets(h.targets).map(toTarget);
   const paces = useMemo(() => (person ? pacesOf(targets, h, person, today) : []), [person, h, today]);
+  // Only what your device shares (derive/arrivals): a goal set on a reading that has stopped arriving is kept, and says it is paused.
+  const arrivalList = person ? arrivalsOf(person.doc.weeks) : null;
+  const paused = (marker: string) => pausedWords(arrivalList, marker);
   const planRows = h.plan?.rows ?? [];
   const thisMonday = nextCheckins(h, today).thisMonday;
   const adherence = person && planRows.length ? adherenceOf(planRows, person, thisMonday, today) : [];
@@ -417,7 +421,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
           </div>
           {paces.map((p) => (
             <div class="grid grid-cols-3 items-center gap-x-3 gap-y-1 border-b border-border py-3 last:border-b-0 md:grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_repeat(2,minmax(0,.8fr))_minmax(0,1.5fr)_minmax(0,1.6fr)]" key={p.marker}>
-              <span class="col-span-3 flex flex-col md:col-span-1"><span class="text-[15px] text-text">{p.label}</span><span class="text-[12px] text-text-3">{MARKER_BY_KEY[p.marker]?.how ?? ""}{p.source ? ` · ${p.source}` : ""}</span></span>
+              <span class="col-span-3 flex flex-col md:col-span-1"><span class="text-[15px] text-text">{p.label}</span><span class="text-[12px] text-text-3">{MARKER_BY_KEY[p.marker]?.how ?? ""}{p.source ? ` · ${p.source}` : ""}</span>{paused(p.marker) ? <span class="text-[12px] text-text-2">{paused(p.marker)}</span> : null}</span>
               <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">I want</span><span class="font-mono text-[15px] font-semibold text-accent-text">{MARKER_BY_KEY[p.marker]?.standing ? <span class="mr-1 font-sans text-[12px] font-normal text-text-2">at least</span> : null}{p.targetText}</span></span>
               <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">Today</span><span class="font-mono text-[15px] font-semibold text-text">{p.nowText}{p.unit && p.now != null ? <span class="ml-1 font-mono text-[11px] font-medium text-text-3">{p.unit}</span> : null}</span></span>
               <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">On {dayMonth(h.starts_on)}</span><span class="font-mono text-[15px] font-semibold text-text-3">{p.startText}</span></span>
@@ -666,7 +670,9 @@ function FinalView({ deps, h, person, today, owner, nav, personId, hasOpen, onSt
 
 /** One more target on a running horizon: the marker, its reading now, the number, the pace it implies. */
 function AddTarget({ person, today, taken, weeks, preset, onAdd, onCancel }: { person: PersonData; today: string; taken: MarkerKey[]; weeks: number; /** The marker the form opens on: a draft from the Guide. */ preset?: MarkerKey; onAdd: (t: Omit<StartTarget, "cadence"> & { cadence: any }) => void; onCancel: () => void }) {
-  const free = TARGET_MARKERS.filter((m) => !taken.includes(m.key));
+  // Only what your device shares (derive/arrivals): a goal is offered only where it can be followed.
+  const off = leftOff(arrivalsOf(person.doc.weeks));
+  const free = TARGET_MARKERS.filter((m) => !taken.includes(m.key) && followable(off, m.key));
   const [key, setKey] = useState<MarkerKey>(preset && free.some((m) => m.key === preset) ? preset : free[0]?.key ?? "mets");
   const [value, setValue] = useState("");
   const def = MARKER_BY_KEY[key];
@@ -726,7 +732,12 @@ function Setup({ deps, person, today, personId, hasOthers, nav, prefill, draftMa
   const [title, setTitle] = useState(prefill?.title ?? "");
   const [date, setDate] = useState(prefill?.date ?? "");
   const [drafts, setDrafts] = useState<Record<string, Draft>>({ ...(prefill ? Object.fromEntries(prefill.markers.map((k) => [k, { ticked: true, value: "" }])) : {}), ...(draftMarker ? { [draftMarker]: { ticked: true, value: "" } } : {}) });
-  const [shown, setShown] = useState<MarkerKey[]>(() => { const base = prefill?.markers.length ? prefill.markers : FIRST_MARKERS; return draftMarker && !base.includes(draftMarker) ? [draftMarker, ...base] : base; });
+  // Only what your device shares (derive/arrivals): the goals offered are the ones that can be followed. A marker
+  // carried over from the last horizon stays on the form, since that goal was the person's own choice.
+  const off = leftOff(person ? arrivalsOf(person.doc.weeks) : null);
+  const OFFERED = TARGET_MARKERS.filter((m) => followable(off, m.key));
+  const notOffered = TARGET_MARKERS.filter((m) => !followable(off, m.key));
+  const [shown, setShown] = useState<MarkerKey[]>(() => { const base = prefill?.markers.length ? prefill.markers : FIRST_MARKERS.filter((k) => followable(off, k)); return draftMarker && !base.includes(draftMarker) ? [draftMarker, ...base] : base; });
   const [allShown, setAllShown] = useState(false);
   // "carry": the last horizon's plan, as it stands, until it is edited or a fresh draft is asked for
   const [planChoice, setPlanChoice] = useState<"coach" | "guide" | "carry">(prefill?.planRows.length ? "carry" : "coach");
@@ -749,8 +760,8 @@ function Setup({ deps, person, today, personId, hasOthers, nav, prefill, draftMa
 
   const draft = (k: MarkerKey): Draft => drafts[k] ?? { ticked: false, value: "" };
   const setDraft = (k: MarkerKey, patch: Partial<Draft>) => setDrafts((d) => ({ ...d, [k]: { ...draft(k), ...patch } }));
-  const rowsShown = allShown ? TARGET_MARKERS.map((m) => m.key) : shown;
-  const rest = TARGET_MARKERS.filter((m) => !rowsShown.includes(m.key));
+  const rowsShown = allShown ? [...shown.filter((k) => !OFFERED.some((m) => m.key === k)), ...OFFERED.map((m) => m.key)] : shown;
+  const rest = OFFERED.filter((m) => !rowsShown.includes(m.key));
 
   const targetsChosen = (): StartTarget[] => rowsShown.filter((k) => draft(k).ticked && draft(k).value !== "" && Number.isFinite(Number(draft(k).value))).map((k) => {
     const def = MARKER_BY_KEY[k]; const now = person ? latestOf(k, person, today) : null;
@@ -845,10 +856,11 @@ function Setup({ deps, person, today, personId, hasOthers, nav, prefill, draftMa
           <div class="flex flex-wrap items-center gap-2">
             <span class="text-[12px] text-text-3">Add another:</span>
             {rest.slice(0, 6).map((m) => <button type="button" key={m.key} onClick={() => setShown((s) => [...s, m.key])} class="rounded-full border border-border px-3 py-1 text-[12px] text-text-2 hover:border-accent-border">{m.label}</button>)}
-            {!allShown && <button type="button" onClick={() => setAllShown(true)} class="rounded-full border border-accent-border bg-accent-fill px-3 py-1 text-[12px] text-accent-text">Any of the {TARGET_MARKERS.length}</button>}
+            {!allShown && <button type="button" onClick={() => setAllShown(true)} class="rounded-full border border-accent-border bg-accent-fill px-3 py-1 text-[12px] text-accent-text">Any of the {OFFERED.length}</button>}
           </div>
         )}
-        {allShown && <Quiet>{Object.entries(GROUP_LABEL).filter(([g]) => TARGET_MARKERS.some((m) => m.group === g)).map(([g, l]) => `${l}: ${TARGET_MARKERS.filter((m) => m.group === g).map((m) => m.label).join(", ")}`).join(" · ")}</Quiet>}
+        {allShown && <Quiet>{Object.entries(GROUP_LABEL).filter(([g]) => OFFERED.some((m) => m.group === g)).map(([g, l]) => `${l}: ${OFFERED.filter((m) => m.group === g).map((m) => m.label).join(", ")}`).join(" · ")}</Quiet>}
+        {notOffered.length > 0 && <Quiet>Not offered: {notOffered.map((m) => m.label).join(", ")}. Nothing is sending {notOffered.length === 1 ? "it" : "them"} from your devices, so a goal on {notOffered.length === 1 ? "it" : "one"} could not be followed. Settings › Devices says why for each.</Quiet>}
       </Step>
 
       <Step n={3} title="The week that gets you there">

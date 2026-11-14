@@ -4,7 +4,9 @@
  * the plan as the server knows it and, on Free, the 14-day trial; Email and
  * notifications holds the weekly email's switch and each open horizon's
  * check-in switch; Appearance is light, dark or the device's own, one choice
- * for the whole site (src/lib/theme.ts).
+ * for the whole site (src/lib/theme.ts). Devices (14 Nov 2026) is the app's
+ * list of which readings arrive from the person's devices and which do not
+ * (derive/arrivals); it asks the server nothing more than the page already has.
  *
  * Profile, Sharing and Data are the page's own markup (the name's edit, the
  * access panel, the exports and the account's deletion are the controls the
@@ -24,6 +26,8 @@ import {
   type PlanInfo, type WeeklyState, ONE_MONDAY_EMAIL, WEEKLY_CARRIES, browserZone, planLine, planRows, trialOffered, weeklyNote,
 } from "../account.ts";
 import { fetchPlan, loadWeekly, saveWeekly, startWebTrial } from "../accountApi.ts";
+import { derived, person } from "../state.ts";
+import { arrivalsOf } from "../derive/arrivals.ts";
 
 /** The plan as the server knows it; null until it answers, and when it cannot. */
 export const planInfoSignal = signal<PlanInfo | null>(null);
@@ -46,7 +50,7 @@ export type SettingsHandle = {
   refreshPlan: () => Promise<PlanInfo | null>;
 };
 
-export function mountSettings(roots: { plan: HTMLElement; email: HTMLElement; appearance: HTMLElement }, deps: SettingsDeps): SettingsHandle {
+export function mountSettings(roots: { plan: HTMLElement; email: HTMLElement; appearance: HTMLElement; devices?: HTMLElement | null }, deps: SettingsDeps): SettingsHandle {
   themeSignal.value = getTheme();
   // the footer's control and another tab write the same choice: this one follows
   document.addEventListener(THEME_EVENT, () => { themeSignal.value = getTheme(); });
@@ -61,6 +65,7 @@ export function mountSettings(roots: { plan: HTMLElement; email: HTMLElement; ap
   render(<PlanBlock deps={deps} refreshPlan={refreshPlan} />, roots.plan);
   render(<EmailBlock deps={deps} refreshEmail={refreshEmail} />, roots.email);
   render(<AppearanceBlock />, roots.appearance);
+  if (roots.devices) render(<DevicesBlock />, roots.devices);
   return { refresh: async () => { await Promise.all([refreshPlan(), refreshEmail()]); }, refreshPlan };
 }
 
@@ -180,6 +185,53 @@ function EmailBlock({ deps, refreshEmail }: { deps: SettingsDeps; refreshEmail: 
         <div class="mt-0.5 text-[12.5px] leading-relaxed text-text-3">One letter a week. It is managed from any letter: each carries its own unsubscribe link.</div>
       </div>
       <Quiet>Each is off until you turn it on, and every email turns itself off in one click.</Quiet>
+    </div>
+  );
+}
+
+// ── Devices: only what your device shares ───────────────────────────────────
+
+/**
+ * What reaches Verve from the person's devices, as the app worked it out and
+ * sent it with its week row (derive/arrivals). The website shows the app's
+ * list and words; it decides nothing, and the one switch ("Show them
+ * anyway") is the app's. With no list, the page says where one comes from.
+ */
+function DevicesBlock() {
+  const d = derived.value;
+  const self = !!person.value?.self;
+  const list = d ? arrivalsOf(d.doc.weeks) : null;
+  if (!self) return <Quiet>This is the list of what your own devices send. Open your own page to see it.</Quiet>;
+  if (!list) {
+    return (
+      <div class="flex flex-col gap-3">
+        <Quiet>The app has not sent a list of what your devices share. It travels with the watch readings, under Back up watch readings in the app (Settings › Backup), which is off unless you switch it on. Until a list arrives, this site holds what you typed in and the reports you uploaded, and every row is shown as before.</Quiet>
+      </div>
+    );
+  }
+  const names = list.devices.map((x) => (x.phone ? (/iphone/i.test(x.name) ? "an iPhone" : "a phone") : x.name));
+  const from = names.length ? `${names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`}, through ${list.store}` : `Nothing has written a reading to ${list.store} in the last 30 days`;
+  return (
+    <div class="flex flex-col">
+      <Row first label="From the app" value={from} note={`The list as the app made it on ${new Date(list.day + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long" })}. Found by what each device wrote; there is nothing to pick or pair.`} />
+      <Row label={`Arrives · ${list.on.length}`} value={list.on.length ? list.on.map((r) => r.label).join(" · ") : "Nothing yet"} note="These fill your cards here and in the app." />
+      {list.off.length > 0 && (
+        <div class="grid gap-x-4 gap-y-1 border-t border-border py-3 sm:grid-cols-[132px_minmax(0,1fr)]">
+          <div class="text-[13px] text-text-3">Does not arrive · {list.off.length}</div>
+          <div class="min-w-0">
+            <ul class="m-0 flex list-none flex-col gap-1.5 p-0">
+              {list.off.map((r) => (
+                <li key={r.key} class="text-[13.5px] leading-snug text-text-2"><span class="font-medium text-text">{r.label}</span>{r.why ? <span class="text-text-3"> · {r.why}</span> : null}</li>
+              ))}
+            </ul>
+            <div class="mt-2 text-[12.5px] leading-relaxed text-text-3">
+              {list.show_all ? "Shown anyway, as rows with a dash: the switch is on in the app." : "Left off your cards, here and in the app. Each comes back by itself the day something sends it."}
+            </div>
+          </div>
+        </div>
+      )}
+      <Row label="Show them anyway" value={list.show_all ? "On" : "Off"} note="One switch for the app and this site. It is in the app, under Settings › Devices." />
+      <Row label="Always there" value="What you supply" note="The fitness test, blood pressure, weight, blood results and logged sessions do not wait for a device." />
     </div>
   );
 }

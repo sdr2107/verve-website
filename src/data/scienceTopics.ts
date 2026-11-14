@@ -213,7 +213,7 @@ export const TOPICS: Topic[] = [
   { slug: "resting-heart-rate", label: "Resting heart rate", sub: "Measured against your own normal, not a population range", subject: "sleep-heart", citations: RESTING_HR_SECTION },
   { slug: "heart-rate-recovery", label: "Heart rate recovery", sub: "One cited line, and why there is no second one", subject: "sleep-heart", citations: HEART_RATE_RECOVERY_SECTION },
   { slug: "night-hrv", label: "Night HRV", sub: "Your own baseline, one writer at a time — and what SDNN is not", subject: "sleep-heart", citations: NIGHT_HRV_SECTION },
-  { slug: "wearables", label: "What each wearable writes", sub: "Apple Watch, WHOOP, Oura, Garmin, Fitbit and Galaxy Watch: which readings reach Apple Health and Health Connect, and so Verve", subject: "sleep-heart", citations: [] },
+  { slug: "wearables", label: "What each wearable writes", sub: "Apple Watch, WHOOP, Oura, Garmin, Fitbit and Galaxy Watch: which readings reach Apple Health and Health Connect, and so Verve", subject: "sleep-heart", citations: [], subAnchors: ["only-what-arrives"] },
 
   // ── Body ───────────────────────────────────────────────────────────────
   { slug: "heart-health", label: "Heart health", sub: "ApoB · LDL-C · Lp(a) · hs-CRP, the two ratios and remnant cholesterol from one panel — screening bands, not treatment targets", subject: "body", citations: HEART_HEALTH_SECTION, subAnchors: ["lipid-ratios", "tg-hdl-ratio", "apob-apoa1-ratio", "remnant-cholesterol"] },

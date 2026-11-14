@@ -123,6 +123,8 @@ export const actions = {
   /** A press that changes the page is a step in the browser's history, so Back returns to the page before it. */
   step: () => {},
   goTab: (_t: string) => {},
+  /** Settings, at one of its sections ("devices"). */
+  goSettings: (_section: string) => {},
   searchNote: (_text: string) => {},
   tabCount: (_tab: string, _text: string, _tone?: string) => {},
   /** The Reports tab's writes: parse, view, del, send, rename, rmimport. */

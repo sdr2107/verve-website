@@ -228,7 +228,7 @@ export function browserZone(): string | null {
 
 export const SETTINGS_SECTIONS = [
   ["profile", "Profile"], ["plan", "Plan and billing"], ["email", "Email and notifications"],
-  ["sharing", "Sharing"], ["data", "Data"], ["appearance", "Appearance"],
+  ["sharing", "Sharing"], ["devices", "Devices"], ["data", "Data"], ["appearance", "Appearance"],
 ] as const;
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number][0];
 export const isSettingsSection = (s: string): s is SettingsSection => SETTINGS_SECTIONS.some(([k]) => k === s);
