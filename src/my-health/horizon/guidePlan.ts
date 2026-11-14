@@ -21,7 +21,7 @@ import { addDays, localDay, medianOf, mondayOf } from "../derive/format.ts";
 import { restingBPOf } from "../derive/markers.ts";
 import RULES from "../../data/plan-rules.ts";
 import {
-  dedupeSessions, horizonMondays, lastCompleteMonday, latestOf, numberWord, weekFigures,
+  dedupeSessions, horizonMondays, lastCompleteMonday, latestOf, numberWord, round, weekFigures,
   type HorizonLike, type Person, type PlanRow, type Target,
 } from "./derive.ts";
 
@@ -72,6 +72,8 @@ export function isGuideStored(x: unknown): x is GuideStored {
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const round5 = (v: number) => Math.round(v / 5) * 5;
+/** A figure to one decimal, rounded as the targets table rounds it (derive.ts fmtValue): toFixed alone can read a figure ending in 5 one tenth lower than the table does. */
+const one = (v: number) => round(v, 1).toFixed(1);
 const thousands = (n: number) => Math.round(n).toLocaleString("en-GB");
 const med = (xs: number[]) => (xs.length ? medianOf(xs)! : 0);
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -366,7 +368,7 @@ export function guidePlan(args: GuidePlanArgs): GuidePlanView {
   // the week, as six tiles
   const tiles: Tile[] = [
     { key: "aerobic", small: "Aerobic", big: plural(days, "session"), text: `${now.lo} to ${now.hi} minutes each. ${typeLine}` },
-    { key: "zone2", small: "Of which, easy", big: `${now.zone2} minutes in zone 2`, text: ["You can talk in full sentences.", now.zone2 > base.zone2 && base.zone2 > 0 ? `Up from ${base.zone2}.` : "", aims.zone2 != null && now.zone2 < aims.zone2 ? (zoneShort ? `It reaches ${last.zone2} by the date.` : `It reaches ${aims.zone2} in week ${zoneAt}.`) : ""].filter(Boolean).join(" ") },
+    { key: "zone2", small: "Of which, easy", big: `${now.zone2} minutes in zone 2`, text: ["You can talk in full sentences.", now.zone2 - base.zone2 >= RULES.progression.zone2StepMin / 2 && base.zone2 > 0 ? `Up from ${base.zone2}.` : "", aims.zone2 != null && now.zone2 < aims.zone2 ? (zoneShort ? `It reaches ${last.zone2} by the date.` : `It reaches ${aims.zone2} in week ${zoneAt}.`) : ""].filter(Boolean).join(" ") },
     now.harder > 0
       ? { key: "harder", small: "Of which, harder", big: `${now.harder} minutes ${harderName}`, text: ["Talking is broken into phrases.", climb.eases && now.harder > harderEnd ? `It steps down to ${harderEnd} by week ${harderFloorAt} and stays there.` : "", mode === "easy4" ? "" : ""].filter(Boolean).join(" ") }
       : { key: "harder", small: "Of which, harder", big: "No harder minutes", text: mode === "easy4" && !noHarder ? `They come back in week ${RULES.screening.harderAfterWeeks + 1}.` : self && mode === "easy" ? "They wait for a doctor's word." : "The plan is in zone 2 only." },
@@ -388,14 +390,14 @@ export function guidePlan(args: GuidePlanArgs): GuidePlanView {
   // why this, for this person
   const why: { head: string; text: string }[] = [];
   if (aims.mets == null) why.push({ head: "No fitness test is on file.", text: `The plan starts as for a fitness under ${RULES.tiers.secondFromMets} METs: volume before intensity. A test would place you.` });
-  else if (tier === 1) why.push({ head: `Your fitness is ${aims.mets.toFixed(1)} METs.`, text: `Under ${RULES.tiers.secondFromMets}, the rule is to build volume at about half of heart-rate reserve before adding intensity. If a test reads ${RULES.tiers.secondFromMets.toFixed(1)} or more, the harder minutes move to ${RULES.tiers.secondHrrLowPct} to ${RULES.tiers.secondHrrHighPct}%.` });
-  else why.push({ head: `Your fitness is ${aims.mets.toFixed(1)} METs.`, text: tier === 2 ? `From ${RULES.tiers.secondFromMets} to ${RULES.tiers.thirdFromMets}, the rule puts harder work at ${RULES.tiers.secondHrrLowPct} to ${RULES.tiers.secondHrrHighPct}% of heart-rate reserve. The plan keeps your harder minutes and adds none.` : `At ${RULES.tiers.thirdFromMets} or more the rule allows harder work than the plan writes. The plan keeps your harder minutes and adds none.` });
+  else if (tier === 1) why.push({ head: `Your fitness is ${one(aims.mets)} METs.`, text: `Under ${RULES.tiers.secondFromMets}, the rule is to build volume at about half of heart-rate reserve before adding intensity. If a test reads ${RULES.tiers.secondFromMets.toFixed(1)} or more, the harder minutes move to ${RULES.tiers.secondHrrLowPct} to ${RULES.tiers.secondHrrHighPct}%.` });
+  else why.push({ head: `Your fitness is ${one(aims.mets)} METs.`, text: tier === 2 ? `From ${RULES.tiers.secondFromMets} to ${RULES.tiers.thirdFromMets}, the rule puts harder work at ${RULES.tiers.secondHrrLowPct} to ${RULES.tiers.secondHrrHighPct}% of heart-rate reserve. The plan keeps your harder minutes and adds none.` : `At ${RULES.tiers.thirdFromMets} or more the rule allows harder work than the plan writes. The plan keeps your harder minutes and adds none.` });
   if (aims.zone2 != null && aims.zone2 > climb.start.zone2) why.push({
     head: base.zone2 > 0 && aims.zone2 / base.zone2 >= 1.8 ? `Your zone 2 target is ${timesWords(aims.zone2 / base.zone2)} a typical week's figure.` : `Your zone 2 target is ${aims.zone2} minutes.`,
     text: zoneShort ? `${cap(numberWord(RULES.progression.zone2StepMin))} minutes a week reaches ${last.zone2} by the date, short of your ${aims.zone2}. The plan does not take bigger steps.`
       : `${cap(numberWord(RULES.progression.zone2StepMin))} minutes a week reaches ${aims.zone2} in week ${zoneAt}${zoneAt != null && n - zoneAt >= 1 ? ` and leaves ${plural(n - zoneAt, "week")} to hold it before the date` : ""}.`,
   });
-  if (climb.eases) why.push({ head: `${cap(floorWords)} is kept.`, text: `A minute in zone 2 adds less to the dose than a harder one: about ${per.zone2.toFixed(1)} against ${per.harder.toFixed(1)} METs for you. So the plan keeps ${harderEnd} harder minutes in the week.` });
+  if (climb.eases) why.push({ head: `${cap(floorWords)} is kept.`, text: `A minute in zone 2 adds less to the dose than a harder one: about ${one(per.zone2)} against ${one(per.harder)} METs for you. So the plan keeps ${harderEnd} harder minutes in the week.` });
   else if (doseShort) why.push({ head: `${cap(floorWords)} is not reached by the date.`, text: `At ${numberWord(RULES.progression.zone2StepMin)} minutes a week the plan's last week comes to about ${thousands(last.dose)}. The plan does not take bigger steps.` });
   else if (base.dose != null && base.dose < aims.doseFloor) why.push({ head: `Your weeks are under ${floorWords}.`, text: `The plan adds zone 2 minutes until the week reaches it, in week ${weekOfStep((s) => s.dose >= aims.doseFloor - 2.5)}.` });
 
@@ -406,7 +408,7 @@ export function guidePlan(args: GuidePlanArgs): GuidePlanView {
       state: !started ? "future" : i < wk ? "past" : i === wk ? "now" : "future", repeats: i > 0 && prog.stepOfWeek[i] === prog.stepOfWeek[i - 1] && climb.steps[Math.min(n - 1, prog.stepOfWeek[i] + 1)].zone2 > s.zone2 };
   });
   const climbNote = per.from === "fitness"
-    ? `A zone 2 minute is counted at about ${per.zone2.toFixed(1)} METs for you and a harder minute at about ${per.harder.toFixed(1)}, from your fitness of ${aims.mets!.toFixed(1)} METs. The dose of a planned week is an estimate: the app measures the real one.`
+    ? `A zone 2 minute is counted at about ${one(per.zone2)} METs for you and a harder minute at about ${one(per.harder)}, from your fitness of ${one(aims.mets!)} METs. The dose of a planned week is an estimate: the app measures the real one.`
     : "No fitness test is on file, so a planned minute is counted by the guideline's own equivalence. The dose of a planned week is an estimate: the app measures the real one.";
 
   const moves = [

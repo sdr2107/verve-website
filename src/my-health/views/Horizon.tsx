@@ -399,7 +399,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
         <div class="flex max-w-[680px] flex-col gap-2">
           <Eyebrow>Horizon · set {dayMonthYear(h.starts_on)} · week {week} of {weeks}{closed ? " · stopped" : ""}</Eyebrow>
           <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-[-0.01em] text-text">{h.title}, {longDate(h.ends_on)}</h1>
-          <p class="m-0 text-[15px] leading-relaxed text-text-2">A horizon is a date, the markers you want different by then, and the week that gets you there. The Guide checks the pace every Monday and reads the month at its end. Your coach sees all of it and writes the plan.</p>
+          <p class="m-0 text-[15px] leading-relaxed text-text-2">A horizon is a date, the markers you want different by then, and the week that gets you there. The Guide checks the pace every Monday and reads the month at its end.{h.plan?.author === "coach" ? (owner ? " Your coach sees all of it and writes the plan." : " You see all of it and write the plan.") : stored ? (owner ? " The Guide wrote the plan from your targets. A coach you share your page with sees all of it." : " The Guide wrote the plan from their targets.") : owner ? " A coach you share your page with sees all of it and can write the plan." : ""}</p>
           <div class="mt-1">{nav}</div>
         </div>
         <div class="flex min-w-[180px] flex-col items-end gap-1 rounded-[16px] border border-border-strong bg-card px-5 py-4">
@@ -423,7 +423,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
             <div class="grid grid-cols-3 items-center gap-x-3 gap-y-1 border-b border-border py-3 last:border-b-0 md:grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_repeat(2,minmax(0,.8fr))_minmax(0,1.5fr)_minmax(0,1.6fr)]" key={p.marker}>
               <span class="col-span-3 flex flex-col md:col-span-1"><span class="text-[15px] text-text">{p.label}</span><span class="text-[12px] text-text-3">{MARKER_BY_KEY[p.marker]?.how ?? ""}{p.source ? ` · ${p.source}` : ""}</span>{paused(p.marker) ? <span class="text-[12px] text-text-2">{paused(p.marker)}</span> : null}</span>
               <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">I want</span><span class="font-mono text-[15px] font-semibold text-accent-text">{MARKER_BY_KEY[p.marker]?.standing ? <span class="mr-1 font-sans text-[12px] font-normal text-text-2">at least</span> : null}{p.targetText}</span></span>
-              <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">Today</span><span class="font-mono text-[15px] font-semibold text-text">{p.nowText}{p.unit && p.now != null ? <span class="ml-1 font-mono text-[11px] font-medium text-text-3">{p.unit}</span> : null}</span></span>
+              <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">Today</span><span class="font-mono text-[15px] font-semibold text-text">{p.nowText}{p.unit && p.now != null ? <span class="ml-1 whitespace-nowrap font-mono text-[11px] font-medium text-text-3">{p.unit}</span> : null}</span></span>
               <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">On {dayMonth(h.starts_on)}</span><span class="font-mono text-[15px] font-semibold text-text-3">{p.startText}</span></span>
               <span class="col-span-3 md:col-span-1"><Track progress={p.progress} elapsed={p.elapsed} tone={p.tone} /></span>
               <span class={`col-span-3 flex items-center justify-between text-[13px] font-medium md:col-span-1 ${TONE_TEXT[p.tone]}`}>
@@ -462,10 +462,10 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
         ) : <>
         {guide && owner && !closed && !editingPlan && h.plan?.author !== "coach" && (locked ? <GuideLocked access={access!} /> : <GuideOffer {...guide} />)}
         <div class="flex flex-wrap items-baseline justify-between gap-3">
-          <H2>The plan{authorWords ? ` · ${authorWords}` : ""}{h.plan ? `, updated ${dayMonthLong(h.plan.updated_at.slice(0, 10))}` : ""}</H2>
+          <H2>The plan{planRows.length && authorWords ? ` · ${authorWords}` : ""}{planRows.length && h.plan ? `, updated ${dayMonthLong(h.plan.updated_at.slice(0, 10))}` : ""}</H2>
           <div class="flex gap-3 text-[13px] font-semibold">
             {planRows.length > 0 && !editingPlan && !closed && <button type="button" onClick={() => setEditingPlan(true)} class="text-text-2 hover:text-text">{owner ? "Edit" : "Edit the plan"}</button>}
-            <button type="button" onClick={() => deps.goTab("messages")} class="text-accent-text">Ask about it</button>
+            <button type="button" onClick={() => deps.goTab("messages")} class="text-accent-text">{owner ? "Ask my coach in Messages" : "Message them"}</button>
           </div>
         </div>
         {editingPlan

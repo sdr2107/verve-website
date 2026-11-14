@@ -553,7 +553,8 @@ export function impliedPace(def: MarkerDef, now: Reading | null, target: number,
       : `${lead} Your number is ${where} ${saidName(def)}'s usual swing from ${plainValue(def, now!.value)}, which is ${s!.range}. A report at your number will not be called reached.`;
   }
   if (!now) return "No reading yet; the first one becomes the start.";
-  const needed = target - now.value;
+  // the gap between the two figures as the row shows them: the reading is rounded first, as it is on the page
+  const needed = target - round(now.value, def.decimals);
   if (Math.abs(round(needed, def.decimals)) === 0) return "Already there; the horizon keeps it in view.";
   const perWeek = needed / Math.max(1, weeks);
   const sixAgo = valueNear(history, addDays(today, -182));

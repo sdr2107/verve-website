@@ -16,7 +16,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PersonData } from "../derive/person.ts";
-import { dayMonthLong, type Target } from "../horizon/derive.ts";
+import { dayMonthLong, weekdayDayMonth, type Target } from "../horizon/derive.ts";
 import {
   guidePlan, storeOf, rowsWith, applyOption, screenOutcome, SCREEN_QUESTIONS, SCREEN_WORDS, STRENGTH, RULE_LINES, LAYOUT_WORDS,
   type GuidePlanView, type GuideStored, type GuideChoices, type Layout, type ScreenAnswers,
@@ -81,7 +81,7 @@ function Week({ v }: { v: GuidePlanView }) {
   return (
     <>
       <div class="flex flex-col gap-2">
-        <Kicker>Your week, this week</Kicker>
+        <Kicker>{v.started ? "Your week, this week" : `Your week, from ${weekdayDayMonth(v.firstMonday)}`}</Kicker>
         <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {v.tiles.map((t) => (
             <div class="flex min-w-0 flex-col gap-1 rounded-[12px] border border-border bg-canvas p-3" key={t.key}>
