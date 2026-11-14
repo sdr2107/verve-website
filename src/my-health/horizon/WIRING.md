@@ -8,6 +8,20 @@ Three new files carry the feature; the page needs a pane, a mount, a tab and its
 | `src/my-health/horizon/api.ts` | The rows (`horizons`, `horizon_targets`, `horizon_plans`, `horizon_checkins`) and the edge function `horizon` (start, check-in) with the error mapping. |
 | `src/my-health/views/Horizon.tsx` | The Preact view: board 14 (the horizon in view) and board 15 (the set-up), one mount. |
 
+## The Guide's plan (13 November 2026)
+
+| File | What it is |
+|---|---|
+| `src/data/plan-rules.ts` | Every rule the plan is worked out from, with its source and how well it was checked. |
+| `src/my-health/horizon/guidePlan.ts` | The plan's arithmetic and its fixed sentences: the three questions, the climb, where a person is on it, the changes on offer, the chat's inputs. Pure; `tests/guide-plan.test.mjs`. The horizon function copies it. |
+| `src/my-health/horizon/access.ts` | What the account may do: Pro, or the one free week. Pure. |
+| `src/my-health/views/GuidePlan.tsx` | The offer (three questions, then the draft), the plan in use, the chat. Mounted inside Horizon's plan card. |
+
+The plan is kept in `horizon_plans.guide`, the answers in `horizon_screens` (the person's alone), the chat in `horizon_asks`
+(METTracker `supabase/migrations/20261114_horizon_guide_plan.sql`). Until that file is run the page shows the plan card as it
+was: `guidePlanReady()` asks once whether the column is there. The chat is the function's `ask` action. No model writes the
+plan; the model speaks only in the chat, from the figures `askInputs()` gives it.
+
 ## The pane
 
 In `src/pages/my-health.astro`, beside the other panes, present from the first byte:

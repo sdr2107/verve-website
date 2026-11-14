@@ -22,6 +22,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../../lib/supabase.ts";
 import type { Cadence, CheckinInputs, Landed, MarkerKey, PlanRow } from "./derive.ts";
 import { mapError, isMissingRelation, HorizonOffError, type ApiError } from "./errors.ts";
+import type { GuideStored, ScreenAnswers } from "./guidePlan.ts";
+import { parseAccess, type HorizonAccess } from "./access.ts";
 export { mapError, ERROR_WORDS, isMissingRelation, HorizonOffError, type ApiError } from "./errors.ts";
 
 export type HorizonKind = "date" | "months";
@@ -41,7 +43,9 @@ export type TargetRow = {
   id: string; horizon_id: string; user_id: string; marker: MarkerKey; label: string; unit: string | null;
   start_value: number | null; start_on: string | null; target_value: number; cadence: Cadence | null; created_at: string;
 };
-export type PlanRecord = { horizon_id: string; rows: PlanRow[]; author: PlanAuthor | null; updated_by: string | null; updated_at: string };
+export type PlanRecord = { horizon_id: string; rows: PlanRow[]; author: PlanAuthor | null; updated_by: string | null; updated_at: string;
+  /** The Guide's plan in use (./guidePlan.ts GuideStored): what it started from and the choices made. Absent before 20261114_horizon_guide_plan.sql, and null when the plan is the coach's or the person's own lines. */
+  guide?: unknown };
 /** What the function stored beside the text: the inputs it wrote from, and where and when they were read. `as_of` is set when a Monday check-in was written before the app had synced the week (the synced_at the figures are from, or null when there was no row). */
 export type CheckinPace = CheckinInputs & { as_of?: string | null; tz?: string; today?: string; computed?: "server" | "browser"; dropped?: number;
   /** Blood readings that arrived since the last check-in (a report was filed): the page says so above the check-in. */
@@ -144,4 +148,70 @@ export async function addTarget(sb: SupabaseClient, t: Omit<TargetRow, "id" | "c
 export async function removeTarget(sb: SupabaseClient, id: string): Promise<string | null> {
   const { error } = await sb.from("horizon_targets").delete().eq("id", id);
   return error ? error.message : null;
+}
+
+// ── the Guide's plan: the plan in use, the three questions, the chat (canvas "Verve, the Guide's plan", 13 Nov 2026) ──
+
+/**
+ * Whether the Guide's plan can be kept for this project: the column horizon_plans.guide is there
+ * (METTracker/supabase/migrations/20261114_horizon_guide_plan.sql). Asked once; a network failure is not an answer.
+ */
+let guideReady: boolean | null = null;
+export async function guidePlanReady(sb: SupabaseClient): Promise<boolean> {
+  if (guideReady != null) return guideReady;
+  try {
+    const { error } = await sb.from("horizon_plans").select("guide").limit(1);
+    if (!error) return (guideReady = true);
+    if (String(error.code ?? "") === "42703" || /guide/i.test(String(error.message ?? "")) || isMissingRelation(error)) return (guideReady = false);
+    return false;
+  } catch { return false; }
+}
+
+/** The plan's lines for the week and the Guide's plan they come from; `guide` null leaves the Guide's plan (the lines stay, the author becomes the person). */
+export async function saveGuidePlan(sb: SupabaseClient, horizonId: string, rows: PlanRow[], guide: GuideStored | null, updatedBy: string): Promise<string | null> {
+  const { error } = await sb.from("horizon_plans").upsert({ horizon_id: horizonId, rows, author: guide ? "guide" : "user", guide, updated_by: updatedBy, updated_at: new Date().toISOString() }, { onConflict: "horizon_id" });
+  return error ? error.message : null;
+}
+
+/** The three answers that come before the first plan. The person's alone: no share reads this table. */
+export type ScreenRow = ScreenAnswers & { horizon_id: string; user_id: string; answered_at: string };
+export async function loadScreen(sb: SupabaseClient, horizonId: string): Promise<ScreenRow | null> {
+  const { data, error } = await sb.from("horizon_screens").select("*").eq("horizon_id", horizonId).maybeSingle();
+  return error || !data ? null : (data as ScreenRow);
+}
+export async function saveScreen(sb: SupabaseClient, horizonId: string, userId: string, a: ScreenAnswers): Promise<string | null> {
+  const { error } = await sb.from("horizon_screens").upsert({ horizon_id: horizonId, user_id: userId, active: a.active, disease: a.disease, symptoms: a.symptoms, answered_at: new Date().toISOString() }, { onConflict: "horizon_id" });
+  return error ? error.message : null;
+}
+export async function removeScreen(sb: SupabaseClient, horizonId: string): Promise<string | null> {
+  const { error } = await sb.from("horizon_screens").delete().eq("horizon_id", horizonId);
+  return error ? error.message : null;
+}
+
+/** A question about the plan and the Guide's answer, as kept for the person to read again. */
+export type AskRow = { id: string; horizon_id: string; question: string; answer: string; rule: string | null; option: string | null; created_at: string };
+/** The last thirty, oldest first. An empty list when the table is not there yet. */
+export async function listAsks(sb: SupabaseClient, horizonId: string): Promise<AskRow[]> {
+  const { data, error } = await sb.from("horizon_asks").select("id, horizon_id, question, answer, rule, option, created_at").eq("horizon_id", horizonId).order("created_at", { ascending: false }).limit(30);
+  return error || !data ? [] : (data as AskRow[]).reverse();
+}
+/** The person clears their questions; the week's count is kept elsewhere and does not come back with them. */
+export async function clearAsks(sb: SupabaseClient, horizonId: string): Promise<string | null> {
+  const { error } = await sb.from("horizon_asks").delete().eq("horizon_id", horizonId);
+  return error ? error.message : null;
+}
+export type AskAnswer = { id: string; answer: string; rule: string | null; option: string | null; created_at: string;
+  /** Questions left: this week's on Pro, the free one on Free. Null when the function did not say. */
+  left: number | null };
+export async function askGuide(sb: SupabaseClient, payload: { horizon_id: string; question: string; timezone?: string | null }): Promise<Result<AskAnswer>> {
+  const { ok, status, out } = await callHorizon(sb, { action: "ask", ...payload });
+  return ok && typeof out?.answer === "string"
+    ? { ok: true, data: { id: String(out.id ?? ""), answer: out.answer, rule: out.rule ? String(out.rule) : null, option: out.option ? String(out.option) : null, created_at: String(out.created_at ?? new Date().toISOString()), left: Number.isFinite(Number(out.left)) && out.left != null ? Number(out.left) : null } }
+    : fail(status, out);
+}
+
+export { parseAccess, type HorizonAccess } from "./access.ts";
+export async function fetchAccess(sb: SupabaseClient): Promise<HorizonAccess | null> {
+  const { ok, out } = await callHorizon(sb, { action: "plan" });
+  return ok ? parseAccess(out) : null;
 }

@@ -17,6 +17,15 @@
  * Pace is arithmetic on the person's own readings; nothing here recommends
  * a number. The plan is intent for a week, not a session for each day; what
  * the week did comes from the sessions and the nights, never a tick box.
+ *
+ * The Guide's plan (canvas "Verve, the Guide's plan", 13 Nov 2026): for a
+ * person with no coach the Guide writes the week and its weekly step from
+ * their targets, after three questions, and a chat answers questions about
+ * it (./GuidePlan.tsx, ../horizon/guidePlan.ts). That is guidance on
+ * exercise: the one place the Guide advises. The check-ins still describe.
+ * A Free account has one week of Horizon with the plan and one question;
+ * after that the plan, the check-ins and the chat are Pro (the function
+ * decides; ../horizon/api.ts HorizonAccess).
  */
 import { render } from "preact";
 import { useEffect, useMemo, useState } from "preact/hooks";
@@ -33,8 +42,11 @@ import {
 } from "../horizon/derive.ts";
 import {
   listHorizons, startHorizon, requestCheckin, grantConsent, savePlan, updateHorizon, stopHorizon, addTarget, removeTarget, ERROR_WORDS,
-  type HorizonFull, type PlanAuthor, type StartTarget, type ApiError,
+  fetchAccess, guidePlanReady,
+  type HorizonFull, type PlanAuthor, type StartTarget, type ApiError, type HorizonAccess,
 } from "../horizon/api.ts";
+import { isGuideStored, type GuideStored } from "../horizon/guidePlan.ts";
+import { GuidePlanCard, GuideOffer, GuideLocked } from "./GuidePlan.tsx";
 
 export type HorizonDeps = {
   supabase: SupabaseClient;
@@ -84,7 +96,7 @@ function ProCard({ goTab }: { goTab: (t: string) => void }) {
     <Card>
       <Eyebrow>Pro</Eyebrow>
       <div class="text-[18px] font-semibold text-text">Horizon is part of Pro on the website.</div>
-      <p class="m-0 text-[15px] leading-relaxed text-text-2">A horizon is a date, the markers you want different by then, and the week that gets you there. Free keeps the Overview, Body, Reports and the Guide's first read. A horizon can be stopped any time; the readings stay.</p>
+      <p class="m-0 text-[15px] leading-relaxed text-text-2">A horizon is a date, the markers you want different by then, and the week that gets you there. Free has one week of it, on the first horizon you set, and keeps the Overview, Body, Reports and the Guide's first read. A horizon can be stopped any time; the readings stay.</p>
       <div class="flex flex-wrap gap-2">
         <a href="/plans" class="inline-flex min-h-10 items-center rounded-[10px] bg-accent px-4 text-[13px] font-semibold text-canvas">See the plans</a>
         <button type="button" onClick={() => goTab("overview")} class="min-h-10 px-3 text-[13px] font-semibold text-text-2 hover:text-text">Not now</button>
@@ -111,7 +123,7 @@ function ConsentBox({ onAgree, busy }: { onAgree: () => void; busy: boolean }) {
     <div class="flex flex-col gap-3 rounded-[10px] border border-accent-border bg-accent-fill p-4">
       <label class="flex items-start gap-3 text-[13px] leading-relaxed text-text-2">
         <input type="checkbox" checked={ticked} onChange={(e) => setTicked((e.currentTarget as HTMLInputElement).checked)} class="mt-1" />
-        <span>The Guide's writer receives the figures on this page: the targets, where each stands, the week's counts and the plan's rows. It receives no name, no note and no message. Its words come back here and, if you chose it, to your coach.</span>
+        <span>The Guide's writer receives the figures on this page: the targets, where each stands, the week's counts and the plan's rows. It receives no name, no note and no message. Its words come back here and, if you chose it, to your coach. A question you ask about the plan is sent as you typed it.</span>
       </label>
       <div><Button primary disabled={!ticked || busy} onClick={onAgree}>{busy ? "Recording…" : "Agree and continue"}</Button></div>
     </div>
@@ -137,11 +149,14 @@ const doneOf = (list: HorizonFull[]) => list.filter(isDone).sort((a, b) => b.end
 
 // ── the plan's rows, editable ──
 
-const PLAN_KINDS: { kind: PlanKind; label: string; n: "count" | "minutes" | "time" | null; words: (n: number) => string }[] = [
+const PLAN_KINDS: { kind: PlanKind; label: string; n: "count" | "minutes" | "time" | "steps" | null; words: (n: number) => string }[] = [
   { kind: "sessions_week", label: "Sessions a week", n: "count", words: (n) => `${cap(numberWord(n))} session${n === 1 ? "" : "s"} a week` },
   { kind: "long_session", label: "One long session", n: "minutes", words: (n) => `One session of ${Math.floor(n / 60)} h ${String(n % 60).padStart(2, "0")} or more` },
   { kind: "strength_week", label: "Strength a week", n: "count", words: (n) => `Strength ${n === 1 ? "once" : n === 2 ? "twice" : `${numberWord(n)} times`} a week` },
   { kind: "zone2_most", label: "Most minutes in zone 2", n: null, words: () => "Most minutes in zone 2" },
+  { kind: "zone2_min", label: "Minutes in zone 2 a week", n: "minutes", words: (n) => `${n} minutes in zone 2` },
+  { kind: "harder_min", label: "Harder minutes a week", n: "minutes", words: (n) => `${n} harder minutes` },
+  { kind: "steps_day", label: "Steps a day", n: "steps", words: (n) => `${Math.round(n).toLocaleString("en-GB")} steps a day` },
   { kind: "bedtime_by", label: "In bed by", n: "time", words: (n) => `In bed by ${clockOf(n)}` },
   { kind: "weigh_in", label: "Weigh in on Monday mornings", n: null, words: () => "Weigh in on Monday mornings" },
   { kind: "custom", label: "Your own line", n: null, words: () => "" },
@@ -153,21 +168,22 @@ function PlanEditor({ rows: initial, onSave, onCancel, busy }: { rows: PlanRow[]
   const set = (i: number, patch: Partial<PlanRow>) => setRows((rs) => rs.map((r, j) => {
     if (j !== i) return r;
     const next = { ...r, ...patch };
-    const def = PLAN_KINDS.find((k) => k.kind === next.kind)!;
+    const def = PLAN_KINDS.find((k) => k.kind === next.kind) ?? PLAN_KINDS[PLAN_KINDS.length - 1];
     if (next.kind !== "custom") next.label = def.words(next.n ?? 0);
     return next;
   }));
   return (
     <div class="flex flex-col gap-3">
       {rows.map((r, i) => {
-        const def = PLAN_KINDS.find((k) => k.kind === r.kind)!;
+        const def = PLAN_KINDS.find((k) => k.kind === r.kind) ?? PLAN_KINDS[PLAN_KINDS.length - 1];
         return (
           <div class="flex flex-wrap items-center gap-2" key={i}>
-            <select value={r.kind} onChange={(e) => { const kind = (e.currentTarget as HTMLSelectElement).value as PlanKind; const d = PLAN_KINDS.find((k) => k.kind === kind)!; set(i, { kind, n: d.n === "count" ? 3 : d.n === "minutes" ? 90 : d.n === "time" ? 1410 : null, label: kind === "custom" ? "" : d.words(d.n === "count" ? 3 : d.n === "minutes" ? 90 : d.n === "time" ? 1410 : 0) }); }} class={`${inputClass} text-[13px]`}>
+            <select value={r.kind} onChange={(e) => { const kind = (e.currentTarget as HTMLSelectElement).value as PlanKind; const d = PLAN_KINDS.find((k) => k.kind === kind)!; const first = d.n === "count" ? 3 : d.n === "minutes" ? 90 : d.n === "time" ? 1410 : d.n === "steps" ? 7000 : null; set(i, { kind, n: first, label: kind === "custom" ? "" : d.words(first ?? 0) }); }} class={`${inputClass} text-[13px]`}>
               {PLAN_KINDS.map((k) => <option value={k.kind}>{k.label}</option>)}
             </select>
             {def.n === "count" && <input type="number" min={1} max={14} value={r.n ?? 1} onInput={(e) => set(i, { n: Number((e.currentTarget as HTMLInputElement).value) || 1 })} class={`${inputClass} w-20 font-mono`} aria-label="How many" />}
             {def.n === "minutes" && <input type="number" min={15} max={600} step={5} value={r.n ?? 90} onInput={(e) => set(i, { n: Number((e.currentTarget as HTMLInputElement).value) || 90 })} class={`${inputClass} w-24 font-mono`} aria-label="Minutes" />}
+            {def.n === "steps" && <input type="number" min={1000} max={40000} step={100} value={r.n ?? 7000} onInput={(e) => set(i, { n: Number((e.currentTarget as HTMLInputElement).value) || 7000 })} class={`${inputClass} w-28 font-mono`} aria-label="Steps a day" />}
             {def.n === "time" && <input type="time" value={clockOf(r.n ?? 1410)} onInput={(e) => { const [h, m] = (e.currentTarget as HTMLInputElement).value.split(":").map(Number); set(i, { n: (h || 0) * 60 + (m || 0) }); }} class={`${inputClass} font-mono`} aria-label="Bedtime" />}
             {r.kind === "custom" && <input type="text" value={r.label} maxLength={80} placeholder="Your own line" onInput={(e) => set(i, { label: (e.currentTarget as HTMLInputElement).value })} class={`${inputClass} flex-1`} />}
             {r.kind !== "custom" && <span class="text-[13px] text-text-2">{r.label}</span>}
@@ -201,6 +217,9 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
   const [notice, setNotice] = useState("");
   const [consent, setConsent] = useState<null | (() => void)>(null);
   const [busy, setBusy] = useState("");
+  // what the account may do (Pro, or the one free week), and whether the Guide's plan can be kept for this project
+  const [access, setAccess] = useState<HorizonAccess | null>(null);
+  const [guideOn, setGuideOn] = useState(false);
 
   const userId = async () => deps.userId?.() ?? (await deps.supabase.auth.getSession()).data.session?.user.id ?? null;
 
@@ -219,6 +238,12 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
     }
   }
   useEffect(() => { void load(); }, [personId, _tick]);
+  useEffect(() => {
+    let on = true;
+    void fetchAccess(deps.supabase).then((a) => { if (on) setAccess(a); });
+    void guidePlanReady(deps.supabase).then((ok) => { if (on) setGuideOn(ok); });
+    return () => { on = false; };
+  }, [personId, _tick]);
 
   /** What a failed write means for the page; returns true when it was handled by a card rather than a line. */
   function onApiError(error: ApiError, retry: () => void): boolean {
@@ -272,15 +297,15 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
       {loadError && <Quiet>{loadError}</Quiet>}
       {consent && <ConsentBox onAgree={() => void agreeConsent()} busy={busy === "consent"} />}
       {showSetup
-        ? <Setup deps={deps} person={person} today={today} personId={personId} hasOthers={open.length > 0 || done.length > 0} nav={nav} draftMarker={draftMarker}
+        ? <Setup deps={deps} person={person} today={today} personId={personId} hasOthers={open.length > 0 || done.length > 0} nav={nav} draftMarker={draftMarker} access={access} guideOn={guideOn}
             prefill={!open.length && done[0] ? prefillOf(done[0], person, today) : undefined} key={!open.length && done[0] ? `next-${done[0].id}` : "new"}
             onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); }}
             onError={onApiError} onCancel={() => { route.value = ""; history.replaceState(null, "", "#horizon"); }} />
         : current && isDone(current)
-          ? <FinalView deps={deps} h={current} person={person} today={today} owner={owner} nav={nav} personId={personId} hasOpen={open.length > 0}
+          ? <FinalView deps={deps} h={current} person={person} today={today} owner={owner} nav={nav} personId={personId} hasOpen={open.length > 0} access={access} guideOn={guideOn}
               onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); }} onError={onApiError} />
         : current
-          ? <View deps={deps} h={current} person={person} today={today} owner={owner} nav={nav} busy={busy} setBusy={setBusy} onError={onApiError} setNotice={setNotice} reload={load} userId={userId} />
+          ? <View deps={deps} h={current} person={person} today={today} owner={owner} nav={nav} busy={busy} setBusy={setBusy} onError={onApiError} setNotice={setNotice} reload={load} userId={userId} access={access} guideOn={guideOn} />
           : <Card>{nav}<div class="text-[18px] font-semibold text-text">No horizon set.</div><Quiet>{owner ? "A horizon is a date, the markers you want different by then, and the week that gets you there." : "Nothing to see here yet: this person has not set a horizon."}</Quiet></Card>}
     </div>
   );
@@ -288,9 +313,10 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
 
 // ── board 14: the horizon in view ──
 
-function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setNotice, reload, userId }: {
+function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setNotice, reload, userId, access, guideOn }: {
   deps: HorizonDeps; h: HorizonFull; person: PersonData | null; today: string; owner: boolean; nav: any; busy: string; setBusy: (s: string) => void;
   onError: (e: ApiError, retry: () => void) => boolean; setNotice: (s: string) => void; reload: () => Promise<void>; userId: () => Promise<string | null>;
+  access: HorizonAccess | null; guideOn: boolean;
 }) {
   const [editingPlan, setEditingPlan] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -315,6 +341,11 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
     ? (c.pace.as_of ? `Figures as of ${new Date(c.pace.as_of).toLocaleDateString("en-GB", { weekday: "long" })}, before the week's last sync.` : "Written before the app had synced the week.")
     : null;
   const authorWords = h.plan?.author === "coach" ? "written by your coach" : h.plan?.author === "guide" ? "drafted by the Guide" : h.plan ? "written by you" : "";
+  // the Guide's plan in use: the Guide is its author and what it started from is on file
+  const stored: GuideStored | null = guideOn && h.plan?.author === "guide" && isGuideStored(h.plan?.guide) ? (h.plan!.guide as GuideStored) : null;
+  // Free, and the one free week is over: the plan and its chat are Pro. A coach never meets this.
+  const locked = owner && !!access && !access.pro && !access.free.running;
+  const guide = guideOn && person ? { sb: deps.supabase, h, person, today, targets, owner, closed, access, userId, reload, setNotice } : null;
   // a line the Guide wrote, carried here: a draft until the person sets its number, and gone when they leave it
   const gd = guideDraft.value;
   const draftDef = gd && owner && !closed && gd.personId === h.person_id && isTargetable(gd.marker) && !targets.some((t) => t.marker === gd.marker) ? MARKER_BY_KEY[gd.marker] ?? null : null;
@@ -420,6 +451,12 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
       </Card>
 
       <Card id="horizon-plan">
+        {guide && stored && !editingPlan ? (locked
+          ? <GuideLocked access={access!} />
+          : <GuidePlanCard {...guide} stored={stored} onCoachEdit={() => setEditingPlan(true)}
+              onOwnLines={() => { if (confirm("Leave the Guide's plan? This week's lines stay as your own, and the weekly step stops.")) void savePlanRows(planRows, "user"); }} />
+        ) : <>
+        {guide && owner && !closed && !editingPlan && h.plan?.author !== "coach" && (locked ? <GuideLocked access={access!} /> : <GuideOffer {...guide} />)}
         <div class="flex flex-wrap items-baseline justify-between gap-3">
           <H2>The plan{authorWords ? ` · ${authorWords}` : ""}{h.plan ? `, updated ${dayMonthLong(h.plan.updated_at.slice(0, 10))}` : ""}</H2>
           <div class="flex gap-3 text-[13px] font-semibold">
@@ -441,9 +478,10 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
             : <div class="flex flex-wrap items-center gap-3">
                 <span class="text-[15px] text-text-2">No plan yet.</span>
                 {!closed && <Button onClick={() => setEditingPlan(true)}>{owner ? "Write the plan" : "Write the plan for them"}</Button>}
-                {owner && !closed && person && <Button onClick={() => void savePlanRows(guideDraftPlan(person, today), "guide")} disabled={busy === "plan"}>Let the Guide draft one</Button>}
+                {owner && !closed && person && !guideOn && <Button onClick={() => void savePlanRows(guideDraftPlan(person, today), "guide")} disabled={busy === "plan"}>Let the Guide draft one</Button>}
               </div>}
-        <Quiet>Without a coach, the Guide drafts the plan from your last eight weeks and you edit it. The plan is intent for a week, not a session for each day; what you did comes from your sessions, never from a tick box.</Quiet>
+        <Quiet>{guideOn ? "Without a coach, the Guide writes the plan from your targets and you change it." : "Without a coach, the Guide drafts the plan from your last eight weeks and you edit it."} The plan is intent for a week, not a session for each day; what you did comes from your sessions, never from a tick box.</Quiet>
+        </>}
       </Card>
 
       <Card id="horizon-checkin">
@@ -512,7 +550,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
 
       <div class="flex flex-wrap items-center gap-3 rounded-[16px] border border-accent-border bg-accent-fill px-5 py-4 text-[13px] text-text-2">
         <span class="font-mono text-[11px] font-medium text-accent-text">Pro</span>
-        <span>Horizon is part of Pro on the website. Free keeps the Overview, Body, Reports and the Guide's first read. A horizon can be stopped any time; the readings stay.</span>
+        <span>Horizon is part of Pro on the website. Free has one week of it, with the plan and one question about the plan, and keeps the Overview, Body, Reports and the Guide's first read. A horizon can be stopped any time; the readings stay.</span>
       </div>
     </>
   );
@@ -544,9 +582,10 @@ function prefillOf(h: HorizonFull, person: PersonData | null, today: string): Pr
   };
 }
 
-function FinalView({ deps, h, person, today, owner, nav, personId, hasOpen, onStarted, onError }: {
+function FinalView({ deps, h, person, today, owner, nav, personId, hasOpen, onStarted, onError, access, guideOn }: {
   deps: HorizonDeps; h: HorizonFull; person: PersonData | null; today: string; owner: boolean; nav: any; personId: string; hasOpen: boolean;
   onStarted: (id: string) => Promise<void>; onError: (e: ApiError, retry: () => void) => boolean;
+  access: HorizonAccess | null; guideOn: boolean;
 }) {
   // with another horizon already running, the next one waits behind a button
   const [later, setLater] = useState(hasOpen);
@@ -620,7 +659,7 @@ function FinalView({ deps, h, person, today, owner, nav, personId, hasOpen, onSt
 
       {owner && prefill && (later
         ? <div><Button onClick={() => setLater(false)}>Set the next horizon</Button></div>
-        : <Setup deps={deps} person={person} today={today} personId={personId} hasOthers={false} nav={null} prefill={prefill} onStarted={onStarted} onError={onError} onCancel={() => setLater(true)} />)}
+        : <Setup deps={deps} person={person} today={today} personId={personId} hasOthers={false} nav={null} prefill={prefill} onStarted={onStarted} onError={onError} onCancel={() => setLater(true)} access={access} guideOn={guideOn} />)}
     </>
   );
 }
@@ -673,8 +712,9 @@ const LENGTH_WORDS: Record<3 | 6 | 12, string> = {
   12: "Twelve months: the same season at both ends, and room for a marker that moves slowly.",
 };
 
-function Setup({ deps, person, today, personId, hasOthers, nav, prefill, draftMarker, onStarted, onError, onCancel }: {
+function Setup({ deps, person, today, personId, hasOthers, nav, prefill, draftMarker, onStarted, onError, onCancel, access, guideOn }: {
   deps: HorizonDeps; person: PersonData | null; today: string; personId: string; hasOthers: boolean; nav: any;
+  access: HorizonAccess | null; guideOn: boolean;
   /** A line the Guide wrote, carried here: its marker is listed and ticked, the number left for the person. */
   draftMarker?: MarkerKey | null;
   /** The next horizon after one read to its date: the same span, markers, plan and check-in choices, the numbers left empty. */
@@ -728,7 +768,8 @@ function Setup({ deps, person, today, personId, hasOthers, nav, prefill, draftMa
       setBusy(true); setProblem("");
       const res = await startHorizon(deps.supabase, {
         person_id: personId, title: name, kind: kind === "date" ? "date" : "months", months: kind === "date" ? null : kind, starts_on: today, ends_on: endsOn, targets,
-        plan: planChoice === "guide" ? { rows: planRows ?? guideRows, author: "guide" }
+        // the Guide's plan is written after the horizon is set, once the three questions are answered: it starts with no lines
+        plan: planChoice === "guide" ? (guideOn ? { rows: [], author: null } : { rows: planRows ?? guideRows, author: "guide" })
           : planChoice === "carry" ? { rows: planRows ?? [], author: carryEdited ? "user" : (prefill?.planAuthor ?? "user") }
           : { rows: [], author: null },
         checkin_monday: monday, checkin_month: month, send_to_coach: toCoach, email_checkin: email,
@@ -824,9 +865,11 @@ function Setup({ deps, person, today, personId, hasOthers, nav, prefill, draftMa
               </div>)
           : <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
               <Opt on={planChoice === "coach"} onPick={() => setPlanChoice("coach")} title="Ask my coach to write the plan" sub="Your coach sees the targets and the pace notes, writes the week in Messages, and can change it any time." />
-              <Opt on={planChoice === "guide"} onPick={() => setPlanChoice("guide")} title="Let the Guide draft one" sub="From your last eight weeks: how many sessions, how much in zone 2, strength, bedtime. You edit it before it starts." />
+              {guideOn
+                ? <Opt on={planChoice === "guide"} onPick={() => setPlanChoice("guide")} title="Let the Guide write the plan" sub="From your targets and your last eight weeks: the shape of a week, how it steps each week to the date, and how strength is laid out. Three questions come first, once the horizon is set." />
+                : <Opt on={planChoice === "guide"} onPick={() => setPlanChoice("guide")} title="Let the Guide draft one" sub="From your last eight weeks: how many sessions, how much in zone 2, strength, bedtime. You edit it before it starts." />}
             </div>}
-        {planChoice === "guide" && (editingDraft
+        {planChoice === "guide" && !guideOn && (editingDraft
           ? <PlanEditor rows={planRows ?? guideRows} busy={false} onCancel={() => setEditingDraft(false)} onSave={(rows) => { setPlanRows(rows); setEditingDraft(false); }} />
           : <div class="flex flex-col gap-2">
               {(planRows ?? guideRows).length ? (planRows ?? guideRows).map((r, i) => <div class="text-[15px] text-text" key={i}>{r.label}</div>) : <Quiet>Not enough weeks on file for a draft yet; write the plan after the horizon starts.</Quiet>}
@@ -851,7 +894,7 @@ function Setup({ deps, person, today, personId, hasOthers, nav, prefill, draftMa
       <div class="flex flex-wrap items-center gap-3">
         <Button type="submit" primary disabled={busy}>{busy ? "Starting…" : next ? "Start the next horizon" : "Start the horizon"}</Button>
         <Button onClick={onCancel}>{next ? "Not now" : "Cancel"}</Button>
-        <span class="ml-auto text-[12px] text-text-3">Pro · stop it any time, the readings stay</span>
+        <span class="ml-auto text-[12px] text-text-3">{access && !access.pro && access.free.available ? "Free for one week, with the plan and one question about it. Then Pro. The horizon and your readings stay." : "Pro · stop it any time, the readings stay"}</span>
       </div>
     </form>
   );
