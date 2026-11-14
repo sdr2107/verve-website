@@ -62,7 +62,7 @@ export default {
     harderFloorMin: 75,
     label: "Ten more minutes a week; volume before intensity",
     source: "ACSM's Guidelines for Exercise Testing and Prescription: add five to ten minutes a session every week or two over the first four to six weeks. Volume before intensity: the Verve article above.",
-    checked: "Second-hand: read in secondary sources only.",
+    checked: "Second-hand: read in secondary sources only. How the plan moves after a short week (the same zone 2 minutes asked again, a step back after two, a week won back when the next figure is reached as well) is the plan's own rule, not a published one: it never asks for more than the ten-minute step.",
   },
   strength: {
     minDays: 2,
@@ -100,7 +100,7 @@ export default {
     harderAfterWeeks: 4,
     label: "Three questions before the first plan",
     source: "Riebe D, Franklin BA, Thompson PD, et al. Updating ACSM's Recommendations for Exercise Preparticipation Health Screening. Med Sci Sports Exerc 2015.",
-    checked: "In the app's thresholds (data/met-thresholds.json#preparticipationScreening). The plan follows the paper's own table: someone active with a known disease and no symptom keeps moderate work without a doctor's word; the app's test gate is stricter.",
+    checked: "In the app's thresholds (data/met-thresholds.json#preparticipationScreening). The plan follows the paper's own table: someone active with a known disease and no symptom keeps moderate work without a doctor's word; the app's test gate is stricter. The paper itself could not be opened on 14 November 2026 (paywalled). Read that day in Whitfield GP et al, Med Sci Sports Exerc 2017 (DOI 10.1249/MSS.0000000000001331), which applies the algorithm: risk factors are not assessed, medication for hypertension is not considered, and peripheral vascular disease is part of the cardiovascular history. Still from memory of the algorithm's footnote, to be read in the original: that metabolic disease means diabetes, type 1 and 2, and that cardiovascular disease includes cerebrovascular disease (the second question's plain words rest on both). Two differences from the original, not yet changed: it defines active as at least 30 minutes of moderate exercise on at least three days a week for three months, where the first question asks only for three days; and its list of signs and symptoms is longer than the third question's four (it adds palpitations, ankle swelling, leg pain on walking, breathlessness lying down or at night, a known heart murmur, unusual fatigue).",
   },
   pressure: {
     systolic: 180,

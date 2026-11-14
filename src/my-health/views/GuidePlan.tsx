@@ -11,18 +11,24 @@
  * changes until the person presses the button.
  *
  * Guidance on exercise, not medical advice. The plan answers to the
- * person's targets and never sets or changes one.
+ * person's targets and never sets or changes one: the zone 2 number in
+ * "Change it" is the person's own target, typed by them.
+ *
+ * 14 November 2026 (boards 09 and 10): a finished week stays on the page
+ * as "Last week"; the weeks table carries what each finished week did over
+ * what it was asked; and the plan says what it does for every target.
  */
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PersonData } from "../derive/person.ts";
-import { dayMonthLong, weekdayDayMonth, type Target } from "../horizon/derive.ts";
+import { addDays } from "../derive/format.ts";
+import { MARKER_BY_KEY, dayMonthLong, latestOf, round, weekMoves, weekdayDayMonth, type Target } from "../horizon/derive.ts";
 import {
-  guidePlan, storeOf, rowsWith, applyOption, screenOutcome, SCREEN_QUESTIONS, SCREEN_WORDS, STRENGTH, RULE_LINES, LAYOUT_WORDS,
-  type GuidePlanView, type GuideStored, type GuideChoices, type Layout, type ScreenAnswers,
+  guidePlan, storeOf, rowsWith, applyOption, freezeOf, screenOutcome, SCREEN_QUESTIONS, SCREEN_WORDS, STRENGTH, RULE_LINES, LAYOUT_WORDS,
+  type ClimbRow, type GuidePlanView, type GuideStored, type GuideChoices, type Layout, type ScreenAnswers,
 } from "../horizon/guidePlan.ts";
 import {
-  askGuide, clearAsks, grantConsent, listAsks, loadScreen, removeScreen, saveGuidePlan, saveScreen, ERROR_WORDS,
+  addTarget, askGuide, clearAsks, grantConsent, listAsks, loadScreen, removeScreen, saveGuidePlan, saveScreen, updateTarget, ERROR_WORDS,
   type AskRow, type HorizonAccess, type HorizonFull, type ScreenRow,
 } from "../horizon/api.ts";
 
@@ -63,17 +69,122 @@ export function GuideLocked({ access }: { access: HorizonAccess }) {
 
 // ── the plan's four parts ──
 
-type Tab = "week" | "climb" | "strength" | "rules";
-const TABS: [Tab, string][] = [["week", "This week"], ["climb", "The climb"], ["strength", "Strength"], ["rules", "The rules"]];
+type Tab = "last" | "week" | "climb" | "strength" | "rules";
+/** The plan's parts. "Last week" is there once a week of the plan is finished; "The climb" reads "The weeks" when nothing in the aerobic week changes. */
+const tabsOf = (v: GuidePlanView): [Tab, string][] => [...(v.review ? [["last", "Last week"] as [Tab, string]] : []), ["week", "This week"], ["climb", v.climbs ? "The climb" : "The weeks"], ["strength", "Strength"], ["rules", "The rules"]];
+/** On a Monday or a Tuesday the plan opens on the week just finished; after that, on the week in hand. */
+const firstTab = (v: GuidePlanView, today: string): Tab => { const d = new Date(today + "T00:00:00").getDay(); return v.review && (d === 1 || d === 2) ? "last" : "week"; };
 
-function Tabs({ tab, pick }: { tab: Tab; pick: (t: Tab) => void }) {
+function Tabs({ v, tab, pick }: { v: GuidePlanView; tab: Tab; pick: (t: Tab) => void }) {
   return (
-    <div class="grid grid-cols-4 gap-1 rounded-[10px] border border-border bg-alt p-1 sm:inline-grid sm:self-start" role="tablist" aria-label="The plan's parts">
-      {TABS.map(([k, label]) => (
+    <div class="flex max-w-full gap-1 self-start overflow-x-auto rounded-[10px] border border-border bg-alt p-1" role="tablist" aria-label="The plan's parts">
+      {tabsOf(v).map(([k, label]) => (
         <button type="button" role="tab" aria-selected={tab === k} onClick={() => pick(k)}
-          class={`min-h-11 rounded-[8px] px-3 text-[13px] font-semibold ${tab === k ? "bg-card text-text" : "text-text-2 hover:text-text"}`}>{label}</button>
+          class={`min-h-11 shrink-0 whitespace-nowrap rounded-[8px] px-3 text-[13px] font-semibold ${tab === k ? "bg-card text-text" : "text-text-2 hover:text-text"}`}>{label}</button>
       ))}
     </div>
+  );
+}
+
+/** What the plan does for each target (board 10): the ones it has a line for, the ones it watches, and a fitness target it leaves untouched. */
+function Answers({ v }: { v: GuidePlanView }) {
+  const a = v.answers;
+  if (!a.works.length && !a.watches.length) return null;
+  const list = (rows: typeof a.works) => rows.map((x) => (
+    <div class="grid grid-cols-1 gap-x-3 border-t border-border pt-2 text-[13px] leading-relaxed text-text-2 first:border-t-0 first:pt-0 sm:grid-cols-[150px_minmax(0,1fr)]" key={x.marker}>
+      <b class="font-semibold text-text">{x.label}</b><span>{x.text}</span>
+    </div>
+  ));
+  return (
+    <div class="flex flex-col gap-3 rounded-[12px] border border-border bg-canvas p-4">
+      <div class={`grid grid-cols-1 gap-4 ${a.watches.length && a.works.length ? "lg:grid-cols-2" : ""}`}>
+        {a.works.length > 0 && <div class="flex min-w-0 flex-col gap-2"><span class="text-[15px] font-semibold text-text">{a.worksHead}</span>{list(a.works)}</div>}
+        {a.watches.length > 0 && <div class="flex min-w-0 flex-col gap-2"><span class="text-[15px] font-semibold text-text">{a.works.length ? a.watchesHead : `The plan has no line for your ${a.watches.length === 1 ? "target" : "targets"}`}</span>{list(a.watches)}</div>}
+      </div>
+      {a.note && <p class="m-0 rounded-[10px] border border-accent-border bg-accent-fill px-4 py-3 text-[13px] leading-relaxed text-text">{a.note}</p>}
+    </div>
+  );
+}
+
+const STATE_TEXT = { reached: "text-good", short: "text-caution", neutral: "text-text-3" } as const;
+
+/** The week just finished (board 09): each line against what it was asked, where a zone 2 gap went, what moved, and what it does to the plan. */
+function LastWeek({ v, p }: { v: GuidePlanView; p: GuideCommon }) {
+  const r = v.review!;
+  const moves = weekMoves(p.targets, p.h, p.person, r.monday, p.today);
+  const checkin = p.h.checkins.find((c) => c.kind === "week" && c.for_date === addDays(r.monday, 7)) ?? null;
+  const nextTest = v.testWeeks.find((w) => w >= v.week) ?? null;
+  return (
+    <>
+      <div class="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
+        <div class="flex min-w-0 flex-col gap-3 rounded-[12px] border border-border bg-canvas p-4">
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <span class="text-[15px] font-semibold text-text">Week {r.week} · {weekdayDayMonth(r.monday)} to {weekdayDayMonth(r.sunday)}</span>
+            <span class="text-[12px] text-text-3">From {p.owner ? "your" : "their"} sessions and days, never from a tick box</span>
+          </div>
+          <div class="flex flex-col gap-2" role="table" aria-label={`Week ${r.week}: the plan against what was done`}>
+            <div class="hidden grid-cols-[100px_84px_minmax(0,1fr)_84px_132px] gap-x-3 font-mono text-[10px] font-semibold uppercase tracking-[0.06em] text-text-3 sm:grid" role="row">
+              <span>Line</span><span>The plan</span><span /><span>{p.owner ? "You did" : "Done"}</span><span class="text-right">The week</span>
+            </div>
+            {r.lines.map((l) => (
+              <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-t border-border pt-2 text-[13px] sm:grid-cols-[100px_84px_minmax(0,1fr)_84px_132px]" role="row" key={l.key}>
+                <span class="text-text">{l.label}</span>
+                <span class="order-3 text-text-2 sm:order-none"><span class="text-[12px] text-text-3 sm:hidden">The plan </span><span class="t-figure-row">{l.plan}</span></span>
+                <span class="order-5 col-span-2 h-2 overflow-hidden rounded-full bg-alt sm:order-none sm:col-span-1" aria-hidden="true"><span class="block h-full bg-accent" style={{ width: `${Math.round(l.share * 100)}%` }} /></span>
+                <span class="order-4 text-right text-text sm:order-none sm:text-left"><span class="text-[12px] text-text-3 sm:hidden">Done </span><span class="t-figure-row">{l.done}</span></span>
+                <span class={`order-2 text-right font-medium sm:order-none ${STATE_TEXT[l.state]}`}>{l.word}</span>
+              </div>
+            ))}
+          </div>
+          <p class="m-0 rounded-[10px] border border-border-strong bg-alt px-4 py-3 text-[13px] leading-relaxed text-text">{r.summary}</p>
+          {r.gap && (
+            <div class="flex flex-col gap-2 border-t border-border pt-3">
+              <span class="text-[15px] font-semibold text-text">{r.gap.head}</span>
+              {r.gap.parts.map((g) => (
+                <div class="grid grid-cols-1 gap-x-3 text-[13px] leading-relaxed text-text-2 sm:grid-cols-[150px_minmax(0,1fr)]" key={g.head}><b class="font-semibold text-text">{g.head}</b><span>{g.text}</span></div>
+              ))}
+              <Quiet>Arithmetic on the week's sessions. No model writes this part.</Quiet>
+            </div>
+          )}
+        </div>
+
+        <div class="flex min-w-0 flex-col gap-3">
+          {moves.length > 0 && (
+            <div class="flex flex-col gap-2 rounded-[12px] border border-border bg-canvas p-4">
+              <span class="text-[15px] font-semibold text-text">What moved against {p.owner ? "your" : "their"} targets</span>
+              {moves.map((m) => (
+                <div class="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 border-t border-border pt-2 text-[13px] first:border-t-0 first:pt-0" key={m.marker}>
+                  <span class="text-text">{m.label}</span>
+                  <span class="t-figure-row whitespace-nowrap text-right text-text">{m.fresh && m.before && m.before !== m.after ? `${m.before} → ${m.after}` : m.after ?? "—"}{m.unit && m.after ? <span class="ml-1 font-mono text-[11px] font-medium text-text-3">{m.unit}</span> : null}</span>
+                  <span class="col-span-2 text-[12px] text-text-3">{m.fresh ? m.pace_word : m.marker === "mets" && nextTest ? `No new test · tested in week ${nextTest}` : "No new reading in the week"}</span>
+                </div>
+              ))}
+              <Quiet>The end of the week before against the end of this one. The full table is above.</Quiet>
+            </div>
+          )}
+          {checkin && (
+            <div class="flex flex-col gap-2 rounded-[12px] border border-accent-border bg-accent-fill p-4">
+              <span class="font-mono text-[11px] font-medium text-accent-text">The Guide's check-in · {weekdayDayMonth(checkin.for_date)} · an AI model</span>
+              <p class="m-0 text-[15px] leading-relaxed text-text">{checkin.text}</p>
+              <p class="m-0 text-[12px] leading-relaxed text-accent-text">The check-in describes and sets nothing. What comes next is the plan's, and it is fixed text.</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <Kicker>What it does to the plan</Kicker>
+        <div class={`grid grid-cols-1 gap-3 ${r.after.length >= 3 ? "lg:grid-cols-3" : r.after.length === 2 ? "lg:grid-cols-2" : ""}`}>
+          {r.after.map((c) => (
+            <div class="flex min-w-0 flex-col gap-1 rounded-[12px] border border-border bg-canvas p-4" key={c.small}>
+              <span class="font-mono text-[10px] font-medium uppercase tracking-[0.04em] text-text-3">{c.small}</span>
+              <span class="text-[15px] font-semibold leading-snug text-text">{c.head}</span>
+              <span class="text-[13px] leading-relaxed text-text-2">{c.text}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -142,57 +253,101 @@ function Week({ v }: { v: GuidePlanView }) {
   );
 }
 
+/** Weeks ahead that ask the same week, read as one line: a plan that holds says so once, with its steps under it. */
+type WeekLine = { rows: ClimbRow[]; first: ClimbRow; last: ClimbRow };
+function weekLines(rows: ClimbRow[]): WeekLine[] {
+  const out: WeekLine[] = [];
+  const same = (x: ClimbRow, y: ClimbRow) => x.state === "future" && y.state === "future" && x.zone2 === y.zone2 && x.harder === y.harder && x.sessions === y.sessions && x.strengthDays === y.strengthDays && x.sets === y.sets;
+  for (const w of rows) {
+    const cur = out[out.length - 1];
+    if (cur && same(cur.last, w)) { cur.rows.push(w); cur.last = w; } else out.push({ rows: [w], first: w, last: w });
+  }
+  // a run of two is two lines: only three or more of the same week read better as one
+  return out.flatMap((g) => (g.rows.length >= 3 ? [g] : g.rows.map((w) => ({ rows: [w], first: w, last: w }))));
+}
+
 function Climb({ v }: { v: GuidePlanView }) {
   const max = Math.max(150, ...v.climb.map((w) => w.total));
   const top = Math.ceil(max / 50) * 50;
   const pct = (m: number) => `${(m / top) * 100}%`;
   const first = v.climb[0], last = v.climb[v.climb.length - 1];
+  const hasSteps = v.climb.some((w) => w.steps != null);
+  const anyDone = v.climb.some((w) => w.done);
+  /** A cell: for a finished week, what was done over what was asked, tinted when it was short; otherwise the plan's figure. */
+  const cell = (w: ClimbRow, key: "zone2" | "harder" | "strength" | "steps" | "sessions", plan: string, done: string | null) => (
+    <td class={`p-2 align-top ${w.done && w.short.includes(key) ? "bg-alt" : ""}`}>
+      {w.done && done != null ? <><span class="t-figure-row block text-text">{done}</span><span class="block font-mono text-[11px] text-text-3">of {plan}</span></> : <span class={`t-figure-row ${w.state === "future" ? "text-text-2" : "text-text"}`}>{plan}</span>}
+    </td>
+  );
+  /** What a finished week did to the plan, beside its row. */
+  const OUTCOME: Record<string, string> = { short: "zone 2 short", back: "zone 2 short again: the plan stepped back", won: "won a week back" };
   return (
     <>
-      <div class="flex flex-col gap-3 rounded-[12px] border border-border bg-canvas p-4">
-        <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-          <span class="text-[15px] font-semibold text-text">Minutes a week, by intensity</span>
-          <span class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-text-2">
-            <span class="inline-flex items-center gap-1.5"><i class="inline-block h-3 w-3 rounded-[3px] bg-z2" />Zone 2</span>
-            <span class="inline-flex items-center gap-1.5"><i class="inline-block h-3 w-3 rounded-[3px] bg-z3" />Harder</span>
-          </span>
-        </div>
-        <div role="img" aria-label={`${v.climb.length} weekly bars. Zone 2 goes from ${first.zone2} to ${last.zone2} minutes, harder minutes from ${first.harder} to ${last.harder}, the week from ${first.total} to ${last.total}.`}>
-          <div class="relative flex h-[180px] items-end gap-1 border-b border-border-strong sm:gap-2">
-            <div class="pointer-events-none absolute inset-x-0 z-10 border-t border-dashed border-text" style={{ bottom: pct(150) }} />
-            {v.climb.map((w) => (
-              <div class={`relative flex h-full min-w-0 flex-1 flex-col justify-end ${w.state === "now" ? "rounded-t-[6px] bg-accent-fill" : ""}`} key={w.week}>
-                <span class="mb-1 hidden text-center font-mono text-[10px] font-semibold text-text md:block">{thousands(w.dose)}</span>
-                <span class="block w-full bg-z3" style={{ height: pct(w.harder) }} />
-                <span class="block w-full bg-z2" style={{ height: pct(w.zone2) }} />
-              </div>
-            ))}
+      {v.climbs ? (
+        <div class="flex flex-col gap-3 rounded-[12px] border border-border bg-canvas p-4">
+          <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+            <span class="text-[15px] font-semibold text-text">Minutes a week, by intensity</span>
+            <span class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-text-2">
+              <span class="inline-flex items-center gap-1.5"><i class="inline-block h-3 w-3 rounded-[3px] bg-z2" />Zone 2</span>
+              <span class="inline-flex items-center gap-1.5"><i class="inline-block h-3 w-3 rounded-[3px] bg-z3" />Harder</span>
+            </span>
           </div>
-          <div class="flex gap-1 pt-1 sm:gap-2">
-            {v.climb.map((w) => <span class={`min-w-0 flex-1 text-center font-mono text-[10px] ${w.state === "now" ? "font-semibold text-accent-text" : "text-text-3"}`} key={w.week}>{w.week}</span>)}
+          <div role="img" aria-label={`${v.climb.length} weekly bars. Zone 2 goes from ${first.zone2} to ${last.zone2} minutes, harder minutes from ${first.harder} to ${last.harder}, the week from ${first.total} to ${last.total}.`}>
+            <div class="relative flex h-[180px] items-end gap-1 border-b border-border-strong sm:gap-2">
+              <div class="pointer-events-none absolute inset-x-0 z-10 border-t border-dashed border-text" style={{ bottom: pct(150) }} />
+              {v.climb.map((w) => (
+                <div class={`relative flex h-full min-w-0 flex-1 flex-col justify-end ${w.state === "now" ? "rounded-t-[6px] bg-accent-fill" : ""}`} key={w.week}>
+                  <span class="mb-1 hidden text-center font-mono text-[10px] font-semibold text-text md:block">{thousands(w.dose)}</span>
+                  <span class="block w-full bg-z3" style={{ height: pct(w.harder) }} />
+                  <span class="block w-full bg-z2" style={{ height: pct(w.zone2) }} />
+                </div>
+              ))}
+            </div>
+            <div class="flex gap-1 pt-1 sm:gap-2">
+              {v.climb.map((w) => <span class={`min-w-0 flex-1 text-center font-mono text-[10px] ${w.state === "now" ? "font-semibold text-accent-text" : "text-text-3"}`} key={w.week}>{w.week}</span>)}
+            </div>
           </div>
+          <Quiet>What the plan asks each week. The dashed line is 150 minutes, the first flag on the app's Weekly Ascent. Over each bar on a wide screen: that week's dose in MET-minutes. The lit column is this week. {v.climbNote}</Quiet>
         </div>
-        <Quiet>The dashed line is 150 minutes, the first flag on the app's Weekly Ascent. Over each bar on a wide screen: that week's dose in MET-minutes. The lit column is this week. {v.climbNote}</Quiet>
-      </div>
+      ) : (
+        <p class="m-0 max-w-[720px] text-[15px] leading-relaxed text-text">Nothing in the aerobic week changes from here to the date, so there is no climb to draw: {first.zone2} minutes in zone 2{first.harder > 0 ? ` and ${first.harder} harder` : ""}, every week{hasSteps && first.steps !== last.steps ? ", with the steps a day rising under it" : ""}.</p>
+      )}
 
-      <div class="overflow-x-auto rounded-[12px] border border-border">
-        <table class="w-full min-w-[560px] border-collapse text-right font-mono text-[12px] text-text">
-          <thead>
-            <tr class="bg-alt text-[10px] font-semibold uppercase tracking-[0.05em] text-text-2">
-              <th class="p-2 text-left font-semibold">Week</th><th class="p-2 font-semibold">Zone 2</th><th class="p-2 font-semibold">Harder</th><th class="p-2 font-semibold">Total</th><th class="p-2 font-semibold">Dose</th><th class="p-2 text-left font-semibold">Strength</th>{first.steps != null && <th class="p-2 font-semibold">Steps a day</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {v.climb.map((w) => (
-              <tr class={`border-t border-border ${w.state === "now" ? "bg-accent-fill" : "bg-card"}`} key={w.week}>
-                <td class="p-2 text-left text-text-2">{w.week}{w.state === "now" ? " · now" : ""}</td><td class="p-2">{w.zone2}</td><td class="p-2">{w.harder}</td><td class="p-2">{w.total}</td><td class="p-2">{thousands(w.dose)}</td>
-                <td class="p-2 text-left font-sans text-text-2">{v.strength.days} · {w.test ? "and a fitness test" : w.sets}{w.repeats ? " · step repeated" : ""}</td>{first.steps != null && <td class="p-2">{w.steps != null ? thousands(w.steps) : ""}</td>}
+      <div class="flex flex-col gap-2">
+        <div class="flex flex-wrap items-baseline justify-between gap-2">
+          <Kicker>{anyDone ? "The weeks so far, and the weeks ahead" : "Every week of the plan"}</Kicker>
+          {anyDone && <span class="text-[12px] text-text-3">A finished week: what was done, over the plan's line. A tinted cell was short. Ahead: the plan only.</span>}
+        </div>
+        <div class="overflow-x-auto rounded-[12px] border border-border">
+          <table class="w-full min-w-[640px] border-collapse text-left text-[13px] text-text">
+            <thead>
+              <tr class="bg-alt font-mono text-[10px] font-semibold uppercase tracking-[0.05em] text-text-2">
+                <th class="p-2 font-semibold">Week</th><th class="p-2 font-semibold">Zone 2</th><th class="p-2 font-semibold">Harder</th><th class="p-2 font-semibold">Strength</th>{hasSteps && <th class="p-2 font-semibold">Steps a day</th>}<th class="p-2 font-semibold">Sessions</th><th class="p-2 font-semibold">Dose</th><th class="p-2 font-semibold" />
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {weekLines(v.climb).map((g) => {
+                const w = g.first, many = g.rows.length > 1;
+                const tests = g.rows.filter((x) => x.test).map((x) => x.week);
+                const note = [w.state === "now" ? "now" : "", w.outcome ? OUTCOME[w.outcome] ?? "" : "", !w.done && w.repeats ? "zone 2 asked again" : "", tests.length ? (many ? `fitness test in week ${tests.join(" and week ")}` : "fitness test") : "", w.sets].filter(Boolean).join(" · ");
+                return (
+                  <tr class={`border-t border-border ${w.state === "now" ? "bg-accent-fill" : "bg-card"}`} key={w.week}>
+                    <td class="p-2 align-top text-text-2"><span class="t-figure-row">{many ? `${w.week} to ${g.last.week}` : w.week}</span></td>
+                    {cell(w, "zone2", String(w.zone2), w.done ? String(w.done.zone2) : null)}
+                    {cell(w, "harder", String(w.harder), w.done ? String(w.done.harder) : null)}
+                    {cell(w, "strength", String(w.strengthDays), w.done ? String(w.done.strength) : null)}
+                    {hasSteps && cell(w, "steps", w.steps == null ? "" : many && g.last.steps != null && g.last.steps !== w.steps ? `${thousands(w.steps)} to ${thousands(g.last.steps)}` : thousands(w.steps), w.done ? (w.done.steps != null ? thousands(w.done.steps) : "—") : null)}
+                    {cell(w, "sessions", String(w.sessions), w.done ? String(w.done.sessions) : null)}
+                    <td class="p-2 align-top">{w.done?.dose != null ? <><span class="t-figure-row block text-text">{thousands(w.done.dose)}</span><span class="block font-mono text-[11px] text-text-3">planned {thousands(w.dose)}</span></> : <span class={`t-figure-row ${w.state === "future" ? "text-text-2" : "text-text"}`}>{thousands(w.dose)}</span>}</td>
+                    <td class="p-2 align-top text-[12px] text-text-3">{note}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <Quiet>Zone 2 and harder in minutes, the dose in MET-minutes. A finished week's dose is the one the app measured; a planned week's is an estimate. The week's figures are a guide to the week, not a session for each day.</Quiet>
       </div>
-      <Quiet>Minutes in the first three columns, the dose in MET-minutes. The week's figures are a guide to the week, not a session for each day.</Quiet>
 
       <div class="flex flex-col gap-2 rounded-[12px] border border-border bg-canvas p-4">
         <span class="text-[15px] font-semibold text-text">How the plan moves</span>
@@ -247,8 +402,25 @@ function Rules() {
   );
 }
 
-function Body({ v, tab }: { v: GuidePlanView; tab: Tab }) {
-  return tab === "week" ? <Week v={v} /> : tab === "climb" ? <Climb v={v} /> : tab === "strength" ? <Strength v={v} /> : <Rules />;
+function Body({ v, tab, p }: { v: GuidePlanView; tab: Tab; p: GuideCommon }) {
+  return tab === "last" && v.review ? <LastWeek v={v} p={p} /> : tab === "climb" ? <Climb v={v} /> : tab === "strength" ? <Strength v={v} /> : tab === "rules" ? <Rules /> : <Week v={v} />;
+}
+
+// ── the zone 2 number: the person's own target, changed from the plan ──
+
+/** The targets with the zone 2 number set to a figure, for working the plan out before it is kept. */
+const withZone2 = (targets: Target[], minutes: number): Target[] =>
+  targets.some((t) => t.marker === "zone2_week") ? targets.map((t) => (t.marker === "zone2_week" ? { ...t, target_value: minutes } : t))
+    : [...targets, { marker: "zone2_week", label: MARKER_BY_KEY.zone2_week.label, unit: MARKER_BY_KEY.zone2_week.unit, start_value: null, start_on: null, target_value: minutes, cadence: MARKER_BY_KEY.zone2_week.cadence }];
+/** What the plan would do with a zone 2 number: the plan's own line for that target. */
+const zoneLine = (next: GuidePlanView) => { const t = next.answers.works.find((x) => x.marker === "zone2_week")?.text; return t ? `${t}.` : ""; };
+/** The person's zone 2 target, set to their figure: the row they have is changed, or one is added from last week's reading as every target starts. */
+async function setZone2(p: GuideCommon, uid: string, minutes: number): Promise<string | null> {
+  const t = p.targets.find((x) => x.marker === "zone2_week");
+  if (t?.id) return updateTarget(p.sb, t.id, minutes);
+  const def = MARKER_BY_KEY.zone2_week, now = latestOf("zone2_week", p.person, p.today);
+  const res = await addTarget(p.sb, { horizon_id: p.h.id, user_id: uid, marker: "zone2_week", label: def.label, unit: def.unit, start_value: now ? round(now.value, def.decimals + 1) : null, start_on: now?.on ?? p.today, target_value: minutes, cadence: def.cadence });
+  return res.ok ? null : res.detail || "the target could not be added";
 }
 
 // ── before the first plan: three questions, then the draft ──
@@ -261,7 +433,7 @@ function Questions({ onDone, busy, onCancel }: { onDone: (a: ScreenAnswers) => v
       <div class="text-[15px] font-semibold text-text">Before the first plan: three questions</div>
       {SCREEN_QUESTIONS.map((q, i) => (
         <fieldset class="m-0 flex flex-col gap-2 border-0 border-t border-border p-0 pt-3" key={q.key}>
-          <legend class="float-left mb-2 w-full p-0 text-[15px] leading-relaxed text-text">{i + 1}. {q.text}</legend>
+          <legend class="float-left mb-2 w-full p-0 text-[15px] leading-relaxed text-text">{i + 1}. {q.text}{q.help ? <span class="mt-1 block text-[13px] leading-relaxed text-text-2">{q.help}</span> : null}</legend>
           <div class="flex gap-2">
             {([["Yes", true], ["No", false]] as const).map(([label, val]) => (
               <label class={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-[10px] border px-4 text-[13px] font-semibold ${a[q.key] === val ? "border-accent-border bg-accent-fill text-accent-text" : "border-border-strong bg-alt text-text"}`} key={label}>
@@ -288,6 +460,19 @@ export function GuideOffer(p: GuideCommon) {
   const [tab, setTab] = useState<Tab>("week");
   const [choices, setChoices] = useState<GuideChoices | null>(null);
   const [changing, setChanging] = useState(false);
+  /** The choices of a draft are kept on the page until it is used; the zone 2 number is the person's target and is kept at once. */
+  async function change(c: GuideChoices, zone2?: number) {
+    if (zone2 !== undefined) {
+      const uid = await p.userId();
+      if (!uid) { p.setNotice("Sign in again to continue."); return; }
+      setBusy("zone");
+      const err = await setZone2(p, uid, zone2);
+      setBusy("");
+      if (err) { p.setNotice(`Could not change your zone 2 number: ${err}`); return; }
+      await p.reload();
+    }
+    setChoices(c); setChanging(false);
+  }
   useEffect(() => { let on = true; void loadScreen(p.sb, p.h.id).then((r) => { if (on) setScreen(r); }); return () => { on = false; }; }, [p.h.id]);
 
   async function answer(a: ScreenAnswers) {
@@ -350,11 +535,13 @@ export function GuideOffer(p: GuideCommon) {
         <div class="flex flex-wrap gap-2"><Btn primary disabled={busy === "use"} onClick={() => void use()}>{busy === "use" ? "Keeping…" : "Use this plan"}</Btn><Btn onClick={() => setChanging((x) => !x)}>Change it</Btn></div>
       </div>
       {outcome !== "full" && <p class="m-0 rounded-[10px] border border-border-strong bg-alt px-4 py-3 text-[13px] leading-relaxed text-text-2">{SCREEN_WORDS[outcome]}</p>}
-      {changing && <Changer v={v} busy={false} onSave={(c) => { setChoices(c); setChanging(false); }} onCancel={() => setChanging(false)} saveLabel="Show the plan with these" />}
+      {changing && <Changer v={v} busy={busy === "zone"} onSave={(c, z) => void change(c, z)} onCancel={() => setChanging(false)} saveLabel="Show the plan with these"
+        preview={(m) => zoneLine(guidePlan({ horizon: p.h, targets: withZone2(p.targets, m), person: p.person, today: p.today, mode: outcome, choices }))} />}
       <p class="m-0 max-w-[820px] text-[16px] leading-[1.6] text-text">{v.lead}</p>
       {v.notes.map((n) => <Quiet key={n}>{n}</Quiet>)}
-      <Tabs tab={tab} pick={setTab} />
-      <Body v={v} tab={tab} />
+      <Answers v={v} />
+      <Tabs v={v} tab={tab} pick={setTab} />
+      <Body v={v} tab={tab} p={p} />
       <div class="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-border pt-3 text-[12px] text-text-3">
         <span>{answered}</span>
         <button type="button" onClick={() => setAnswering(true)} class="min-h-11 font-semibold text-accent-text hover:text-text">Answer again</button>
@@ -368,15 +555,34 @@ export function GuideOffer(p: GuideCommon) {
 
 const STRENGTH_CHOICES: [number, Layout][] = [[2, "whole"], [3, "whole"], [3, "ppl"], [4, "upper_lower"], [4, "push_pull"]];
 const selectClass = "min-h-11 rounded-[10px] border border-border-strong bg-alt px-3 text-[15px] text-text outline-none focus:border-accent-border";
+/** What the field takes: a week of zone 2 between ten minutes and fifteen hours. The plan's own step stays ten minutes whatever is typed. */
+const ZONE2_MIN = 10, ZONE2_MAX = 900;
 
-function Changer({ v, busy, onSave, onCancel, saveLabel }: { v: GuidePlanView; busy: boolean; onSave: (c: GuideChoices) => void; onCancel: () => void; saveLabel: string }) {
+function Changer({ v, busy, onSave, onCancel, saveLabel, preview }: { v: GuidePlanView; busy: boolean;
+  /** The choices, and the zone 2 number when the person changed it. */ onSave: (c: GuideChoices, zone2?: number) => void; onCancel: () => void; saveLabel: string;
+  /** What the plan would do with a zone 2 number, in the plan's own words. */ preview: (minutes: number) => string }) {
   const [days, setDays] = useState<number>(v.choices.aerobic_days ?? 3);
   const [strength, setStrength] = useState(`${v.choices.strength_days}|${v.choices.layout}`);
   const [out, setOut] = useState<string[]>(v.choices.leave_out);
+  const [zone, setZone] = useState(v.aims.zone2 != null ? String(v.aims.zone2) : "");
   const [d, l] = strength.split("|");
+  const z = Math.round(Number(zone));
+  const zoneOk = zone.trim() !== "" && Number.isFinite(z) && z >= ZONE2_MIN && z <= ZONE2_MAX;
+  const zoneChanged = zoneOk && z !== v.aims.zone2;
+  const nowZone = v.climb.find((w) => w.state === "now")?.zone2 ?? null;
   return (
     <div class="flex flex-col gap-3 rounded-[12px] border border-border-strong bg-canvas p-4">
       <div class="text-[15px] font-semibold text-text">Change the plan</div>
+      <div class="flex flex-col gap-2 rounded-[10px] border border-border bg-card p-3">
+        <label class="flex flex-col gap-1 text-[12px] text-text-3">Minutes in zone 2 a week, by the date
+          <span class="flex flex-wrap items-center gap-2">
+            <input type="number" inputMode="numeric" min={ZONE2_MIN} max={ZONE2_MAX} step={5} value={zone} onInput={(e) => setZone((e.currentTarget as HTMLInputElement).value)} placeholder="I want" class={`${selectClass} w-28 font-mono`} />
+            <span class="font-mono text-[11px] text-text-3">min · a typical week {v.base.zone2}{v.aims.zone2 != null ? ` · your number now ${v.aims.zone2}` : " · no number set"}</span>
+          </span>
+        </label>
+        <p class="m-0 text-[13px] leading-relaxed text-text-2" aria-live="polite">{zone.trim() === "" ? "This is the number the plan's zone 2 minutes climb to." : !zoneOk ? `Between ${ZONE2_MIN} and ${ZONE2_MAX} minutes.` : `${preview(z)}${zoneChanged && nowZone != null ? ` This week keeps its ${nowZone}.` : ""}`}</p>
+        <Quiet>It is your zone 2 target: changing it here changes it in your targets. You set the number. Verve sets none.</Quiet>
+      </div>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label class="flex flex-col gap-1 text-[12px] text-text-3">Aerobic days a week
           <select value={String(days)} onChange={(e) => setDays(Number((e.currentTarget as HTMLSelectElement).value))} class={selectClass}>{[3, 4, 5].map((n) => <option value={String(n)}>{n} days</option>)}</select>
@@ -397,8 +603,8 @@ function Changer({ v, busy, onSave, onCancel, saveLabel }: { v: GuidePlanView; b
           </div>
         </fieldset>
       )}
-      <Quiet>The week's minutes and the step each week do not change with these: they follow your targets and the rules. A split of push and pull days is offered only from three strength days.</Quiet>
-      <div class="flex flex-wrap gap-2"><Btn primary disabled={busy} onClick={() => onSave({ aerobic_days: days, strength_days: Number(d), layout: l as Layout, leave_out: out })}>{busy ? "Keeping…" : saveLabel}</Btn><Btn onClick={onCancel}>Cancel</Btn></div>
+      <Quiet>The days, the strength layout and the types do not change the week's minutes: those follow your numbers and the rules. {v.changing[1]} A split of push and pull days is offered only from three strength days.</Quiet>
+      <div class="flex flex-wrap gap-2"><Btn primary disabled={busy || (zone.trim() !== "" && !zoneOk)} onClick={() => onSave({ aerobic_days: days, strength_days: Number(d), layout: l as Layout, leave_out: out }, zoneChanged ? z : undefined)}>{busy ? "Keeping…" : saveLabel}</Btn><Btn onClick={onCancel}>Cancel</Btn></div>
     </div>
   );
 }
@@ -406,11 +612,11 @@ function Changer({ v, busy, onSave, onCancel, saveLabel }: { v: GuidePlanView; b
 // ── the plan in use ──
 
 export function GuidePlanCard(p: GuideCommon & { stored: GuideStored; /** The person leaves the Guide's plan for lines of their own. */ onOwnLines: () => void; /** A coach opens the plan's lines to write them. */ onCoachEdit: () => void }) {
-  const [tab, setTab] = useState<Tab>("week");
+  const v = guidePlan({ horizon: p.h, targets: p.targets, person: p.person, today: p.today, stored: p.stored, self: p.owner });
+  const [tab, setTab] = useState<Tab>(() => firstTab(v, p.today));
   const [changing, setChanging] = useState(false);
   const [chat, setChat] = useState(false);
   const [busy, setBusy] = useState(false);
-  const v = guidePlan({ horizon: p.h, targets: p.targets, person: p.person, today: p.today, stored: p.stored, self: p.owner });
 
   // the stored lines follow the week, so a check-in that reads them reads this week's
   const kept = useRef("");
@@ -421,13 +627,17 @@ export function GuidePlanCard(p: GuideCommon & { stored: GuideStored; /** The pe
     void p.userId().then((uid) => { if (uid) void saveGuidePlan(p.sb, p.h.id, JSON.parse(lines), p.stored, uid); });
   }, [lines, p.h.id]);
 
-  async function keep(choices: GuideChoices) {
+  /**
+   * A change is kept. The weeks behind are written down as they were asked first, so the change rewrites none of them;
+   * a new zone 2 number starts from the week it is made in, which keeps its own figures (guidePlan.ts freezeOf).
+   */
+  async function keep(choices: GuideChoices, zone2?: number) {
     const uid = await p.userId();
     if (!uid) { p.setNotice("Sign in again to continue."); return; }
     setBusy(true);
-    const stored: GuideStored = { ...p.stored, choices };
-    const next = guidePlan({ horizon: p.h, targets: p.targets, person: p.person, today: p.today, stored });
-    const err = await saveGuidePlan(p.sb, p.h.id, rowsWith(next, p.h.plan?.rows ?? []), stored, uid);
+    const stored: GuideStored = { ...freezeOf(v, p.stored, zone2 !== undefined), choices };
+    const next = guidePlan({ horizon: p.h, targets: zone2 !== undefined ? withZone2(p.targets, zone2) : p.targets, person: p.person, today: p.today, stored });
+    const err = await saveGuidePlan(p.sb, p.h.id, rowsWith(next, p.h.plan?.rows ?? []), stored, uid) ?? (zone2 !== undefined ? await setZone2(p, uid, zone2) : null);
     setBusy(false);
     if (err) { p.setNotice(`Could not change the plan: ${err}`); return; }
     setChanging(false); await p.reload();
@@ -447,12 +657,14 @@ export function GuidePlanCard(p: GuideCommon & { stored: GuideStored; /** The pe
           {!p.owner && !p.closed && <Btn onClick={p.onCoachEdit}>Write the plan yourself</Btn>}
         </div>
       </div>
-      {changing && <Changer v={v} busy={busy} onSave={(c) => void keep(c)} onCancel={() => setChanging(false)} saveLabel="Change the plan" />}
-      {chat && canChange && <Chat {...p} v={v} onApply={keep} onClose={() => setChat(false)} />}
+      {changing && <Changer v={v} busy={busy} onSave={(c, z) => void keep(c, z)} onCancel={() => setChanging(false)} saveLabel="Change the plan"
+        preview={(m) => zoneLine(guidePlan({ horizon: p.h, targets: withZone2(p.targets, m), person: p.person, today: p.today, stored: freezeOf(v, p.stored, true), self: p.owner }))} />}
+      {chat && canChange && <Chat {...p} v={v} onApply={(c) => keep(c)} onClose={() => setChat(false)} />}
       <p class="m-0 max-w-[820px] text-[16px] leading-[1.6] text-text">{v.lead}</p>
       {v.notes.map((n) => <p class="m-0 rounded-[10px] border border-border-strong bg-alt px-4 py-3 text-[13px] leading-relaxed text-text-2" key={n}>{n}</p>)}
-      <Tabs tab={tab} pick={setTab} />
-      <Body v={v} tab={tab} />
+      <Answers v={v} />
+      <Tabs v={v} tab={tab} pick={setTab} />
+      <Body v={v} tab={tab} p={p} />
       <Quiet>{FOOT}</Quiet>
       {canChange && <div><button type="button" onClick={p.onOwnLines} class="min-h-11 text-[13px] font-semibold text-text-2 hover:text-text">Write my own lines instead</button></div>}
       {!p.owner && <Quiet>The Guide wrote this from their targets. If you write the plan yourself, yours replaces it and reads "written by your coach".</Quiet>}
@@ -462,7 +674,7 @@ export function GuidePlanCard(p: GuideCommon & { stored: GuideStored; /** The pe
 
 // ── the chat about the plan ──
 
-const CHIPS = ["Why this week?", "I missed a week", "Fewer days", "Swap a type"];
+const CHIPS = ["Why this week?", "I missed a week", "More zone 2", "Fewer days", "Swap a type"];
 
 function Chat(p: GuideCommon & { v: GuidePlanView; onApply: (c: GuideChoices) => Promise<void>; onClose: () => void }) {
   const [asks, setAsks] = useState<AskRow[] | null>(null);

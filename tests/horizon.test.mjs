@@ -8,6 +8,7 @@ import {
   adherenceOf, guideDraftPlan, weekOf, daysToGo, roadOf, nextCheckins, checkinInputs, weekFigures, weeklyHistory, dedupeSessions, addMonths, clockOf,
   landedLine, reachedTarget, upTo, horizonMondays, horizonWeeks, outcomeOf, outcomesOf, lastRoadWords, nextSpan,
   swingRead, medicineOf, BLOOD_TARGETS_OPEN, isTargetable, TARGET_MARKERS, FIRST_MARKERS, openTargets, horizonLinesByCard,
+  typicalWeek, typicalOf, weekMoves, readingAt, targetKeyOf, ML_PER_MET,
 } from "../src/my-health/horizon/derive.ts";
 
 const TODAY = "2026-11-08";                      // a Sunday; the last complete week is 26 October
@@ -253,10 +254,61 @@ test("history gives the readings a six-month comparison needs", () => {
   assert.equal(historyOf("ldl", person, TODAY)[0].v, 143);
 });
 
-test("the catalogue holds 36 markers; a target can be set on 27 of them while blood is out of Horizon", () => {
+test("the catalogue holds 36 markers; a target can be set on 26 of them while blood is out of Horizon", () => {
   assert.equal(MARKERS.length, 36);
   assert.equal(new Set(MARKERS.map((m) => m.key)).size, 36);
-  assert.equal(TARGET_MARKERS.length, 27, "the count the page names");
+  assert.equal(TARGET_MARKERS.length, 26, "the count the page names: the nine blood markers are out, and VO₂max is Fitness in another unit");
+});
+
+test("fitness is one marker: VO₂max is not offered, and a target set on it is read as the Fitness target it is", () => {
+  assert.ok(!TARGET_MARKERS.some((m) => m.key === "vo2"));
+  assert.ok(TARGET_MARKERS.some((m) => m.key === "mets"));
+  assert.equal(ML_PER_MET, 3.5);
+  assert.equal(targetKeyOf("vo2"), "mets"); assert.equal(targetKeyOf("weight"), "weight");
+  // a VO₂max target from before: 29.4 → 31.5 mL/kg/min is 8.4 → 9.0 METs, on the Fitness row
+  const old = { id: "t1", marker: "vo2", label: "VO₂max", unit: "mL/kg/min", start_value: 29.4, start_on: "2026-09-01", target_value: 31.5, cadence: "monthly" };
+  const [read1] = openTargets([old]);
+  assert.equal(read1.marker, "mets"); assert.equal(read1.label, "Fitness"); assert.equal(read1.unit, "METs"); assert.equal(read1.id, "t1");
+  assert.ok(Math.abs(read1.target_value - 9.0) < 1e-9); assert.ok(Math.abs(read1.start_value - 8.4) < 1e-9);
+  // a row as the function reads it, with its numbers as text
+  assert.ok(Math.abs(openTargets([{ marker: "vo2", label: "VO₂max", target_value: "31.5", start_value: null }])[0].target_value - 9.0) < 1e-9);
+  // both on file: the Fitness target is the one read, and the pace has one fitness row
+  const both = [old, tgt("mets", 8.6, 9.6)];
+  assert.deepEqual(openTargets(both).map((t) => [t.marker, t.target_value]), [["mets", 9.6]]);
+  assert.deepEqual(pacesOf([old], H, person, TODAY).map((x) => [x.marker, x.label, x.targetText]), [["mets", "Fitness", "9.0"]]);
+});
+
+test("a typical week is the middle of the last eight, and a weekly number is read against it, not against last week alone", () => {
+  const t = typicalWeek(person, TODAY);
+  assert.deepEqual([t.zone2, t.harder, t.strength, t.aerobic, t.longest, t.weeks_read], [102, 38, 1, 4, 100, 8]);
+  assert.equal(t.dose, 960, "the middle of four weeks at 1,040 and four at 880");
+  assert.equal(typicalOf("zone2_week", person, TODAY), 102);
+  assert.equal(typicalOf("strength_week", person, TODAY), 1);
+  assert.equal(typicalOf("mets", person, TODAY), null, "only a weekly marker has a typical week");
+  const z = MARKER_BY_KEY.zone2_week;
+  // last week was a low one (35); the number is read against the typical week (70)
+  assert.equal(impliedPace(z, read(35), 50, 13, [], TODAY, undefined, 70), "50 is under your typical week of 70. A plan would have nothing to add in zone 2.");
+  assert.equal(impliedPace(z, read(35), 70, 13, [], TODAY, undefined, 70), "70 is your typical week. A plan would have nothing to add in zone 2.");
+  assert.equal(impliedPace(z, read(35), 135, 13, [], TODAY, undefined, 70), "65 minutes more than your typical week of 70, in 13 weeks: about five minutes a week.");
+  assert.equal(impliedPace(MARKER_BY_KEY.strength_week, read(1), 2, 13, [], TODAY, undefined, 1), "A session more than your typical week of 1, in 13 weeks.");
+  assert.equal(impliedPace(MARKER_BY_KEY.longest_session, read(70), 60, 13, [], TODAY, undefined, 100), "1 h 00 is under your typical week of 1 h 40.");
+  // with no typical week on file the note is the one it was
+  assert.match(impliedPace(z, read(35), 50, 13, [], TODAY), /^15 minutes in 13 weeks/);
+});
+
+test("what moved in a finished week: each target at the end of the week before and at the end of that week", () => {
+  // the week of 26 October, read on Sunday 8 November
+  const targets = [tgt("mets", 8.4, 9.6, { start_on: "2026-05-08" }), tgt("weight", 75.6, 73.0), tgt("rhr", 54, 50), tgt("dose", 820, 1000)];
+  const moves = weekMoves(targets, H, person, "2026-10-26", TODAY);
+  assert.deepEqual(moves.map((m) => m.marker), ["mets", "weight", "rhr"], "the dose is a floor, read on the plan's own line");
+  const by = Object.fromEntries(moves.map((m) => [m.marker, m]));
+  // the fitness test of 1 November landed in that week
+  assert.deepEqual([by.mets.before, by.mets.after, by.mets.fresh], ["8.4", "8.9", true]);
+  assert.equal(by.weight.fresh, true); assert.notEqual(by.weight.before, by.weight.after);
+  assert.equal(readingAt("mets", person, "2026-10-25").value, 8.4);
+  // the week before it: no new test, so the figure stands
+  const earlier = weekMoves(targets, H, person, "2026-10-19", TODAY);
+  assert.deepEqual([earlier[0].before, earlier[0].after, earlier[0].fresh], ["8.4", "8.4", false]);
 });
 
 test("a blood target says which report it is read from once one newer than the start lands (board 04)", () => {
