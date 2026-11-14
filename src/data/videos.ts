@@ -69,6 +69,7 @@ export const VIDEOS: Video[] = [
   { slug: "apob", title: "ApoB", seconds: 14, group: "body", topic: "heart-health" },
   { slug: "lpa", title: "Lp(a): test it once", seconds: 14, group: "body", topic: "heart-health" },
   { slug: "arc-cholesterol-2026", title: "Cholesterol: the 2026 guideline makes LDL the target", seconds: 62, group: "body", topic: "heart-health", youtube: true },
+  { slug: "arc-fh-early", title: "Familial hypercholesterolemia: high cholesterol from birth", seconds: 178, group: "body", topic: "heart-health", youtube: true },
   { slug: "insulin-upstream", title: "Glucose rises last: insulin and HOMA-IR", seconds: 29, group: "body", topic: "body-phenotyping" },
   { slug: "prediabetes-lifestyle", title: "Prediabetes: can lifestyle stop diabetes?", seconds: 32, group: "body", topic: "body-phenotyping", youtube: true },
   { slug: "bp-safe-limit", title: "Is there a safe limit to blood pressure?", seconds: 39, group: "body", topic: "body-phenotyping" },
