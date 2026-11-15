@@ -697,7 +697,9 @@ export function weekSoFar(person: Person, key: MarkerKey, h: HorizonLike, today:
   const s = spans.find((x) => today <= x.to);
   const def = MARKER_BY_KEY[key];
   if (!s || !def) return null;
-  const v = weeklyValue(spanFigures(person, s), key);
+  const f = spanFigures(person, s);
+  // a week with no session on file yet is a dash with its reason, never a nought: not "0 sessions", not "0 minutes"
+  const v = f.sessions === 0 ? null : weeklyValue(f, key);
   return { n: s.n, of: spans.length, from: s.from, to: s.to, upto: today, days: s.days, full: s.full, value: v, text: fmtValue(def, v) };
 }
 /** A rolling average's days in words: "8 to 14 Nov"; with fewer than seven on file, "5 days on file, 10 to 14 Nov". */

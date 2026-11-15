@@ -583,6 +583,7 @@ test("a weekly target reads the horizon's own weeks, never the week before it", 
   const mon = pacesOf(targets, MIDWEEK, p, "2026-11-30");
   assert.equal(mon[0].now, 64); assert.deepEqual(mon[0].judged, { from: "2026-11-23", to: "2026-11-29", text: "64" });
   assert.equal(mon[0].week.n, 3); assert.equal(mon[0].week.value, null);
+  assert.equal(mon[2].week.value, null, "a week with no session on file yet is a dash, not 0 sessions"); assert.equal(mon[2].week.text, "—");
   assert.equal(mon[1].pace_word, "Reached in 1 of 1 full week"); assert.equal(mon[1].tone, "good");
   assert.deepEqual(fullWeeksSoFar(p, "dose", MIDWEEK, "2026-11-30"), [{ week_start: "2026-11-23", v: 490 }]);
   assert.equal(weekSoFar(p, "dose", MIDWEEK, "2026-12-20"), null, "after the date there is no week in progress");
