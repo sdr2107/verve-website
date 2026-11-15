@@ -22,6 +22,26 @@ The plan is kept in `horizon_plans.guide`, the answers in `horizon_screens` (the
 was: `guidePlanReady()` asks once whether the column is there. The chat is the function's `ask` action. No model writes the
 plan; the model speaks only in the chat, from the figures `askInputs()` gives it.
 
+## A finished week, a week won back, a number that can be changed (14 November 2026)
+
+Boards 09 and 10 of the canvas "Verve, the Guide's plan". All of it is arithmetic and fixed words in `guidePlan.ts`; nothing
+new is stored except two optional fields in `horizon_plans.guide`, so no migration is needed.
+
+| What | Where |
+|---|---|
+| The week just finished, line by line, with where a zone 2 gap went and what it does to the plan | `guidePlan().review`; the "Last week" tab |
+| Every week of the plan, done over asked | `guidePlan().climb[i].done` and `.short`; the table on "The climb" (or "The weeks" when nothing climbs) |
+| A week won back | `progressOf()`: behind its first line, a week that also covers the next step is not asked that step twice. Zone 2 only, never past the first line |
+| What the plan does for each target | `guidePlan().answers` |
+| Changing the zone 2 number, or any target | `Changer` in `GuidePlan.tsx`; "Change" on a row of the targets table; `api.ts updateTarget` |
+| A change never rewrites a week behind the person | `freezeOf()` writes `guide.past` (what each finished week asked) and, for a number the plan follows (`PLAN_MARKERS`), `guide.leg` (the week it was changed in keeps its figures and the climb goes on from it) |
+| One typical week for the set-up, the table and the plan | `derive.ts typicalWeek()`; `baseOf()` reads it |
+| Fitness is one marker | `derive.ts openTargets()` reads a VO₂max target as Fitness; `TARGET_MARKERS` no longer offers VO₂max |
+
+The horizon function copies `derive.ts`, `guidePlan.ts` and `plan-rules.ts`: after a change here, run
+`tools/sync-horizon-web.sh <this commit>` in METTracker and deploy `horizon`, or the check-in's lines and the chat's figures
+lag the page.
+
 ## The pane
 
 In `src/pages/my-health.astro`, beside the other panes, present from the first byte:

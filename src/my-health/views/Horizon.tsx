@@ -38,15 +38,15 @@ import { arrivalsOf, followable, leftOff, pausedWords } from "../derive/arrivals
 import {
   TARGET_MARKERS, isTargetable, openTargets, MARKER_BY_KEY, GROUP_LABEL, FIRST_MARKERS, type MarkerKey, type PlanRow, type PlanKind, type Tone,
   latestOf, historyOf, weeklyHistory, pacesOf, impliedPace, adherenceOf, guideDraftPlan, roadOf, weekOf, daysToGo, nextCheckins, checkinInputs, landedLine,
-  outcomesOf, lastRoadWords, nextSpan, horizonMondays, toTarget,
+  outcomesOf, lastRoadWords, nextSpan, horizonMondays, toTarget, typicalOf, targetKeyOf, vo2Line, ML_PER_MET, type MarkerDef, type Reading,
   fmtValue, addMonths, longDate, dayMonth, dayMonthLong, dayMonthYear, weekdayDayMonth, clockOf, round, numberWord,
 } from "../horizon/derive.ts";
 import {
-  listHorizons, startHorizon, requestCheckin, grantConsent, savePlan, updateHorizon, stopHorizon, addTarget, removeTarget, ERROR_WORDS,
+  listHorizons, startHorizon, requestCheckin, grantConsent, savePlan, updateHorizon, stopHorizon, addTarget, removeTarget, updateTarget, saveGuidePlan, ERROR_WORDS,
   fetchAccess, guidePlanReady,
   type HorizonFull, type PlanAuthor, type StartTarget, type ApiError, type HorizonAccess,
 } from "../horizon/api.ts";
-import { isGuideStored, type GuideStored } from "../horizon/guidePlan.ts";
+import { guidePlan, freezeOf, isGuideStored, PLAN_MARKERS, type GuideStored } from "../horizon/guidePlan.ts";
 import { GuidePlanCard, GuideOffer, GuideLocked } from "./GuidePlan.tsx";
 
 export type HorizonDeps = {
@@ -143,6 +143,16 @@ function Track({ progress, elapsed, tone }: { progress: number; elapsed: number;
 }
 
 const shortTitle = (t: string) => t.split(",")[0].split(" ").slice(0, 2).join(" ");
+/**
+ * Where a marker stands, beside the number being set. A weekly marker's reading is last week alone, which can be a
+ * low or a high one, so it is named as last week and a typical week of the last eight sits beside it (board 10).
+ */
+function standsWords(def: MarkerDef, now: Reading | null, typical: number | null): string {
+  if (!now) return typical != null ? ` · a typical week ${fmtValue(def, typical)}` : " · no reading yet";
+  const fig = now.display ?? fmtValue(def, now.value);
+  if (def.kind === "weekly") return ` · last week ${fig}${typical != null ? ` · a typical week ${fmtValue(def, typical)}` : ""}`;
+  return def.kind === "blood" ? ` · ${fig} on ${dayMonthLong(now.on)}` : ` · today ${fig}`;
+}
 /** Read to its date: closed, with the read of the whole road on file. A horizon the person stopped has no such read and leaves the page. */
 const isDone = (h: HorizonFull) => !!h.closed_at && h.checkins.some((c) => c.kind === "final");
 /** The horizons read to their date, newest first; the sidebar and the chips keep the last three. */
@@ -276,7 +286,7 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
   const showSetup = owner && (r === "new" || (!current && !open.length));
   // a line the Guide wrote, carried here as a draft for this person
   const gd = guideDraft.value;
-  const draftMarker = gd && gd.personId === personId && MARKER_BY_KEY[gd.marker] && isTargetable(gd.marker) ? (gd.marker as MarkerKey) : null;
+  const draftMarker = gd && gd.personId === personId && MARKER_BY_KEY[targetKeyOf(gd.marker)] && isTargetable(gd.marker) ? (targetKeyOf(gd.marker) as MarkerKey) : null;
 
   const nav = open.length || done.length || owner ? (
     <div class="flex flex-wrap gap-2" role="tablist" aria-label="Your horizons">
@@ -321,6 +331,8 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
 }) {
   const [editingPlan, setEditingPlan] = useState(false);
   const [adding, setAdding] = useState(false);
+  /** The target whose number is being changed, and what is typed. */
+  const [changing, setChanging] = useState<{ marker: MarkerKey; value: string } | null>(null);
   const { week, weeks } = weekOf(h, today);
   const togo = daysToGo(h, today);
   const targets = openTargets(h.targets).map(toTarget);
@@ -328,6 +340,13 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   // Only what your device shares (derive/arrivals): a goal set on a reading that has stopped arriving is kept, and says it is paused.
   const arrivalList = person ? arrivalsOf(person.doc.weeks) : null;
   const paused = (marker: string) => pausedWords(arrivalList, marker);
+  /** Under a row's own line: Fitness as VO₂max, and a weekly marker's typical week beside the last week its "Today" shows. */
+  const rowNote = (marker: MarkerKey, target: number): string => {
+    if (!person) return "";
+    if (marker === "mets") return vo2Line(person, today, target);
+    const def = MARKER_BY_KEY[marker], typical = typicalOf(marker, person, today);
+    return def?.kind === "weekly" && typical != null ? `Today is last week. A typical week: ${fmtValue(def, typical)}.` : "";
+  };
   const planRows = h.plan?.rows ?? [];
   const thisMonday = nextCheckins(h, today).thisMonday;
   const adherence = person && planRows.length ? adherenceOf(planRows, person, thisMonday, today) : [];
@@ -352,7 +371,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   const guide = guideOn && person ? { sb: deps.supabase, h, person, today, targets, owner, closed, access, userId, reload, setNotice } : null;
   // a line the Guide wrote, carried here: a draft until the person sets its number, and gone when they leave it
   const gd = guideDraft.value;
-  const draftDef = gd && owner && !closed && gd.personId === h.person_id && isTargetable(gd.marker) && !targets.some((t) => t.marker === gd.marker) ? MARKER_BY_KEY[gd.marker] ?? null : null;
+  const draftDef = gd && owner && !closed && gd.personId === h.person_id && isTargetable(gd.marker) && !targets.some((t) => t.marker === targetKeyOf(gd.marker)) ? MARKER_BY_KEY[targetKeyOf(gd.marker)] ?? null : null;
   const draft = draftDef && gd ? { def: draftDef, readOn: gd.readOn, now: person ? latestOf(draftDef.key, person, today) : null } : null;
 
   // the horizon set before the zone column existed learns its zone on the owner's visit; the scheduled check-in needs it
@@ -383,6 +402,29 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
     if (err) { setNotice(`Could not save the plan: ${err}`); return; }
     setEditingPlan(false); await reload();
   }
+  /**
+   * Just before a number the Guide's plan follows is changed, removed or added: the plan writes down the weeks behind
+   * as they were asked, and the week already begun keeps its own figures (guidePlan.ts freezeOf). A plan that has not
+   * started, and a marker the plan does not follow, need nothing kept.
+   */
+  async function keepPlanBefore(marker: string, uid: string): Promise<string | null> {
+    if (!stored || !person || !PLAN_MARKERS.has(marker)) return null;
+    const frozen = freezeOf(guidePlan({ horizon: h, targets, person, today, stored }), stored, true);
+    return frozen === stored ? null : saveGuidePlan(deps.supabase, h.id, planRows, frozen, uid);
+  }
+  /** The person changes the number they set. Where the target started, and the day, stay as they were. */
+  async function changeTarget(marker: MarkerKey, value: number) {
+    const t = targets.find((x) => x.marker === marker);
+    const uid = await userId();
+    if (!t?.id || !uid) { setNotice("Sign in again to continue."); return; }
+    setBusy("target");
+    // a target kept as VO₂max from before is written back in its own unit
+    const raw = h.targets.find((x) => x.id === t.id);
+    const err = await keepPlanBefore(marker, uid) ?? await updateTarget(deps.supabase, t.id, raw?.marker === "vo2" ? round(value * ML_PER_MET, 1) : value);
+    setBusy("");
+    if (err) { setNotice(`Could not change that number: ${err}`); return; }
+    setChanging(null); await reload();
+  }
   async function toggle(key: "checkin_monday" | "checkin_month" | "send_to_coach" | "email_checkin", value: boolean) {
     const err = await updateHorizon(deps.supabase, h.id, { [key]: value } as Partial<Pick<HorizonFull, "checkin_monday" | "checkin_month" | "send_to_coach" | "email_checkin">>);
     if (err) setNotice(`Could not change that: ${err}`); else await reload();
@@ -399,7 +441,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
         <div class="flex max-w-[680px] flex-col gap-2">
           <Eyebrow>Horizon · set {dayMonthYear(h.starts_on)} · week {week} of {weeks}{closed ? " · stopped" : ""}</Eyebrow>
           <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-[-0.01em] text-text">{h.title}, {longDate(h.ends_on)}</h1>
-          <p class="m-0 text-[15px] leading-relaxed text-text-2">A horizon is a date, the markers you want different by then, and the week that gets you there. The Guide checks the pace every Monday and reads the month at its end. Your coach sees all of it and writes the plan.</p>
+          <p class="m-0 text-[15px] leading-relaxed text-text-2">A horizon is a date, the markers you want different by then, and the week that gets you there. The Guide checks the pace every Monday and reads the month at its end.{h.plan?.author === "coach" ? (owner ? " Your coach sees all of it and writes the plan." : " You see all of it and write the plan.") : stored ? (owner ? " The Guide wrote the plan from your targets. A coach you share your page with sees all of it." : " The Guide wrote the plan from their targets.") : owner ? " A coach you share your page with sees all of it and can write the plan." : ""}</p>
           <div class="mt-1">{nav}</div>
         </div>
         <div class="flex min-w-[180px] flex-col items-end gap-1 rounded-[16px] border border-border-strong bg-card px-5 py-4">
@@ -421,15 +463,35 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
           </div>
           {paces.map((p) => (
             <div class="grid grid-cols-3 items-center gap-x-3 gap-y-1 border-b border-border py-3 last:border-b-0 md:grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_repeat(2,minmax(0,.8fr))_minmax(0,1.5fr)_minmax(0,1.6fr)]" key={p.marker}>
-              <span class="col-span-3 flex flex-col md:col-span-1"><span class="text-[15px] text-text">{p.label}</span><span class="text-[12px] text-text-3">{MARKER_BY_KEY[p.marker]?.how ?? ""}{p.source ? ` · ${p.source}` : ""}</span>{paused(p.marker) ? <span class="text-[12px] text-text-2">{paused(p.marker)}</span> : null}</span>
+              <span class="col-span-3 flex flex-col md:col-span-1"><span class="text-[15px] text-text">{p.label}</span><span class="text-[12px] text-text-3">{MARKER_BY_KEY[p.marker]?.how ?? ""}{p.source ? ` · ${p.source}` : ""}</span>{rowNote(p.marker, p.target) ? <span class="text-[12px] text-text-3">{rowNote(p.marker, p.target)}</span> : null}{paused(p.marker) ? <span class="text-[12px] text-text-2">{paused(p.marker)}</span> : null}</span>
               <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">I want</span><span class="font-mono text-[15px] font-semibold text-accent-text">{MARKER_BY_KEY[p.marker]?.standing ? <span class="mr-1 font-sans text-[12px] font-normal text-text-2">at least</span> : null}{p.targetText}</span></span>
-              <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">Today</span><span class="font-mono text-[15px] font-semibold text-text">{p.nowText}{p.unit && p.now != null ? <span class="ml-1 font-mono text-[11px] font-medium text-text-3">{p.unit}</span> : null}</span></span>
+              <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">Today</span><span class="font-mono text-[15px] font-semibold text-text">{p.nowText}{p.unit && p.now != null ? <span class="ml-1 whitespace-nowrap font-mono text-[11px] font-medium text-text-3">{p.unit}</span> : null}</span></span>
               <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">On {dayMonth(h.starts_on)}</span><span class="font-mono text-[15px] font-semibold text-text-3">{p.startText}</span></span>
               <span class="col-span-3 md:col-span-1"><Track progress={p.progress} elapsed={p.elapsed} tone={p.tone} /></span>
               <span class={`col-span-3 flex items-center justify-between text-[13px] font-medium md:col-span-1 ${TONE_TEXT[p.tone]}`}>
                 {p.pace_word}
-                {owner && !closed && targets.length > 1 && <button type="button" onClick={async () => { const t = targets.find((x) => x.marker === p.marker); if (!t?.id) return; const err = await removeTarget(deps.supabase, t.id); if (err) setNotice(err); else await reload(); }} class="ml-2 text-[11px] font-normal text-text-3 hover:text-text" aria-label={`Remove ${p.label}`}>Remove</button>}
+                {owner && !closed && <span class="ml-2 flex shrink-0 gap-3 text-[12px] font-normal">
+                  <button type="button" onClick={() => setChanging(changing?.marker === p.marker ? null : { marker: p.marker, value: String(round(p.target, MARKER_BY_KEY[p.marker]?.decimals ?? 1)) })} class="min-h-8 text-accent-text hover:text-text" aria-label={`Change the number for ${p.label}`}>Change</button>
+                  {targets.length > 1 && <button type="button" onClick={async () => { const t = targets.find((x) => x.marker === p.marker); const uid = await userId(); if (!t?.id || !uid) return; const err = await keepPlanBefore(p.marker, uid) ?? await removeTarget(deps.supabase, t.id); if (err) setNotice(err); else await reload(); }} class="min-h-8 text-text-3 hover:text-text" aria-label={`Remove ${p.label}`}>Remove</button>}
+                </span>}
               </span>
+              {changing?.marker === p.marker && person && MARKER_BY_KEY[p.marker] ? (() => {
+                const def = MARKER_BY_KEY[p.marker], n = Number(changing.value), ok = changing.value.trim() !== "" && Number.isFinite(n);
+                const now = latestOf(p.marker, person, today), typical = typicalOf(p.marker, person, today);
+                return (
+                  <form class="col-span-3 flex flex-col gap-2 rounded-[10px] border border-border-strong bg-alt p-3 md:col-span-6" onSubmit={(e) => { e.preventDefault(); if (ok) void changeTarget(p.marker, n); }}>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <input type="number" step={10 ** -def.decimals} value={changing.value} onInput={(e) => setChanging({ marker: p.marker, value: (e.currentTarget as HTMLInputElement).value })} aria-label={`${p.label}: the number you want`} class={`${inputClass} w-28 bg-card font-mono`} />
+                      <span class="text-[12px] text-text-3"><span class="font-mono text-[11px]">{p.unit}</span>{standsWords(def, now, typical)}</span>
+                      <span class="flex-1" />
+                      <Button onClick={() => setChanging(null)}>Cancel</Button>
+                      <Button type="submit" primary disabled={!ok || busy === "target" || n === p.target}>{busy === "target" ? "Keeping…" : "Change the number"}</Button>
+                    </div>
+                    <Quiet>{ok ? impliedPace(def, now, n, Math.max(1, Math.ceil(daysBetween(today, h.ends_on) / 7)), historyOf(p.marker, person, today), today, def.standing ? weeklyHistory(person, p.marker, today, 13) : undefined, typical) : "Set the number."}{p.marker === "mets" ? ` ${vo2Line(person, today, ok ? n : null)}` : ""}</Quiet>
+                    <Quiet>Where it started on {dayMonth(h.starts_on)} stays as it was.{stored && PLAN_MARKERS.has(p.marker) ? (today >= stored.first_monday ? " The Guide's plan follows this number: the week already begun keeps what it asked, and the plan goes on from it." : " The Guide's plan follows this number and is worked out again from it.") : ""}</Quiet>
+                  </form>
+                );
+              })() : null}
               {/* a blood target's two guards, under its row: where the move sits against the marker's usual swing, and a medicine on file */}
               {p.swing || p.medicine ? <span class="col-span-3 text-[12px] leading-relaxed text-text-3 md:col-span-6">{[p.swing?.words, p.medicine].filter(Boolean).join(" ")}</span> : null}
             </div>
@@ -445,10 +507,10 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
         ) : null}
         {owner && !closed && person && (adding
           ? <AddTarget person={person} today={today} taken={targets.map((t) => t.marker)} weeks={Math.max(1, Math.ceil(daysBetween(today, h.ends_on) / 7))} preset={draft?.def.key}
-              onAdd={async (t) => { const uid = await userId(); if (!uid) return; const res = await addTarget(deps.supabase, { horizon_id: h.id, user_id: uid, ...t }); if (!res.ok) setNotice(res.detail || ERROR_WORDS.unknown); else { if (draft && t.marker === draft.def.key) setGuideDraft(null); setAdding(false); await reload(); } }}
+              onAdd={async (t) => { const uid = await userId(); if (!uid) return; const kept = await keepPlanBefore(t.marker, uid); if (kept) { setNotice(kept); return; } const res = await addTarget(deps.supabase, { horizon_id: h.id, user_id: uid, ...t }); if (!res.ok) setNotice(res.detail || ERROR_WORDS.unknown); else { if (draft && t.marker === draft.def.key) setGuideDraft(null); setAdding(false); await reload(); } }}
               onCancel={() => setAdding(false)} />
           : <div><button type="button" onClick={() => setAdding(true)} class="rounded-full border border-border px-3 py-1 text-[12px] text-text-2 hover:border-accent-border">Add a target</button></div>)}
-        <Quiet>You set every number under "I want". Verve sets none, and promises none: it tells you the pace your number implies and whether the weeks are keeping it. Any of the {TARGET_MARKERS.length} markers on this page can be a target.</Quiet>
+        <Quiet>You set every number under "I want", and can change it. Verve sets none, and promises none: it tells you the pace your number implies and whether the weeks are keeping it. Any of the {TARGET_MARKERS.length} markers on this page can be a target.</Quiet>
         {/* blood markers are out of Horizon pending the lawyers' review: a target set before that is kept in its row, unread, and the page says so */}
         {h.targets.length > targets.length && <Quiet>Blood markers are not offered as targets for now. The {h.targets.length - targets.length === 1 ? "one you set is" : `${numberWord(h.targets.length - targets.length)} you set are`} kept, and not shown or checked while this stands.</Quiet>}
         {paces.some((p) => MARKER_BY_KEY[p.marker]?.kind === "blood") && <Quiet>A blood target is called reached only when the move from its start is more than that marker's usual swing: two reports can differ by that much with nothing having changed. A medicine you have told the app you take is shown beside its target, and is never read as the cause of a change.</Quiet>}
@@ -462,10 +524,10 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
         ) : <>
         {guide && owner && !closed && !editingPlan && h.plan?.author !== "coach" && (locked ? <GuideLocked access={access!} /> : <GuideOffer {...guide} />)}
         <div class="flex flex-wrap items-baseline justify-between gap-3">
-          <H2>The plan{authorWords ? ` · ${authorWords}` : ""}{h.plan ? `, updated ${dayMonthLong(h.plan.updated_at.slice(0, 10))}` : ""}</H2>
+          <H2>The plan{planRows.length && authorWords ? ` · ${authorWords}` : ""}{planRows.length && h.plan ? `, updated ${dayMonthLong(h.plan.updated_at.slice(0, 10))}` : ""}</H2>
           <div class="flex gap-3 text-[13px] font-semibold">
             {planRows.length > 0 && !editingPlan && !closed && <button type="button" onClick={() => setEditingPlan(true)} class="text-text-2 hover:text-text">{owner ? "Edit" : "Edit the plan"}</button>}
-            <button type="button" onClick={() => deps.goTab("messages")} class="text-accent-text">Ask about it</button>
+            <button type="button" onClick={() => deps.goTab("messages")} class="text-accent-text">{owner ? "Ask my coach in Messages" : "Message them"}</button>
           </div>
         </div>
         {editingPlan
@@ -679,7 +741,8 @@ function AddTarget({ person, today, taken, weeks, preset, onAdd, onCancel }: { p
   const now = latestOf(key, person, today);
   const unit = now?.unit ?? def.unit;
   const n = Number(value);
-  const note = value && Number.isFinite(n) ? impliedPace(def, now, n, weeks, historyOf(key, person, today), today, def.standing ? weeklyHistory(person, key, today, 13) : undefined) : def.how;
+  const typical = typicalOf(key, person, today);
+  const note = `${value && Number.isFinite(n) ? impliedPace(def, now, n, weeks, historyOf(key, person, today), today, def.standing ? weeklyHistory(person, key, today, 13) : undefined, typical) : def.how}${key === "mets" ? ` ${vo2Line(person, today, value && Number.isFinite(n) ? n : null)}` : ""}`;
   return (
     <div class="flex flex-col gap-3 rounded-[10px] border border-border-strong bg-alt p-4">
       <div class="flex flex-wrap items-center gap-2">
@@ -687,8 +750,7 @@ function AddTarget({ person, today, taken, weeks, preset, onAdd, onCancel }: { p
           {free.map((m) => <option value={m.key}>{m.label}</option>)}
         </select>
         <input type="number" step={10 ** -def.decimals} value={value} onInput={(e) => setValue((e.currentTarget as HTMLInputElement).value)} placeholder="I want" class={`${inputClass} w-28 font-mono`} aria-label={`${def.label}: the number you want`} />
-        <span class="font-mono text-[11px] text-text-3">{unit}</span>
-        <span class="text-[12px] text-text-3">{now ? `today ${now.display ?? fmtValue(def, now.value)} ${unit}` : "no reading yet"}</span>
+        <span class="text-[12px] text-text-3"><span class="font-mono text-[11px]">{unit}</span>{standsWords(def, now, typical)}</span>
       </div>
       <Quiet>{note}</Quiet>
       <div class="flex gap-2"><Button onClick={onCancel}>Cancel</Button><Button primary disabled={!value || !Number.isFinite(n)} onClick={() => onAdd({ marker: key, label: def.label, unit, start_value: now?.value != null ? round(now.value, def.decimals + 1) : null, start_on: now?.on ?? today, target_value: n, cadence: def.cadence })}>Add</Button></div>
@@ -837,16 +899,18 @@ function Setup({ deps, person, today, personId, hasOthers, nav, prefill, draftMa
             const unit = now?.unit ?? def.unit;
             const n = Number(d.value);
             const lastRoad = prefill?.lastRoad[k] ? `The last road: ${prefill.lastRoad[k]}.` : "";
-            const note = d.ticked && d.value !== "" && Number.isFinite(n) && person
-              ? `${impliedPace(def, now, n, weeks, historyOf(k, person, today), today, def.standing ? weeklyHistory(person, k, today, 13) : undefined)}${lastRoad ? ` ${lastRoad}` : ""}`
-              : d.ticked ? `${lastRoad ? `${lastRoad} ` : ""}Set the number.` : def.how;
+            const typical = person ? typicalOf(k, person, today) : null;
+            const set = d.ticked && d.value !== "" && Number.isFinite(n);
+            const note = `${set && person
+              ? `${impliedPace(def, now, n, weeks, historyOf(k, person, today), today, def.standing ? weeklyHistory(person, k, today, 13) : undefined, typical)}${lastRoad ? ` ${lastRoad}` : ""}`
+              : d.ticked ? `${lastRoad ? `${lastRoad} ` : ""}Set the number.` : def.how}${k === "mets" && person ? ` ${vo2Line(person, today, set ? n : null)}` : ""}`;
             return (
               <div class={`grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 py-3 md:grid-cols-[auto_minmax(0,1.1fr)_auto_minmax(0,1.5fr)] ${i ? "border-t border-border" : ""}`} key={k}>
                 <input type="checkbox" checked={d.ticked} onChange={(e) => setDraft(k, { ticked: (e.currentTarget as HTMLInputElement).checked })} aria-label={def.label} class="h-5 w-5 accent-accent" />
                 <span class="text-[15px] text-text">{def.label}</span>
                 {/* what you want first, today beside it */}
                 <input type="number" step={10 ** -def.decimals} value={d.value} placeholder="I want" disabled={!d.ticked} onInput={(e) => setDraft(k, { value: (e.currentTarget as HTMLInputElement).value })} aria-label={`${def.label}: the number you want`} class={`${inputClass} col-start-2 w-28 font-mono md:col-start-auto`} />
-                <span class="col-start-2 text-[12px] text-text-3 md:col-start-auto"><span class="font-mono text-[11px]">{unit}</span>{now ? ` · ${def.kind === "blood" ? "" : "today "}${now.display ?? fmtValue(def, now.value)}${def.kind === "blood" ? ` on ${dayMonthLong(now.on)}` : ""}` : " · no reading yet"}</span>
+                <span class="col-start-2 text-[12px] text-text-3 md:col-start-auto"><span class="font-mono text-[11px]">{unit}</span>{standsWords(def, now, typical)}</span>
                 <span class={`col-span-2 text-[12px] leading-relaxed md:col-span-4 md:pl-8 ${d.ticked ? "text-text-2" : "text-text-3"}`}>{note}</span>
               </div>
             );

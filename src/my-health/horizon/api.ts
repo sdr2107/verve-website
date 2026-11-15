@@ -145,6 +145,11 @@ export async function addTarget(sb: SupabaseClient, t: Omit<TargetRow, "id" | "c
   const { data, error } = await sb.from("horizon_targets").insert(t).select("*").single();
   return error || !data ? { ok: false, error: "unknown", status: 0, detail: error?.message ?? "" } : { ok: true, data: data as TargetRow };
 }
+/** A target's number, changed by the person who set it. Where it started, and the day, stay as they were. */
+export async function updateTarget(sb: SupabaseClient, id: string, targetValue: number): Promise<string | null> {
+  const { error } = await sb.from("horizon_targets").update({ target_value: targetValue }).eq("id", id);
+  return error ? error.message : null;
+}
 export async function removeTarget(sb: SupabaseClient, id: string): Promise<string | null> {
   const { error } = await sb.from("horizon_targets").delete().eq("id", id);
   return error ? error.message : null;

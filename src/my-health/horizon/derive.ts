@@ -43,6 +43,8 @@ export type MarkerDef = {
 
 export const MARKERS: MarkerDef[] = [
   { key: "mets", label: "Fitness", how: "METs, from sessions with heart rate", unit: "METs", decimals: 1, kind: "measured", cadence: "monthly", group: "fitness" },
+  // The same measure in its other unit (1 MET is 3.5 mL/kg/min). Kept in the catalogue so a reading can be shown as
+  // VO₂max and a target set on it before 14 November 2026 is still read; it is not offered as a target (TARGET_MARKERS).
   { key: "vo2", label: "VO₂max", how: "mL/kg/min, the same tests", unit: "mL/kg/min", decimals: 1, kind: "measured", cadence: "monthly", group: "fitness" },
   { key: "dose", label: "Weekly dose", how: "every week from here", unit: "MET-min", decimals: 0, kind: "weekly", cadence: "weekly", group: "movement", standing: true },
   { key: "zone2_week", label: "Zone 2 a week", how: "minutes, logged sessions", unit: "min", decimals: 0, kind: "weekly", cadence: "weekly", group: "movement" },
@@ -94,10 +96,32 @@ export const GROUP_LABEL: Record<MarkerGroup, string> = { fitness: "Fitness", mo
 export const BLOOD_TARGETS_OPEN = false;
 /** Whether a target can be held on a marker today. A marker the catalogue does not know is left to its row. */
 export const isTargetable = (marker: string): boolean => BLOOD_TARGETS_OPEN || MARKER_BY_KEY[marker]?.kind !== "blood";
-/** The markers a target can be set on today: the catalogue, less the blood markers while they are out. */
-export const TARGET_MARKERS: MarkerDef[] = MARKERS.filter((m) => isTargetable(m.key));
-/** A horizon's targets as the page and the check-in read them: one on a marker that is out is left where it is, unread. */
-export const openTargets = <T extends { marker: string }>(targets: T[]): T[] => targets.filter((t) => isTargetable(t.marker));
+/**
+ * Fitness and VO₂max are one measure in two units: 1 MET is 3.5 mL of oxygen a kilo a minute. Horizon keeps one
+ * marker for it, Fitness, typed in METs, and shows the VO₂max beside it (the founder, 14 November 2026: "they are the
+ * same thing").
+ */
+export const ML_PER_MET = 3.5;
+/** The marker a target is held on: VO₂max is read as Fitness. */
+export const targetKeyOf = (marker: string): string => (marker === "vo2" ? "mets" : marker);
+/** The markers a target can be set on today: the catalogue, less the blood markers while they are out, and less VO₂max, which is Fitness in another unit. */
+export const TARGET_MARKERS: MarkerDef[] = MARKERS.filter((m) => isTargetable(m.key) && targetKeyOf(m.key) === m.key);
+const perMet = (v: unknown) => (v == null || v === "" || !Number.isFinite(Number(v)) ? v : Number(v) / ML_PER_MET);
+/**
+ * A horizon's targets as the page and the check-in read them: one on a marker that is out is left where it is, unread.
+ * A target set on VO₂max is read as the Fitness target it is, in METs; where a Fitness target is also on file, that one
+ * is read and the VO₂max row is left where it is.
+ */
+export function openTargets<T extends { marker: string }>(targets: T[]): T[] {
+  const open = targets.filter((t) => isTargetable(t.marker));
+  const hasMets = open.some((t) => t.marker === "mets");
+  return open.flatMap((t) => {
+    if (t.marker !== "vo2") return [t];
+    if (hasMets) return [];
+    const r = t as unknown as Record<string, unknown>;
+    return [{ ...t, marker: "mets", label: "Fitness", unit: "METs", start_value: perMet(r.start_value), target_value: perMet(r.target_value) } as unknown as T];
+  });
+}
 /** The markers the setup offers first; the rest sit behind "Add another". */
 export const FIRST_MARKERS: MarkerKey[] = (["mets", "weight", "waist", "almi", "ldl", "dose", "rhr"] as MarkerKey[]).filter(isTargetable);
 
@@ -179,6 +203,38 @@ export const lastCompleteMonday = (today: string) => addDays(mondayOf(new Date(t
 const weeklyValue = (f: WeekFigures, key: MarkerKey): number | null =>
   key === "dose" ? f.dose : key === "zone2_week" ? f.zone2 : key === "strength_week" ? f.strength : key === "longest_session" ? f.longest : null;
 
+/** A typical week of the last eight complete ones. */
+export type TypicalWeek = { zone2: number; harder: number; dose: number | null; aerobic: number; strength: number; longest: number; /** Weeks of the eight with anything on file. */ weeks_read: number };
+/**
+ * A typical week: the medians of the last eight complete weeks, a week with nothing on file counted as nothing. THE ONE
+ * READER: the set-up's "a typical week", the targets table and the Guide's plan (./guidePlan.ts baseOf) all take it
+ * from here, so a number set against one is never planned against another. (A target set from last week alone, a low
+ * one, sat under what the person already did, and the plan had nothing to add: the recording of 14 November 2026.)
+ */
+export function typicalWeek(person: Person, today: string): TypicalWeek {
+  const weeks: WeekFigures[] = [];
+  let m = lastCompleteMonday(today);
+  for (let i = 0; i < 8; i++) { weeks.push(weekFigures(person, m)); m = addDays(m, -7); }
+  const med = (xs: number[]) => (xs.length ? medianOf(xs)! : 0);
+  const doses = weeks.filter((w) => w.dose != null).map((w) => w.dose!);
+  return {
+    zone2: Math.round(med(weeks.map((w) => w.zone2 ?? 0))),
+    harder: Math.round(med(weeks.map((w) => w.zone3 ?? Math.max(0, (w.zoned ?? 0) - (w.zone2 ?? 0))))),
+    dose: doses.length ? Math.round(med(doses)) : null,
+    aerobic: Math.round(med(weeks.map((w) => Math.max(0, w.sessions - w.strength)))),
+    strength: Math.round(med(weeks.map((w) => w.strength))),
+    longest: Math.round(med(weeks.map((w) => w.longest))),
+    weeks_read: weeks.filter((w) => w.sessions > 0 || w.dose != null).length,
+  };
+}
+/** A weekly marker's typical week; null for any other marker, and when none of the eight weeks has anything on file. */
+export function typicalOf(key: MarkerKey, person: Person, today: string): number | null {
+  if (MARKER_BY_KEY[key]?.kind !== "weekly") return null;
+  const t = typicalWeek(person, today);
+  if (!t.weeks_read) return null;
+  return key === "dose" ? t.dose : key === "zone2_week" ? t.zone2 : key === "strength_week" ? t.strength : key === "longest_session" ? t.longest : null;
+}
+
 /** The last n complete weeks' values of a weekly marker, oldest first; a week with no sessions and no row is null. */
 export function weeklyHistory(person: Person, key: MarkerKey, today: string, n = 13): { week_start: string; v: number | null }[] {
   const out: { week_start: string; v: number | null }[] = [];
@@ -209,8 +265,8 @@ export function latestOf(key: MarkerKey, person: Person, today: string): Reading
       const tests = [...person.crf].filter((c) => c.vo2max != null || c.met_capacity != null).sort((a, b) => String(a.measured_on).localeCompare(String(b.measured_on)));
       const t = tests[tests.length - 1];
       if (!t) return null;
-      const mets = t.met_capacity != null ? Number(t.met_capacity) : Number(t.vo2max) / 3.5;
-      const v = key === "mets" ? mets : t.vo2max != null ? Number(t.vo2max) : mets * 3.5;
+      const mets = t.met_capacity != null ? Number(t.met_capacity) : Number(t.vo2max) / ML_PER_MET;
+      const v = key === "mets" ? mets : t.vo2max != null ? Number(t.vo2max) : mets * ML_PER_MET;
       return { value: v, on: String(t.measured_on).slice(0, 10), unit: def.unit, writer: t.method ? String(t.method) : null };
     }
     case "dose": case "zone2_week": case "strength_week": case "longest_session": {
@@ -257,7 +313,7 @@ export function historyOf(key: MarkerKey, person: Person, today: string): { d: s
   if (def.kind === "weekly") return weeklyHistory(person, key, today, 26).filter((w) => w.v != null).map((w) => ({ d: addDays(w.week_start, 6), v: w.v! }));
   switch (key) {
     case "mets": case "vo2": return [...person.crf].filter((c) => c.vo2max != null || c.met_capacity != null).sort((a, b) => String(a.measured_on).localeCompare(String(b.measured_on)))
-      .map((t) => { const mets = t.met_capacity != null ? Number(t.met_capacity) : Number(t.vo2max) / 3.5; return { d: String(t.measured_on).slice(0, 10), v: key === "mets" ? mets : t.vo2max != null ? Number(t.vo2max) : mets * 3.5 }; });
+      .map((t) => { const mets = t.met_capacity != null ? Number(t.met_capacity) : Number(t.vo2max) / ML_PER_MET; return { d: String(t.measured_on).slice(0, 10), v: key === "mets" ? mets : t.vo2max != null ? Number(t.vo2max) : mets * ML_PER_MET }; });
     case "weight": return weightSeries(person.weights);
     case "almi": case "ffmi": { const h = heightM(person.profile); return h ? (person.by.get(key === "almi" ? "alm_kg" : "ffm_kg") ?? []).map((p) => ({ d: p.d, v: p.v / (h * h) })) : []; }
     case "sppb": return sppbSeries(person.doc.app_labs ?? []);
@@ -518,6 +574,34 @@ export function landedLine(l: Landed, target?: Pick<Target, "start_value" | "tar
   return `${lead} The target of ${goal} is reached${swing ? `. ${swing.words} The` : "; the"} horizon keeps it as a floor to hold.`;
 }
 
+/** The Fitness row's second line: the same number as VO₂max. "As VO₂max: 31.5 mL/kg/min · today 29.4. One measure in two units: 1 MET is 3.5 mL/kg/min." */
+export function vo2Line(person: Person, today: string, targetMets?: number | null): string {
+  const now = latestOf("vo2", person, today);
+  const aim = targetMets != null && Number.isFinite(targetMets) && targetMets > 0 ? round(targetMets * ML_PER_MET, 1).toFixed(1) : null;
+  const fig = now ? round(now.value, 1).toFixed(1) : null;
+  const lead = aim ? `As VO₂max: ${aim} mL/kg/min${fig ? ` · today ${fig}` : ""}. ` : fig ? `As VO₂max, today is ${fig} mL/kg/min. ` : "";
+  return `${lead}One measure in two units: 1 MET is ${ML_PER_MET} mL/kg/min.`;
+}
+
+/** A marker as it stood at the end of a day: what the document held then, read by the same rule as today's figure. */
+export const readingAt = (key: MarkerKey, person: Person, day: string): Reading | null => latestOf(key, upTo(person, day), addDays(day, 1));
+
+/** A target over one finished week: the figure at the end of the week before, the figure at the end of that week, and the pace word the table carries. */
+export type WeekMove = { marker: MarkerKey; label: string; unit: string; before: string | null; after: string | null; /** No reading newer than the week before: the figure stands as it was. */ fresh: boolean; pace_word: string; tone: Tone };
+/**
+ * What moved against the targets in a finished week (canvas "Verve, the Guide's plan", board 09): each target's figure
+ * at the end of the week before and at the end of that week, with today's pace word. Arithmetic on the person's own
+ * readings; the weekly dose, a floor to hold, is left to the plan's own line for it.
+ */
+export function weekMoves(targets: Target[], horizon: HorizonLike, person: Person, monday: string, today: string): WeekMove[] {
+  return pacesOf(targets, horizon, person, today).filter((p) => !MARKER_BY_KEY[p.marker]?.standing).map((p) => {
+    const def = MARKER_BY_KEY[p.marker];
+    const a = readingAt(p.marker, person, addDays(monday, -1)), b = readingAt(p.marker, person, addDays(monday, 6));
+    const text = (r: Reading | null) => (r ? r.display ?? (def ? fmtValue(def, r.value) : String(round(r.value, 1))) : null);
+    return { marker: p.marker, label: p.label, unit: def?.hm ? "" : p.unit, before: text(a), after: text(b), fresh: !!b && (!a || b.on > a.on), pace_word: p.pace_word, tone: p.tone };
+  });
+}
+
 /** Every target's pace, with the readings looked up in the person's document. */
 export function pacesOf(targets: Target[], horizon: HorizonLike, person: Person, today: string): Pace[] {
   // a target on a marker that is out of Horizon (blood, pending review) is not paced: the page, the Overview's card
@@ -537,7 +621,11 @@ export function valueNear(history: { d: string; v: number }[], day: string, tole
   return p && Math.abs(daysBetween(p.d, day)) <= tolerance ? p : null;
 }
 
-export function impliedPace(def: MarkerDef, now: Reading | null, target: number, weeks: number, history: { d: string; v: number }[], today: string, weekly?: { week_start: string; v: number | null }[]): string {
+/** What a plan would have to add, said under a weekly number set at or under a typical week. */
+const NOTHING_TO_ADD: Partial<Record<MarkerKey, string>> = { zone2_week: " A plan would have nothing to add in zone 2.", strength_week: " A plan would have nothing to add in strength." };
+
+export function impliedPace(def: MarkerDef, now: Reading | null, target: number, weeks: number, history: { d: string; v: number }[], today: string, weekly?: { week_start: string; v: number | null }[],
+  /** A weekly marker's typical week (typicalOf): its number is read against that, not against last week alone. */ typical?: number | null): string {
   if (def.standing) {
     const read = (weekly ?? []).filter((w) => w.v != null);
     const met = read.filter((w) => w.v! >= target).length;
@@ -552,8 +640,18 @@ export function impliedPace(def: MarkerDef, now: Reading | null, target: number,
     return def.key === "hs_crp" ? `${lead} Your number is ${where} ${saidName(def)}'s usual swing from ${plainValue(def, now!.value)}: it takes ${s!.range}, to be more than that. A report at your number will not be called reached.`
       : `${lead} Your number is ${where} ${saidName(def)}'s usual swing from ${plainValue(def, now!.value)}, which is ${s!.range}. A report at your number will not be called reached.`;
   }
+  if (def.kind === "weekly" && typical != null) {
+    // one week is noise: a weekly number is read against a typical week of the last eight
+    const usual = round(typical, def.decimals), gap = round(target - usual, def.decimals);
+    if (gap < 0) return `${fmtValue(def, target)} is under your typical week of ${fmtValue(def, usual)}.${NOTHING_TO_ADD[def.key] ?? ""}`;
+    if (gap === 0) return `${fmtValue(def, target)} is your typical week.${NOTHING_TO_ADD[def.key] ?? ""}`;
+    const each = gap / Math.max(1, weeks);
+    const rate = def.hm || each < 1 ? "" : `: about ${amountWords(def, Math.round(each))} a week`;
+    return `${cap(amountWords(def, gap))} more than your typical week of ${fmtValue(def, usual)}, in ${weeks} week${weeks === 1 ? "" : "s"}${rate}.`;
+  }
   if (!now) return "No reading yet; the first one becomes the start.";
-  const needed = target - now.value;
+  // the gap between the two figures as the row shows them: the reading is rounded first, as it is on the page
+  const needed = target - round(now.value, def.decimals);
   if (Math.abs(round(needed, def.decimals)) === 0) return "Already there; the horizon keeps it in view.";
   const perWeek = needed / Math.max(1, weeks);
   const sixAgo = valueNear(history, addDays(today, -182));

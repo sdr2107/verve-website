@@ -37,7 +37,7 @@ import { weekFiguresOf } from "../derive/snapshot.ts";
 import { fmtHMin } from "../derive/signals.ts";
 import { restingBPOf } from "../derive/markers.ts";
 import { LANE_FOR, WINDOWS, DEFAULT_WINDOW, isWindowKey, timelineOf, usualSwingForGuide, type WindowKey } from "../derive/timeline.ts";
-import { MARKER_BY_KEY, latestOf, upTo, fmtValue, isTargetable, openTargets, type MarkerKey } from "../horizon/derive.ts";
+import { MARKER_BY_KEY, latestOf, upTo, fmtValue, isTargetable, openTargets, targetKeyOf, type MarkerKey } from "../horizon/derive.ts";
 import { MARKER_KEYS, WILL_NOT, markerOf, standOut, studyOf } from "../derive/guideLines.ts";
 
 export type ReadsContext = {
@@ -213,10 +213,10 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
     const l = studyOf(marker, `${c.topic ?? ""} ${c.headline ?? ""} ${c.text ?? ""}`);
     const door = "min-h-8 font-semibold text-accent-text hover:text-text";
     // a marker that is out of Horizon (blood, pending review) has no target door, and a target already on file for it is not read
-    const onHorizon = !!marker && (horizons.value ?? []).some((h) => !h.closed_at && openTargets(h.targets).some((t) => t.marker === marker));
+    const onHorizon = !!marker && (horizons.value ?? []).some((h) => !h.closed_at && openTargets(h.targets).some((t) => t.marker === targetKeyOf(marker)));
     const over = `<button type="button" data-over="${marker ? esc(LANE_FOR[marker] ?? "") : ""}" data-window="${windowOf(r) ?? DEFAULT_WINDOW}" class="${door}">See it over time &rarr;</button>`;
     const target = !marker || !isTargetable(marker) ? "" : onHorizon ? `<button type="button" data-onhorizon class="${door}">On ${ctx!.self ? "your" : "their"} horizon already &rarr;</button>`
-      : ctx!.owner ? `<button type="button" data-target="${esc(marker)}" data-on="${esc(day(r.created_at))}" class="${door}">Make it a target &rarr;</button>` : "";
+      : ctx!.owner ? `<button type="button" data-target="${esc(targetKeyOf(marker))}" data-on="${esc(day(r.created_at))}" class="${door}">Make it a target &rarr;</button>` : "";
     return `<div class="t-small mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-border pt-2.5">
       ${l ? `<a href="${l.href}" class="t-caption mr-auto text-text-3 hover:text-text">Study: ${l.label}</a>` : `<span class="mr-auto"></span>`}${over}${target}</div>`;
   }
