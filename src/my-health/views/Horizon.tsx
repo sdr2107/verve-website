@@ -334,7 +334,9 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   const [adding, setAdding] = useState(false);
   /** The target whose number is being changed, and what is typed. */
   const [changing, setChanging] = useState<{ marker: MarkerKey; value: string } | null>(null);
-  const { week, weeks } = weekOf(h, today);
+  const { week, weeks, short } = weekOf(h, today);
+  // every full week is behind once the short last week has begun
+  const weeksBehindNow = short === "last" ? weeks : Math.max(0, week - 1);
   const togo = daysToGo(h, today);
   const targets = openTargets(h.targets).map(toTarget);
   const paces = useMemo(() => (person ? pacesOf(targets, h, person, today) : []), [person, h, today]);
@@ -468,7 +470,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
         <div class="flex min-w-[180px] flex-col items-end gap-1 rounded-[16px] border border-border-strong bg-card px-5 py-4">
           <span class="t-figure leading-none text-text">{togo}</span>
           <span class="font-mono text-[11px] font-medium text-text-3">days to go</span>
-          <span class="text-[12px] text-text-2">{weeks} weeks · {Math.max(0, week - 1)} behind you</span>
+          <span class="text-[12px] text-text-2">{weeks} weeks · {weeksBehindNow} behind you</span>
         </div>
       </header>
 
