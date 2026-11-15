@@ -670,8 +670,25 @@ const vitalsWatch: Array<[string, string, string]> = [
     median lies outside the middle half of those earlier nights; otherwise it
     says steady. Wrist temperature has no six-month line: it is shown as a
     difference from your own median, so a month of it is always near zero.
-    The app draws no chart here; every night and month is in
-    <a href="/my-health">My health</a>.
+    The app draws no chart here; every night and month is
+    in <a href="/my-health">My health</a>.
+  </p>
+  <p class="mt-4 text-sm leading-relaxed text-text-secondary">
+    <strong class="text-text-primary">One device against itself.</strong> Each
+    line is read from the nights of the device that writes the reading now.
+    After a change of device the line starts again. Until the new device
+    has 60 days of its own nights, the card says whose nights these are, since
+    when, how many of the 60 days have passed and the part of the month the
+    line begins. The earlier device&rsquo;s nights stay in your record and are
+    left out of the line. The reason is that makers do not take a reading the
+    same way. Apple estimates resting heart rate from the still moments of the
+    whole day
+    (<a href="https://developer.apple.com/documentation/healthkit/hkquantitytypeidentifier/restingheartrate" target="_blank" rel="noopener">Apple, HealthKit</a>);
+    WHOOP takes it during sleep, weighted toward the last period of deep sleep
+    (<a href="https://www.whoop.com/us/en/thelocker/normal-resting-heart-rate-improve-fitness/" target="_blank" rel="noopener">WHOOP</a>);
+    and night HRV is SDNN from one maker and rMSSD from another
+    (<a href="/science/sleep-heart/night-hrv">Night HRV</a>). Joined into one
+    line, the change of device would be drawn as a change in you.
   </p>
   <p class="mt-4 text-sm leading-relaxed text-text-secondary">
     <strong class="text-text-primary">What the Guide may say, and what it may not.</strong>
