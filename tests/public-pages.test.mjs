@@ -73,3 +73,11 @@ test("no page promises anything about how long a person will live", () => {
     for (const rx of retired) assert.ok(!rx.test(text), `${f.slice(SRC.length)} carries a retired line: ${rx}`);
   }
 });
+
+// 15 Nov 2026: the live site read "may not.On a morning" and "is inMy health". Astro 7's default whitespace
+// handling ('jsx') deletes a line break that sits between a tag and the text beside it, and these pages are
+// prose wrapped across lines. `true` is the lossless handling: such a break becomes one space.
+test("prose wrapped across lines keeps its spaces: the build's whitespace handling is lossless", () => {
+  const config = readFileSync(new URL("../astro.config.mjs", import.meta.url), "utf8");
+  assert.match(config, /^\s*compressHTML:\s*true\s*,/m, "astro.config.mjs sets compressHTML: true");
+});

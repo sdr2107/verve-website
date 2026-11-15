@@ -59,11 +59,9 @@ const isSingleValue = (band: string) => (band.match(/:/g) ?? []).length <= 1;
         <div id={m.slug} class={`scroll-mt-8 px-5 py-4 ${COL}`}>
           <!-- Marker -->
           <div>
+            {/* The label and its unit sit on one line of source: the gap between them is the unit's margin alone, with no space added to it. */}
             <p class="text-[13.5px] font-semibold text-text-primary">
-              {m.label}
-              {m.units.length > 0 && (
-                <span class="ml-1.5 font-normal text-text-muted">{m.units.join(" · ")}</span>
-              )}
+              {m.label}{m.units.length > 0 && <span class="ml-1.5 font-normal text-text-muted">{m.units.join(" · ")}</span>}
             </p>
             {m.purpose && (
               <p class="mt-1 text-[11.5px] leading-relaxed text-text-tertiary">{m.purpose}</p>
