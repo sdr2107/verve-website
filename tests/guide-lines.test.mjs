@@ -46,7 +46,9 @@ test("a card carries one line for the horizon: the aim, the date, the pace", () 
   ].map(toTarget);
   const lines = horizonLinesByCard(h, targets, person, "2026-11-11");
   assert.equal(lines.fitness, "On your horizon: 9.5 by 9 February · on pace");
-  assert.equal(lines.movement, "On your horizon: at least 1,000 a week · reached in 3 of the last 4");
+  // the horizon was set on Monday 9 November and it is Wednesday: no week of its own has ended, and the weeks before it are not read
+  assert.equal(lines.movement, "On your horizon: at least 1,000 a week · no full week yet");
+  assert.equal(horizonLinesByCard(h, targets, person, "2026-11-16").movement, "On your horizon: at least 1,000 a week · no session on file yet", "its first week has ended with no row on file");
   // the Body card names its target. Blood markers are out of Horizon pending the lawyers' review (12 Nov 2026), so the
   // LDL target on file is not read: the card's line is the waist's, and it does not count "one more"
   assert.equal(lines.body, "On your horizon: Waist 90 cm by 9 February · on pace");

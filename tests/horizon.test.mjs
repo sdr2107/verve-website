@@ -9,6 +9,7 @@ import {
   landedLine, reachedTarget, upTo, horizonMondays, horizonWeeks, outcomeOf, outcomesOf, lastRoadWords, nextSpan,
   swingRead, medicineOf, BLOOD_TARGETS_OPEN, isTargetable, TARGET_MARKERS, FIRST_MARKERS, openTargets, horizonLinesByCard,
   typicalWeek, typicalOf, weekMoves, readingAt, targetKeyOf, ML_PER_MET,
+  horizonSpans, spanOf, spanFigures, weekSoFar, fullWeeksSoFar, windowWords, weeksWords, daysWords, weekWords,
 } from "../src/my-health/horizon/derive.ts";
 
 const TODAY = "2026-11-08";                      // a Sunday; the last complete week is 26 October
@@ -132,12 +133,12 @@ test("pace interpolates from the start to the date and reads the gap", () => {
 test("a standing weekly figure reads as the weeks that reached it", () => {
   const weekly = [{ week_start: "2026-10-05", v: 1040 }, { week_start: "2026-10-12", v: 880 }, { week_start: "2026-10-19", v: 1120 }, { week_start: "2026-10-26", v: 814 }];
   const p = paceOf(tgt("dose", 820, 1000), H, read(814), TODAY, weekly);
-  assert.equal(p.pace_word, "Reached in 2 of the last 4 weeks"); assert.equal(p.tone, "caution");
-  assert.equal(paceOf(tgt("dose", 820, 1000), H, read(814), TODAY, []).pace_word, "No complete week yet");
+  assert.equal(p.pace_word, "Reached in 2 of 4 full weeks"); assert.equal(p.tone, "caution");
+  assert.equal(paceOf(tgt("dose", 820, 1000), H, read(814), TODAY, []).pace_word, "No full week yet");
   // a floor set BELOW the latest week is still a floor: the weeks at or above it are met, not the weeks under it
   const under = [{ week_start: "2026-10-05", v: 1040 }, { week_start: "2026-10-12", v: 880 }, { week_start: "2026-10-19", v: 1120 }, { week_start: "2026-10-26", v: 1132 }];
   const floor = paceOf(tgt("dose", 1132, 1000), H, read(1132), TODAY, under);
-  assert.equal(floor.pace_word, "Reached in 3 of the last 4 weeks"); assert.equal(floor.tone, "caution");
+  assert.equal(floor.pace_word, "Reached in 3 of 4 full weeks"); assert.equal(floor.tone, "caution");
 });
 
 test("a blood marker is known when you measure", () => {
@@ -150,7 +151,8 @@ test("a blood marker is known when you measure", () => {
 test("pacesOf looks the readings up in the document", () => {
   const ps = pacesOf([tgt("mets", 8.6, 9.6), tgt("dose", 820, 1000), tgt("waist", 98, 90)], H, person, TODAY);
   assert.equal(ps[0].now, 8.9); assert.equal(ps[0].nowText, "8.9");
-  assert.equal(ps[1].pace_word, "Reached in 2 of the last 4 weeks");
+  // the horizon was set on Tuesday 1 September: its first week is short, and eight full weeks have ended since
+  assert.equal(ps[1].pace_word, "Reached in 4 of 8 full weeks");
   assert.equal(ps[2].now, 96); assert.equal(ps[2].startText, "98");
 });
 
@@ -224,11 +226,12 @@ test("the Guide's draft is the last eight weeks written as intent", () => {
 });
 
 test("weeks, days and the road are counted from the dates", () => {
-  assert.deepEqual(weekOf(H, TODAY), { week: 10, weeks: 33 });
+  // set on Tuesday 1 September: a short first week, then the count starts on Monday 7 September
+  assert.deepEqual(weekOf(H, TODAY), { week: 9, weeks: 32, short: null });
   assert.equal(daysToGo(H, TODAY), 161);
   const road = roadOf(H, TODAY);
   assert.equal(road.length, 10);
-  assert.deepEqual(road.map((s) => s.sub), ["set", "month read", "month read", "week 10", "month read", "month read", "month read", "month read", "month read", "Boston Marathon"]);
+  assert.deepEqual(road.map((s) => s.sub), ["set", "month read", "month read", "week 9", "month read", "month read", "month read", "month read", "month read", "Boston Marathon"]);
   assert.deepEqual(road.map((s) => s.state).slice(0, 4), ["past", "past", "past", "now"]);
   assert.equal(road[road.length - 1].state, "end");
   assert.deepEqual(nextCheckins(H, TODAY), { thisMonday: "2026-11-02", nextMonday: "2026-11-09", monthReview: "2026-12-01" });
@@ -244,7 +247,7 @@ test("the check-in's inputs carry the week, the paces, the plan and its adherenc
   assert.equal(inp.week.rhr, 52); assert.equal(inp.week.sleep_avg, 486);
   assert.equal(inp.pace.length, 2); assert.equal(inp.pace[0].pace_word, "On pace");
   assert.equal(inp.adherence[0].word, "Done");
-  assert.deepEqual(inp.horizon, { title: "Boston Marathon", ends_on: "2027-04-18", week_of: 10, weeks_total: 33, days_to_go: 161 });
+  assert.deepEqual(inp.horizon, { title: "Boston Marathon", ends_on: "2027-04-18", week_of: 9, weeks_total: 32, days_to_go: 161, short_week: null });
 });
 
 test("history gives the readings a six-month comparison needs", () => {
@@ -493,3 +496,112 @@ test("no blood marker can be a target: not offered, not paced, not on the Overvi
   assert.ok(!/medic|swing|LDL|triglycer/i.test(JSON.stringify(inputs)));
   for (const row of inputs.pace) assert.deepEqual(Object.keys(row).sort(), ["expected_today", "label", "marker", "measured_on", "now", "pace_word", "start", "target", "unit"]);
 });
+
+// ── a horizon reads from the day it was set (15 November 2026) ──
+
+const MIDWEEK = { starts_on: "2026-11-18", ends_on: "2026-12-16", title: "A month" };   // a Wednesday to a Wednesday
+
+test("a horizon's weeks: a short first one, full ones, a short last one", () => {
+  assert.deepEqual(horizonSpans(MIDWEEK).map((s) => [s.n, s.from, s.to, s.days, s.full]), [
+    [1, "2026-11-18", "2026-11-22", 5, false],
+    [2, "2026-11-23", "2026-11-29", 7, true],
+    [3, "2026-11-30", "2026-12-06", 7, true],
+    [4, "2026-12-07", "2026-12-13", 7, true],
+    [5, "2026-12-14", "2026-12-16", 3, false],
+  ]);
+  // the count starts on the first Monday: a short week has no number, and the weeks are the ones a plan asks in
+  assert.deepEqual(horizonSpans(MIDWEEK).map((s) => s.week), [null, 1, 2, 3, null]);
+  assert.deepEqual(weekOf(MIDWEEK, "2026-11-18"), { week: 0, weeks: 3, short: "first" });
+  assert.deepEqual(weekOf(MIDWEEK, "2026-11-22"), { week: 0, weeks: 3, short: "first" }, "the Sunday is still the short first week");
+  assert.deepEqual(weekOf(MIDWEEK, "2026-11-23"), { week: 1, weeks: 3, short: null }, "week 1 starts on the first Monday, whatever day the horizon was set");
+  assert.deepEqual(weekOf(MIDWEEK, "2026-12-16"), { week: 3, weeks: 3, short: "last" });
+  assert.deepEqual(weekOf(MIDWEEK, "2027-01-01"), { week: 3, weeks: 3, short: "last" }, "after the date it is still the last week");
+  assert.equal(weekWords(MIDWEEK, "2026-11-20"), "a short first week"); assert.equal(weekWords(MIDWEEK, "2026-12-01"), "week 2 of 3"); assert.equal(weekWords(MIDWEEK, "2026-12-15"), "the short last week");
+  assert.equal(spanOf(MIDWEEK, "2026-12-15").from, "2026-12-14");
+  assert.deepEqual(horizonMondays(MIDWEEK), ["2026-11-23", "2026-11-30", "2026-12-07"], "the full weeks are the ones a plan asks in");
+  // Monday to Sunday: nothing short, nothing to explain
+  const whole = { starts_on: "2026-11-16", ends_on: "2026-12-13" };
+  assert.equal(horizonSpans(whole).length, 4); assert.equal(horizonSpans(whole).every((s) => s.full), true);
+  assert.equal(weeksWords(whole), "");
+  assert.equal(weeksWords(MIDWEEK), "This horizon reads from the day it was set: a short first week, Wed 18 to Sun 22 Nov, then 3 weeks from Monday to Sunday, then a short last week, Mon 14 to Wed 16 Dec. A short week is shown as the days it holds and is not judged against a weekly number.");
+  assert.equal(daysWords("2026-11-30", "2026-12-06"), "Mon 30 Nov to Sun 6 Dec");
+  assert.equal(daysWords("2026-11-23", "2026-11-23"), "Mon 23 Nov");
+});
+
+/** An invented person around a horizon set on a Wednesday: sessions before it, inside its short week and in its first full week. */
+function midweekPerson() {
+  const act = (day, hh, type, mins, met, z2) => ({ timestamp: `${day}T${hh}:00:00`, activity_name: type === "strength" ? "Strength" : "Walk", activity_type: type, intensity_category: "moderate", duration_minutes: mins, met_minutes: met, zone2_minutes: z2, source: "healthkit" });
+  const row = (week_start, workouts, dose, z2, strength) => ({ week_start, source: "sync", synced_at: "2026-12-01T06:00:00Z", workouts, dose_met_min: dose, dose_goal_met_min: 1000, zone2_min: z2, zone3_min: 0, strength_sessions: strength });
+  return {
+    doc: { weeks: [row("2026-11-09", 1, 300, 35, 0), row("2026-11-16", 3, 310, 37, 1), row("2026-11-23", 2, 490, 64, 0)] },
+    acts: [
+      act("2026-11-10", "07", "aerobic", 40, 300, 35),   // the week before the horizon
+      act("2026-11-16", "07", "aerobic", 30, 150, 25),   // the Monday of the week it was set in: before the day it was set
+      act("2026-11-19", "07", "aerobic", 30, 160, 12),   // inside the short first week
+      act("2026-11-21", "09", "strength", 25, 0, 0),
+      act("2026-11-24", "07", "aerobic", 45, 240, 31),   // the first full week
+      act("2026-11-26", "07", "aerobic", 45, 250, 33),
+    ],
+    // the app's own days: the zone minutes of the short week are read from here
+    signals: [{ day: "2026-11-16", zone2_min: 25, zone3_min: 0, steps: 7000 }, { day: "2026-11-19", zone2_min: 12, zone3_min: 4, steps: 8000 }, { day: "2026-11-20", steps: 9000 }],
+    weights: [], profile: null, by: new Map(), crf: [],
+  };
+}
+
+test("a short week is counted from its own days, not from the app's row for the whole calendar week", () => {
+  const p = midweekPerson(), first = horizonSpans(MIDWEEK)[0];
+  const f = spanFigures(p, first);
+  assert.equal(f.dose, 160, "the Monday session, before the horizon was set, is left out");
+  assert.equal(f.zone2, 12); assert.equal(f.zone3, 4, "the zone minutes are the app's own days");
+  assert.equal(f.strength, 1); assert.equal(f.sessions, 2); assert.equal(f.from, "sessions");
+  // a full week reads as any week does: the app's row
+  assert.equal(spanFigures(p, horizonSpans(MIDWEEK)[1]).dose, 490);
+  assert.equal(spanFigures(p, horizonSpans(MIDWEEK)[1]).from, "app");
+  // a short week with nothing in it is a dash, not a nought
+  assert.equal(spanFigures(p, horizonSpans(MIDWEEK)[4]).dose, null);
+});
+
+test("a weekly target reads the horizon's own weeks, never the week before it", () => {
+  const p = midweekPerson();
+  const targets = [
+    { marker: "zone2_week", label: "Zone 2 a week", unit: "min", start_value: 35, start_on: "2026-11-15", target_value: 90, cadence: "weekly" },
+    { marker: "dose", label: "Weekly dose", unit: "MET-min", start_value: 300, start_on: "2026-11-15", target_value: 450, cadence: "weekly" },
+    { marker: "strength_week", label: "Strength a week", unit: "sessions", start_value: 0, start_on: "2026-11-15", target_value: 1, cadence: "weekly" },
+    { marker: "steps", label: "Steps a day", unit: "steps", start_value: 7000, start_on: "2026-11-17", target_value: 9000, cadence: "weekly" },
+  ];
+  // the Sunday of the short first week: the figure is the week so far, and nothing is judged
+  const fri = pacesOf(targets, MIDWEEK, p, "2026-11-22");
+  assert.deepEqual([fri[0].week.value, fri[0].week.from, fri[0].week.upto, fri[0].week.full, fri[0].week.days], [12, "2026-11-18", "2026-11-22", false, 5]);
+  assert.equal(fri[0].now, null, "last week's 35 is from before the horizon and is not read");
+  assert.equal(fri[0].pace_word, "No full week yet"); assert.equal(fri[0].tone, "neutral"); assert.equal(fri[0].judged, null);
+  assert.equal(fri[1].pace_word, "No full week yet");
+  assert.equal(fri[2].pace_word, "No full week yet", "a strength session in a short week is shown, and reaches nothing");
+  assert.equal(fri[2].week.value, 1); assert.equal(fri[1].week.text, "160");
+  // a rolling average names its days
+  assert.equal(fri[3].window, "3 days on file, 16 to 20 Nov"); assert.equal(fri[3].week, undefined);
+  // the Monday after the first full week: the pace is read from it, and the week in progress starts again
+  const mon = pacesOf(targets, MIDWEEK, p, "2026-11-30");
+  assert.equal(mon[0].now, 64); assert.deepEqual(mon[0].judged, { from: "2026-11-23", to: "2026-11-29", text: "64" });
+  assert.equal(mon[0].week.n, 3); assert.equal(mon[0].week.value, null);
+  assert.equal(mon[1].pace_word, "Reached in 1 of 1 full week"); assert.equal(mon[1].tone, "good");
+  assert.deepEqual(fullWeeksSoFar(p, "dose", MIDWEEK, "2026-11-30"), [{ week_start: "2026-11-23", v: 490 }]);
+  assert.equal(weekSoFar(p, "dose", MIDWEEK, "2026-12-20"), null, "after the date there is no week in progress");
+  assert.equal(windowWords({ value: 1, on: "2026-11-14", unit: null, writer: null, from: "2026-11-08", n: 7 }), "8 to 14 Nov");
+});
+
+test("the check-in's week is the horizon week that has just ended, short or full", () => {
+  const p = midweekPerson();
+  // the first Monday: the week that ended is the short one, Wednesday to Sunday
+  const first = checkinInputs(MIDWEEK, [], [{ kind: "sessions_week", label: "Three sessions a week", n: 3 }], p, "2026-11-23");
+  assert.deepEqual([first.week.from, first.week.to, first.week.days, first.week.short], ["2026-11-18", "2026-11-22", 5, true]);
+  assert.equal(first.week.dose, 160); assert.equal(first.week.zone2, 12); assert.equal(first.week.strength, 1); assert.equal(first.week.sessions, 2);
+  assert.deepEqual(first.adherence, [], "a weekly count is not read against a short week");
+  assert.deepEqual([first.horizon.week_of, first.horizon.weeks_total, first.horizon.short_week], [1, 3, null], "the Monday it is written on is week 1");
+  // the Monday after: a full week, the app's own row
+  const second = checkinInputs(MIDWEEK, [], [], p, "2026-11-30");
+  assert.deepEqual([second.week.from, second.week.to, second.week.days, second.week.short, second.week.dose], ["2026-11-23", "2026-11-29", 7, false, 490]);
+  // the day it was set: no week of the horizon has ended, and the week before it is not read
+  const day0 = checkinInputs(MIDWEEK, [], [], p, "2026-11-18");
+  assert.deepEqual([day0.week.from, day0.week.days, day0.week.dose, day0.week.sessions], [null, 0, null, 0]);
+});
+
