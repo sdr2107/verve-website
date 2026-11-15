@@ -143,7 +143,8 @@ export type Person = {
   by: Map<string, Pt[]>;
   labsShown?: any[];
 };
-export type Reading = { value: number; on: string; unit: string | null; writer: string | null; display?: string };
+export type Reading = { value: number; on: string; unit: string | null; writer: string | null; display?: string;
+  /** A rolling average's own days: the oldest one it holds, and how many. */ from?: string; n?: number };
 
 export type Target = {
   id?: string; marker: MarkerKey; label: string; unit: string | null;
@@ -180,24 +181,91 @@ const inWeek = (a: any, weekStart: string) => { const d = localDay(a.timestamp);
 const isDose = (a: any) => (a.activity_type === "aerobic" || a.activity_type === "mixed") && (a.intensity_category === "moderate" || a.intensity_category === "vigorous");
 
 export type WeekFigures = { week_start: string; dose: number | null; goal: number | null; zone2: number | null; zone3: number | null; zoned: number | null; strength: number; sessions: number; longest: number; from: "app" | "sessions" };
-/** One week's figures: the app's row when it wrote one, else counted from the sessions with the interim rule. */
-export function weekFigures(person: Person, weekStart: string): WeekFigures {
-  const sessions = dedupeSessions(person.acts).filter((a) => inWeek(a, weekStart));
+/**
+ * A stretch of days counted without a week row of the app's: the dose, the sessions and the strength sessions from the
+ * sessions themselves (the interim rule), the zone minutes from the app's own days (daily_signals zone2_min and
+ * zone3_min, which add up to its week row) when it sent them, else from the sessions.
+ */
+function countedFigures(person: Person, from: string, toExclusive: string): WeekFigures {
+  const sessions = dedupeSessions(person.acts).filter((a) => { const d = localDay(a.timestamp); return d >= from && d < toExclusive; });
   const longest = sessions.reduce((m, a) => Math.max(m, Number(a.duration_minutes) || 0), 0);
   const strength = sessions.filter((a) => a.activity_type === "strength").length;
-  const row = appWeekRows(person.doc).get(weekStart);
-  if (row) {
-    const z2 = row.zone2_min != null ? Number(row.zone2_min) : null, z3 = row.zone3_min != null ? Number(row.zone3_min) : null;
-    return { week_start: weekStart, dose: row.dose_met_min != null ? Number(row.dose_met_min) : null, goal: row.dose_goal_met_min != null ? Number(row.dose_goal_met_min) : null,
-      // "most minutes in zone 2" is read against the training zones, 2 and 3; zone 1 is the easy remainder
-      zone2: z2, zone3: z3, zoned: z2 != null && z3 != null ? z2 + z3 : null,
-      strength: row.strength_sessions != null ? Number(row.strength_sessions) : strength, sessions: row.workouts != null ? Number(row.workouts) : sessions.length, longest, from: "app" };
-  }
   const dose = sessions.length ? sessions.filter(isDose).reduce((t, a) => t + (Number(a.met_minutes) || 0), 0) : null;
+  const days = (person.signals ?? []).filter((r) => { const d = String(r?.day ?? "").slice(0, 10); return d >= from && d < toExclusive; });
+  const daySum = (col: string) => { const xs = days.filter((r) => r?.[col] != null).map((r) => Number(r[col])); return xs.length ? xs.reduce((t, x) => t + x, 0) : null; };
+  const z2 = daySum("zone2_min"), z3 = daySum("zone3_min");
+  if (z2 != null || z3 != null) return { week_start: from, dose, goal: null, zone2: z2 ?? 0, zone3: z3 ?? 0, zoned: (z2 ?? 0) + (z3 ?? 0), strength, sessions: sessions.length, longest, from: "sessions" };
   const zone2 = sessions.length ? sessions.reduce((t, a) => t + (Number(a.zone2_minutes) || 0), 0) : null;
   // without the app's zone split, the training minutes are the moderate and vigorous aerobic sessions' minutes
   const zoned = sessions.length ? sessions.filter(isDose).reduce((t, a) => t + (Number(a.duration_minutes) || 0), 0) : null;
-  return { week_start: weekStart, dose, goal: null, zone2, zone3: null, zoned, strength, sessions: sessions.length, longest, from: "sessions" };
+  return { week_start: from, dose, goal: null, zone2, zone3: null, zoned, strength, sessions: sessions.length, longest, from: "sessions" };
+}
+/** One week's figures: the app's row when it wrote one, else counted from the sessions with the interim rule. */
+export function weekFigures(person: Person, weekStart: string): WeekFigures {
+  const counted = countedFigures(person, weekStart, addDays(weekStart, 7));
+  const row = appWeekRows(person.doc).get(weekStart);
+  if (!row) return counted;
+  const z2 = row.zone2_min != null ? Number(row.zone2_min) : null, z3 = row.zone3_min != null ? Number(row.zone3_min) : null;
+  return { week_start: weekStart, dose: row.dose_met_min != null ? Number(row.dose_met_min) : null, goal: row.dose_goal_met_min != null ? Number(row.dose_goal_met_min) : null,
+    // "most minutes in zone 2" is read against the training zones, 2 and 3; zone 1 is the easy remainder
+    zone2: z2, zone3: z3, zoned: z2 != null && z3 != null ? z2 + z3 : null,
+    strength: row.strength_sessions != null ? Number(row.strength_sessions) : counted.strength, sessions: row.workouts != null ? Number(row.workouts) : counted.sessions, longest: counted.longest, from: "app" };
+}
+
+// ── a horizon's weeks ──
+
+/**
+ * A horizon reads from the day it was set (the founder's rule, 15 November 2026). Its first week runs from that day
+ * to the Sunday, the weeks after it from Monday to Sunday, and its last from the Monday to its date. A week short at
+ * either end is shown as the days it holds and is never judged against a weekly number. THE ONE LIST: the week
+ * count, the week a day falls in, a weekly target's figures and the check-in's week are all read from it.
+ */
+export type Span = { /** Its place in the list, from 1. */ n: number; from: string; to: string; days: number; /** Monday to Sunday. */ full: boolean;
+  /** The week's number: the count starts on the first Monday, so a short week at either end has none. */ week: number | null };
+export function horizonSpans(h: HorizonLike): Span[] {
+  const out: Span[] = [];
+  for (let from = h.starts_on; from <= h.ends_on && out.length < 600;) {
+    const sunday = addDays(mondayOf(new Date(from + "T00:00:00")), 6);
+    const to = sunday < h.ends_on ? sunday : h.ends_on;
+    const days = daysBetween(from, to) + 1;
+    out.push({ n: out.length + 1, from, to, days, full: days === 7, week: null });
+    from = addDays(to, 1);
+  }
+  let k = 0;
+  for (const s of out) if (s.full) s.week = ++k;
+  return out;
+}
+/** The horizon week a day falls in: the first for a day before the start, the last for a day after the date. Null for a horizon with no day in it. */
+export function spanOf(h: HorizonLike, day: string): Span | null {
+  const spans = horizonSpans(h);
+  return spans.find((s) => day <= s.to) ?? spans[spans.length - 1] ?? null;
+}
+const shortDay = (d: string, month = true) => { const x = new Date(d + "T00:00:00"); return `${x.toLocaleDateString("en-GB", { weekday: "short" })} ${x.getDate()}${month ? ` ${x.toLocaleDateString("en-GB", { month: "short" })}` : ""}`; };
+/** A stretch of days in words: "Sat 14 to Sun 15 Nov", "Mon 30 Nov to Sun 6 Dec", "Sat 14 Nov" for one day. */
+export const daysWords = (from: string, to: string) => from === to ? shortDay(from) : `${shortDay(from, from.slice(0, 7) !== to.slice(0, 7))} to ${shortDay(to)}`;
+/**
+ * A horizon's weeks in one sentence, for the page: "This horizon reads from the day it was set: a short first week,
+ * Sat 14 to Sun 15 Nov, then 13 weeks from Monday to Sunday." Empty when every week runs Monday to Sunday.
+ */
+export function weeksWords(h: HorizonLike): string {
+  const spans = horizonSpans(h);
+  const first = spans[0], last = spans[spans.length - 1];
+  const full = spans.filter((s) => s.full).length;
+  if (!first || full === spans.length) return "";
+  const parts: string[] = [];
+  if (!first.full) parts.push(`a short first week, ${daysWords(first.from, first.to)}`);
+  if (full) parts.push(`${full} week${full === 1 ? "" : "s"} from Monday to Sunday`);
+  if (spans.length > 1 && !last.full) parts.push(`a short last week, ${daysWords(last.from, last.to)}`);
+  const list = parts.join(", then ");
+  return `This horizon reads from the day it was set: ${list}. A short week is shown as the days it holds and is not judged against a weekly number.`;
+}
+/**
+ * One horizon week's figures, up to today for the week in progress. A full week reads as any week does (the app's own
+ * row when it wrote one). A short one has no row of the app's, which holds the whole calendar week, so it is counted
+ * from its own days (countedFigures).
+ */
+export function spanFigures(person: Person, s: Span): WeekFigures {
+  return s.full ? weekFigures(person, s.from) : countedFigures(person, s.from, addDays(s.to, 1));
 }
 export const lastCompleteMonday = (today: string) => addDays(mondayOf(new Date(today + "T00:00:00")), -7);
 const weeklyValue = (f: WeekFigures, key: MarkerKey): number | null =>
@@ -252,7 +320,8 @@ function dailyMean(signals: any[], col: string, n = 7, writerCol?: string): Read
   const last = rows.slice(-n);
   if (!last.length) return null;
   const v = mean(last.map((r) => Number(r[col])))!;
-  return { value: v, on: String(last[last.length - 1].day).slice(0, 10), unit: null, writer: writerCol ? String(last[last.length - 1][writerCol] ?? "") || null : null };
+  return { value: v, on: String(last[last.length - 1].day).slice(0, 10), unit: null, writer: writerCol ? String(last[last.length - 1][writerCol] ?? "") || null : null,
+    from: String(last[0].day).slice(0, 10), n: last.length };
 }
 
 /** Where a marker stands now: the value, the day it is from, its unit, who wrote it. Null when the person has no reading. */
@@ -460,7 +529,17 @@ export type Pace = {
   swing?: SwingRead | null;
   /** A medicine the person has told the app they take for this marker, as the line beside the target; null when there is none on file. */
   medicine?: string | null;
+  /**
+   * A weekly row's week in progress, counted from the horizon's own days: the figure so far, the days it holds, and
+   * whether the week is a short one (never judged). The pace word is read from the full weeks that have ended.
+   */
+  week?: WeekSoFar | null;
+  /** A weekly row: the last full week of the horizon that has ended, the one the pace is read from; null before the first. */
+  judged?: { from: string; to: string; text: string } | null;
+  /** A rolling average's days, in words: "8 to 14 Nov", "5 days on file, 10 to 14 Nov". Null for every other row. */
+  window?: string | null;
 };
+export type WeekSoFar = { n: number; of: number; from: string; to: string; /** The last day counted: today, or the week's last day. */ upto: string; days: number; full: boolean; value: number | null; text: string };
 
 const monthName = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-GB", { month: "long" });
 /** The track's tick: the share of the horizon's days that have passed, clamped to the horizon. */
@@ -469,8 +548,8 @@ export const elapsedShare = (h: HorizonLike, today: string) => { const total = d
 /**
  * Pace: what has moved against what the date needs. Within five per cent of the whole way either side is on pace;
  * further ahead is ahead; further behind is behind by the gap in the marker's words. A marker that has not moved from
- * its start after four weeks is not yet moving; one within five per cent of the target is nearly there. A standing
- * weekly figure (the dose) reads as the weeks that reached it; a blood marker is known only when a report lands, and
+ * its start after four weeks is not yet moving; one within five per cent of the target is nearly there. A weekly
+ * figure is read from the horizon's own full weeks (pacesOf): a standing one (the dose) reads as the weeks that reached it; a blood marker is known only when a report lands, and
  * a report at its number reads "At your number", not "Reached", while the move is inside the marker's usual swing.
  */
 export function paceOf(target: Target, horizon: HorizonLike, now: Reading | null, today: string, weekly?: { week_start: string; v: number | null }[]): Pace {
@@ -492,13 +571,16 @@ export function paceOf(target: Target, horizon: HorizonLike, now: Reading | null
   const progress = start != null && cur != null && needed ? clamp01(((cur - start) * dir) / needed) : start != null && cur != null && needed === 0 ? 1 : 0;
 
   if (def.standing) {
-    const read = (weekly ?? []).slice(-4).filter((w) => w.v != null);
-    if (!read.length) return { ...base, expected_today, progress, pace_word: "No complete week yet", tone: "neutral" };
+    const read = (weekly ?? []).filter((w) => w.v != null);
+    // none has ended yet, or the ones that have hold nothing: a dash with its reason, never a nought
+    if (!read.length) return { ...base, expected_today, progress, pace_word: (weekly ?? []).length ? "No session on file yet" : "No full week yet", tone: "neutral" };
     // A standing figure is a floor whatever the start was: a dose target set below this week's figure still reads
     // "hold at least this", so the weeks AT OR ABOVE it are the ones that reached it, never the weeks under it.
     const met = read.filter((w) => w.v! >= goal).length;
-    return { ...base, expected_today, progress: met / read.length, pace_word: `Reached in ${met} of the last ${read.length} week${read.length === 1 ? "" : "s"}`, tone: met === read.length ? "good" : "caution" };
+    return { ...base, expected_today, progress: met / read.length, pace_word: `Reached in ${met} of ${read.length} full week${read.length === 1 ? "" : "s"}`, tone: met === read.length ? "good" : "caution" };
   }
+  // a weekly figure is judged on the horizon's own full weeks: none has ended yet, so there is nothing to judge
+  if (cur == null && def.kind === "weekly") return { ...base, expected_today, progress, pace_word: (weekly ?? []).length ? "No session on file yet" : "No full week yet", tone: "neutral" };
   if (cur == null) return { ...base, expected_today, progress, pace_word: "No reading yet", tone: "neutral" };
   if (def.kind === "blood" && now && target.start_on && now.on <= target.start_on) {
     return { ...base, expected_today, progress, pace_word: `${monthName(now.on)}'s report${target.next_on ? ` · next in ${monthName(target.next_on)}` : ""}`, tone: "neutral" };
@@ -538,7 +620,7 @@ export function horizonLinesByCard(h: HorizonLike, targets: Target[], person: Pe
     const named = p.marker === "mets" || p.marker === "dose" ? "" : `${def.label} `;
     // the pace's words run on inside the line; a month's name keeps its capital ("October's report")
     const pace = /^(January|February|March|April|May|June|July|August|September|October|November|December)\b/.test(p.pace_word) ? p.pace_word : p.pace_word.charAt(0).toLowerCase() + p.pace_word.slice(1);
-    const line = def.standing ? `${named}at least ${p.targetText} a week · ${pace.replace(/ weeks?$/, "")}`
+    const line = def.standing ? `${named}at least ${p.targetText} a week · ${pace.replace(/ (full )?weeks?$/, "")}`
       : `${named}${p.targetText}${named && p.unit ? ` ${p.unit}` : ""} by ${dayMonthLong(h.ends_on)} · ${pace}`;
     (by[CARD_OF_GROUP[def.group]] ??= []).push(line);
   }
@@ -596,20 +678,57 @@ export type WeekMove = { marker: MarkerKey; label: string; unit: string; before:
 export function weekMoves(targets: Target[], horizon: HorizonLike, person: Person, monday: string, today: string): WeekMove[] {
   return pacesOf(targets, horizon, person, today).filter((p) => !MARKER_BY_KEY[p.marker]?.standing).map((p) => {
     const def = MARKER_BY_KEY[p.marker];
-    const a = readingAt(p.marker, person, addDays(monday, -1)), b = readingAt(p.marker, person, addDays(monday, 6));
+    // a weekly figure's "before" is the full week of the horizon before this one: a week from before the horizon, or a short one, is not read
+    const prior = def?.kind !== "weekly" || horizonSpans(horizon).some((s) => s.full && s.from === addDays(monday, -7));
+    const a = prior ? readingAt(p.marker, person, addDays(monday, -1)) : null, b = readingAt(p.marker, person, addDays(monday, 6));
     const text = (r: Reading | null) => (r ? r.display ?? (def ? fmtValue(def, r.value) : String(round(r.value, 1))) : null);
     return { marker: p.marker, label: p.label, unit: def?.hm ? "" : p.unit, before: text(a), after: text(b), fresh: !!b && (!a || b.on > a.on), pace_word: p.pace_word, tone: p.tone };
   });
 }
 
-/** Every target's pace, with the readings looked up in the person's document. */
+/** A weekly marker over the FULL weeks of a horizon that have ended before today, oldest first. */
+export function fullWeeksSoFar(person: Person, key: MarkerKey, h: HorizonLike, today: string): { week_start: string; v: number | null }[] {
+  return horizonSpans(h).filter((s) => s.full && s.to < today).map((s) => ({ week_start: s.from, v: weeklyValue(weekFigures(person, s.from), key) }));
+}
+/** A weekly marker's week in progress on a horizon: the figure so far, from the horizon's own days. Null outside the horizon's days. */
+export function weekSoFar(person: Person, key: MarkerKey, h: HorizonLike, today: string): WeekSoFar | null {
+  if (today < h.starts_on || today > h.ends_on) return null;
+  const spans = horizonSpans(h);
+  const s = spans.find((x) => today <= x.to);
+  const def = MARKER_BY_KEY[key];
+  if (!s || !def) return null;
+  const f = spanFigures(person, s);
+  // a week with no session on file yet is a dash with its reason, never a nought: not "0 sessions", not "0 minutes"
+  const v = f.sessions === 0 ? null : weeklyValue(f, key);
+  return { n: s.n, of: spans.length, from: s.from, to: s.to, upto: today, days: s.days, full: s.full, value: v, text: fmtValue(def, v) };
+}
+/** A rolling average's days in words: "8 to 14 Nov"; with fewer than seven on file, "5 days on file, 10 to 14 Nov". */
+export function windowWords(r: Reading | null, want = 7): string | null {
+  if (!r?.from || !r.n) return null;
+  const days = daysWords(r.from, r.on).replace(/\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun) /g, "");
+  return r.n < want ? `${r.n} day${r.n === 1 ? "" : "s"} on file, ${days}` : days;
+}
+/**
+ * Every target's pace, with the readings looked up in the person's document. A weekly marker is read from the
+ * horizon's own weeks (horizonSpans): its figure is the last FULL week that has ended since the horizon was set, its
+ * week in progress rides beside it, and a week from before the horizon is never read.
+ */
 export function pacesOf(targets: Target[], horizon: HorizonLike, person: Person, today: string): Pace[] {
   // a target on a marker that is out of Horizon (blood, pending review) is not paced: the page, the Overview's card
   // and the check-in's inputs all read their rows from here
-  return openTargets(targets).map((t) => ({
-    ...paceOf(t, horizon, latestOf(t.marker, person, today), today, MARKER_BY_KEY[t.marker]?.standing ? weeklyHistory(person, t.marker, today, 13) : undefined),
-    medicine: medicineOf(t.marker, person, today)?.line ?? null,
-  }));
+  return openTargets(targets).map((t) => {
+    const def = MARKER_BY_KEY[t.marker];
+    const medicine = medicineOf(t.marker, person, today)?.line ?? null;
+    if (def?.kind !== "weekly") {
+      const now = latestOf(t.marker, person, today);
+      return { ...paceOf(t, horizon, now, today), medicine, window: def?.kind === "daily" ? windowWords(now) : null };
+    }
+    const done = fullWeeksSoFar(person, t.marker, horizon, today);
+    const last = [...done].reverse().find((w) => w.v != null) ?? null;
+    const now: Reading | null = last ? { value: last.v!, on: addDays(last.week_start, 6), unit: def.unit, writer: null } : null;
+    return { ...paceOf(t, horizon, now, today, done), medicine, week: weekSoFar(person, t.marker, horizon, today),
+      judged: last ? { from: last.week_start, to: addDays(last.week_start, 6), text: fmtValue(def, last.v) } : null };
+  });
 }
 
 // ── the setup's note under a ticked marker: the pace the number implies, against the person's own six months ──
@@ -683,11 +802,15 @@ export const clockOf = (n: number) => `${String(Math.floor(((n % 1440) + 1440) %
 /** A bedtime read against a cut: a time after midnight is a late night, so it sits past 24:00 on the line. */
 const bedtimeLine = (m: number) => (m < 6 * 60 ? m + 1440 : m);
 
-/** What this week did against each row of the plan, from the sessions and the nights, never from a tick box. */
-export function adherenceOf(rows: PlanRow[], person: Person, weekStart: string, today: string): Adherence[] {
-  const sessions = dedupeSessions(person.acts).filter((a) => inWeek(a, weekStart));
+/**
+ * What this week did against each row of the plan, from the sessions and the nights, never from a tick box. `from` is
+ * the day a horizon was set: in the week it was set in, only the sessions from that day on are counted.
+ */
+export function adherenceOf(rows: PlanRow[], person: Person, weekStart: string, today: string, from?: string | null): Adherence[] {
+  const cut = from != null && from > weekStart && from < addDays(weekStart, 7) ? from : null;
+  const sessions = dedupeSessions(person.acts).filter((a) => inWeek(a, weekStart) && (!cut || localDay(a.timestamp) >= cut));
   const daysLeft = Math.max(0, 7 - (daysBetween(weekStart, today) + 1));
-  const f = weekFigures(person, weekStart);
+  const f = cut ? countedFigures(person, cut, addDays(weekStart, 7)) : weekFigures(person, weekStart);
   const countRow = (kind: PlanKind, label: string, done: number, n: number): Adherence => {
     const remaining = Math.max(0, n - done);
     if (done >= n) return { kind, label, done, of: n, word: "Done", tone: "good" };
@@ -775,19 +898,31 @@ export const dayMonthYear = (d: string) => new Date(d + "T00:00:00").toLocaleDat
 export const weekdayDayMonth = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
 
 export const daysToGo = (h: HorizonLike, today: string) => Math.max(0, daysBetween(today, h.ends_on));
-/** Week k of n: the weeks the horizon spans, and the one today is in. */
-export function weekOf(h: HorizonLike, today: string): { week: number; weeks: number } {
-  const weeks = Math.max(1, Math.ceil(daysBetween(h.starts_on, h.ends_on) / 7));
-  const week = Math.min(weeks, Math.max(1, Math.floor(daysBetween(h.starts_on, today) / 7) + 1));
-  return { week, weeks };
+/**
+ * Week k of n. The count starts on the horizon's first Monday (horizonSpans), so it is the same count a plan's weeks
+ * carry: n is the weeks that run Monday to Sunday, and a day in a short week at either end has `short` set and no
+ * number of its own (0 in the short first week, n in the short last one).
+ */
+export function weekOf(h: HorizonLike, today: string): { week: number; weeks: number; short: "first" | "last" | null } {
+  const spans = horizonSpans(h);
+  const weeks = Math.max(1, spans.filter((s) => s.full).length);
+  const s = spans.find((x) => today <= x.to) ?? spans[spans.length - 1];
+  if (!s) return { week: 1, weeks, short: null };
+  if (s.week != null) return { week: s.week, weeks, short: null };
+  return s.n === 1 ? { week: 0, weeks, short: "first" } : { week: weeks, weeks, short: "last" };
+}
+/** The week today is in, in words: "week 3 of 13", "a short first week", "the short last week". */
+export function weekWords(h: HorizonLike, today: string): string {
+  const { week, weeks, short } = weekOf(h, today);
+  return short === "first" ? "a short first week" : short === "last" ? "the short last week" : `week ${week} of ${weeks}`;
 }
 export type Stop = { date: string; label: string; sub: string; state: "past" | "now" | "future" | "end" };
 /** The road: the day it was set, each month's read, today, the date. */
 export function roadOf(h: HorizonLike, today: string): Stop[] {
   const stops: Stop[] = [{ date: h.starts_on, label: dayMonth(h.starts_on), sub: "set", state: "past" }];
   for (let d = addMonths(h.starts_on.slice(0, 7) + "-01", 1); d < h.ends_on; d = addMonths(d, 1)) if (d > h.starts_on) stops.push({ date: d, label: dayMonth(d), sub: "month read", state: d <= today ? "past" : "future" });
-  const { week } = weekOf(h, today);
-  if (today > h.starts_on && today < h.ends_on) stops.push({ date: today, label: "Today", sub: `week ${week}`, state: "now" });
+  const { week, short } = weekOf(h, today);
+  if (today > h.starts_on && today < h.ends_on) stops.push({ date: today, label: "Today", sub: short ? "a short week" : `week ${week}`, state: "now" });
   stops.push({ date: h.ends_on, label: dayMonth(h.ends_on), sub: h.title ? h.title.split(",")[0].split(" ").slice(0, 2).join(" ") : "the date", state: "end" });
   return stops.sort((a, b) => a.date.localeCompare(b.date) || (a.state === "now" ? 1 : -1));
 }
@@ -914,21 +1049,31 @@ export type CheckinInputs = {
     swing?: string }[];
   plan: { kind: string; label: string; n: number | null }[];
   adherence: { label: string; done: number | null; of: number | null; word: string }[];
-  week: { dose: number | null; goal: number | null; sessions: number; zone2: number | null; zone3: number | null; strength: number; sleep_avg: number | null; rhr: number | null; hrv: number | null };
-  horizon: { title: string; ends_on: string; week_of: number; weeks_total: number; days_to_go: number };
+  /**
+   * The horizon week that has just ended, read from the horizon's own days (horizonSpans): its first and last day, how
+   * many days it holds, and whether it is a short one (the first week of a horizon set mid-week, the last of one
+   * that ends mid-week). Every figure is null, and days 0, when no week of the horizon has ended yet.
+   */
+  week: { from: string | null; to: string | null; days: number; short: boolean; dose: number | null; goal: number | null; sessions: number; zone2: number | null; zone3: number | null; strength: number; sleep_avg: number | null; rhr: number | null; hrv: number | null };
+  /** week_of counts from the horizon's first Monday: 0 on a day in a short first week, which `short_week` names. */
+  horizon: { title: string; ends_on: string; week_of: number; weeks_total: number; days_to_go: number; short_week: "first" | "last" | null };
 };
 export function checkinInputs(h: HorizonLike & { title: string }, targets: Target[], plan: PlanRow[], person: Person, today: string): CheckinInputs {
-  const lastWeek = lastCompleteMonday(today);
-  const f = weekFigures(person, lastWeek);
-  const inLast = (s: any) => String(s.day) >= lastWeek && String(s.day) < addDays(lastWeek, 7);
-  const avg = (col: string) => { const xs = person.signals.filter((s) => s?.[col] != null && inLast(s)).map((s) => Number(s[col])); return xs.length ? round(mean(xs)!, 0) : null; };
-  const { week, weeks } = weekOf(h, today);
+  // the horizon week that has just ended: a short first or last one is reported as the days it holds, and a week
+  // from before the horizon was set is never read
+  const span = [...horizonSpans(h)].reverse().find((s) => s.to < today) ?? null;
+  const f = span ? spanFigures(person, span) : null;
+  const inSpan = (s: any) => { const d = String(s?.day ?? "").slice(0, 10); return span != null && d >= span.from && d <= span.to; };
+  const avg = (col: string) => { const xs = person.signals.filter((s) => s?.[col] != null && inSpan(s)).map((s) => Number(s[col])); return xs.length ? round(mean(xs)!, 0) : null; };
+  const { week, weeks, short } = weekOf(h, today);
   return {
     pace: pacesOf(targets, h, person, today).map((p) => ({ marker: p.marker, label: p.label, unit: p.unit, start: p.start, now: p.now != null ? round(p.now, 2) : null, target: p.target, expected_today: p.expected_today != null ? round(p.expected_today, 2) : null, pace_word: p.pace_word, measured_on: p.measured_on,
       ...(p.swing ? { swing: p.swing.words } : {}) })),
     plan: plan.map((r) => ({ kind: r.kind, label: r.label, n: r.n ?? null })),
-    adherence: adherenceOf(plan, person, lastWeek, addDays(lastWeek, 6)).map((a) => ({ label: a.label, done: a.done, of: a.of, word: a.word })),
-    week: { dose: f.dose, goal: f.goal, sessions: f.sessions, zone2: f.zone2, zone3: f.zone3, strength: f.strength, sleep_avg: avg("sleep_minutes"), rhr: avg("resting_hr"), hrv: avg("hrv_night_ms") },
-    horizon: { title: h.title, ends_on: h.ends_on, week_of: week, weeks_total: weeks, days_to_go: daysToGo(h, today) },
+    // a hand-written plan's weekly counts are read against a full week only
+    adherence: span?.full ? adherenceOf(plan, person, span.from, span.to).map((a) => ({ label: a.label, done: a.done, of: a.of, word: a.word })) : [],
+    week: { from: span?.from ?? null, to: span?.to ?? null, days: span?.days ?? 0, short: span != null && !span.full,
+      dose: f?.dose ?? null, goal: f?.goal ?? null, sessions: f?.sessions ?? 0, zone2: f?.zone2 ?? null, zone3: f?.zone3 ?? null, strength: f?.strength ?? 0, sleep_avg: avg("sleep_minutes"), rhr: avg("resting_hr"), hrv: avg("hrv_night_ms") },
+    horizon: { title: h.title, ends_on: h.ends_on, week_of: week, weeks_total: weeks, days_to_go: daysToGo(h, today), short_week: short },
   };
 }

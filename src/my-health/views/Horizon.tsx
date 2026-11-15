@@ -40,6 +40,7 @@ import {
   latestOf, historyOf, weeklyHistory, pacesOf, impliedPace, adherenceOf, guideDraftPlan, roadOf, weekOf, daysToGo, nextCheckins, checkinInputs, landedLine,
   outcomesOf, lastRoadWords, nextSpan, horizonMondays, toTarget, typicalOf, targetKeyOf, vo2Line, ML_PER_MET, type MarkerDef, type Reading,
   fmtValue, addMonths, longDate, dayMonth, dayMonthLong, dayMonthYear, weekdayDayMonth, clockOf, round, numberWord,
+  horizonSpans, daysWords, weeksWords, weekWords, type Pace,
 } from "../horizon/derive.ts";
 import {
   listHorizons, startHorizon, requestCheckin, grantConsent, savePlan, updateHorizon, stopHorizon, addTarget, removeTarget, updateTarget, saveGuidePlan, ERROR_WORDS,
@@ -340,16 +341,32 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   // Only what your device shares (derive/arrivals): a goal set on a reading that has stopped arriving is kept, and says it is paused.
   const arrivalList = person ? arrivalsOf(person.doc.weeks) : null;
   const paused = (marker: string) => pausedWords(arrivalList, marker);
-  /** Under a row's own line: Fitness as VO₂max, and a weekly marker's typical week beside the last week its "Today" shows. */
-  const rowNote = (marker: MarkerKey, target: number): string => {
-    if (!person) return "";
-    if (marker === "mets") return vo2Line(person, today, target);
-    const def = MARKER_BY_KEY[marker], typical = typicalOf(marker, person, today);
-    return def?.kind === "weekly" && typical != null ? `Today is last week. A typical week: ${fmtValue(def, typical)}.` : "";
+  const spans = useMemo(() => horizonSpans(h), [h.starts_on, h.ends_on]);
+  const firstFull = spans.find((s) => s.full) ?? null;
+  /**
+   * Under a row's own line. Fitness as VO₂max. A weekly marker says which days its figure holds (the week in progress,
+   * counted from the day the horizon was set), which full week the pace is read from, and what stood before the
+   * horizon: the week its start column shows and a typical week. The founder read "Today" as this week and found last
+   * week's figure under it (15 November 2026).
+   */
+  const rowNotes = (p: Pace): string[] => {
+    if (!person) return [];
+    if (p.marker === "mets") return [vo2Line(person, today, p.target)].filter(Boolean);
+    const def = MARKER_BY_KEY[p.marker];
+    if (def?.kind !== "weekly") return [];
+    const out: string[] = [];
+    const w = p.week;
+    if (w) out.push(`This week so far: ${daysWords(w.from, w.upto)}${w.full ? "" : ", a short week"}.${w.value == null ? " No session on file yet." : ""}`);
+    out.push(p.judged ? `Pace is read from the last full week, ${daysWords(p.judged.from, p.judged.to)}: ${p.judged.text}.`
+      : firstFull ? `Pace is read from full weeks. The first ends ${daysWords(firstFull.to, firstFull.to)}.` : "Pace is read from full weeks, and this horizon holds none.");
+    const typical = typicalOf(p.marker, person, h.starts_on);
+    const before = [p.start != null ? `the week before ${p.startText}` : "", typical != null ? `a typical week ${fmtValue(def, typical)}` : ""].filter(Boolean);
+    if (before.length) out.push(`Before the horizon: ${before.join(", ")}.`);
+    return out;
   };
   const planRows = h.plan?.rows ?? [];
   const thisMonday = nextCheckins(h, today).thisMonday;
-  const adherence = person && planRows.length ? adherenceOf(planRows, person, thisMonday, today) : [];
+  const adherence = person && planRows.length ? adherenceOf(planRows, person, thisMonday, today, h.starts_on) : [];
   const latest = h.checkins[0] ?? null;
   const next = nextCheckins(h, today);
   const road = roadOf(h, today);
@@ -439,9 +456,10 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
     <>
       <header class="flex flex-wrap items-start justify-between gap-6">
         <div class="flex max-w-[680px] flex-col gap-2">
-          <Eyebrow>Horizon · set {dayMonthYear(h.starts_on)} · week {week} of {weeks}{closed ? " · stopped" : ""}</Eyebrow>
+          <Eyebrow>Horizon · set {dayMonthYear(h.starts_on)} · {weekWords(h, today)}{closed ? " · stopped" : ""}</Eyebrow>
           <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-[-0.01em] text-text">{h.title}, {longDate(h.ends_on)}</h1>
           <p class="m-0 text-[15px] leading-relaxed text-text-2">A horizon is a date, the markers you want different by then, and the week that gets you there. The Guide checks the pace every Monday and reads the month at its end.{h.plan?.author === "coach" ? (owner ? " Your coach sees all of it and writes the plan." : " You see all of it and write the plan.") : stored ? (owner ? " The Guide wrote the plan from your targets. A coach you share your page with sees all of it." : " The Guide wrote the plan from their targets.") : owner ? " A coach you share your page with sees all of it and can write the plan." : ""}</p>
+          {weeksWords(h) ? <p class="m-0 text-[13px] leading-relaxed text-text-3">{weeksWords(h)}</p> : null}
           <div class="mt-1">{nav}</div>
         </div>
         <div class="flex min-w-[180px] flex-col items-end gap-1 rounded-[16px] border border-border-strong bg-card px-5 py-4">
@@ -459,13 +477,13 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
         {!person && <Quiet>Reading your numbers…</Quiet>}
         <div class="flex flex-col">
           <div class="hidden grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_repeat(2,minmax(0,.8fr))_minmax(0,1.5fr)_minmax(0,1.6fr)] gap-3 border-b border-border pb-2 font-mono text-[11px] text-text-3 md:grid">
-            <span>Marker</span><span class="text-right">I want, by {dayMonth(h.ends_on)}</span><span class="text-right">Today</span><span class="text-right">On {dayMonth(h.starts_on)}</span><span>Track</span><span>Pace</span>
+            <span>Marker</span><span class="text-right">I want, by {dayMonth(h.ends_on)}</span><span class="text-right">Now</span><span class="text-right">On {dayMonth(h.starts_on)}</span><span>Track</span><span>Pace</span>
           </div>
           {paces.map((p) => (
             <div class="grid grid-cols-3 items-center gap-x-3 gap-y-1 border-b border-border py-3 last:border-b-0 md:grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_repeat(2,minmax(0,.8fr))_minmax(0,1.5fr)_minmax(0,1.6fr)]" key={p.marker}>
-              <span class="col-span-3 flex flex-col md:col-span-1"><span class="text-[15px] text-text">{p.label}</span><span class="text-[12px] text-text-3">{MARKER_BY_KEY[p.marker]?.how ?? ""}{p.source ? ` · ${p.source}` : ""}</span>{rowNote(p.marker, p.target) ? <span class="text-[12px] text-text-3">{rowNote(p.marker, p.target)}</span> : null}{paused(p.marker) ? <span class="text-[12px] text-text-2">{paused(p.marker)}</span> : null}</span>
+              <span class="col-span-3 flex flex-col md:col-span-1"><span class="text-[15px] text-text">{p.label}</span><span class="text-[12px] text-text-3">{MARKER_BY_KEY[p.marker]?.how ?? ""}{p.window ? ` · ${p.window}` : ""}{p.source ? ` · ${p.source}` : ""}</span>{rowNotes(p).map((line) => <span class="text-[12px] text-text-3" key={line}>{line}</span>)}{paused(p.marker) ? <span class="text-[12px] text-text-2">{paused(p.marker)}</span> : null}</span>
               <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">I want</span><span class="font-mono text-[15px] font-semibold text-accent-text">{MARKER_BY_KEY[p.marker]?.standing ? <span class="mr-1 font-sans text-[12px] font-normal text-text-2">at least</span> : null}{p.targetText}</span></span>
-              <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">Today</span><span class="font-mono text-[15px] font-semibold text-text">{p.nowText}{p.unit && p.now != null ? <span class="ml-1 whitespace-nowrap font-mono text-[11px] font-medium text-text-3">{p.unit}</span> : null}</span></span>
+              <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">{p.week ? "This week" : "Now"}</span><span class="font-mono text-[15px] font-semibold text-text">{p.week ? p.week.text : p.nowText}{p.unit && (p.week ? p.week.value != null : p.now != null) ? <span class="ml-1 whitespace-nowrap font-mono text-[11px] font-medium text-text-3">{p.unit === "sessions" && (p.week ? p.week.value : p.now) === 1 ? "session" : p.unit}</span> : null}</span>{p.week ? <span class="hidden font-mono text-[10px] text-text-3 md:block">this week</span> : null}</span>
               <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">On {dayMonth(h.starts_on)}</span><span class="font-mono text-[15px] font-semibold text-text-3">{p.startText}</span></span>
               <span class="col-span-3 md:col-span-1"><Track progress={p.progress} elapsed={p.elapsed} tone={p.tone} /></span>
               <span class={`col-span-3 flex items-center justify-between text-[13px] font-medium md:col-span-1 ${TONE_TEXT[p.tone]}`}>
@@ -671,6 +689,7 @@ function FinalView({ deps, h, person, today, owner, nav, personId, hasOpen, onSt
           <Eyebrow>Horizon · set {dayMonthYear(h.starts_on)} · the date</Eyebrow>
           <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-[-0.01em] text-text">{longDate(h.ends_on)}</h1>
           <p class="m-0 text-[15px] leading-relaxed text-text-2">{owner ? "The whole road, read once. Then the next horizon, prefilled from what moved; the numbers are yours to set." : "The whole road, read once."}</p>
+          {weeksWords(h) ? <p class="m-0 text-[13px] leading-relaxed text-text-3">{weeksWords(h)}</p> : null}
           <div class="mt-1">{nav}</div>
         </div>
         <div class="flex min-w-[180px] flex-col items-end gap-1 rounded-[16px] border border-border-strong bg-card px-5 py-4">

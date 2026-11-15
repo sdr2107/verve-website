@@ -103,3 +103,14 @@ When `send_to_coach` is on, the function posts a Messages row (`sender_role` sys
 ## Theme names
 
 The view uses the redesign's Tailwind theme colours only: `canvas card alt border border-strong text text-2 text-3 text-4 accent accent-text accent-fill accent-border good caution concern z2 z3 z3-text`, Inter for words and `font-mono` for figures, radii 16 / 10 / full. It renders unstyled on `main` until `global.css` defines them.
+
+## A horizon's weeks (15 November 2026)
+
+A horizon reads from the day it was set. `horizonSpans(h)` in `derive.ts` is the one list of its weeks: the first runs from the start date to that Sunday, the ones after it from Monday to Sunday, the last from the Monday to the end date. A week short at either end has no number (`Span.week` is null): the count starts on the first Monday, so `weekOf` and a plan's weeks carry the same count.
+
+- **A weekly target** (`pacesOf`): the figure in the table is the week in progress (`Pace.week`, from `weekSoFar`), counted from the horizon's own days. The pace word is read from the full weeks that have ended (`fullWeeksSoFar`); before the first one ends it is "No full week yet". A week from before the horizon is never read. The start column keeps the stored start value, which is the week before the horizon.
+- **A short week's figures** (`spanFigures`): the app's week row holds the whole calendar week, so a short week is counted from its own days: the dose, the sessions and the strength sessions from the sessions, the zone minutes from the app's own days (`daily_signals.zone2_min`, `zone3_min`, which add up to its week row).
+- **A rolling average** (steps, resting heart rate and the other daily markers) keeps its window and names its days (`Pace.window`): it is a level, not a week's total.
+- **The check-in's week** (`checkinInputs().week`): the horizon week that has just ended, with `from`, `to`, `days` and `short`. A hand-written plan's weekly counts are read against a full week only.
+
+The function vendors `derive.ts`: re-sync it after this lands (`tools/sync-horizon-web.sh` in METTracker).
