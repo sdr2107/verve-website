@@ -40,7 +40,7 @@ import {
   latestOf, historyOf, weeklyHistory, pacesOf, impliedPace, adherenceOf, guideDraftPlan, roadOf, weekOf, daysToGo, nextCheckins, checkinInputs, landedLine,
   outcomesOf, lastRoadWords, nextSpan, horizonMondays, toTarget, typicalOf, targetKeyOf, vo2Line, ML_PER_MET, type MarkerDef, type Reading,
   fmtValue, addMonths, longDate, dayMonth, dayMonthLong, dayMonthYear, weekdayDayMonth, clockOf, round, numberWord,
-  horizonSpans, daysWords, weeksWords, weekWords, type Pace,
+  horizonSpans, spanOf, daysWords, weeksWords, weekWords, type Pace,
 } from "../horizon/derive.ts";
 import {
   listHorizons, startHorizon, requestCheckin, grantConsent, savePlan, updateHorizon, stopHorizon, addTarget, removeTarget, updateTarget, saveGuidePlan, ERROR_WORDS,
@@ -342,6 +342,9 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   const arrivalList = person ? arrivalsOf(person.doc.weeks) : null;
   const paused = (marker: string) => pausedWords(arrivalList, marker);
   const spans = useMemo(() => horizonSpans(h), [h.starts_on, h.ends_on]);
+  // the header names the week today is in by its days: "a short first week, Tue 17 to Sun 22 Nov", "week 3 of 13, Mon 30 Nov to Sun 6 Dec"
+  const thisSpan = spanOf(h, today);
+  const weekLine = `${weekWords(h, today)}${thisSpan ? `, ${daysWords(thisSpan.from, thisSpan.to)}` : ""}`;
   const firstFull = spans.find((s) => s.full) ?? null;
   /**
    * Under a row's own line. Fitness as VO₂max. A weekly marker says which days its figure holds (the week in progress,
@@ -456,7 +459,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
     <>
       <header class="flex flex-wrap items-start justify-between gap-6">
         <div class="flex max-w-[680px] flex-col gap-2">
-          <Eyebrow>Horizon · set {dayMonthYear(h.starts_on)} · {weekWords(h, today)}{closed ? " · stopped" : ""}</Eyebrow>
+          <Eyebrow>Horizon · set {dayMonthYear(h.starts_on)} · {weekLine}{closed ? " · stopped" : ""}</Eyebrow>
           <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-[-0.01em] text-text">{h.title}, {longDate(h.ends_on)}</h1>
           <p class="m-0 text-[15px] leading-relaxed text-text-2">A horizon is a date, the markers you want different by then, and the week that gets you there. The Guide checks the pace every Monday and reads the month at its end.{h.plan?.author === "coach" ? (owner ? " Your coach sees all of it and writes the plan." : " You see all of it and write the plan.") : stored ? (owner ? " The Guide wrote the plan from your targets. A coach you share your page with sees all of it." : " The Guide wrote the plan from their targets.") : owner ? " A coach you share your page with sees all of it and can write the plan." : ""}</p>
           {weeksWords(h) ? <p class="m-0 text-[13px] leading-relaxed text-text-3">{weeksWords(h)}</p> : null}
