@@ -43,7 +43,10 @@ export const VIDEOS: Video[] = [
   { slug: "crf-tiers-thread", title: "Fitness is a vital sign. Yours is probably not on file.", seconds: 49, group: "fitness", topic: "crf" },
   { slug: "2026-09-29-tier-not-score", title: "A tier, not a score", seconds: 14, group: "fitness", topic: "crf", youtube: true },
   { slug: "arc-crf-prescription", title: "Exercise matched to your fitness: one prescription does not fit all", seconds: 176, group: "fitness", topic: "crf", youtube: true },
-  { slug: "arc-fitness-survival", title: "Your fitness predicts how long you live: know your number", seconds: 153, group: "fitness", topic: "crf", youtube: true },
+  // Posted on the channels under a longer title. That title carries a line this site retired (the test "no page
+  // promises anything about how long a person will live", tests/public-pages.test.mjs), so here the video goes by
+  // its subject, in the word its own captions use.
+  { slug: "arc-fitness-survival", title: "Fitness and survival: know your number", seconds: 153, group: "fitness", topic: "crf", youtube: true },
   { slug: "one-met", title: "One MET", seconds: 14, group: "fitness", topic: "mets-vs-met-h" },
   { slug: "when-to-retest", title: "When should you retest your fitness?", seconds: 56, group: "fitness", topic: "test-crf" },
   { slug: "watch-vs-run", title: "My watch said 10.9. The run said 8.7.", seconds: 29, group: "fitness", topic: "test-accuracy" },
