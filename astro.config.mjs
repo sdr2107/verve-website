@@ -20,6 +20,15 @@ export default defineConfig({
   // function of the person's document; the marketing pages carry no runtime.
   integrations: [preact()],
 
+  // Whitespace: lossless, not Astro 7's default. From v7.0 the default
+  // ('jsx') applies React's JSX rules, which delete a line break that sits
+  // between a tag and the text beside it. These pages are prose wrapped
+  // across lines, so that glued words together on the live site: a bold
+  // lead ran into its sentence ("may not.On a morning") and a link into
+  // the word before it ("is inMy health"), on twelve pages (seen 15 Nov
+  // 2026). `true` still minifies, and turns such a break into one space.
+  compressHTML: true,
+
   vite: {
     plugins: [tailwindcss()]
   }
