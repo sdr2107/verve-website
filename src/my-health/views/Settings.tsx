@@ -23,7 +23,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getTheme, setTheme, THEME_EVENT, type ThemeChoice } from "../../lib/theme.ts";
 import { listHorizons, updateHorizon, type HorizonFull } from "../horizon/api.ts";
 import {
-  type PlanInfo, type WeeklyState, ONE_MONDAY_EMAIL, WEEKLY_CARRIES, browserZone, planLine, planRows, trialOffered, weeklyNote,
+  type PlanInfo, type WeeklyState, MONDAY_EMAILS, WEEKLY_CARRIES, browserZone, planLine, planRows, trialOffered, weeklyNote,
 } from "../account.ts";
 import { fetchPlan, loadWeekly, saveWeekly, startWebTrial } from "../accountApi.ts";
 import { derived, person } from "../state.ts";
@@ -179,7 +179,7 @@ function EmailBlock({ deps, refreshEmail }: { deps: SettingsDeps; refreshEmail: 
             </div>
           )}
       </div>
-      <div class="border-t border-border py-3"><Quiet>{ONE_MONDAY_EMAIL}</Quiet></div>
+      <div class="border-t border-border py-3"><Quiet>{MONDAY_EMAILS}</Quiet></div>
       <div class="border-t border-border py-3">
         <div class="text-[15px] font-medium text-text">The newsletter</div>
         <div class="mt-0.5 text-[12.5px] leading-relaxed text-text-3">One letter a week. It is managed from any letter: each carries its own unsubscribe link.</div>

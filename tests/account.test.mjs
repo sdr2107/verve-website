@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {
   parsePlan, planLine, planRows, trialOffered, trialStartedLine, parseTrial, longDay,
   parseKeep, keepLine, keepRow, alreadyKept, keepCard, KEEP_METHOD, metsText,
-  weeklyNote, ONE_MONDAY_EMAIL, isSettingsSection, SETTINGS_SECTIONS,
+  weeklyNote, MONDAY_EMAILS, isSettingsSection, SETTINGS_SECTIONS,
 } from "../src/my-health/account.ts";
 
 const TODAY = new Date("2026-11-11T08:00:00Z");
@@ -95,12 +95,14 @@ test("Keep it: the card says only what happened", () => {
   assert.equal(keepCard({ kept: false, mets: 8, trial: null, weekly: false }, TODAY), null, "nothing was kept: no card");
 });
 
-test("the weekly email's switch has three states, and the rule of one Monday email is said once", () => {
+test("the weekly email's switch has three states; it goes every Monday whether or not the app was opened, and the check-in's own rule is said once", () => {
   assert.equal(weeklyNote({ state: "off", timezone: null }, TODAY), "Off unless you turn it on.");
   assert.equal(weeklyNote({ state: "unavailable", timezone: null }, TODAY), "Not switched on for this account yet.");
-  assert.equal(weeklyNote({ state: "on", timezone: "Asia/Dubai", since: "2026-11-11T05:00:00Z" }, TODAY), "On since 11 November. Mondays, once the app has synced the week.");
-  assert.equal(weeklyNote({ state: "on", timezone: null }, TODAY), "On. Mondays, once the app has synced the week.");
-  assert.match(ONE_MONDAY_EMAIL, /one email on Monday/);
+  assert.equal(weeklyNote({ state: "on", timezone: "Asia/Dubai", since: "2026-11-11T05:00:00Z" }, TODAY), "On since 11 November. Every Monday morning, with the figures from the app's last sync.");
+  assert.equal(weeklyNote({ state: "on", timezone: null }, TODAY), "On. Every Monday morning, with the figures from the app's last sync.");
+  assert.equal(/once the app has synced the week\.$/.test(weeklyNote({ state: "on", timezone: null }, TODAY)), false, "Your week no longer waits for the app");
+  assert.match(MONDAY_EMAILS, /Your week arrives on Monday morning/);
+  assert.match(MONDAY_EMAILS, /follows in its own email/, "the check-in still waits for the app, and then goes alone");
 });
 
 test("Settings has six sections and knows its own links", () => {

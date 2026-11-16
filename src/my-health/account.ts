@@ -211,12 +211,22 @@ export function keepCard(o: KeepOutcome, today = new Date()): KeepCard | null {
 
 /** Tri-state: on, off, or the table is not there yet ("not switched on yet", and the switch does nothing). */
 export type WeeklyState = { state: "on" | "off" | "unavailable"; timezone: string | null; since?: string | null };
+/**
+ * When Your week goes: every Monday morning, whether or not the app has been opened (16 November 2026; the
+ * function's week.ts weekEmailDue). Where the app has not synced the week since it ended, the email carries
+ * the figures of the last sync and names its day. Until then it waited for the app, to Wednesday.
+ */
+export const WEEKLY_WHEN = "Every Monday morning, with the figures from the app's last sync.";
 export const weeklyNote = (w: WeeklyState, today = new Date()): string =>
   w.state === "unavailable" ? "Not switched on for this account yet."
-  : w.state === "on" ? (longDay(w.since ?? null, today) ? `On since ${longDay(w.since ?? null, today)}. Mondays, once the app has synced the week.` : "On. Mondays, once the app has synced the week.")
+  : w.state === "on" ? (longDay(w.since ?? null, today) ? `On since ${longDay(w.since ?? null, today)}. ${WEEKLY_WHEN}` : `On. ${WEEKLY_WHEN}`)
   : "Off unless you turn it on.";
-/** One Monday email, never two: said once under the two switches. */
-export const ONE_MONDAY_EMAIL = "With both on you get one email on Monday, Your week, with the check-in inside it. Whenever a Monday check-in exists it travels in Your week, whichever way the horizon's own switch is set.";
+/**
+ * How the two Monday emails meet, said once under the two switches. The Guide's check-in still waits for the
+ * app to sync the whole week (the function's due.ts), so it is often written after Your week has gone: it is
+ * then its own email. One already written when Your week goes travels inside it.
+ */
+export const MONDAY_EMAILS = "With both on, Your week arrives on Monday morning. A check-in the Guide has already written travels inside it, whichever way the horizon's own switch is set. One written later, once the app has synced the week, follows in its own email when that switch is on.";
 export const WEEKLY_CARRIES = "The week's dose, six figures against the week before, and your horizon's pace when one is open. One click in any email turns it off.";
 
 /** The browser's zone, the one the email's Monday is read in; null when the browser will not say. */
