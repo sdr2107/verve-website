@@ -24,6 +24,7 @@ import type { Cadence, CheckinInputs, Landed, MarkerKey, PlanRow } from "./deriv
 import { mapError, isMissingRelation, HorizonOffError, type ApiError } from "./errors.ts";
 import type { GuideStored, ScreenAnswers } from "./guidePlan.ts";
 import { parseAccess, type HorizonAccess } from "./access.ts";
+import type { Programme, WeekNote } from "./programme.ts";
 export { mapError, ERROR_WORDS, isMissingRelation, HorizonOffError, type ApiError } from "./errors.ts";
 
 export type HorizonKind = "date" | "months";
@@ -38,10 +39,14 @@ export type HorizonRow = {
   timezone?: string | null;
   /** The Guide's check-in also goes to the person's inbox, from the same round that writes it. Absent before 20261111 (the column); the page shows the switch only when the row carries it. */
   email_checkin?: boolean;
+  /** What a horizon set up as a programme keeps: its goal, the person's aims, the days they train (./programme.ts Programme). Absent before 20261116_horizon_programme.sql, null on a horizon of the person's own targets. */
+  programme?: unknown;
 };
 export type TargetRow = {
   id: string; horizon_id: string; user_id: string; marker: MarkerKey; label: string; unit: string | null;
   start_value: number | null; start_on: string | null; target_value: number; cadence: Cadence | null; created_at: string;
+  /** How the number is held, a band's lower edge, and the method a fitness number is kept to. Absent before 20261116_horizon_programme.sql. */
+  mode?: string | null; low_value?: number | null; method?: string | null;
 };
 export type PlanRecord = { horizon_id: string; rows: PlanRow[]; author: PlanAuthor | null; updated_by: string | null; updated_at: string;
   /** The Guide's plan in use (./guidePlan.ts GuideStored): what it started from and the choices made. Absent before 20261114_horizon_guide_plan.sql, and null when the plan is the coach's or the person's own lines. */
@@ -219,4 +224,44 @@ export { parseAccess, type HorizonAccess } from "./access.ts";
 export async function fetchAccess(sb: SupabaseClient): Promise<HorizonAccess | null> {
   const { ok, out } = await callHorizon(sb, { action: "plan" });
   return ok ? parseAccess(out) : null;
+}
+
+// ── Horizon as a programme (canvas "Verve, Horizon as a programme"; built for test accounts, 16 November 2026) ──
+
+/**
+ * Whether this account is on the list of test accounts (programme_testers, METTracker
+ * supabase/migrations/20261116_horizon_programme.sql). The programme's set-up is offered to nobody else: the offer, a
+ * coach's words on food and the lines about weight wait for the lawyers. A table that is not there, a row that is
+ * not there and a network failure all read as "no". Asked once for the page.
+ */
+let tester: Promise<boolean> | null = null;
+export function programmeTester(sb: SupabaseClient): Promise<boolean> {
+  return (tester ??= (async () => {
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session?.user?.id) return false;
+      const { data, error } = await sb.from("programme_testers").select("user_id").eq("user_id", session.user.id).maybeSingle();
+      return !error && !!data;
+    } catch { return false; }
+  })());
+}
+/** What the horizon keeps about its programme; written by its owner once it is set. */
+export async function saveProgramme(sb: SupabaseClient, horizonId: string, programme: Programme): Promise<string | null> {
+  const { error } = await sb.from("horizons").update({ programme }).eq("id", horizonId);
+  return error ? error.message : null;
+}
+/** How a target's number is held, and the method a fitness number is kept to: written by the owner after the horizon is set. */
+export async function setTargetHold(sb: SupabaseClient, horizonId: string, marker: string, patch: { mode?: string | null; low_value?: number | null; method?: string | null }): Promise<string | null> {
+  const { error } = await sb.from("horizon_targets").update(patch).eq("horizon_id", horizonId).eq("marker", marker);
+  return error ? error.message : null;
+}
+/** The weeks a horizon has kept notes for: the person's answer, a week away, the call and its three lines. Empty when the table is not there. */
+export async function listWeekNotes(sb: SupabaseClient, horizonId: string): Promise<WeekNote[]> {
+  const { data, error } = await sb.from("horizon_weeks").select("horizon_id, week_start, way, away, call_at, call_kept, lines, lines_by, updated_at").eq("horizon_id", horizonId).order("week_start", { ascending: true });
+  return error || !data ? [] : (data as any[]).map((r) => ({ ...r, week_start: String(r.week_start).slice(0, 10), away: !!r.away, lines: Array.isArray(r.lines) ? r.lines.filter((l: unknown) => typeof l === "string") : [] })) as WeekNote[];
+}
+/** One week's note, written by the person or by the coach they share with; `updatedBy` must be the signed-in user's id (the policy checks it). */
+export async function saveWeekNote(sb: SupabaseClient, horizonId: string, weekStart: string, patch: Partial<Pick<WeekNote, "way" | "away" | "call_at" | "call_kept" | "lines" | "lines_by">>, updatedBy: string): Promise<string | null> {
+  const { error } = await sb.from("horizon_weeks").upsert({ horizon_id: horizonId, week_start: weekStart, ...patch, updated_by: updatedBy, updated_at: new Date().toISOString() }, { onConflict: "horizon_id,week_start" });
+  return error ? error.message : null;
 }

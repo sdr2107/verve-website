@@ -114,3 +114,24 @@ A horizon reads from the day it was set. `horizonSpans(h)` in `derive.ts` is the
 - **The check-in's week** (`checkinInputs().week`): the horizon week that has just ended, with `from`, `to`, `days` and `short`. A hand-written plan's weekly counts are read against a full week only.
 
 The function vendors `derive.ts`: re-sync it after this lands (`tools/sync-horizon-web.sh` in METTracker).
+
+## Horizon as a programme (16 November 2026)
+
+Canvas "Verve, Horizon as a programme", boards 04 to 08. Built on the founder's word for **test accounts only**: the set-up is offered to an account in `programme_testers` and to nobody else, and its cards are drawn only on a horizon that carries `horizons.programme`. For everyone else the page is as it was. The offer, its credit and any price are not in this repository.
+
+| File | What it is |
+|---|---|
+| `src/data/programme.ts` | The four goals and the markers each ticks; what studies report beside each number, each with its paper and how it was read (`checked`); the fitness doors and how far off each can be; the figures a weight number is read against. |
+| `src/my-health/horizon/programme.ts` | The arithmetic: what the page already reads, the pace a weight number implies, three signs for fat or muscle, the calls kept. Pure; `tests/programme.test.mjs`. |
+| `src/my-health/views/Programme.tsx` | The set-up (`ProgrammeSetup`), the goal and the person's words above the numbers, the weight card, the call sheet. Mounted by `Horizon.tsx`. |
+
+Four rules it keeps: the person sets every number (a goal ticks markers and fills no field); measured before asked; one fitness method from start to end; reached is worked out by the page.
+
+What `derive.ts` gained, and the horizon function must copy (`tools/sync-horizon-web.sh`, which now also needs `data/programme.ts`):
+
+- **A number that is held** (`Target.mode`): `floor` (at least), `ceiling` (at most), `band` (between `low_value` and the number). A weekly marker set as a floor is read like the dose, by the full weeks that reached it (`isStanding`). Any other held number has no line to the date: it is "Held", "Inside your band", or under or over by the gap (`isHeld`, `paceOf`). A move from the start smaller than two readings of one person differ by is not a change (`noChangeOf`: 5 kg for grip, 5% for a fitness test).
+- **Fitness by its door** (`Target.method`, `doorOfMethod`, `fitnessBy`): a fitness target kept to a method is read, paced, moved and judged on the date by that method's readings alone. A newer reading by another method rides on the row as `Pace.other`: shown, never compared. A test at its number is "At your number", not "Reached", while the move is inside 5% of the start.
+
+Stored (METTracker `supabase/migrations/20261116_horizon_programme.sql`): `horizons.programme` (jsonb), `horizon_targets.mode`, `.low_value`, `.method`, the table `horizon_weeks` (one row a week: the person's answer when a week fell short, a week away, the call and the three lines kept after it; both sides read and write) and `programme_testers`. The function's `start` does not take the new fields: the page writes them after the horizon is set, under the owner's row-level security.
+
+Not built here: the person adding a waist or a grip reading on the website (they come from the app), a distance marker for the marathon goal, and the Guide's rules for a marathon (a coach writes that plan).

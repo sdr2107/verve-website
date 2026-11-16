@@ -40,15 +40,16 @@ import {
   latestOf, historyOf, weeklyHistory, pacesOf, impliedPace, adherenceOf, guideDraftPlan, roadOf, weekOf, daysToGo, nextCheckins, checkinInputs, landedLine,
   outcomesOf, lastRoadWords, nextSpan, horizonMondays, toTarget, typicalOf, targetKeyOf, vo2Line, ML_PER_MET, type MarkerDef, type Reading,
   fmtValue, addMonths, longDate, dayMonth, dayMonthLong, dayMonthYear, weekdayDayMonth, clockOf, round, numberWord,
-  horizonSpans, spanOf, daysWords, weeksWords, weekWords, type Pace,
+  horizonSpans, spanOf, daysWords, weeksWords, weekWords, fitnessBy, type Pace,
 } from "../horizon/derive.ts";
 import {
   listHorizons, startHorizon, requestCheckin, grantConsent, savePlan, updateHorizon, stopHorizon, addTarget, removeTarget, updateTarget, saveGuidePlan, ERROR_WORDS,
-  fetchAccess, guidePlanReady,
+  fetchAccess, guidePlanReady, programmeTester,
   type HorizonFull, type PlanAuthor, type StartTarget, type ApiError, type HorizonAccess,
 } from "../horizon/api.ts";
 import { guidePlan, freezeOf, isGuideStored, PLAN_MARKERS, type GuideStored } from "../horizon/guidePlan.ts";
 import { GuidePlanCard, GuideOffer, GuideLocked } from "./GuidePlan.tsx";
+import { ProgrammeSetup, ProgrammeLine, WeightCard, CallCard, holdNotes, parseProgramme } from "./Programme.tsx";
 
 export type HorizonDeps = {
   supabase: SupabaseClient;
@@ -232,6 +233,9 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
   // what the account may do (Pro, or the one free week), and whether the Guide's plan can be kept for this project
   const [access, setAccess] = useState<HorizonAccess | null>(null);
   const [guideOn, setGuideOn] = useState(false);
+  // Horizon as a programme is built for test accounts only (api.ts programmeTester); "My own targets" opens the set-up as it was
+  const [tester, setTester] = useState(false);
+  const [ownTargets, setOwnTargets] = useState(false);
 
   const userId = async () => deps.userId?.() ?? (await deps.supabase.auth.getSession()).data.session?.user.id ?? null;
 
@@ -254,6 +258,7 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
     let on = true;
     void fetchAccess(deps.supabase).then((a) => { if (on) setAccess(a); });
     void guidePlanReady(deps.supabase).then((ok) => { if (on) setGuideOn(ok); });
+    void programmeTester(deps.supabase).then((ok) => { if (on) setTester(ok); });
     return () => { on = false; };
   }, [personId, _tick]);
 
@@ -308,7 +313,11 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
       {notice && <div class="flex items-start justify-between gap-3 rounded-[10px] border border-border-strong bg-alt px-4 py-3 text-[13px] text-text-2"><span>{notice}</span><button type="button" onClick={() => setNotice("")} class="text-text-3 hover:text-text" aria-label="Dismiss">×</button></div>}
       {loadError && <Quiet>{loadError}</Quiet>}
       {consent && <ConsentBox onAgree={() => void agreeConsent()} busy={busy === "consent"} />}
-      {showSetup
+      {showSetup && tester && owner && !ownTargets && !(!open.length && done[0])
+        ? <ProgrammeSetup sb={deps.supabase} person={person} today={today} personId={personId} nav={nav} hasOthers={open.length > 0 || done.length > 0} access={access} guideOn={guideOn} userId={userId}
+            onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); }}
+            onError={onApiError} onCancel={() => { route.value = ""; history.replaceState(null, "", "#horizon"); }} onOwn={() => setOwnTargets(true)} />
+        : showSetup
         ? <Setup deps={deps} person={person} today={today} personId={personId} hasOthers={open.length > 0 || done.length > 0} nav={nav} draftMarker={draftMarker} access={access} guideOn={guideOn}
             prefill={!open.length && done[0] ? prefillOf(done[0], person, today) : undefined} key={!open.length && done[0] ? `next-${done[0].id}` : "new"}
             onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); }}
@@ -317,7 +326,7 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
           ? <FinalView deps={deps} h={current} person={person} today={today} owner={owner} nav={nav} personId={personId} hasOpen={open.length > 0} access={access} guideOn={guideOn}
               onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); }} onError={onApiError} />
         : current
-          ? <View deps={deps} h={current} person={person} today={today} owner={owner} nav={nav} busy={busy} setBusy={setBusy} onError={onApiError} setNotice={setNotice} reload={load} userId={userId} access={access} guideOn={guideOn} />
+          ? <View deps={deps} h={current} person={person} today={today} owner={owner} nav={nav} busy={busy} setBusy={setBusy} onError={onApiError} setNotice={setNotice} reload={load} userId={userId} access={access} guideOn={guideOn} tester={tester} />
           : <Card>{nav}<div class="text-[18px] font-semibold text-text">No horizon set.</div><Quiet>{owner ? "A horizon is a date, the markers you want different by then, and the week that gets you there." : "Nothing to see here yet: this person has not set a horizon."}</Quiet></Card>}
     </div>
   );
@@ -325,12 +334,15 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
 
 // ── board 14: the horizon in view ──
 
-function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setNotice, reload, userId, access, guideOn }: {
+function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setNotice, reload, userId, access, guideOn, tester }: {
   deps: HorizonDeps; h: HorizonFull; person: PersonData | null; today: string; owner: boolean; nav: any; busy: string; setBusy: (s: string) => void;
   onError: (e: ApiError, retry: () => void) => boolean; setNotice: (s: string) => void; reload: () => Promise<void>; userId: () => Promise<string | null>;
   access: HorizonAccess | null; guideOn: boolean;
+  /** A test account for Horizon as a programme (api.ts programmeTester). */ tester: boolean;
 }) {
   const [editingPlan, setEditingPlan] = useState(false);
+  // a horizon set up as a programme keeps its goal, the person's own words and who writes the plan
+  const programme = parseProgramme(h.programme);
   const [adding, setAdding] = useState(false);
   /** The target whose number is being changed, and what is typed. */
   const [changing, setChanging] = useState<{ marker: MarkerKey; value: string } | null>(null);
@@ -356,7 +368,8 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
    */
   const rowNotes = (p: Pace): string[] => {
     if (!person) return [];
-    if (p.marker === "mets") return [vo2Line(person, today, p.target)].filter(Boolean);
+    if (p.marker === "mets") return [vo2Line(person, today, p.target, p.method ? p.now : null), ...holdNotes(p)].filter(Boolean);
+    if (p.marker === "grip" && p.mode) return holdNotes(p);
     const def = MARKER_BY_KEY[p.marker];
     if (def?.kind !== "weekly") return [];
     const out: string[] = [];
@@ -465,6 +478,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
           <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-[-0.01em] text-text">{h.title}, {longDate(h.ends_on)}</h1>
           <p class="m-0 text-[15px] leading-relaxed text-text-2">A horizon is a date, the markers you want different by then, and the week that gets you there. The Guide checks the pace every Monday and reads the month at its end.{h.plan?.author === "coach" ? (owner ? " Your coach sees all of it and writes the plan." : " You see all of it and write the plan.") : stored ? (owner ? " The Guide wrote the plan from your targets. A coach you share your page with sees all of it." : " The Guide wrote the plan from their targets.") : owner ? " A coach you share your page with sees all of it and can write the plan." : ""}</p>
           {weeksWords(h) ? <p class="m-0 text-[13px] leading-relaxed text-text-3">{weeksWords(h)}</p> : null}
+          {programme ? <ProgrammeLine programme={programme} /> : null}
           <div class="mt-1">{nav}</div>
         </div>
         <div class="flex min-w-[180px] flex-col items-end gap-1 rounded-[16px] border border-border-strong bg-card px-5 py-4">
@@ -487,7 +501,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
           {paces.map((p) => (
             <div class="grid grid-cols-3 items-center gap-x-3 gap-y-1 border-b border-border py-3 last:border-b-0 md:grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_repeat(2,minmax(0,.8fr))_minmax(0,1.5fr)_minmax(0,1.6fr)]" key={p.marker}>
               <span class="col-span-3 flex flex-col md:col-span-1"><span class="text-[15px] text-text">{p.label}</span><span class="text-[12px] text-text-3">{MARKER_BY_KEY[p.marker]?.how ?? ""}{p.window ? ` · ${p.window}` : ""}{p.source ? ` · ${p.source}` : ""}</span>{rowNotes(p).map((line) => <span class="text-[12px] text-text-3" key={line}>{line}</span>)}{paused(p.marker) ? <span class="text-[12px] text-text-2">{paused(p.marker)}</span> : null}</span>
-              <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">I want</span><span class="font-mono text-[15px] font-semibold text-accent-text">{MARKER_BY_KEY[p.marker]?.standing ? <span class="mr-1 font-sans text-[12px] font-normal text-text-2">at least</span> : null}{p.targetText}</span></span>
+              <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">I want</span><span class="font-mono text-[15px] font-semibold text-accent-text">{p.mode ? <span class="mr-1 font-sans text-[12px] font-normal text-text-2">{p.mode === "floor" ? "at least" : p.mode === "ceiling" ? "at most" : `${p.lowText ?? "—"} to`}</span> : null}{p.targetText}</span></span>
               <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">{p.week ? "This week" : "Now"}</span><span class="font-mono text-[15px] font-semibold text-text">{p.week ? p.week.text : p.nowText}{p.unit && (p.week ? p.week.value != null : p.now != null) ? <span class="ml-1 whitespace-nowrap font-mono text-[11px] font-medium text-text-3">{p.unit === "sessions" && (p.week ? p.week.value : p.now) === 1 ? "session" : p.unit}</span> : null}</span>{p.week ? <span class="hidden font-mono text-[10px] text-text-3 md:block">this week</span> : null}</span>
               <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">On {dayMonth(h.starts_on)}</span><span class="font-mono text-[15px] font-semibold text-text-3">{p.startText}</span></span>
               <span class="col-span-3 md:col-span-1"><Track progress={p.progress} elapsed={p.elapsed} tone={p.tone} /></span>
@@ -500,7 +514,9 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
               </span>
               {changing?.marker === p.marker && person && MARKER_BY_KEY[p.marker] ? (() => {
                 const def = MARKER_BY_KEY[p.marker], n = Number(changing.value), ok = changing.value.trim() !== "" && Number.isFinite(n);
-                const now = latestOf(p.marker, person, today), typical = typicalOf(p.marker, person, today);
+                // a fitness number kept to one method is read by that method here too
+                const now = (p.marker === "mets" && p.method ? fitnessBy(person, p.method) : null) ?? latestOf(p.marker, person, today), typical = typicalOf(p.marker, person, today);
+                const held = p.mode && def.kind !== "weekly" ? { mode: p.mode, low: targets.find((t) => t.marker === p.marker)?.low_value ?? null } : null;
                 return (
                   <form class="col-span-3 flex flex-col gap-2 rounded-[10px] border border-border-strong bg-alt p-3 md:col-span-6" onSubmit={(e) => { e.preventDefault(); if (ok) void changeTarget(p.marker, n); }}>
                     <div class="flex flex-wrap items-center gap-2">
@@ -510,7 +526,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
                       <Button onClick={() => setChanging(null)}>Cancel</Button>
                       <Button type="submit" primary disabled={!ok || busy === "target" || n === p.target}>{busy === "target" ? "Keeping…" : "Change the number"}</Button>
                     </div>
-                    <Quiet>{ok ? impliedPace(def, now, n, Math.max(1, Math.ceil(daysBetween(today, h.ends_on) / 7)), historyOf(p.marker, person, today), today, def.standing ? weeklyHistory(person, p.marker, today, 13) : undefined, typical) : "Set the number."}{p.marker === "mets" ? ` ${vo2Line(person, today, ok ? n : null)}` : ""}</Quiet>
+                    <Quiet>{ok ? impliedPace(def, now, n, Math.max(1, Math.ceil(daysBetween(today, h.ends_on) / 7)), historyOf(p.marker, person, today), today, p.mode === "floor" && def.kind === "weekly" ? weeklyHistory(person, p.marker, today, 13) : undefined, typical, held) : "Set the number."}{p.marker === "mets" ? ` ${vo2Line(person, today, ok ? n : null)}` : ""}</Quiet>
                     <Quiet>Where it started on {dayMonth(h.starts_on)} stays as it was.{stored && PLAN_MARKERS.has(p.marker) ? (today >= stored.first_monday ? " The Guide's plan follows this number: the week already begun keeps what it asked, and the plan goes on from it." : " The Guide's plan follows this number and is worked out again from it.") : ""}</Quiet>
                   </form>
                 );
@@ -538,6 +554,8 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
         {h.targets.length > targets.length && <Quiet>Blood markers are not offered as targets for now. The {h.targets.length - targets.length === 1 ? "one you set is" : `${numberWord(h.targets.length - targets.length)} you set are`} kept, and not shown or checked while this stands.</Quiet>}
         {paces.some((p) => MARKER_BY_KEY[p.marker]?.kind === "blood") && <Quiet>A blood target is called reached only when the move from its start is more than that marker's usual swing: two reports can differ by that much with nothing having changed. A medicine you have told the app you take is shown beside its target, and is never read as the cause of a change.</Quiet>}
       </Card>
+
+      {programme && person ? <WeightCard h={h} targets={targets} person={person} today={today} programme={programme} /> : null}
 
       <Card id="horizon-plan">
         {guide && stored && !editingPlan ? (locked
@@ -572,6 +590,10 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
         <Quiet>{guideOn ? "Without a coach, the Guide writes the plan from your targets and you change it." : "Without a coach, the Guide drafts the plan from your last eight weeks and you edit it."} The plan is intent for a week, not a session for each day; what you did comes from your sessions, never from a tick box.</Quiet>
         </>}
       </Card>
+
+      {programme && (programme.writer !== "guide" || !owner || tester)
+        ? <CallCard sb={deps.supabase} h={h} targets={targets} person={person} today={today} owner={owner} closed={closed} tester={tester} programme={programme} planRows={planRows} guideOn={guideOn} userId={userId} setNotice={setNotice} />
+        : null}
 
       <Card id="horizon-checkin">
         <div class="flex flex-wrap items-baseline justify-between gap-3">
