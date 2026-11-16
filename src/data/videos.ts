@@ -85,6 +85,7 @@ export const VIDEOS: Video[] = [
   { slug: "bp-safe-limit", title: "Is there a safe limit to blood pressure?", seconds: 39, group: "body", topic: "body-phenotyping" },
   { slug: "sprint-under-120", title: "Blood pressure: is a target under 120 worth it?", seconds: 48, group: "body", topic: "body-phenotyping", youtube: true },
   { slug: "arc-salt-dash-bp", title: "Can cutting salt and changing your diet lower blood pressure?", seconds: 172, group: "body", topic: "body-phenotyping", youtube: true },
+  { slug: "arc-home-bp", title: "White coat and masked hypertension: why measure your BP at home", seconds: 166, group: "body", topic: "body-phenotyping", youtube: true },
   { slug: "grip-strength", title: "Grip strength", seconds: 14, group: "body", topic: "muscle-health" },
   { slug: "sarcopenia-grip-first", title: "Weaker grip, not small muscles: the first sign of sarcopenia", seconds: 161, group: "body", topic: "muscle-health", youtube: true },
   { slug: "intrinsic-capacity", title: "Intrinsic capacity: what you can still do", seconds: 54, group: "body", topic: "intrinsic-capacity" },
