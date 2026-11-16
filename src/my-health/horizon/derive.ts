@@ -1232,7 +1232,7 @@ export function checkinInputs(h: HorizonLike & { title: string }, targets: Targe
 // on pace, what is not, the plan. The two in the middle are COUNTED here, from the pace words the page already
 // shows, and are never written by the model: a count cannot be miscounted and a name cannot be left out. The Guide
 // writes the first and the last. A figure is written only for a target that is not simply on pace, because the table
-// above the check-in already holds every figure. The month's read and the whole road stay as paragraphs.
+// beside the check-in (above it in "Your week", below it in its own email) already holds every figure. The month's read and the whole road stay as paragraphs.
 //
 // It is kept as it always was, in the check-in's one column of text: one line to a row, "Head: words". The page, the
 // check-in's email and "Your week" all read it back with checkinLinesOf, so the three cannot drift.
@@ -1293,7 +1293,7 @@ export function countedLines(pace: PaceRow[], firstFullWeekEnds: string | null):
   if (off.length) {
     // "Reached in 2 of 5 full weeks" is its own figure; every other word is read beside where the marker stands now.
     // Never a nought ("0 sessions now"). Past four such targets the line would run long: the figures are left to the
-    // table above, and targets that share a word are said together ("waist and weight, slightly behind").
+    // table beside it, and targets that share a word are said together ("waist and weight, slightly behind").
     const item = (p: PaceRow) => `${nameInSentence(p)}, ${lowerFirst(p.pace_word)}${p.said?.now && p.now !== 0 && !/^Reached in /.test(p.pace_word) ? ` (${p.said.now} now)` : ""}`;
     const words = [...new Set(off.map((p) => p.pace_word))];
     const offItems = off.length <= 4 ? off.map(item) : words.map((w) => `${listWords(off.filter((p) => p.pace_word === w).map(nameInSentence))}, ${lowerFirst(w)}`);
