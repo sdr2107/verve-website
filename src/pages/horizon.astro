@@ -1,0 +1,143 @@
+---
+/**
+ * /horizon — the way in to Horizon: five questions, in the founder's order, that end in a three-month horizon
+ * (canvas "Verve, Horizon as a programme", board 03; the founder's notes of 15 November 2026).
+ *
+ * BEING TRIED, NOT OFFERED: the page is not linked from the bar, the footer or the landing page, and asks search
+ * engines to leave it out. It carries no price and no offer.
+ *
+ * Each question does one job. The first names the thing a person wants, in their words. The second gives before it
+ * asks: the six-minute walk on the front page hands them their own number. The third is what gets in the way, and
+ * each answer changes one thing on the page that follows (../data/programme.ts BARRIERS). The fourth says what
+ * Horizon is, with nothing promised. The fifth is one action.
+ *
+ * Nothing is sent anywhere. The answers are kept in this browser (localStorage "verve-way-in") and read by the
+ * horizon's set-up after sign-in, which keeps them above the numbers and then clears them here.
+ */
+import Layout from "../layouts/Layout.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import Footer from "../components/Footer.astro";
+import { AIMS, BARRIERS } from "../data/programme.ts";
+import { ACCOUNT_PATH } from "../data/site.ts";
+
+const chip = "inline-flex min-h-10 items-center rounded-full border border-border-strong bg-alt px-4 text-[14px] font-medium text-text transition-colors hover:border-accent-border aria-pressed:border-accent-border aria-pressed:bg-accent-fill aria-pressed:text-accent-text";
+const section = "flex flex-col gap-3 border-t border-border pt-7";
+const num = "inline-flex h-7 w-7 items-center justify-center rounded-full border border-accent-border bg-accent-fill font-mono text-[12px] font-semibold text-accent-text";
+---
+
+<Layout title="Where do you want to be in three months? · Verve" description="Five questions that end in a three-month horizon: your own numbers, a week worked out from them, and a check-in every Monday." cardType="summary" noindex>
+  <SiteHeader />
+  <main class="mx-auto flex w-full max-w-[760px] flex-col gap-7 px-4 pb-24 pt-12 sm:px-6" data-way-in>
+    <header class="flex flex-col gap-3">
+      <p class="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-text-3">Horizon</p>
+      <h1 class="m-0 text-[32px] font-semibold leading-[1.12] tracking-[-0.02em] text-text sm:text-[38px]">Where do you want to be in three months?</h1>
+      <p class="m-0 text-[16px] leading-relaxed text-text-2">Five questions. They end in a horizon: a date, the numbers you want by then, and the week that gets you there. You set every number.</p>
+    </header>
+
+    <section class={section} aria-labelledby="q1">
+      <span class={num}>1</span>
+      <h2 id="q1" class="m-0 text-[21px] font-semibold leading-snug text-text">Where do you want to be in three months? And in a year?</h2>
+      <p class="m-0 text-[15px] leading-relaxed text-text-2">Not a number yet. The thing itself. Pick any, or write your own.</p>
+      <div class="flex flex-wrap gap-2" data-aims>
+        {AIMS.map((a) => <button type="button" class={chip} aria-pressed="false" data-aim={a}>{a}</button>)}
+      </div>
+      <label class="flex flex-col gap-1 text-[13px] font-medium text-text-2">Something else, in your words
+        <input type="text" maxlength="80" data-aim-own class="min-h-11 rounded-[10px] border border-border bg-alt px-3 text-[15px] text-text outline-none focus:border-accent-border" />
+      </label>
+    </section>
+
+    <section class={section} aria-labelledby="q2">
+      <span class={num}>2</span>
+      <h2 id="q2" class="m-0 text-[21px] font-semibold leading-snug text-text">Is what you do now getting you there?</h2>
+      <p class="m-0 text-[15px] leading-relaxed text-text-2">Most people have never seen their fitness as a number. Six minutes of walking gives you yours, free, before you sign in.</p>
+      <div class="flex flex-wrap items-center gap-3">
+        <a href="/#find-your-number" class="inline-flex min-h-11 items-center rounded-[10px] border border-accent-border bg-card px-5 text-[14px] font-semibold text-accent-text">Find your number</a>
+        <div data-kept hidden class="flex flex-col gap-0.5 rounded-[12px] border border-border bg-card px-4 py-3">
+          <span class="t-figure-row font-semibold text-text" data-kept-figure></span>
+          <span class="text-[12.5px] text-text-3" data-kept-from></span>
+        </div>
+      </div>
+    </section>
+
+    <section class={section} aria-labelledby="q3">
+      <span class={num}>3</span>
+      <h2 id="q3" class="m-0 text-[21px] font-semibold leading-snug text-text">What gets in the way?</h2>
+      <p class="m-0 text-[15px] leading-relaxed text-text-2">Pick any. Each one changes something real in what follows.</p>
+      <div class="flex flex-wrap gap-2" data-barriers>
+        {BARRIERS.map((b) => <button type="button" class={chip} aria-pressed="false" data-barrier={b.key} data-does={b.does}>{b.label}</button>)}
+      </div>
+      <ul class="m-0 flex list-none flex-col gap-1 p-0 text-[13.5px] leading-relaxed text-text-2" data-does-list aria-live="polite"></ul>
+    </section>
+
+    <section class={section} aria-labelledby="q4">
+      <span class={num}>4</span>
+      <h2 id="q4" class="m-0 text-[21px] font-semibold leading-snug text-text">Would you want a guide that starts from your number and tells you what this week asks?</h2>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div class="flex flex-col gap-1 rounded-[12px] border border-border bg-card p-4"><b class="text-[15px] font-semibold text-text">It reads your baseline</b><span class="text-[13.5px] leading-relaxed text-text-2">Your fitness, your typical week, your strength. Measured, not guessed from a form.</span></div>
+        <div class="flex flex-col gap-1 rounded-[12px] border border-border bg-card p-4"><b class="text-[15px] font-semibold text-text">It writes the week</b><span class="text-[13.5px] leading-relaxed text-text-2">From published guidelines, step by step. You see the rule behind every line.</span></div>
+        <div class="flex flex-col gap-1 rounded-[12px] border border-border bg-card p-4"><b class="text-[15px] font-semibold text-text">It stays with you</b><span class="text-[13.5px] leading-relaxed text-text-2">A check-in every Monday. A coach you invite sees the same page.</span></div>
+      </div>
+      <p class="m-0 text-[13px] leading-relaxed text-text-3">Guidance on exercise, not medical advice. Nothing here promises a result: the page tells you whether the weeks are keeping the pace your own number needs.</p>
+    </section>
+
+    <section class={section} aria-labelledby="q5">
+      <span class={num}>5</span>
+      <h2 id="q5" class="m-0 text-[21px] font-semibold leading-snug text-text">Start with three months.</h2>
+      <p class="m-0 text-[15px] leading-relaxed text-text-2">Set your own numbers, and see the first week before you decide anything.</p>
+      <div class="flex flex-wrap items-center gap-3">
+        <a href={`${ACCOUNT_PATH}/#horizon-new`} data-start class="inline-flex min-h-12 items-center rounded-[10px] bg-accent px-6 text-[15px] font-semibold text-canvas">Set a three-month horizon</a>
+        <span class="text-[13px] text-text-3">Your answers are kept in this browser until you sign in.</span>
+      </div>
+    </section>
+  </main>
+  <Footer />
+</Layout>
+
+<script>
+  // The answers stay in this browser. The horizon's set-up reads them after sign-in (views/Programme.tsx readWayIn).
+  const KEY = "verve-way-in";
+  const root = document.querySelector<HTMLElement>("[data-way-in]");
+  if (root) {
+    const own = root.querySelector<HTMLInputElement>("[data-aim-own]")!;
+    const list = root.querySelector<HTMLElement>("[data-does-list]")!;
+    const pressed = (sel: string, attr: string) => [...root.querySelectorAll<HTMLButtonElement>(sel)].filter((b) => b.getAttribute("aria-pressed") === "true").map((b) => b.dataset[attr] ?? "");
+    const read = () => ({ aims: [...pressed("[data-aim]", "aim"), own.value.trim()].filter(Boolean).slice(0, 6), barriers: pressed("[data-barrier]", "barrier").slice(0, 6) });
+    const keep = () => { try { localStorage.setItem(KEY, JSON.stringify(read())); } catch { /* a private window: the answers are not carried */ } };
+    const draw = () => {
+      // each answer says the one thing it changes
+      list.replaceChildren(...[...root.querySelectorAll<HTMLButtonElement>('[data-barrier][aria-pressed="true"]')].filter((b) => b.dataset.does).map((b) => { const li = document.createElement("li"); li.textContent = `${b.textContent}: ${b.dataset.does}`; return li; }));
+    };
+    // what was answered before, on this browser
+    try {
+      const was = JSON.parse(localStorage.getItem(KEY) ?? "null");
+      const aims: string[] = Array.isArray(was?.aims) ? was.aims : [], barriers: string[] = Array.isArray(was?.barriers) ? was.barriers : [];
+      root.querySelectorAll<HTMLButtonElement>("[data-aim]").forEach((b) => b.setAttribute("aria-pressed", String(aims.includes(b.dataset.aim ?? ""))));
+      root.querySelectorAll<HTMLButtonElement>("[data-barrier]").forEach((b) => b.setAttribute("aria-pressed", String(barriers.includes(b.dataset.barrier ?? ""))));
+      const known = new Set([...root.querySelectorAll<HTMLButtonElement>("[data-aim]")].map((b) => b.dataset.aim));
+      own.value = aims.find((a) => !known.has(a)) ?? "";
+    } catch { /* nothing kept */ }
+    draw();
+    root.addEventListener("click", (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-aim], [data-barrier]");
+      if (!b) return;
+      const on = b.getAttribute("aria-pressed") !== "true";
+      // "Nothing, I am consistent" stands alone
+      if (b.dataset.barrier === "none" && on) root.querySelectorAll<HTMLButtonElement>("[data-barrier]").forEach((x) => x.setAttribute("aria-pressed", "false"));
+      else if (b.dataset.barrier && on) root.querySelector<HTMLButtonElement>('[data-barrier="none"]')?.setAttribute("aria-pressed", "false");
+      b.setAttribute("aria-pressed", String(on));
+      draw(); keep();
+    });
+    own.addEventListener("input", keep);
+    root.querySelector("[data-start]")?.addEventListener("click", keep);
+
+    // a number already found on the front page, in this browser: shown, never asked for again
+    try {
+      const k = JSON.parse(localStorage.getItem("verve-keep") ?? "null");
+      if (k && Number.isFinite(Number(k.mets))) {
+        root.querySelector<HTMLElement>("[data-kept-figure]")!.textContent = `${Number(k.mets).toFixed(1)} METs`;
+        root.querySelector<HTMLElement>("[data-kept-from]")!.textContent = k.test === "run12" ? "from your twelve-minute run" : "from your six-minute walk";
+        root.querySelector<HTMLElement>("[data-kept]")!.hidden = false;
+      }
+    } catch { /* nothing kept */ }
+  }
+</script>

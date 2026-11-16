@@ -313,8 +313,9 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
       {notice && <div class="flex items-start justify-between gap-3 rounded-[10px] border border-border-strong bg-alt px-4 py-3 text-[13px] text-text-2"><span>{notice}</span><button type="button" onClick={() => setNotice("")} class="text-text-3 hover:text-text" aria-label="Dismiss">×</button></div>}
       {loadError && <Quiet>{loadError}</Quiet>}
       {consent && <ConsentBox onAgree={() => void agreeConsent()} busy={busy === "consent"} />}
-      {showSetup && tester && owner && !ownTargets && !(!open.length && done[0])
+      {showSetup && tester && owner && !ownTargets && (open.length > 0 || !done[0] || !!parseProgramme(done[0].programme))
         ? <ProgrammeSetup sb={deps.supabase} person={person} today={today} personId={personId} nav={nav} hasOthers={open.length > 0 || done.length > 0} access={access} guideOn={guideOn} userId={userId}
+            after={!open.length && done[0] ? parseProgramme(done[0].programme)?.goal ?? null : null} key={!open.length && done[0] ? `after-${done[0].id}` : "programme"}
             onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); }}
             onError={onApiError} onCancel={() => { route.value = ""; history.replaceState(null, "", "#horizon"); }} onOwn={() => setOwnTargets(true)} />
         : showSetup

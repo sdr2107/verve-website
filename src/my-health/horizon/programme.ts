@@ -263,4 +263,30 @@ export function sheetWeeks(h: HorizonLike, today: string): { thisWeek: { from: s
 }
 /** The Monday a note is kept under for a day: the week's own first day inside the horizon. */
 export const weekStartOf = (h: HorizonLike, day: string): string | null => horizonSpans(h).find((s) => day >= s.from && day <= s.to)?.from ?? null;
+// ── the trainer's Monday list (board 11): one row for each client who shares a programme horizon ──
+
+export type MondayRow = {
+  /** "Build fitness · week 4 of 13" */ horizon: string;
+  /** "Zone 2 a week: 48 of 60", "All lines done", "Marked away", "No check-in yet" */ lastWeek: string;
+  /** "Call today, 18:30", "Call Wed 18 Nov, 18:30", "No call set" */ call: string;
+  /** The call is today and has not been marked kept: the row a trainer starts from. */ today: boolean;
+};
+const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+/**
+ * A client's horizon as one row. Last week is read from what the horizon already holds: a week marked away, or the
+ * lines of the latest Monday check-in (what the plan asked and what the week did). Nothing about the person's page
+ * is read that they did not share.
+ */
+export function mondayRow(h: HorizonLike & { title?: string; programme?: unknown }, notes: WeekNote[], adherence: { label: string; done: number | null; of: number | null }[] | null, today: string): MondayRow {
+  const prog = parseProgramme(h.programme);
+  const goal = prog ? GOAL_BY_KEY[prog.goal]?.title ?? "Own targets" : (h.title ?? "Horizon").split(",")[0];
+  const { thisWeek, lastWeek } = sheetWeeks(h, today);
+  const prev = lastWeek ? noteFor(notes, lastWeek.from) : null, cur = thisWeek ? noteFor(notes, thisWeek.from) : null;
+  const short = (adherence ?? []).find((a) => a.done != null && a.of != null && a.done < a.of);
+  const last = !lastWeek ? "No full week yet" : prev?.away ? "Marked away" : adherence == null ? "No check-in yet" : short ? `${short.label}: ${short.done} of ${short.of}` : adherence.length ? "All lines done" : "No plan line to read";
+  const at = cur?.call_at ?? null;
+  const isToday = !!at && new Date(at).toLocaleDateString("en-CA") === today;
+  const call = cur?.away ? "No call: away" : !at ? "No call set" : cur?.call_kept ? `Kept, ${new Date(at).toLocaleDateString("en-GB", { weekday: "short" })}` : isToday ? `Call today, ${clock(at)}` : `Call ${new Date(at).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}, ${clock(at)}`;
+  return { horizon: `${goal} · ${weekWords(h, today)}`, lastWeek: last, call, today: isToday && cur?.call_kept !== true };
+}
 export { addDays };

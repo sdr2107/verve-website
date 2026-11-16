@@ -134,4 +134,6 @@ What `derive.ts` gained, and the horizon function must copy (`tools/sync-horizon
 
 Stored (METTracker `supabase/migrations/20261116_horizon_programme.sql`): `horizons.programme` (jsonb), `horizon_targets.mode`, `.low_value`, `.method`, the table `horizon_weeks` (one row a week: the person's answer when a week fell short, a week away, the call and the three lines kept after it; both sides read and write) and `programme_testers`. The function's `start` does not take the new fields: the page writes them after the horizon is set, under the owner's row-level security.
 
+Two more pieces ride with it. `src/pages/horizon.astro` is the way in (board 03): five questions that end in "Set a three-month horizon". It is linked from nowhere and marked `noindex` while it is tried; its answers stay in the browser (`localStorage["verve-way-in"]`) until the set-up reads them. And the group page mounts `mountMondayList` (board 11): for a coach, one row for each client who shares a programme horizon, read from `horizons`, `horizon_weeks` and the latest Monday check-in under row-level security. It draws nothing when no client has one.
+
 Not built here: the person adding a waist or a grip reading on the website (they come from the app), a distance marker for the marathon goal, and the Guide's rules for a marathon (a coach writes that plan).

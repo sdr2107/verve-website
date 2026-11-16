@@ -2,6 +2,9 @@
 // three signs for fat or muscle, and the week with a coach. `npm test`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
+import { NAV, FOOTER_LINKS } from "../src/data/site.ts";
 import { derivePerson } from "../src/my-health/derive/person.ts";
 import { addDays } from "../src/my-health/derive/format.ts";
 import {
@@ -10,7 +13,7 @@ import {
 } from "../src/my-health/horizon/derive.ts";
 import { GOALS, SOURCES, DOORS, GRIP, WEIGHT, FITNESS_RULES, BARRIERS, WAYS, doiUrl } from "../src/data/programme.ts";
 import {
-  parseProgramme, goalDraft, alreadyReads, doorsOnFile, startingMethod, doorLine, weightPace, threeSigns, callsKept, sheetWeeks, isAwayWay,
+  parseProgramme, goalDraft, alreadyReads, doorsOnFile, startingMethod, doorLine, weightPace, threeSigns, callsKept, sheetWeeks, isAwayWay, mondayRow,
 } from "../src/my-health/horizon/programme.ts";
 
 const TODAY = "2026-11-08";                                   // a Sunday
@@ -271,4 +274,45 @@ test("the sheet names this week and the full week before it by their days, and a
   // a horizon set on a Tuesday: its first days are a short week, and no full week is behind it yet
   const tue = sheetWeeks({ starts_on: "2026-11-17", ends_on: "2027-02-16" }, "2026-11-19");
   assert.deepEqual([tue.thisWeek.n, tue.thisWeek.full, tue.lastWeek], [null, false, null]);
+});
+
+test("the trainer's list reads a client's week from what the horizon already holds", () => {
+  const h = { ...H, programme: { v: 1, goal: "build_fitness", aims: [], barriers: [], days: [], place: null, writer: "coach" } };
+  const day = "2026-10-14";                                           // a Wednesday in week 6
+  const note = (week_start, extra) => ({ horizon_id: "h1", week_start, way: null, away: false, call_at: null, call_kept: null, lines: [], lines_by: null, ...extra });
+  const lines = [{ label: "Zone 2 minutes", done: 48, of: 60 }, { label: "Strength sessions", done: 2, of: 2 }];
+  const r = mondayRow(h, [note("2026-10-12", { call_at: "2026-10-14T13:00:00" })], lines, day);
+  assert.equal(r.horizon, "Build fitness · week 6 of 13");
+  assert.equal(r.lastWeek, "Zone 2 minutes: 48 of 60");
+  assert.match(r.call, /^Call today, 13:00$/);
+  assert.equal(r.today, true);
+  // a call already kept is not the row to start from; a week away says so; no check-in is said, never guessed
+  assert.equal(mondayRow(h, [note("2026-10-12", { call_at: "2026-10-14T13:00:00", call_kept: true })], lines, day).today, false);
+  assert.equal(mondayRow(h, [note("2026-10-05", { away: true })], lines, day).lastWeek, "Marked away");
+  assert.equal(mondayRow(h, [], null, day).lastWeek, "No check-in yet");
+  assert.equal(mondayRow(h, [], [{ label: "Strength sessions", done: 2, of: 2 }], day).lastWeek, "All lines done");
+  assert.equal(mondayRow(h, [], null, day).call, "No call set");
+  // a horizon of the person's own targets is named by its title
+  assert.equal(mondayRow({ ...H, title: "Boston Marathon, 18 April" }, [], null, day).horizon, "Boston Marathon · week 6 of 13");
+});
+
+// ── being tried, not offered ──
+
+const walk = (dir) => readdirSync(dir).flatMap((f) => { const p = join(dir, f); return statSync(p).isDirectory() ? walk(p) : /\.(astro|ts|tsx|js|mjs|json|md)$/.test(f) ? [p] : []; });
+
+test("the way in is being tried: out of search, linked from nowhere, with no price on it", () => {
+  const page = readFileSync("src/pages/horizon.astro", "utf8");
+  assert.match(page, /<Layout[^>]*\bnoindex\b/);
+  assert.doesNotMatch(page, /[$₹£€]\s?\d/);
+  for (const l of [...NAV, ...FOOTER_LINKS]) assert.notEqual(l.href.replace(/\/$/, ""), "/horizon");
+  // no other page links to it yet
+  for (const f of walk("src").filter((x) => x.endsWith(".astro") && !x.endsWith("pages/horizon.astro"))) assert.doesNotMatch(readFileSync(f, "utf8"), /href="\/horizon\/?"/, f);
+});
+
+test("the offer is not in this repository: no free months, no credit, no money back", () => {
+  // The offer, its credit and its price wait for the lawyers, and a public commit is publication.
+  for (const f of walk("src")) {
+    const t = readFileSync(f, "utf8");
+    assert.doesNotMatch(t, /money[- ]back|more months free|months,? free\b|as credit\b|earns? (the|a) credit/i, f);
+  }
 });

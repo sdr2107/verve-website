@@ -16,6 +16,8 @@ interface Props {
   image?: string;
   /** "summary_large_image" gives the full-bleed card; "summary" the small square. */
   cardType?: "summary_large_image" | "summary";
+  /** Keep the page out of search results: a page that is being tried and is not linked from anywhere yet. */
+  noindex?: boolean;
 }
 
 const SITE = "https://verve-app.health";
@@ -25,6 +27,7 @@ const {
   image = "/og-default.png",
   cardType = "summary_large_image",
   router = false,
+  noindex = false,
 } = Astro.props;
 
 // The two grounds, for the browser's own chrome (the address bar on a phone). The page's colours are
@@ -41,6 +44,7 @@ const imageAbs  = new URL(image, SITE).href;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {noindex && <meta name="robots" content="noindex" />}
     <meta name="theme-color" content={GROUND.light} />
     <script is:inline>
       // One choice for the whole site, read before anything paints (src/lib/theme.ts writes it). Until a

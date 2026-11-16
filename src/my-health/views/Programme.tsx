@@ -13,7 +13,9 @@
  * Nothing here works anything out: the arithmetic is ../horizon/programme.ts and ../horizon/derive.ts, the figures
  * and their papers ../../data/programme.ts. The page sets no number and fills no field. It writes no diet.
  */
+import { render } from "preact";
 import { useEffect, useMemo, useState } from "preact/hooks";
+import { signal } from "@preact/signals";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PersonData } from "../derive/person.ts";
 import { daysBetween } from "../derive/format.ts";
@@ -24,8 +26,8 @@ import {
 } from "../horizon/derive.ts";
 import { DOOR_BY_KEY, FITNESS_RULES, GOALS, GOAL_BY_KEY, GRIP, LENGTH_FOR, OWN_GOAL, BARRIERS, TEMPLATE_KEEPS, WAYS, WEIGHT, doiUrl, type GoalKey, type Line, type Mode } from "../../data/programme.ts";
 import {
-  DAY_NAMES, MODE_WORDS, alreadyReads, callsKept, doorLine, doorsOnFile, goalDraft, isAwayWay, noteFor, parseProgramme, sheetWeeks, startingMethod, threeSigns, weightPace,
-  type Programme, type WeekNote, type Writer,
+  DAY_NAMES, MODE_WORDS, alreadyReads, callsKept, doorLine, doorsOnFile, goalDraft, isAwayWay, mondayRow, noteFor, parseProgramme, sheetWeeks, startingMethod, threeSigns, weightPace,
+  type MondayRow, type Programme, type WeekNote, type Writer,
 } from "../horizon/programme.ts";
 import { guidePlan, rowsWith, screenOutcome, storeOf, isGuideStored, SCREEN_QUESTIONS, SCREEN_WORDS, type GuideStored, type ScreenAnswers } from "../horizon/guidePlan.ts";
 import { methodLabel } from "../derive/markers.ts";
@@ -81,18 +83,20 @@ const clearWayIn = () => { try { localStorage.removeItem(WAY_IN_KEY); } catch { 
 type Field = { ticked: boolean; value: string; low: string };
 type Length = 3 | 6 | 12 | "date";
 
-export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, access, guideOn, userId, onStarted, onError, onCancel, onOwn }: {
+export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, access, guideOn, userId, onStarted, onError, onCancel, onOwn, after }: {
   sb: SupabaseClient; person: PersonData | null; today: string; personId: string; nav: any; hasOthers: boolean;
   access: HorizonAccess | null; guideOn: boolean; userId: () => Promise<string | null>;
   onStarted: (id: string) => Promise<void>; onError: (e: ApiError, retry: () => void) => boolean; onCancel: () => void;
   /** "My own targets": the set-up as it was before the programme. */
   onOwn: () => void;
+  /** The goal of the horizon just read to its date. After a weight horizon the next one offered is "Hold what I have". */
+  after?: GoalKey | null;
 }) {
   const wayIn = useMemo(readWayIn, []);
   const [length, setLength] = useState<Length>(3);
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
-  const [goal, setGoal] = useState<GoalKey | null>(null);
+  const [goal, setGoal] = useState<GoalKey | null>(after === "lose_weight" ? "hold" : null);
   const [writer, setWriter] = useState<Writer>("guide");
   const [days, setDays] = useState<number[]>([]);
   const [place, setPlace] = useState<"home" | "gym" | "both" | null>(null);
@@ -205,6 +209,7 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
         <Eyebrow>Horizon · new · test account</Eyebrow>
         <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-[-0.01em] text-text">Set a horizon</h1>
         <p class="m-0 text-[15px] leading-relaxed text-text-2">Three choices, then the page shows what it already reads about you. It asks only what it cannot read, and you set every number.</p>
+        {after === "lose_weight" ? <Evidence line={{ text: `Your last horizon was for weight, so this one opens on "Hold what I have": a floor, not another loss. ${WEIGHT.after.text} Any other goal can be chosen below.`, cites: WEIGHT.after.cites }} /> : null}
         {wayIn.aims.length > 0 && <p class="m-0 text-[13px] leading-relaxed text-text-2">You said you want: {wayIn.aims.map((a) => `"${a}"`).join(", ")}. It is kept above your numbers.</p>}
         {hasOthers && <div class="mt-1">{nav}</div>}
       </header>
@@ -519,6 +524,65 @@ export function CallCard({ sb, h, targets, person, today, owner, closed, tester,
       <Quiet>{programme.writer === "guide" ? "This horizon's plan is the Guide's. A coach you share your page with sees this sheet too." : "Food is your coach's own advice, spoken on the call. This page writes no diet."}</Quiet>
     </Card>
   );
+}
+
+// ── the trainer's Monday list (board 11): the clients who share a programme horizon, one row each ──
+
+type ListClient = { id: string; name: string };
+const listClients = signal<ListClient[]>([]);
+type ListRow = MondayRow & { person: ListClient; horizonId: string };
+
+function MondayList({ sb, open }: { sb: SupabaseClient; open: (personId: string) => void }) {
+  const clients = listClients.value;
+  const [rows, setRows] = useState<ListRow[]>([]);
+  useEffect(() => {
+    let on = true;
+    (async () => {
+      if (!clients.length) { setRows([]); return; }
+      const today = new Date().toLocaleDateString("en-CA");
+      // only what each person shares is readable here: row-level security answers for it
+      const { data: hs } = await sb.from("horizons").select("id, person_id, title, starts_on, ends_on, programme, closed_at").in("person_id", clients.map((c) => c.id)).is("closed_at", null);
+      const mine = ((hs ?? []) as any[]).filter((h) => parseProgramme(h.programme));
+      if (!mine.length) { if (on) setRows([]); return; }
+      const ids = mine.map((h) => h.id);
+      const [w, c] = await Promise.all([
+        sb.from("horizon_weeks").select("horizon_id, week_start, way, away, call_at, call_kept, lines, lines_by").in("horizon_id", ids),
+        sb.from("horizon_checkins").select("horizon_id, kind, for_date, pace").in("horizon_id", ids).eq("kind", "week").order("for_date", { ascending: false }),
+      ]);
+      const out = mine.flatMap((h): ListRow[] => {
+        const person = clients.find((x) => x.id === h.person_id);
+        if (!person) return [];
+        const notes = ((w.data ?? []) as any[]).filter((n) => n.horizon_id === h.id).map((n) => ({ ...n, week_start: String(n.week_start).slice(0, 10), lines: Array.isArray(n.lines) ? n.lines : [] })) as WeekNote[];
+        const latest = ((c.data ?? []) as any[]).find((x) => x.horizon_id === h.id);
+        return [{ ...mondayRow(h, notes, latest ? (latest.pace?.adherence ?? []) : null, today), person, horizonId: h.id }];
+      }).sort((a, b) => Number(b.today) - Number(a.today) || a.person.name.localeCompare(b.person.name));
+      if (on) setRows(out);
+    })().catch(() => { if (on) setRows([]); });
+    return () => { on = false; };
+  }, [clients.map((c) => c.id).join(",")]);
+  if (!rows.length) return null;
+  return (
+    <Card>
+      <div class="flex flex-wrap items-baseline justify-between gap-3"><H2>This week's horizons</H2><span class="text-[12px] text-text-3">The people who share a horizon with you. Each row opens their call sheet.</span></div>
+      <div class="flex flex-col">
+        <div class="hidden grid-cols-[minmax(0,1.1fr)_minmax(0,1.6fr)_minmax(0,1.4fr)_minmax(0,1.2fr)] gap-3 border-b border-border pb-2 font-mono text-[11px] text-text-3 md:grid"><span>Client</span><span>Horizon</span><span>Last week</span><span>Call</span></div>
+        {rows.map((r) => (
+          <button type="button" key={r.horizonId} onClick={() => open(r.person.id)} class="grid grid-cols-2 items-baseline gap-x-3 gap-y-1 border-b border-border py-3 text-left last:border-b-0 hover:bg-alt md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.6fr)_minmax(0,1.4fr)_minmax(0,1.2fr)]">
+            <span class="text-[15px] font-semibold text-text">{r.person.name}</span>
+            <span class="font-mono text-[12px] text-text-2">{r.horizon}</span>
+            <span class="font-mono text-[12px] text-text-2">{r.lastWeek}</span>
+            <span class={`text-[13px] font-semibold ${r.today ? "text-accent-text" : "text-text-2"}`}>{r.call}</span>
+          </button>
+        ))}
+      </div>
+      <Quiet>You see only people who shared their page with you, and only what each chose to share.</Quiet>
+    </Card>
+  );
+}
+/** The list's mount, for the group page: `refresh` with the clients in view; it draws nothing when none of them shares a programme horizon. */
+export function mountMondayList(root: HTMLElement, deps: { supabase: SupabaseClient; open: (personId: string) => void }): { refresh: (clients: ListClient[]) => void } {
+  render(<MondayList sb={deps.supabase} open={deps.open} />, root);
+  return { refresh: (clients) => { listClients.value = clients; } };
 }
 
 /** A fitness or grip row's own lines on the targets table: the method it is kept to, how far off that can be, and a newer reading by another method. */
