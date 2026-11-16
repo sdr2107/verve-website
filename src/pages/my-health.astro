@@ -478,6 +478,8 @@ import { STORY } from "../data/story";
            follows which you have. Tap a row to open that person. It used
            to sit at the top of your own Overview, above your own numbers. -->
       <div id="tab-group" class="hidden pt-5 sm:pt-8">
+        <!-- a view (src/my-health/views/Programme): the clients who share a programme horizon, one row each; empty for everyone else -->
+        <div id="mondayroot" class="mb-6 empty:hidden"></div>
         <!-- the plan gate: the group view is on Max -->
         <div id="glancelocked" class="mb-7 hidden max-w-2xl flex-col gap-3 rounded-2xl border border-dashed border-accent/50 bg-accent/[0.05] p-5"></div>
         <!-- the coach's door with no one sharing yet: the ask, and the way to your own page -->
@@ -1006,6 +1008,7 @@ import { STORY } from "../data/story";
   import { mountBody } from "../my-health/views/Body";
   import { mountDepth } from "../my-health/views/Depth";
   import { mountHorizon } from "../my-health/views/Horizon.tsx";
+  import { mountMondayList } from "../my-health/views/Programme.tsx";
   import { mountPlanSheet } from "../my-health/views/PlanSheet.tsx";
   import { mountSettings, planInfoSignal } from "../my-health/views/Settings.tsx";
   import { KEEP_KEY, SETTINGS_SECTIONS, alreadyKept, browserZone, isSettingsSection, keepCard, keepLine, keepRow, parseKeep, planLine, trialOffered, type Keep, type KeepOutcome, type SettingsSection } from "../my-health/account";
@@ -2339,6 +2342,8 @@ import { STORY } from "../data/story";
   }
   const day0 = (iso: string) => String(iso).slice(0, 10);
 
+  /** The trainer's list above the group table (views/Programme.tsx), mounted on the first visit to the group. */
+  let mondayView: ReturnType<typeof mountMondayList> | null = null;
   async function loadGlance() {
     const inClients = spaceSignal.value === "clients";
     const pool = people.filter((p) => (inClients ? isClient(p) : !isClient(p)));
@@ -2352,6 +2357,9 @@ import { STORY } from "../data/story";
     }
     show("glance", on && !locked);
     show("glanceempty", !on);
+    // the trainer's list: the clients in view who share a programme horizon (it draws nothing when none does)
+    mondayView ??= mountMondayList($("mondayroot"), { supabase: supabase as any, open: (id) => { void switchPerson(id).then(() => setTab("horizon")); } });
+    mondayView.refresh(inClients ? others.filter((p) => !p.mine).map((p) => ({ id: p.id, name: p.name })) : []);
     if (!on || locked) return;
     const managed = others.filter((p) => p.mine).length, shared = others.length - managed;
     const coach = inClients;

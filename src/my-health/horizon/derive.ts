@@ -16,6 +16,7 @@ import { isWorkout } from "../derive/activity.ts";
 import { weightSeries, sppbSeries } from "../derive/lenses.ts";
 import { REMNANT_LABEL } from "../derive/lipids.ts";
 import { swingOf, type SwingKey } from "../derive/swing.ts";
+import { FITNESS_RULES, GRIP } from "../../data/programme.ts";
 
 // ── the markers a target can be set on ──
 
@@ -152,7 +153,31 @@ export type Target = {
   cadence: Cadence;
   /** A blood target may carry the date of the report you plan to have: "next in April". */
   next_on?: string | null;
+  /**
+   * How the number is held (Horizon as a programme, 16 November 2026): null reaches it by the date, as every target did
+   * before; "floor" holds at least it; "ceiling" holds at most it (a time in seconds); "band" stays between `low_value`
+   * and it. The weekly dose is a floor by its marker, whatever this says.
+   */
+  mode?: TargetMode | null;
+  /** A band's lower edge; the number itself is the upper one. */
+  low_value?: number | null;
+  /** The way a fitness number is measured for the whole horizon (programme.ts DoorKey): one method from start to end. */
+  method?: string | null;
 };
+export type TargetMode = "floor" | "ceiling" | "band";
+/** A target held every week from here, read as the weeks that reached it: the dose by its marker, any weekly marker set as a floor. */
+export const isStanding = (def: MarkerDef | undefined, t: { mode?: string | null } | null | undefined): boolean => !!def && (!!def.standing || (def.kind === "weekly" && t?.mode === "floor"));
+/** A number held, not reached: a floor, a ceiling or a band on a marker that is not a weekly count. */
+export const isHeld = (def: MarkerDef | undefined, t: { mode?: string | null } | null | undefined): boolean => !!def && def.kind !== "weekly" && (t?.mode === "floor" || t?.mode === "ceiling" || t?.mode === "band");
+/**
+ * What two readings of one person differ by with nothing changed, in the marker's own unit: 5% of the start for a
+ * fitness test, 5 kg for grip (../../data/programme.ts, each with its paper). Null where no figure is on file.
+ */
+export function noChangeOf(marker: string, start: number | null | undefined): number | null {
+  if (marker === "grip") return GRIP.noChangeKg;
+  if ((marker === "mets" || marker === "vo2") && start != null && Number.isFinite(start)) return Math.abs(start) * FITNESS_RULES.noChangeShare;
+  return null;
+}
 export type HorizonLike = { starts_on: string; ends_on: string; title?: string };
 
 export const round = (v: number, d: number) => Math.round(v * 10 ** d) / 10 ** d;
@@ -324,6 +349,41 @@ function dailyMean(signals: any[], col: string, n = 7, writerCol?: string): Read
     from: String(last[0].day).slice(0, 10), n: last.length };
 }
 
+// ── fitness by its door (Horizon as a programme, rule C: one method from start to end) ──
+
+/** The four ways a fitness figure arrives, and the reference (../../data/programme.ts DOORS). */
+export type FitnessDoor = "walk" | "run" | "watch" | "treadmill" | "lab";
+/**
+ * The door a fitness reading came by, from the method its row carries: the app's keys ("six-minute-walk",
+ * "cooper-run", "non-exercise-formula" for a watch's estimate) and the website's own ("six-minute walk",
+ * "twelve-minute run"). A method with no door (a one-mile walk, a heart-rate formula, a typed figure) is null: it is
+ * shown by its own name, with no error figure borrowed from another test.
+ */
+export function doorOfMethod(method: unknown): FitnessDoor | null {
+  const m = String(method ?? "").toLowerCase().replace(/[\s_]+/g, "-");
+  if (m === "cpet") return "lab";
+  if (m === "six-minute-walk") return "walk";
+  if (m === "cooper-run" || m === "1.5-mile-run" || m === "twelve-minute-run") return "run";
+  if (m === "treadmill-test" || m === "bruce-protocol") return "treadmill";
+  if (m === "non-exercise-formula") return "watch";
+  return null;
+}
+/** What two readings must share to be compared: the door, or for a method with none, the method itself. */
+export const methodFamily = (method: unknown): string | null => doorOfMethod(method) ?? (String(method ?? "").trim() ? String(method).toLowerCase().replace(/[\s_]+/g, "-") : null);
+export type DoorReading = Reading & { door: FitnessDoor | null; family: string | null };
+/** Every fitness reading on file in METs, oldest first, each with its door. */
+export function fitnessReadings(person: Person): DoorReading[] {
+  return [...person.crf].filter((c) => c.vo2max != null || c.met_capacity != null).sort((a, b) => String(a.measured_on).localeCompare(String(b.measured_on)))
+    .map((t) => ({ value: t.met_capacity != null ? Number(t.met_capacity) : Number(t.vo2max) / ML_PER_MET, on: String(t.measured_on).slice(0, 10), unit: "METs", writer: t.method ? String(t.method) : null,
+      door: doorOfMethod(t.method), family: methodFamily(t.method) }));
+}
+/** The latest fitness reading by one method family; null when none of that family is on file. */
+export function fitnessBy(person: Person, family: string | null | undefined): DoorReading | null {
+  if (!family) return null;
+  const all = fitnessReadings(person).filter((r) => r.family === family);
+  return all[all.length - 1] ?? null;
+}
+
 /** Where a marker stands now: the value, the day it is from, its unit, who wrote it. Null when the person has no reading. */
 export function latestOf(key: MarkerKey, person: Person, today: string): Reading | null {
   const def = MARKER_BY_KEY[key];
@@ -431,6 +491,7 @@ export function amountWords(def: MarkerDef, amount: number): string {
     case "%": return w("point", "points");
     case "": return w("point", "points");
     case "PAL": return `${a.toFixed(def.decimals)} PAL`;
+    case "METs": return one ? "1 MET" : `${whole ? String(a) : a.toFixed(def.decimals)} METs`;
     default: return `${whole ? (a >= 1000 ? a.toLocaleString("en-GB") : String(a)) : a.toFixed(def.decimals)} ${def.unit}`;
   }
 }
@@ -538,6 +599,11 @@ export type Pace = {
   judged?: { from: string; to: string; text: string } | null;
   /** A rolling average's days, in words: "8 to 14 Nov", "5 days on file, 10 to 14 Nov". Null for every other row. */
   window?: string | null;
+  /** How the number is held: "floor" for the dose and any "at least", "ceiling", "band"; null for a number to reach by the date. */
+  mode?: TargetMode | null;
+  /** A band's lower edge, as words. */ lowText?: string | null;
+  /** The method a fitness row is kept to, and a newer reading by another method that is shown and not compared. */
+  method?: string | null; other?: { method: string | null; on: string; text: string } | null;
 };
 export type WeekSoFar = { n: number; of: number; from: string; to: string; /** The last day counted: today, or the week's last day. */ upto: string; days: number; full: boolean; value: number | null; text: string };
 
@@ -564,13 +630,30 @@ export function paceOf(target: Target, horizon: HorizonLike, now: Reading | null
     source: def.kind === "blood" && now && target.start_on && now.on > target.start_on ? `from the report of ${dayMonthLong(now.on)}` : null,
     // the same report's move from the start, against the marker's usual swing
     swing: def.kind === "blood" && now && target.start_on && now.on > target.start_on ? swingRead(target.marker, start, cur) : null,
+    mode: isStanding(def, target) ? "floor" : isHeld(def, target) ? target.mode! : null,
+    lowText: target.mode === "band" && target.low_value != null ? fmtValue(def, target.low_value) : null,
+    method: target.method ?? null,
   };
   const dir = start != null && goal < start ? -1 : 1;
   const needed = start != null ? Math.abs(goal - start) : null;
   const expected_today = start != null ? start + (goal - start) * elapsed : null;
   const progress = start != null && cur != null && needed ? clamp01(((cur - start) * dir) / needed) : start != null && cur != null && needed === 0 ? 1 : 0;
 
-  if (def.standing) {
+  // a number held, not reached: there is no line to the date, only whether today's reading is on the right side of it
+  if (isHeld(def, target)) {
+    if (cur == null) return { ...base, expected_today: null, progress: 0, pace_word: "No reading yet", tone: "neutral" };
+    const lo = target.mode === "band" ? target.low_value ?? null : target.mode === "floor" ? goal : null;
+    const hi = target.mode === "floor" ? null : goal;
+    const under = lo != null && cur < lo ? lo - cur : 0, over = hi != null && cur > hi ? cur - hi : 0;
+    if (!under && !over) return { ...base, expected_today: null, progress: 1, pace_word: target.mode === "band" ? "Inside your band" : "Held", tone: "good" };
+    // two readings of one person differ with nothing changed: a move from the start smaller than that is not a change
+    const slack = noChangeOf(target.marker, start);
+    if (slack != null && start != null && Math.abs(cur - start) < slack) return { ...base, expected_today: null, progress: 1, pace_word: "Held: the move is inside what two readings differ by", tone: "neutral" };
+    const gap = round(under || over, def.decimals);
+    const side = target.mode === "band" ? (under ? "under your band" : "over your band") : under ? "under your floor" : "over your line";
+    return { ...base, expected_today: null, progress: 0, pace_word: gap > 0 ? `${cap(amountWords(def, gap))} ${side}` : `Just ${side}`, tone: "caution" };
+  }
+  if (isStanding(def, target)) {
     const read = (weekly ?? []).filter((w) => w.v != null);
     // none has ended yet, or the ones that have hold nothing: a dash with its reason, never a nought
     if (!read.length) return { ...base, expected_today, progress, pace_word: (weekly ?? []).length ? "No session on file yet" : "No full week yet", tone: "neutral" };
@@ -588,7 +671,12 @@ export function paceOf(target: Target, horizon: HorizonLike, now: Reading | null
   if (start == null || needed == null) return { ...base, expected_today, progress, pace_word: "No starting value", tone: "neutral" };
   if (needed === 0) return { ...base, expected_today, progress: 1, pace_word: "Already there", tone: "good" };
   // a blood figure at its number is reached only when the move is more than its usual swing (or none is on file)
-  if (progress >= 1) return withinSwing(base.swing) ? { ...base, expected_today, progress, pace_word: "At your number", tone: "neutral" } : { ...base, expected_today, progress, pace_word: "Reached", tone: "good" };
+  if (progress >= 1) {
+    // a fitness test at its number is reached only when the move from the start is more than two tests of one person differ by
+    const slack = target.marker === "mets" || target.marker === "vo2" ? noChangeOf(target.marker, start) : null;
+    const insideTest = slack != null && Math.abs(cur - start) < slack;
+    return withinSwing(base.swing) || insideTest ? { ...base, expected_today, progress, pace_word: "At your number", tone: "neutral" } : { ...base, expected_today, progress, pace_word: "Reached", tone: "good" };
+  }
   // nearly there: within one step of the marker's own precision, or five per cent of the whole way, whichever is wider
   const step = 10 ** -def.decimals;
   if (progress > 0 && (1 - progress) * needed <= Math.max(step, 0.05 * needed) + 1e-9) return { ...base, expected_today, progress, pace_word: "Nearly there", tone: "good" };
@@ -602,8 +690,9 @@ export function paceOf(target: Target, horizon: HorizonLike, now: Reading | null
 }
 
 /** A target's row (horizon_targets) as the arithmetic reads it. */
-export const toTarget = (t: { marker: string; label: string; unit: string | null; start_value: number | null; start_on: string | null; target_value: number; cadence: any; id?: string }): Target =>
-  ({ id: t.id, marker: t.marker as MarkerKey, label: t.label, unit: t.unit, start_value: t.start_value != null ? Number(t.start_value) : null, start_on: t.start_on, target_value: Number(t.target_value), cadence: t.cadence ?? MARKER_BY_KEY[t.marker]?.cadence ?? "monthly" });
+export const toTarget = (t: { marker: string; label: string; unit: string | null; start_value: number | null; start_on: string | null; target_value: number; cadence: any; id?: string; mode?: string | null; low_value?: number | null; method?: string | null }): Target =>
+  ({ id: t.id, marker: t.marker as MarkerKey, label: t.label, unit: t.unit, start_value: t.start_value != null ? Number(t.start_value) : null, start_on: t.start_on, target_value: Number(t.target_value), cadence: t.cadence ?? MARKER_BY_KEY[t.marker]?.cadence ?? "monthly",
+    mode: t.mode === "floor" || t.mode === "ceiling" || t.mode === "band" ? t.mode : null, low_value: t.low_value != null && Number.isFinite(Number(t.low_value)) ? Number(t.low_value) : null, method: t.method ? String(t.method) : null });
 
 /** The Overview card a marker's target shows on: blood and the body's measures sit on Body. */
 const CARD_OF_GROUP: Record<MarkerGroup, string> = { fitness: "fitness", movement: "movement", sleep: "sleep", vitals: "vitals", body: "body", blood: "body" };
@@ -620,7 +709,9 @@ export function horizonLinesByCard(h: HorizonLike, targets: Target[], person: Pe
     const named = p.marker === "mets" || p.marker === "dose" ? "" : `${def.label} `;
     // the pace's words run on inside the line; a month's name keeps its capital ("October's report")
     const pace = /^(January|February|March|April|May|June|July|August|September|October|November|December)\b/.test(p.pace_word) ? p.pace_word : p.pace_word.charAt(0).toLowerCase() + p.pace_word.slice(1);
-    const line = def.standing ? `${named}at least ${p.targetText} a week · ${pace.replace(/ (full )?weeks?$/, "")}`
+    const held = p.mode && def.kind !== "weekly";
+    const line = p.mode === "floor" && def.kind === "weekly" ? `${named}at least ${p.targetText} a week · ${pace.replace(/ (full )?weeks?$/, "")}`
+      : held ? `${named}${p.mode === "band" ? `${p.lowText ?? "—"} to ${p.targetText}` : `${p.mode === "floor" ? "at least" : "at most"} ${p.targetText}`}${p.unit ? ` ${p.unit}` : ""} · ${pace}`
       : `${named}${p.targetText}${named && p.unit ? ` ${p.unit}` : ""} by ${dayMonthLong(h.ends_on)} · ${pace}`;
     (by[CARD_OF_GROUP[def.group]] ??= []).push(line);
   }
@@ -657,8 +748,9 @@ export function landedLine(l: Landed, target?: Pick<Target, "start_value" | "tar
 }
 
 /** The Fitness row's second line: the same number as VO₂max. "As VO₂max: 31.5 mL/kg/min · today 29.4. One measure in two units: 1 MET is 3.5 mL/kg/min." */
-export function vo2Line(person: Person, today: string, targetMets?: number | null): string {
-  const now = latestOf("vo2", person, today);
+export function vo2Line(person: Person, today: string, targetMets?: number | null,
+  /** A fitness number kept to one method: today's figure in METs by that method, shown in place of the newest reading of any method. */ nowMets?: number | null): string {
+  const now = nowMets != null ? { value: nowMets * ML_PER_MET } : latestOf("vo2", person, today);
   const aim = targetMets != null && Number.isFinite(targetMets) && targetMets > 0 ? round(targetMets * ML_PER_MET, 1).toFixed(1) : null;
   const fig = now ? round(now.value, 1).toFixed(1) : null;
   const lead = aim ? `As VO₂max: ${aim} mL/kg/min${fig ? ` · today ${fig}` : ""}. ` : fig ? `As VO₂max, today is ${fig} mL/kg/min. ` : "";
@@ -676,11 +768,13 @@ export type WeekMove = { marker: MarkerKey; label: string; unit: string; before:
  * readings; the weekly dose, a floor to hold, is left to the plan's own line for it.
  */
 export function weekMoves(targets: Target[], horizon: HorizonLike, person: Person, monday: string, today: string): WeekMove[] {
-  return pacesOf(targets, horizon, person, today).filter((p) => !MARKER_BY_KEY[p.marker]?.standing).map((p) => {
+  return pacesOf(targets, horizon, person, today).filter((p) => !(p.mode === "floor" && MARKER_BY_KEY[p.marker]?.kind === "weekly")).map((p) => {
     const def = MARKER_BY_KEY[p.marker];
     // a weekly figure's "before" is the full week of the horizon before this one: a week from before the horizon, or a short one, is not read
     const prior = def?.kind !== "weekly" || horizonSpans(horizon).some((s) => s.full && s.from === addDays(monday, -7));
-    const a = prior ? readingAt(p.marker, person, addDays(monday, -1)) : null, b = readingAt(p.marker, person, addDays(monday, 6));
+    // a fitness number kept to one method moves only by that method's own readings
+    const at = (day: string): Reading | null => (p.marker === "mets" && p.method ? fitnessBy(upTo(person, day), p.method) : readingAt(p.marker, person, day));
+    const a = prior ? at(addDays(monday, -1)) : null, b = at(addDays(monday, 6));
     const text = (r: Reading | null) => (r ? r.display ?? (def ? fmtValue(def, r.value) : String(round(r.value, 1))) : null);
     return { marker: p.marker, label: p.label, unit: def?.hm ? "" : p.unit, before: text(a), after: text(b), fresh: !!b && (!a || b.on > a.on), pace_word: p.pace_word, tone: p.tone };
   });
@@ -720,8 +814,15 @@ export function pacesOf(targets: Target[], horizon: HorizonLike, person: Person,
     const def = MARKER_BY_KEY[t.marker];
     const medicine = medicineOf(t.marker, person, today)?.line ?? null;
     if (def?.kind !== "weekly") {
-      const now = latestOf(t.marker, person, today);
-      return { ...paceOf(t, horizon, now, today), medicine, window: def?.kind === "daily" ? windowWords(now) : null };
+      const latest = latestOf(t.marker, person, today);
+      // one method from start to end: a fitness number kept to a door is read from that door's own readings
+      if (t.marker === "mets" && t.method) {
+        const same = fitnessBy(person, t.method);
+        const newest = fitnessReadings(person).slice(-1)[0] ?? null;
+        const other = newest && newest.family !== t.method && (!same || newest.on > same.on) ? { method: newest.writer, on: newest.on, text: fmtValue(def, newest.value) } : null;
+        return { ...paceOf(t, horizon, same, today), medicine, window: null, other };
+      }
+      return { ...paceOf(t, horizon, latest, today), medicine, window: def?.kind === "daily" ? windowWords(latest) : null };
     }
     const done = fullWeeksSoFar(person, t.marker, horizon, today);
     const last = [...done].reverse().find((w) => w.v != null) ?? null;
@@ -744,8 +845,18 @@ export function valueNear(history: { d: string; v: number }[], day: string, tole
 const NOTHING_TO_ADD: Partial<Record<MarkerKey, string>> = { zone2_week: " A plan would have nothing to add in zone 2.", strength_week: " A plan would have nothing to add in strength." };
 
 export function impliedPace(def: MarkerDef, now: Reading | null, target: number, weeks: number, history: { d: string; v: number }[], today: string, weekly?: { week_start: string; v: number | null }[],
-  /** A weekly marker's typical week (typicalOf): its number is read against that, not against last week alone. */ typical?: number | null): string {
-  if (def.standing) {
+  /** A weekly marker's typical week (typicalOf): its number is read against that, not against last week alone. */ typical?: number | null,
+  /** How the number is held (a floor, a ceiling, a band with its lower edge); absent for a number to reach by the date. */ held?: { mode: TargetMode; low?: number | null } | null): string {
+  if (held && def.kind !== "weekly") {
+    if (!now) return "A number to hold. No reading yet; the first one is read against it.";
+    const fig = now.display ?? fmtValue(def, now.value), by = (d: number) => amountWords(def, round(Math.abs(d), def.decimals));
+    if (held.mode === "floor") return now.value >= target ? `A floor to hold, not a number to raise. Today's ${fig} is above it.` : `A floor to hold. Today's ${fig} is under it by ${by(target - now.value)}.`;
+    if (held.mode === "ceiling") return now.value <= target ? `A line to stay under. Today's ${fig} is under it.` : `A line to stay under. Today's ${fig} is over it by ${by(now.value - target)}.`;
+    const lo = held.low ?? null;
+    if (lo == null || !(lo < target)) return "Set both ends of the band: the lower number first.";
+    return now.value < lo ? `A band to stay inside. Today's ${fig} is under it by ${by(lo - now.value)}.` : now.value > target ? `A band to stay inside. Today's ${fig} is over it by ${by(now.value - target)}.` : `A band to stay inside. Today's ${fig} is inside it.`;
+  }
+  if (def.standing || held?.mode === "floor") {
     const read = (weekly ?? []).filter((w) => w.v != null);
     const met = read.filter((w) => w.v! >= target).length;
     return read.length ? `Every week from here. You have reached it in ${met} of the last ${read.length}.` : "Every week from here. No complete week on file yet.";
@@ -977,12 +1088,15 @@ export type Outcome = { marker: MarkerKey; label: string; how: string; unit: str
 export function outcomeOf(target: Target, h: HorizonLike, person: Person): Outcome {
   const def = MARKER_BY_KEY[target.marker] ?? ({ key: target.marker, label: target.label, unit: target.unit ?? "", decimals: 1, kind: "measured", cadence: "monthly", group: "body", how: "" } as MarkerDef);
   const then = upTo(person, h.ends_on);
-  const end = latestOf(target.marker, then, addDays(h.ends_on, 1));
+  // a fitness number kept to a method is read on the date by that method alone
+  const end = target.marker === "mets" && target.method ? fitnessBy(then, target.method) : latestOf(target.marker, then, addDays(h.ends_on, 1));
   const p = paceOf(target, h, end, h.ends_on);
   const base = { marker: target.marker, label: p.label, how: def.how, unit: p.unit, startText: p.startText, endText: end?.display ?? fmtValue(def, end?.value), targetText: p.targetText,
     swing: p.swing?.words ?? null, medicine: medicineOf(target.marker, then, h.ends_on)?.line ?? null };
   const goal = target.target_value;
-  if (def.standing) {
+  // a number held: the word the table carried, read on the date
+  if (isHeld(def, target)) return { ...base, targetText: target.mode === "band" ? `${p.lowText ?? "—"} to ${p.targetText}` : `${target.mode === "floor" ? "at least" : "at most"} ${p.targetText}`, word: p.pace_word === "No reading yet" ? "No reading" : p.pace_word, tone: p.tone };
+  if (isStanding(def, target)) {
     const read = horizonWeeks(then, target.marker, h).filter((w) => w.v != null);
     if (!read.length) return { ...base, word: "No complete week", tone: "neutral" };
     const met = read.filter((w) => w.v! >= goal).length;
@@ -1017,7 +1131,7 @@ export function lastRoadWords(target: Target, h: HorizonLike, person: Person): s
   const then = upTo(person, h.ends_on);
   const weeks = Math.max(1, horizonMondays(h).length);
   const span = `in ${weeks} week${weeks === 1 ? "" : "s"}`;
-  if (def.standing) {
+  if (isStanding(def, target)) {
     const read = horizonWeeks(then, target.marker, h).filter((w) => w.v != null);
     return read.length ? `${fmtValue(def, target.target_value)} held in ${read.filter((w) => w.v! >= target.target_value).length} of ${read.length}` : "No complete week on the last road";
   }
