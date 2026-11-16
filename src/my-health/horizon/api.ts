@@ -245,6 +245,17 @@ export function programmeTester(sb: SupabaseClient): Promise<boolean> {
     } catch { return false; }
   })());
 }
+/**
+ * A panel for test accounts (views/TesterPanel.tsx): the row's body, or null when it cannot be read. Its words live in
+ * the database, not here: only an account in programme_testers can read programme_panels.
+ */
+export async function loadPanel(sb: SupabaseClient, key: string): Promise<unknown | null> {
+  try {
+    const { data, error } = await sb.from("programme_panels").select("body").eq("key", key).maybeSingle();
+    const body = (data as { body?: unknown } | null)?.body;
+    return error || !body || typeof body !== "object" ? null : body;
+  } catch { return null; }
+}
 /** What the horizon keeps about its programme; written by its owner once it is set. */
 export async function saveProgramme(sb: SupabaseClient, horizonId: string, programme: Programme): Promise<string | null> {
   const { error } = await sb.from("horizons").update({ programme }).eq("id", horizonId);

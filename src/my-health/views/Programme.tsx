@@ -213,6 +213,7 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
         <p class="m-0 text-[15px] leading-relaxed text-text-2">Three choices, then the page shows what it already reads about you. It asks only what it cannot read, and you set every number.</p>
         {after === "lose_weight" ? <Evidence line={{ text: `Your last horizon was for weight, so this one opens on "Hold what I have": a floor, not another loss. ${WEIGHT.after.text} Any other goal can be chosen below.`, cites: WEIGHT.after.cites }} /> : null}
         {wayIn.aims.length > 0 && <p class="m-0 text-[13px] leading-relaxed text-text-2">You said you want: {wayIn.aims.map((a) => `"${a}"`).join(", ")}. It is kept above your numbers.</p>}
+        <p class="m-0 text-[13px] text-text-2"><a href="/horizon/" class="font-semibold text-accent-text underline-offset-2 hover:underline">{wayIn.aims.length || wayIn.barriers.length ? "Change your answers to the five questions" : "Start from the five questions"}</a></p>
         {hasOthers && <div class="mt-1">{nav}</div>}
       </header>
 

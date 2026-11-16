@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { NAV, FOOTER_LINKS } from "../src/data/site.ts";
+import { horizonFacts, fill, needOf } from "../src/my-health/horizon/facts.ts";
 import { derivePerson } from "../src/my-health/derive/person.ts";
 import { addDays } from "../src/my-health/derive/format.ts";
 import {
@@ -315,4 +316,38 @@ test("the offer is not in this repository: no free months, no credit, no money b
     const t = readFileSync(f, "utf8");
     assert.doesNotMatch(t, /money[- ]back|more months free|months,? free\b|as credit\b|earns? (the|a) credit/i, f);
   }
+});
+
+// ── a panel for test accounts: its counts ──
+
+test("a horizon's standing is plain counts: targets that read reached, calls kept, plan weeks kept", () => {
+  const note = (week_start, extra) => ({ horizon_id: "h1", week_start, way: null, away: false, call_at: null, call_kept: null, lines: [], lines_by: null, ...extra });
+  const kept = ["2026-09-07", "2026-09-14", "2026-09-21", "2026-09-28", "2026-10-05", "2026-10-12"].map((m) => note(m, { call_kept: true }));
+  const pace = (marker, pace_word, extra = {}) => ({ marker, pace_word, ...extra });
+  const day = "2026-10-21";                                           // six full weeks have ended; week 7
+  const share = 10 / 12;
+  const f = horizonFacts({ h: H, paces: [pace("mets", "Reached", { method: "walk" }), pace("dose", "Reached in 6 of 6 full weeks"), pace("grip", "Held: the move is inside what two readings differ by"), pace("waist", "No reading yet")], targets: [], notes: kept, today: day, planWeeks: { kept: 4, of: 6 }, share });
+  assert.deepEqual([f.week, f.weeks_total, f.judged, f.reached, f.targets_ok], [7, 13, 3, 3, true]);     // a row with no reading is not judged
+  assert.deepEqual([f.calls_kept, f.calls_of, f.calls_need, f.calls_ok], [6, 6, 5, true]);
+  assert.deepEqual([f.plan_kept, f.plan_of, f.plan_need, f.plan_ok], [4, 6, 5, false]);
+  assert.equal(f.method_kept, true);
+  assert.equal(f.standing, "targets");
+  // "nearly there" is not reached; the plan's weeks kept stand in for the numbers
+  const g = horizonFacts({ h: H, paces: [pace("mets", "Nearly there")], targets: [], notes: kept, today: day, planWeeks: { kept: 5, of: 6 }, share });
+  assert.deepEqual([g.reached, g.targets_ok, g.standing], [0, false, "weeks"]);
+  // five calls of six is ten of twelve; four is not
+  assert.equal(horizonFacts({ h: H, paces: [pace("mets", "Reached")], targets: [], notes: kept.slice(0, 4), today: day, share }).standing, "not_yet");
+  assert.equal(needOf(12, share), 10); assert.equal(needOf(6, share), 5); assert.equal(needOf(13, share), 11);
+  // a weight number faster than guidelines describe is said in the counts, and the targets do not all stand
+  const fast = horizonFacts({ h: H, paces: [pace("weight", "Reached")], targets: [target("weight", 71.4, 58)], notes: kept, today: day, share });
+  assert.deepEqual([fast.weight_read, fast.weight_ok, fast.targets_ok], ["faster", false, false]);
+  // before anything can be read
+  assert.equal(horizonFacts({ h: H, paces: [], targets: [], notes: [], today: "2026-09-08" }).standing, "none");
+  assert.equal(horizonFacts({ h: H, paces: [], targets: [], notes: [], today: "2026-09-08" }).plan_of, null);
+});
+
+test("a panel's sentence takes its counts, and a name the counts do not hold is left out", () => {
+  assert.equal(fill("{reached} of {judged} would read reached today", { reached: 2, judged: 6 }), "2 of 6 would read reached today");
+  assert.equal(fill("{plan_kept} of {plan_of}{nothing}", { plan_kept: null, plan_of: 0 }), " of 0");
+  assert.equal(fill("No counts here.", {}), "No counts here.");
 });

@@ -50,6 +50,7 @@ import {
 import { guidePlan, freezeOf, isGuideStored, PLAN_MARKERS, type GuideStored } from "../horizon/guidePlan.ts";
 import { GuidePlanCard, GuideOffer, GuideLocked } from "./GuidePlan.tsx";
 import { ProgrammeSetup, ProgrammeLine, WeightCard, CallCard, holdNotes, parseProgramme } from "./Programme.tsx";
+import { HorizonPanel } from "./TesterPanel.tsx";
 
 export type HorizonDeps = {
   supabase: SupabaseClient;
@@ -556,6 +557,8 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
         {paces.some((p) => MARKER_BY_KEY[p.marker]?.kind === "blood") && <Quiet>A blood target is called reached only when the move from its start is more than that marker's usual swing: two reports can differ by that much with nothing having changed. A medicine you have told the app you take is shown beside its target, and is never read as the cause of a change.</Quiet>}
       </Card>
 
+      {/* a panel for test accounts: its words are a row only they can read, filled with this horizon's counts */}
+      {programme && person && tester && owner && !closed ? <HorizonPanel sb={deps.supabase} h={h} targets={targets} person={person} today={today} guideOn={guideOn} /> : null}
       {programme && person ? <WeightCard h={h} targets={targets} person={person} today={today} programme={programme} /> : null}
 
       <Card id="horizon-plan">

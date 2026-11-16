@@ -102,6 +102,9 @@ const CURRENCIES = ["inr", "usd"] as const;
       </table>
     </div>
 
+    <!-- a panel for test accounts (src/my-health/views/TesterPanel): empty for everyone else; its words are a row only they can read -->
+    <div id="testerpanel" class="mt-8 empty:hidden"></div>
+
     <div class="mt-8 grid gap-3 sm:grid-cols-3">
       <div class="rounded-2xl border border-ink/10 p-4">
         <div class="font-mono text-[10px] font-semibold tracking-[0.12em] text-text-tertiary">BILLED WHERE</div>
@@ -124,6 +127,12 @@ const CURRENCIES = ["inr", "usd"] as const;
     import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
     const main = document.querySelector("main")!;
     const open = main.hasAttribute("data-open");
+    // A panel for test accounts: asked for only when someone is signed in, and drawn only when the row can be read.
+    void supabase.auth.getSession().then(async ({ data }) => {
+      if (!data.session) return;
+      const { mountTesterPanel } = await import("../my-health/views/TesterPanel.tsx");
+      mountTesterPanel(document.getElementById("testerpanel")!, { supabase: supabase as any, panel: "plans" });
+    }).catch(() => { /* not signed in, or offline: the page is as it was */ });
     const apply = () => {
       const period = main.dataset.period!, currency = main.dataset.currency!;
       document.querySelectorAll<HTMLElement>("[data-set-period]").forEach((b) => {
