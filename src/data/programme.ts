@@ -228,11 +228,13 @@ export const WEIGHT = {
 
 // ── the way in: the questions asked before a horizon (board 03) ──
 
+/** "Time" gets in the way: the Guide's plan opens on this many aerobic days, the fewest it offers (plan-rules: 3 to 5). The person can change it. */
+export const FEWEST_AEROBIC_DAYS = 3;
 export const AIMS = ["Climb four floors without stopping", "Run five kilometres easily", "Play a full game with friends", "Keep up with my children", "Feel strong lifting and carrying"];
 /** What gets in the way, and the one thing each answer changes on the page. */
 export const BARRIERS: { key: string; label: string; does: string }[] = [
-  { key: "time", label: "Time", does: "The plan opens on the fewest aerobic days its rules allow." },
-  { key: "unsure", label: "I am not sure what to do", does: "The plan opens on its rules, each with its source." },
+  { key: "time", label: "Time", does: "The Guide's plan opens on three aerobic days, the fewest its rules allow." },
+  { key: "unsure", label: "I am not sure what to do", does: "Every line of the Guide's plan names the published rule it comes from." },
   { key: "alone", label: "No one checks on me", does: "A coach is offered where the plan's writer is chosen." },
   { key: "stop_start", label: "I start, then stop", does: "A week short of its line is asked again, never added to the next." },
   { key: "travel", label: "Travel", does: "A week can be marked away. It is shown as the days it had and is not judged." },

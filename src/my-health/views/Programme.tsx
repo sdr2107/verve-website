@@ -24,7 +24,7 @@ import {
   addMonths, adherenceOf, dayMonthLong, doorOfMethod, dayMonthYear, fitnessBy, fmtValue, historyOf, impliedPace, latestOf, round, typicalOf, vo2Line, weekMoves, weeklyHistory,
   type MarkerDef, type MarkerKey, type PlanRow, type Reading, type Target,
 } from "../horizon/derive.ts";
-import { DOOR_BY_KEY, FITNESS_RULES, GOALS, GOAL_BY_KEY, GRIP, LENGTH_FOR, OWN_GOAL, BARRIERS, TEMPLATE_KEEPS, WAYS, WEIGHT, doiUrl, type GoalKey, type Line, type Mode } from "../../data/programme.ts";
+import { DOOR_BY_KEY, FEWEST_AEROBIC_DAYS, FITNESS_RULES, GOALS, GOAL_BY_KEY, GRIP, LENGTH_FOR, OWN_GOAL, BARRIERS, TEMPLATE_KEEPS, WAYS, WEIGHT, doiUrl, type GoalKey, type Line, type Mode } from "../../data/programme.ts";
 import {
   DAY_NAMES, MODE_WORDS, alreadyReads, callsKept, doorLine, doorsOnFile, goalDraft, isAwayWay, mondayRow, noteFor, parseProgramme, sheetWeeks, startingMethod, threeSigns, weightPace,
   type MondayRow, type Programme, type WeekNote, type Writer,
@@ -93,6 +93,8 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
   after?: GoalKey | null;
 }) {
   const wayIn = useMemo(readWayIn, []);
+  // "Time" gets in the way: the Guide's plan opens on the fewest aerobic days it offers. The person can change it in the plan.
+  const planChoices = wayIn.barriers.includes("time") ? { aerobic_days: FEWEST_AEROBIC_DAYS } : null;
   const [length, setLength] = useState<Length>(3);
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
@@ -153,7 +155,7 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
   /** The Guide's first week, worked out from the draft before anything is kept. */
   const firstWeek = useMemo(() => {
     if (!preview || !person || !guideWrites || !guideOn || !outcome || outcome === "none" || !endsOn || endsOn <= today) return null;
-    try { return guidePlan({ horizon: { starts_on: today, ends_on: endsOn }, targets: draftTargets.map((t) => ({ marker: t.marker, target_value: t.target_value })), person, today, mode: outcome }); } catch { return null; }
+    try { return guidePlan({ horizon: { starts_on: today, ends_on: endsOn }, targets: draftTargets.map((t) => ({ marker: t.marker, target_value: t.target_value })), person, today, mode: outcome, choices: planChoices }); } catch { return null; }
   }, [preview, person, endsOn, outcome, JSON.stringify(draftTargets.map((t) => [t.marker, t.target_value]))]);
 
   function check(): string {
@@ -191,7 +193,7 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
         say(await saveScreen(sb, id, uid, screen as ScreenAnswers));
         const oc = screenOutcome(screen as ScreenAnswers);
         if (oc !== "none" && person) {
-          const v = guidePlan({ horizon: { starts_on: today, ends_on: endsOn }, targets: targets.map((t) => ({ marker: t.marker, target_value: t.target_value })), person, today, mode: oc });
+          const v = guidePlan({ horizon: { starts_on: today, ends_on: endsOn }, targets: targets.map((t) => ({ marker: t.marker, target_value: t.target_value })), person, today, mode: oc, choices: planChoices });
           say(await saveGuidePlan(sb, id, rowsWith(v, []), storeOf(v, today), uid));
         }
       }
