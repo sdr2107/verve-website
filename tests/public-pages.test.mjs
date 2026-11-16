@@ -81,3 +81,10 @@ test("prose wrapped across lines keeps its spaces: the build's whitespace handli
   const config = readFileSync(new URL("../astro.config.mjs", import.meta.url), "utf8");
   assert.match(config, /^\s*compressHTML:\s*true\s*,/m, "astro.config.mjs sets compressHTML: true");
 });
+
+// 15 Nov 2026: Arc Story 17 opens with a caption that carries a retired line. The founder took the video off
+// the site until that card is recut; it stays on the channels. A sweep that puts posted videos on their topic
+// pages must not bring the old cut back. Remove this test when the recut file goes in.
+test("the fitness-and-survival video stays off the site until it is recut", () => {
+  assert.ok(!VIDEOS.some((v) => v.slug === "arc-fitness-survival"), "arc-fitness-survival is back in videos.ts: only the recut may return, and this test goes with it");
+});
