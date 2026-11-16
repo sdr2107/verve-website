@@ -471,6 +471,20 @@ export function fmtValue(def: MarkerDef, v: number | null | undefined): string {
   if (def.unit === "steps" || (def.unit === "MET-min" && v >= 1000)) return Math.round(v).toLocaleString("en-GB");
   return round(v, def.decimals).toFixed(def.decimals);
 }
+/**
+ * A figure with its unit, as the page prints the two side by side: "5,610 steps", "7 h 50", "1 session", "53 bpm",
+ * "118/76 mmHg", "18.4%". Null where the page prints a dash. `text` is the figure as the page already wrote it.
+ */
+export function withUnit(def: MarkerDef | undefined, text: string | null | undefined, value: number | null | undefined, unit?: string | null): string | null {
+  if (value == null || !Number.isFinite(value) || !text || text === "—") return null;
+  const u = def?.hm ? "" : unit ?? def?.unit ?? "";
+  if (!u) return text;
+  if (u === "%") return `${text}%`;
+  // the unit follows the figure as it is printed: 1.08 sessions prints "1", and reads "1 session"
+  return `${text} ${u === "sessions" && text === "1" ? "session" : u}`;
+}
+/** "a", "a and b", "a, b and c". */
+export const listWords = (xs: string[]) => (xs.length <= 1 ? xs[0] ?? "" : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
 const SMALL = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
 export const numberWord = (n: number) => (Number.isInteger(n) && n >= 1 && n <= 12 ? SMALL[n] : String(n));
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -1155,6 +1169,14 @@ export function nextSpan(h: HorizonLike & { months?: number | null }, today: str
 
 export type CheckinInputs = {
   pace: { marker: string; label: string; unit: string; start: number | null; now: number | null; target: number; expected_today: number | null; pace_word: string; measured_on: string | null;
+    /** The colour the page gives the pace word. Absent in a row stored before 16 November 2026. */
+    tone?: Tone;
+    /**
+     * The row's figures as the page prints them, each with its unit: "5,610 steps", "7 h 50", "53 bpm"; null where
+     * the page prints a dash. These, and never the raw numbers beside them, are what the Guide is shown (guideView):
+     * it copies a figure exactly, and it once copied a steps average to two decimals. Absent before 16 November 2026.
+     */
+    said?: { start: string | null; now: string | null; target: string | null; expected: string | null };
     /**
      * A blood target read from a report newer than its start: where the move sits against the marker's usual swing, in
      * the page's own sentence. The medicine on file is NOT here, on purpose: these inputs go to the model, into the
@@ -1171,6 +1193,8 @@ export type CheckinInputs = {
   week: { from: string | null; to: string | null; days: number; short: boolean; dose: number | null; goal: number | null; sessions: number; zone2: number | null; zone3: number | null; strength: number; sleep_avg: number | null; rhr: number | null; hrv: number | null };
   /** week_of counts from the horizon's first Monday: 0 on a day in a short first week, which `short_week` names. */
   horizon: { title: string; ends_on: string; week_of: number; weeks_total: number; days_to_go: number; short_week: "first" | "last" | null };
+  /** The two lines of a Monday check-in that are counted and not written (countedLines). Absent before 16 November 2026. */
+  lines?: CheckinLine[];
 };
 export function checkinInputs(h: HorizonLike & { title: string }, targets: Target[], plan: PlanRow[], person: Person, today: string): CheckinInputs {
   // the horizon week that has just ended: a short first or last one is reported as the days it holds, and a week
@@ -1180,9 +1204,18 @@ export function checkinInputs(h: HorizonLike & { title: string }, targets: Targe
   const inSpan = (s: any) => { const d = String(s?.day ?? "").slice(0, 10); return span != null && d >= span.from && d <= span.to; };
   const avg = (col: string) => { const xs = person.signals.filter((s) => s?.[col] != null && inSpan(s)).map((s) => Number(s[col])); return xs.length ? round(mean(xs)!, 0) : null; };
   const { week, weeks, short } = weekOf(h, today);
+  const pace = pacesOf(targets, h, person, today).map((p) => {
+    const def = MARKER_BY_KEY[p.marker];
+    return { marker: p.marker, label: p.label, unit: p.unit, start: p.start, now: p.now != null ? round(p.now, 2) : null, target: p.target, expected_today: p.expected_today != null ? round(p.expected_today, 2) : null, pace_word: p.pace_word, measured_on: p.measured_on,
+      tone: p.tone,
+      said: { start: withUnit(def, p.startText, p.start, p.unit), now: withUnit(def, p.nowText, p.now, p.unit), target: withUnit(def, p.targetText, p.target, p.unit),
+        // where the straight line to the date stands today; a number that is held or stands every week has no such line
+        expected: def && p.expected_today != null && !p.mode ? withUnit(def, fmtValue(def, p.expected_today), p.expected_today, p.unit) : null },
+      ...(p.swing ? { swing: p.swing.words } : {}) };
+  });
   return {
-    pace: pacesOf(targets, h, person, today).map((p) => ({ marker: p.marker, label: p.label, unit: p.unit, start: p.start, now: p.now != null ? round(p.now, 2) : null, target: p.target, expected_today: p.expected_today != null ? round(p.expected_today, 2) : null, pace_word: p.pace_word, measured_on: p.measured_on,
-      ...(p.swing ? { swing: p.swing.words } : {}) })),
+    pace,
+    lines: countedLines(pace, horizonSpans(h).find((s) => s.full)?.to ?? null),
     plan: plan.map((r) => ({ kind: r.kind, label: r.label, n: r.n ?? null })),
     // a hand-written plan's weekly counts are read against a full week only
     adherence: span?.full ? adherenceOf(plan, person, span.from, span.to).map((a) => ({ label: a.label, done: a.done, of: a.of, word: a.word })) : [],
@@ -1190,4 +1223,164 @@ export function checkinInputs(h: HorizonLike & { title: string }, targets: Targe
       dose: f?.dose ?? null, goal: f?.goal ?? null, sessions: f?.sessions ?? 0, zone2: f?.zone2 ?? null, zone3: f?.zone3 ?? null, strength: f?.strength ?? 0, sleep_avg: avg("sleep_minutes"), rhr: avg("resting_hr"), hrv: avg("hrv_night_ms") },
     horizon: { title: h.title, ends_on: h.ends_on, week_of: week, weeks_total: weeks, days_to_go: daysToGo(h, today), short_week: short },
   };
+}
+
+// ── the Monday check-in as short lines (16 November 2026) ──
+//
+// The founder, on the first check-in to reach him: "the guide as a paragraph looks like a long prose - would concise
+// bullet points work better?" A Monday check-in is now at most four short lines, each with one job: the week, what is
+// on pace, what is not, the plan. The two in the middle are COUNTED here, from the pace words the page already
+// shows, and are never written by the model: a count cannot be miscounted and a name cannot be left out. The Guide
+// writes the first and the last. A figure is written only for a target that is not simply on pace, because the table
+// above the check-in already holds every figure. The month's read and the whole road stay as paragraphs.
+//
+// It is kept as it always was, in the check-in's one column of text: one line to a row, "Head: words". The page, the
+// check-in's email and "Your week" all read it back with checkinLinesOf, so the three cannot drift.
+
+export type CheckinLine = { head: string; text: string };
+/** The heads a Monday check-in can carry, in the order they are shown. A text is read as lines only when every row opens with one of them. */
+export const CHECKIN_HEADS = { week: "The week", on: "On pace", off: "Not on pace", waitingWeek: "Waiting on a full week", waiting: "Waiting", plan: "The plan" } as const;
+/** The Guide's last line when it finds nothing to say about the plan: fixed words, so the null answer always reads the same. */
+export const PLAN_NOTHING = "Nothing in this week's figures argues for more or less than it asks.";
+
+/** A target's name inside a sentence: no capital it does not need, and no comma of its own to break a list. */
+const IN_A_SENTENCE: Partial<Record<MarkerKey, string>> = {
+  mets: "fitness", vo2: "VO₂max", dose: "weekly dose", zone2_week: "zone 2 a week", longest_session: "longest session", strength_week: "strength a week",
+  steps: "steps a day", background: "background movement", sitting: "sitting", pal: "activity level", cadence: "cadence", sleep: "sleep", sri: "sleep regularity",
+  rhr: "resting heart rate", hrv: "night HRV", hrr: "1-minute recovery", bp: "blood pressure", breathing: "breathing rate", spo2: "blood oxygen",
+  weight: "weight", waist: "waist", almi: "ALMI", body_fat: "body fat", ffmi: "fat-free mass index", grip: "grip strength", chair_stands: "chair stand", sppb: "SPPB",
+};
+const nameInSentence = (p: { marker: string; label: string }) => IN_A_SENTENCE[p.marker as MarkerKey] ?? SAID[p.marker as MarkerKey] ?? p.label;
+const MONTH_FIRST = /^(January|February|March|April|May|June|July|August|September|October|November|December)\b/;
+/** A pace word inside a sentence: "A centimetre behind" reads "a centimetre behind"; a month's name and a numeral keep their start. */
+const lowerFirst = (w: string) => (MONTH_FIRST.test(w) ? w : w.charAt(0).toLowerCase() + w.slice(1));
+const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+/** "Sunday 22 November", from the date's own digits: no clock and no locale data, so it reads the same wherever it runs. */
+const plainDay = (d: string) => { const [y, m, dd] = d.slice(0, 10).split("-").map(Number); return `${WEEKDAY_NAMES[new Date(Date.UTC(y, m - 1, dd)).getUTCDay()]} ${dd} ${MONTH_NAMES[m - 1]}`; };
+
+type PaceRow = CheckinInputs["pace"][number];
+const NOT_JUDGED_YET = /^No (full week|session on file|reading|starting value)\b/;
+/**
+ * Where a row sits in the check-in. "on": the page colours its word good, or it is at its number (a move inside what
+ * two readings differ by is not a change, and is not a miss). "off": the page colours it caution. "waiting": there is
+ * nothing to judge yet, and the word says why.
+ */
+const groupOf = (p: PaceRow): "on" | "off" | "waiting" =>
+  p.tone === "good" ? "on" : p.tone === "caution" ? "off" : /^(At your number|Held\b)/.test(p.pace_word) ? "on" : "waiting";
+
+/**
+ * The counted lines of a Monday check-in, from the pace rows: which targets are on pace, as a count and their names,
+ * and the rest with their reasons. A target that is simply on pace is named and not re-quoted; one that is ahead,
+ * reached or behind carries its figure. `firstFullWeekEnds` is the Sunday the horizon's first Monday-to-Sunday week
+ * ends on, for the line that says what a weekly target is waiting for. Empty when the horizon holds no target.
+ */
+export function countedLines(pace: PaceRow[], firstFullWeekEnds: string | null): CheckinLine[] {
+  const out: CheckinLine[] = [];
+  const on = pace.filter((p) => groupOf(p) === "on"), off = pace.filter((p) => groupOf(p) === "off"), waiting = pace.filter((p) => groupOf(p) === "waiting");
+  if (on.length) {
+    const item = (p: PaceRow) => {
+      if (p.pace_word === "On pace") return nameInSentence(p);
+      const figure = /^(Ahead of pace|Reached|Nearly there|At your number)$/.test(p.pace_word) && p.said?.now ? `${p.said.now}, ` : "";
+      return `${nameInSentence(p)} (${figure}${lowerFirst(p.pace_word.replace(/^Held: .*/, "Held"))})`;
+    };
+    const names = listWords(on.map(item));
+    out.push({ head: CHECKIN_HEADS.on, text: pace.length === 1 ? `${cap(names)}, your one target.` : on.length === pace.length ? `All ${pace.length} targets: ${names}.` : `${on.length} of ${pace.length} targets: ${names}.` });
+  }
+  // the targets with nothing to judge yet, said once for each reason: "weekly dose and zone 2 a week, no full week yet"
+  const reasons = [...new Set(waiting.map((p) => p.pace_word))];
+  const waitingItems = reasons.map((r) => `${listWords(waiting.filter((p) => p.pace_word === r).map(nameInSentence))}, ${lowerFirst(r)}`);
+  if (off.length) {
+    // "Reached in 2 of 5 full weeks" is its own figure; every other word is read beside where the marker stands now.
+    // Never a nought ("0 sessions now"), and past four such targets the figures are left to the table so the line stays short.
+    const figures = off.length <= 4;
+    const item = (p: PaceRow) => `${nameInSentence(p)}, ${lowerFirst(p.pace_word)}${figures && p.said?.now && p.now !== 0 && !/^Reached in /.test(p.pace_word) ? ` (${p.said.now} now)` : ""}`;
+    out.push({ head: CHECKIN_HEADS.off, text: `${cap([...off.map(item), ...waitingItems].join("; "))}.` });
+  } else if (waiting.length) {
+    const weekOnly = reasons.length === 1 && reasons[0] === "No full week yet";
+    out.push(weekOnly
+      ? { head: CHECKIN_HEADS.waitingWeek, text: `${cap(listWords(waiting.map(nameInSentence)))}.${firstFullWeekEnds ? ` The first full week ends on ${plainDay(firstFullWeekEnds)}.` : ""}` }
+      : { head: CHECKIN_HEADS.waiting, text: `${cap(waitingItems.join("; "))}.` });
+  }
+  return out;
+}
+
+/** A check-in's lines as the one column of text keeps them: one line to a row, "Head: words". */
+export const linesText = (lines: CheckinLine[]) => lines.map((l) => `${l.head}: ${l.text}`).join("\n");
+/**
+ * A stored check-in read back. Its lines, when it was kept as lines: two rows or more, every one opening with a head
+ * this file knows. Null for prose: every check-in written before 16 November 2026, the month's read, the whole road.
+ */
+export function checkinLinesOf(text: string | null | undefined): CheckinLine[] | null {
+  const rows = String(text ?? "").split(/\n+/).map((r) => r.trim()).filter(Boolean);
+  if (rows.length < 2) return null;
+  const heads = Object.values(CHECKIN_HEADS) as string[];
+  const out: CheckinLine[] = [];
+  for (const r of rows) {
+    const head = heads.find((h) => r.startsWith(`${h}: `));
+    const rest = head ? r.slice(head.length + 2).trim() : "";
+    if (!head || !rest) return null;
+    out.push({ head, text: rest });
+  }
+  return out;
+}
+
+/**
+ * The inputs as the Guide is shown them. Every figure is the page's own print of it, with its unit; a figure that was
+ * not recorded is left out, and a week with no session says "none on file", so the Guide has no nought and no raw
+ * decimal to copy. The numbers the email's table and the next check-in read stay in the stored inputs beside this;
+ * this is only what the model sees, and what the numbers-only check then holds its words to.
+ *
+ * A Monday check-in is not shown the week's sleep, resting heart rate or night HRV: they are averages of the
+ * horizon week's own days, which on a short week are few, and beside the page's seven-day figure for the same marker
+ * they read as a disagreement. A marker the person made a target is in the pace rows, as the page prints it.
+ */
+export function guideView(inputs: CheckinInputs, kind: "week" | "month" | "final"): Record<string, unknown> {
+  const n = (v: number) => Math.round(v).toLocaleString("en-GB");
+  const big = (v: number) => (Math.abs(v) >= 1000 ? n(v) : v);
+  const w = inputs.week;
+  const week: Record<string, unknown> = { from: w.from, to: w.to, days: w.days, short: w.short };
+  if (w.from != null) {
+    week.sessions = w.sessions > 0 ? `${n(w.sessions)} ${w.sessions === 1 ? "session" : "sessions"}` : "none on file";
+    if (w.dose != null && w.dose > 0) week.dose = `${n(w.dose)} MET-min`;
+    // a short week is never read against a weekly number, so it is not shown one
+    if (w.goal != null && w.goal > 0 && !w.short) week.goal = `${n(w.goal)} MET-min`;
+    if (w.zone2 != null && w.zone2 > 0) week.zone2 = `${n(w.zone2)} min`;
+    if (w.zone3 != null && w.zone3 > 0) week.zone3 = `${n(w.zone3)} min`;
+    if (w.strength > 0) week.strength = `${n(w.strength)} ${w.strength === 1 ? "strength session" : "strength sessions"}`;
+    if (kind !== "week") {
+      if (w.sleep_avg != null) week.sleep_avg = hm(w.sleep_avg);
+      if (w.rhr != null) week.rhr = `${n(w.rhr)} bpm`;
+      if (w.hrv != null) week.hrv = `${n(w.hrv)} ms`;
+    }
+  }
+  const pace = inputs.pace.map((p) => {
+    const def = MARKER_BY_KEY[p.marker];
+    // a row from a page that predates `said` is printed here by the same rule
+    const say = (text: string | null | undefined, v: number | null | undefined) => (text !== undefined ? text : def ? withUnit(def, fmtValue(def, v), v, p.unit) : v == null ? null : String(v));
+    // a weekly figure that came to nothing is said in a word, never as a nought
+    const now = p.now === 0 && def?.kind === "weekly" ? "none" : say(p.said?.now, p.now);
+    // a figure that stands every week has no line to the date, so no place it should be today
+    const expected = p.said ? p.said.expected : def?.standing ? null : say(undefined, p.expected_today);
+    return { label: p.label, start: say(p.said?.start, p.start), now, target: say(p.said?.target, p.target), expected_today: expected,
+      pace_word: p.pace_word, measured_on: p.measured_on, ...(p.swing ? { swing: p.swing } : {}) };
+  });
+  const plan = inputs.plan.map((r) => (r.kind === "bedtime_by" && r.n != null ? { label: r.label, by: clockOf(r.n) } : { label: r.label, ...(r.n != null ? { n: big(r.n) } : {}) }));
+  const adherence = inputs.adherence.map((a) => ({ label: a.label, ...(a.done != null ? { done: big(a.done) } : {}), ...(a.of != null ? { of: big(a.of) } : {}), word: a.word }));
+  return { horizon: inputs.horizon, week, pace, plan, adherence,
+    ...(kind === "week" && inputs.lines?.length ? { written: inputs.lines.map((l) => `${l.head}: ${l.text}`) } : {}) };
+}
+
+/**
+ * The week in one counted line, for when the Guide's own first line does not survive the numbers-only check: the
+ * check-in is never left without it. Null when no week of the horizon has ended.
+ */
+export function weekLine(inputs: CheckinInputs): string | null {
+  const w = inputs.week;
+  if (!w.from || !w.to) return null;
+  const v = guideView(inputs, "week").week as Record<string, string | undefined>;
+  const figures = [v.sessions !== "none on file" ? v.sessions : null, v.dose ? (v.goal ? `${v.dose} against your goal of ${v.goal}` : v.dose) : null, v.zone2 ? `${v.zone2} in zone 2` : null, v.strength ?? null].filter((x): x is string => !!x);
+  const days = daysWords(w.from, w.to);
+  if (w.short) return `A short week of ${w.days} day${w.days === 1 ? "" : "s"}, ${days}${figures.length ? `: ${listWords(figures)}` : ", with no session on file"}. A short week is not read against a weekly number.`;
+  return figures.length ? `${cap(listWords(figures))}.` : `No session on file for ${days}.`;
 }

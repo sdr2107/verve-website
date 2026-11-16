@@ -10,6 +10,7 @@ import {
   swingRead, medicineOf, BLOOD_TARGETS_OPEN, isTargetable, TARGET_MARKERS, FIRST_MARKERS, openTargets, horizonLinesByCard,
   typicalWeek, typicalOf, weekMoves, readingAt, targetKeyOf, ML_PER_MET,
   horizonSpans, spanOf, spanFigures, weekSoFar, fullWeeksSoFar, windowWords, weeksWords, daysWords, weekWords,
+  withUnit, listWords, countedLines, linesText, checkinLinesOf, guideView, weekLine, CHECKIN_HEADS, PLAN_NOTHING,
 } from "../src/my-health/horizon/derive.ts";
 
 const TODAY = "2026-11-08";                      // a Sunday; the last complete week is 26 October
@@ -494,7 +495,7 @@ test("no blood marker can be a target: not offered, not paced, not on the Overvi
   const inputs = checkinInputs(H, targets, [], p, TODAY);
   assert.deepEqual(inputs.pace.map((x) => x.marker), ["mets", "dose"]);
   assert.ok(!/medic|swing|LDL|triglycer/i.test(JSON.stringify(inputs)));
-  for (const row of inputs.pace) assert.deepEqual(Object.keys(row).sort(), ["expected_today", "label", "marker", "measured_on", "now", "pace_word", "start", "target", "unit"]);
+  for (const row of inputs.pace) assert.deepEqual(Object.keys(row).sort(), ["expected_today", "label", "marker", "measured_on", "now", "pace_word", "said", "start", "target", "tone", "unit"]);
 });
 
 // ── a horizon reads from the day it was set (15 November 2026) ──
@@ -606,3 +607,132 @@ test("the check-in's week is the horizon week that has just ended, short or full
   assert.deepEqual([day0.week.from, day0.week.days, day0.week.dose, day0.week.sessions], [null, 0, null, 0]);
 });
 
+// ── the Monday check-in as short lines (16 November 2026) ──
+
+/** A pace row as the check-in's inputs carry it, for the counted lines: the word, its colour, the figure as printed. */
+const row = (marker, pace_word, tone, now = null, value = 1) => ({ marker, label: MARKER_BY_KEY[marker].label, unit: MARKER_BY_KEY[marker].unit, start: null, now: now == null ? null : value, target: 1, expected_today: null, pace_word, measured_on: null, tone, said: { start: null, now, target: null, expected: null } });
+
+test("a figure is said with its unit as the page prints the two: a comma in the thousands, hours and minutes, one session", () => {
+  assert.equal(withUnit(MARKER_BY_KEY.steps, "5,610", 5610.14), "5,610 steps");
+  assert.equal(withUnit(MARKER_BY_KEY.sleep, "7 h 50", 470), "7 h 50", "a time carries its own units");
+  assert.equal(withUnit(MARKER_BY_KEY.strength_week, "1", 1.08), "1 session", "the unit follows the figure as printed");
+  assert.equal(withUnit(MARKER_BY_KEY.strength_week, "2", 2), "2 sessions");
+  assert.equal(withUnit(MARKER_BY_KEY.body_fat, "18.4", 18.4), "18.4%");
+  assert.equal(withUnit(MARKER_BY_KEY.sri, "84", 84), "84", "a marker with no unit is its figure");
+  assert.equal(withUnit(MARKER_BY_KEY.bp, "118/76", 118), "118/76 mmHg", "the reading's own print wins");
+  assert.equal(withUnit(MARKER_BY_KEY.grip, "—", null), null, "a dash is nothing to say");
+  assert.equal(listWords(["a"]), "a"); assert.equal(listWords(["a", "b"]), "a and b"); assert.equal(listWords(["a", "b", "c"]), "a, b and c");
+});
+
+test("the check-in's inputs carry each figure as the page prints it, beside the number the table reads", () => {
+  const targets = [tgt("mets", 8.6, 9.6), tgt("dose", 820, 1000), tgt("steps", 8000, 9000), tgt("rhr", 54, 50), tgt("sleep", 470, 480), tgt("bp", 120, 115), tgt("grip", null, 40)];
+  const inp = checkinInputs(H, targets, [], person, TODAY);
+  const said = Object.fromEntries(inp.pace.map((p) => [p.marker, p.said]));
+  assert.deepEqual(said.mets, { start: "8.6 METs", now: "8.9 METs", target: "9.6 METs", expected: "8.9 METs" });
+  assert.equal(said.dose.now, "1,040 MET-min"); assert.equal(said.dose.target, "1,000 MET-min");
+  assert.equal(said.dose.expected, null, "a number held every week has no line to the date");
+  assert.equal(said.steps.now, "8,300 steps"); assert.equal(said.rhr.now, "52 bpm", "52.43 on file, 52 on the page");
+  assert.equal(said.sleep.now, "8 h 06"); assert.equal(said.bp.now, "118/76 mmHg");
+  assert.deepEqual(said.grip, { start: null, now: null, target: "40.0 kg", expected: null });
+  // the number beside it is unchanged: the email's table and the next check-in still read it
+  assert.equal(inp.pace.find((p) => p.marker === "rhr").now, 52.43);
+  assert.deepEqual(inp.pace.map((p) => p.tone).sort().filter((t, i, a) => a.indexOf(t) === i).every((t) => ["good", "caution", "neutral"].includes(t)), true);
+});
+
+test("the counted lines: what is on pace as a count and names, the rest with their reasons, four targets or forty", () => {
+  // every target on pace
+  assert.deepEqual(countedLines([row("mets", "On pace", "good"), row("steps", "On pace", "good"), row("bp", "On pace", "good")], null),
+    [{ head: "On pace", text: "All 3 targets: fitness, steps a day and blood pressure." }]);
+  assert.deepEqual(countedLines([row("mets", "On pace", "good")], null), [{ head: "On pace", text: "Fitness, your one target." }]);
+  // a horizon set mid-week, on its first Monday: the weekly targets wait for a full week, and the line says when it ends
+  const first = countedLines([row("mets", "On pace", "good"), row("rhr", "On pace", "good"), row("dose", "No full week yet", "neutral"), row("zone2_week", "No full week yet", "neutral"), row("strength_week", "No full week yet", "neutral")], "2026-11-22");
+  assert.deepEqual(first, [
+    { head: "On pace", text: "2 of 5 targets: fitness and resting heart rate." },
+    { head: "Waiting on a full week", text: "Weekly dose, zone 2 a week and strength a week. The first full week ends on Sunday 22 November." },
+  ]);
+  // a target simply on pace is named; one that is ahead, reached or behind carries its figure; a word keeps its sense in a sentence
+  const mixed = countedLines([
+    row("mets", "On pace", "good", "8.9 METs"), row("weight", "Ahead of pace", "good", "73.1 kg"), row("grip", "Held", "good", "41.0 kg"), row("dose", "Reached in 3 of 3 full weeks", "good", "1,040 MET-min"),
+    row("bp", "Held: the move is inside what two readings differ by", "neutral", "121/78 mmHg"),
+    row("waist", "A centimetre behind", "caution", "96 cm"), row("zone2_week", "Reached in 2 of 5 full weeks", "caution", "102 min"), row("strength_week", "Slightly behind", "caution", "0 sessions", 0),
+    row("chair_stands", "No reading yet", "neutral"),
+  ], "2026-11-22");
+  assert.deepEqual(mixed, [
+    { head: "On pace", text: "5 of 9 targets: fitness, weight (73.1 kg, ahead of pace), grip strength (held), weekly dose (reached in 3 of 3 full weeks) and blood pressure (held)." },
+    { head: "Not on pace", text: "Waist, a centimetre behind (96 cm now); zone 2 a week, reached in 2 of 5 full weeks; strength a week, slightly behind; chair stand, no reading yet." },
+  ]);
+  assert.ok(!/\b0 sessions/.test(linesText(mixed)), "never a nought");
+  // nothing on pace and two reasons to wait: one line, each reason said once
+  assert.deepEqual(countedLines([row("dose", "No full week yet", "neutral"), row("grip", "No reading yet", "neutral"), row("sppb", "No reading yet", "neutral")], "2026-11-22"),
+    [{ head: "Waiting", text: "Weekly dose, no full week yet; grip strength and SPPB, no reading yet." }]);
+  // past four targets off pace the figures are left to the table above, so the line stays short
+  const many = countedLines(["mets", "weight", "waist", "rhr", "steps"].map((m) => row(m, "Slightly behind", "caution", "1 x")), null);
+  assert.equal(many[0].text, "Fitness, slightly behind; weight, slightly behind; waist, slightly behind; resting heart rate, slightly behind; steps a day, slightly behind.");
+  assert.deepEqual(countedLines([], null), [], "a horizon with no target has no counted line");
+  // the inputs carry them, worked out from the same rows
+  const inp = checkinInputs(H, [tgt("mets", 8.6, 9.6), tgt("dose", 820, 1000)], [], person, TODAY);
+  assert.deepEqual(inp.lines, countedLines(inp.pace, "2026-09-13"));
+  assert.equal(inp.lines[0].head, "On pace");
+});
+
+test("a check-in kept as lines is read back as lines; prose is left as prose", () => {
+  const lines = [{ head: CHECKIN_HEADS.week, text: "5 sessions and 1,040 MET-min against your goal of 1,000 MET-min." }, { head: CHECKIN_HEADS.on, text: "All 2 targets: fitness and weekly dose." }, { head: CHECKIN_HEADS.plan, text: PLAN_NOTHING }];
+  const text = linesText(lines);
+  assert.equal(text.split("\n").length, 3);
+  assert.deepEqual(checkinLinesOf(text), lines);
+  assert.deepEqual(checkinLinesOf("The week: A short week.\n\nThe plan: Nothing in it: not yet."), [{ head: "The week", text: "A short week." }, { head: "The plan", text: "Nothing in it: not yet." }], "a colon inside the words stays in the words");
+  // every check-in written before 16 November 2026 is one paragraph; a month's read may be two
+  assert.equal(checkinLinesOf("The week closed with 1,040 MET-min. Fitness is on pace."), null);
+  assert.equal(checkinLinesOf("November closed with four full weeks.\n\nThe plan was kept in three of them."), null);
+  assert.equal(checkinLinesOf("The week: one line is a sentence, not a list."), null);
+  assert.equal(checkinLinesOf("The week: A short week.\nA row with no head."), null, "one row out of shape and the whole is prose");
+  assert.equal(checkinLinesOf(""), null); assert.equal(checkinLinesOf(null), null);
+});
+
+test("the Guide is shown figures as the page prints them: no raw decimal, no nought, no minutes for a night", () => {
+  const targets = [tgt("mets", 8.6, 9.6), tgt("dose", 820, 1000), tgt("steps", 8000, 9000), tgt("rhr", 54, 50), tgt("sleep", 470, 480), tgt("strength_week", 1, 2)];
+  const plan = [{ kind: "sessions_week", label: "Five sessions a week", n: 5 }, { kind: "bedtime_by", label: "In bed by 23:30", n: 1410 }, { kind: "steps_day", label: "9,000 steps a day", n: 9000 }];
+  const inp = checkinInputs(H, targets, plan, person, TODAY);
+  const week = guideView(inp, "week");
+  assert.deepEqual(week.week, { from: "2026-10-26", to: "2026-11-01", days: 7, short: false, sessions: "5 sessions", dose: "1,040 MET-min", goal: "1,000 MET-min", zone2: "102 min", zone3: "38 min", strength: "1 strength session" });
+  const rhr = week.pace.find((p) => p.label === "Resting heart rate");
+  assert.deepEqual(rhr, { label: "Resting heart rate", start: "54 bpm", now: "52 bpm", target: "50 bpm", expected_today: rhr.expected_today, pace_word: rhr.pace_word, measured_on: rhr.measured_on });
+  assert.equal(week.pace.find((p) => p.label === "Sleep").now, "8 h 06");
+  assert.deepEqual(week.plan, [{ label: "Five sessions a week", n: 5 }, { label: "In bed by 23:30", by: "23:30" }, { label: "9,000 steps a day", n: "9,000" }]);
+  assert.equal(week.adherence.find((a) => a.label === "9,000 steps a day").done, "8,300");
+  assert.deepEqual(week.written, inp.lines.map((l) => `${l.head}: ${l.text}`), "the counted lines, so the Guide does not write them again");
+  const json = JSON.stringify(week);
+  assert.ok(!/52\.43|1410|\b486\b|"marker"|"unit"|"tone"|"said"/.test(json), json);
+  // a month's read keeps the week's sleep and mornings, as printed; a Monday check-in is not shown them
+  assert.ok(!("rhr" in week.week) && !("sleep_avg" in week.week) && !("hrv" in week.week));
+  const month = guideView(inp, "month");
+  assert.equal(month.week.sleep_avg, "8 h 06"); assert.equal(month.week.rhr, "52 bpm"); assert.equal(month.week.hrv, "48 ms");
+  assert.ok(!("written" in month), "a month's read is prose, with no line written for it");
+  // inputs from a page that predates `said` are printed by the same rule
+  const old = { ...inp, pace: inp.pace.map(({ said, tone, ...rest }) => rest), lines: undefined };
+  assert.deepEqual(guideView(old, "week").pace, week.pace);
+  assert.ok(!("written" in guideView(old, "week")));
+});
+
+test("a short week, an empty week and a weekly figure that came to nothing are said in words", () => {
+  const p = midweekPerson();
+  const first = checkinInputs(MIDWEEK, [tgt("dose", 400, 500, { start_on: "2026-11-18" })], [], p, "2026-11-23");
+  const v = guideView(first, "week");
+  assert.equal(v.week.short, true); assert.equal(v.week.sessions, "2 sessions"); assert.equal(v.week.dose, "160 MET-min");
+  assert.ok(!("goal" in v.week), "a short week is not shown a weekly number to be read against");
+  assert.equal(weekLine(first), "A short week of 5 days, Wed 18 to Sun 22 Nov: 2 sessions, 160 MET-min, 12 min in zone 2 and 1 strength session. A short week is not read against a weekly number.");
+  assert.deepEqual(first.lines, [{ head: "Waiting on a full week", text: "Weekly dose. The first full week ends on Sunday 29 November." }]);
+  // the day it was set: no week has ended, and there is no line for one
+  const day0 = checkinInputs(MIDWEEK, [], [], p, "2026-11-18");
+  assert.deepEqual(guideView(day0, "week").week, { from: null, to: null, days: 0, short: false });
+  assert.equal(weekLine(day0), null);
+  // a full week
+  assert.equal(weekLine(checkinInputs(H, [], [], person, TODAY)), "5 sessions, 1,040 MET-min against your goal of 1,000 MET-min, 102 min in zone 2 and 1 strength session.");
+  // a week with nothing on file, and a strength target that week
+  const empty = derivePerson({ ...document(), activities: [], weeks: [] });
+  const none = checkinInputs(H, [tgt("strength_week", 1, 2)], [], empty, TODAY);
+  assert.equal(guideView(none, "week").week.sessions, "none on file");
+  assert.equal(weekLine(none), "No session on file for Mon 26 Oct to Sun 1 Nov.");
+  assert.ok(!/"0 |: ?0[,}]/.test(JSON.stringify(guideView(none, "week").week)), "no nought in the week");
+  for (const row of guideView(none, "week").pace) assert.notEqual(row.now, "0 sessions");
+});
