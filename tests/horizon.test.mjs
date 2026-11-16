@@ -665,9 +665,9 @@ test("the counted lines: what is on pace as a count and names, the rest with the
   // nothing on pace and two reasons to wait: one line, each reason said once
   assert.deepEqual(countedLines([row("dose", "No full week yet", "neutral"), row("grip", "No reading yet", "neutral"), row("sppb", "No reading yet", "neutral")], "2026-11-22"),
     [{ head: "Waiting", text: "Weekly dose, no full week yet; grip strength and SPPB, no reading yet." }]);
-  // past four targets off pace the figures are left to the table above, so the line stays short
-  const many = countedLines(["mets", "weight", "waist", "rhr", "steps"].map((m) => row(m, "Slightly behind", "caution", "1 x")), null);
-  assert.equal(many[0].text, "Fitness, slightly behind; weight, slightly behind; waist, slightly behind; resting heart rate, slightly behind; steps a day, slightly behind.");
+  // past four targets off pace the figures are left to the table above and a shared word is said once, so the line stays short
+  const many = countedLines([row("mets", "0.1 METs behind", "caution", "8.9 METs"), ...["weight", "waist", "rhr"].map((m) => row(m, "Slightly behind", "caution", "1 x")), row("steps", "246 steps behind", "caution", "5,695 steps"), row("bp", "Slightly behind", "caution", "121/78 mmHg")], null);
+  assert.deepEqual(many, [{ head: "Not on pace", text: "Fitness, 0.1 METs behind; weight, waist, resting heart rate and blood pressure, slightly behind; steps a day, 246 steps behind." }]);
   assert.deepEqual(countedLines([], null), [], "a horizon with no target has no counted line");
   // the inputs carry them, worked out from the same rows
   const inp = checkinInputs(H, [tgt("mets", 8.6, 9.6), tgt("dose", 820, 1000)], [], person, TODAY);

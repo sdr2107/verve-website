@@ -1292,10 +1292,12 @@ export function countedLines(pace: PaceRow[], firstFullWeekEnds: string | null):
   const waitingItems = reasons.map((r) => `${listWords(waiting.filter((p) => p.pace_word === r).map(nameInSentence))}, ${lowerFirst(r)}`);
   if (off.length) {
     // "Reached in 2 of 5 full weeks" is its own figure; every other word is read beside where the marker stands now.
-    // Never a nought ("0 sessions now"), and past four such targets the figures are left to the table so the line stays short.
-    const figures = off.length <= 4;
-    const item = (p: PaceRow) => `${nameInSentence(p)}, ${lowerFirst(p.pace_word)}${figures && p.said?.now && p.now !== 0 && !/^Reached in /.test(p.pace_word) ? ` (${p.said.now} now)` : ""}`;
-    out.push({ head: CHECKIN_HEADS.off, text: `${cap([...off.map(item), ...waitingItems].join("; "))}.` });
+    // Never a nought ("0 sessions now"). Past four such targets the line would run long: the figures are left to the
+    // table above, and targets that share a word are said together ("waist and weight, slightly behind").
+    const item = (p: PaceRow) => `${nameInSentence(p)}, ${lowerFirst(p.pace_word)}${p.said?.now && p.now !== 0 && !/^Reached in /.test(p.pace_word) ? ` (${p.said.now} now)` : ""}`;
+    const words = [...new Set(off.map((p) => p.pace_word))];
+    const offItems = off.length <= 4 ? off.map(item) : words.map((w) => `${listWords(off.filter((p) => p.pace_word === w).map(nameInSentence))}, ${lowerFirst(w)}`);
+    out.push({ head: CHECKIN_HEADS.off, text: `${cap([...offItems, ...waitingItems].join("; "))}.` });
   } else if (waiting.length) {
     const weekOnly = reasons.length === 1 && reasons[0] === "No full week yet";
     out.push(weekOnly
