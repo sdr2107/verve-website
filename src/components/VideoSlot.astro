@@ -5,13 +5,14 @@
  * Each is the silent website cut from data/videos.ts: a poster with a play
  * button; the tap swaps in the file itself, playing, with the browser's own
  * controls. Nothing loads until it is asked for, and nothing comes from a
- * third party. Under the title, the length and, for a video that is also on
- * the channel, the way to YouTube. A topic with no video yet keeps the
+ * third party. Under the title, the length; for a video made from one of the
+ * founder's posts, the post on Substack and X, to read instead or as well;
+ * and, for a video also on the channel, that video on YouTube. A topic with no video yet keeps the
  * dashed placeholder, so the page says so rather than showing a gap. Each
  * video carries id="video-<slug>", which is where a search hit under Watch
  * lands. Nothing plays by itself and nothing has sound.
  */
-import { videosForTopic, videosBySlugs, videoSrc, videoPoster, videoChannel, fmtSeconds, type Video } from "../data/videos";
+import { videosForTopic, videosBySlugs, videoSrc, videoPoster, videoYouTube, fmtSeconds, type Video } from "../data/videos";
 import { TOPICS, topicHref } from "../data/scienceTopics";
 
 interface Props {
@@ -47,9 +48,17 @@ const cols = videos.length > 2 ? "sm:grid-cols-2 lg:grid-cols-3" : videos.length
               {fmtSeconds(v.seconds)} &middot; captions, no sound
               {withTopic && v.topic && <> &middot; <a href={topicHref(v.topic)} class="text-accent-light hover:text-text-primary">{topicLabel(v.topic)}</a></>}
             </span>
+            {v.posts && (v.posts.substack || v.posts.x) && (
+              <span class="mt-1 block text-xs text-text-tertiary">
+                Read the post:{" "}
+                {v.posts.substack && <a href={v.posts.substack} target="_blank" rel="noopener" class="font-semibold text-accent-light hover:text-text-primary">Substack</a>}
+                {v.posts.substack && v.posts.x && <> &middot; </>}
+                {v.posts.x && <a href={v.posts.x} target="_blank" rel="noopener" class="font-semibold text-accent-light hover:text-text-primary">X</a>}
+              </span>
+            )}
           </span>
           {v.youtube && (
-            <a href={videoChannel} target="_blank" rel="noopener" class="shrink-0 text-xs font-semibold text-text-tertiary hover:text-text-primary">YouTube &rarr;</a>
+            <a href={videoYouTube(v)} target="_blank" rel="noopener" class="shrink-0 text-xs font-semibold text-text-tertiary hover:text-text-primary">YouTube &rarr;</a>
           )}
         </figcaption>
       </figure>

@@ -20,6 +20,7 @@ import type { APIRoute } from "astro";
 import { SUBJECTS, TOPICS, subjectFor, topicHref } from "../data/scienceTopics";
 import { BODY_MARKERS } from "../data/bodyMarkers";
 import { VIDEOS, GROUPS, fmtSeconds } from "../data/videos";
+import VIDEO_WORDS from "../data/videoWords.json";
 import { TIERS_MEN, TIERS_WOMEN, TIER_LABELS, tierRanges, TIER_SOURCES } from "../data/fitness-tiers";
 
 export const prerender = true;
@@ -118,7 +119,8 @@ export const GET: APIRoute = () => {
     const group = GROUPS.find((g) => g.key === v.group)!;
     entries.push({
       k: "video", t: v.title, s: topic ? `On the ${topic.label} page.` : v.group === "how-verve-works" ? "On How it works." : `In the videos, under ${group.label}.`,
-      u: videoHref(v), d: "", h: [], x: [topic?.label ?? "", topic?.sub ?? "", group.label, group.blurb].join(" "),
+      // what the video says on its screens (16 Nov 2026: "home blood pressure" found nothing, as the title says BP)
+      u: videoHref(v), d: "", h: [], x: [(VIDEO_WORDS as Record<string, string>)[v.slug] ?? "", topic?.label ?? "", topic?.sub ?? "", group.label, group.blurb].join(" "),
       m: `${fmtSeconds(v.seconds)} · captions`,
     });
   }
