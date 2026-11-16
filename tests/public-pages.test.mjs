@@ -88,3 +88,19 @@ test("prose wrapped across lines keeps its spaces: the build's whitespace handli
 test("the fitness-and-survival video stays off the site until it is recut", () => {
   assert.ok(!VIDEOS.some((v) => v.slug === "arc-fitness-survival"), "arc-fitness-survival is back in videos.ts: only the recut may return, and this test goes with it");
 });
+
+// 16 Nov 2026: a search for "home blood pressure" missed the home BP video (its title says "BP"), and every
+// YouTube link opened the channel's home page. Each video now carries the words on its screens, its own id on
+// the channel, and, when it was made from one, the founder's post to read instead.
+test("every video is searchable by what it says, and links to itself on YouTube and to its posts", () => {
+  const words = JSON.parse(readFileSync(join(SRC, "data/videoWords.json"), "utf8"));
+  for (const v of VIDEOS) {
+    assert.ok((words[v.slug] ?? "").length >= 40, `${v.slug} has no words for the search: run verve-videos/tools/web_words.py`);
+    if (v.youtube !== undefined) assert.match(v.youtube, /^[\w-]{11}$/, `${v.slug}: youtube is the video's own id, not a channel address`);
+    if (v.posts?.substack) assert.match(v.posts.substack, /^https:\/\/(substack\.com\/@roplekarsudeep\/note\/c-\d+|roplekarsudeep\.substack\.com\/p\/[\w-]+)$/, `${v.slug}: substack`);
+    if (v.posts?.x) assert.match(v.posts.x, /^https:\/\/x\.com\/RoplekarSudeep\/status\/\d+$/, `${v.slug}: x`);
+  }
+  const ids = VIDEOS.filter((v) => v.youtube).map((v) => v.youtube);
+  assert.equal(new Set(ids).size, ids.length, "no two videos share a YouTube id");
+  assert.ok(Object.keys(words).every((s) => VIDEOS.some((v) => v.slug === s)), "videoWords.json holds only the site's videos");
+});
