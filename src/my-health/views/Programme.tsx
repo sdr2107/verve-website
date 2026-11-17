@@ -26,11 +26,12 @@ import {
 } from "../horizon/derive.ts";
 import { DOOR_BY_KEY, FEWEST_AEROBIC_DAYS, FITNESS_RULES, GOALS, GOAL_BY_KEY, GRIP, LENGTH_FOR, OWN_GOAL, BARRIERS, TEMPLATE_KEEPS, WAYS, WEIGHT, doiUrl, type GoalKey, type Line, type Mode } from "../../data/programme.ts";
 import {
-  DAY_NAMES, MODE_WORDS, alreadyReads, callsKept, doorLine, doorsOnFile, goalDraft, isAwayWay, mondayRow, noteFor, parseProgramme, sheetWeeks, startingMethod, threeSigns, weightPace,
+  DAY_NAMES, MODE_WORDS, alreadyReads, callsKept, doorLine, doorsOnFile, goalDraft, mondayRow, noteFor, parseProgramme, sheetWeeks, startingMethod, threeSigns, weightPace,
   type MondayRow, type Programme, type WeekNote, type Writer,
 } from "../horizon/programme.ts";
 import { guidePlan, rowsWith, screenOutcome, storeOf, isGuideStored, SCREEN_QUESTIONS, SCREEN_WORDS, type GuideStored, type ScreenAnswers } from "../horizon/guidePlan.ts";
 import { methodLabel } from "../derive/markers.ts";
+import type { PauseChoice, PauseState } from "../horizon/pause.ts";
 import {
   startHorizon, saveProgramme, setTargetHold, saveScreen, saveGuidePlan, listWeekNotes, saveWeekNote, ERROR_WORDS,
   type ApiError, type HorizonAccess, type HorizonFull, type StartTarget,
@@ -420,11 +421,15 @@ export function WeightCard({ h, targets, person, today, programme }: { h: Horizo
 const callWords = (iso: string | null) => { if (!iso) return "No time set"; const d = new Date(iso); return `${d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}, ${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`; };
 const localInput = (iso: string | null) => { if (!iso) return ""; const d = new Date(iso); const p = (n: number) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
 
-export function CallCard({ sb, h, targets, person, today, owner, closed, tester, programme, planRows, guideOn, userId, setNotice }: {
+export function CallCard({ sb, h, targets, person, today, owner, closed, tester, programme, planRows, guideOn, userId, setNotice, pause, pausing, onSetAside }: {
   sb: SupabaseClient; h: HorizonFull; targets: Target[]; person: PersonData | null; today: string; owner: boolean; closed: boolean;
   /** A test account may write the coach's side of its own horizon, so the sheet can be tried by one person. */
   tester: boolean; programme: Programme; planRows: PlanRow[]; guideOn: boolean;
   userId: () => Promise<string | null>; setNotice: (s: string) => void;
+  /** The horizon's pauses (../horizon/pause.ts), when its owner may use one; null for a coach and for an account it is not offered to. */
+  pause?: PauseState | null; pausing?: boolean;
+  /** The owner sets last week aside (board 13, A): the page asks, then the function writes it. */
+  onSetAside?: (c: PauseChoice) => void;
 }) {
   const [notes, setNotes] = useState<WeekNote[] | null>(null);
   const [lines, setLines] = useState<string[] | null>(null);
@@ -441,9 +446,13 @@ export function CallCard({ sb, h, targets, person, today, owner, closed, tester,
   const coachSide = !owner || tester;
   const kept = notes ? callsKept(notes, h, today) : null;
   const review = view?.review ?? null;
-  const adherence = !review && person && lastWeek && planRows.length ? adherenceOf(planRows, person, lastWeek.from, lastWeek.to, h.starts_on) : [];
-  const moves = person && lastWeek ? weekMoves(targets, h, person, lastWeek.from, today) : [];
-  const short = review ? review.lines.some((l) => l.state === "short") : adherence.some((a) => a.tone === "caution");
+  // a paused week is shown and not judged: no line of it is read, nothing is asked about it
+  const judged = lastWeek && !lastWeek.paused ? lastWeek : null;
+  const adherence = !review && person && judged && planRows.length ? adherenceOf(planRows, person, judged.from, judged.to, h.starts_on) : [];
+  const moves = person && judged ? weekMoves(targets, h, person, judged.from, today) : [];
+  const short = !judged ? false : review ? review.lines.some((l) => l.state === "short") : adherence.some((a) => a.tone === "caution");
+  // the week just ended can still be set aside, until this Sunday (board 13, A)
+  const back = owner && !closed && judged ? pause?.choices.find((c) => c.key === "last" && c.ok && c.monday === judged.from) ?? null : null;
 
   async function write(weekStart: string, patch: Parameters<typeof saveWeekNote>[3]) {
     const uid = await userId();
@@ -458,23 +467,29 @@ export function CallCard({ sb, h, targets, person, today, owner, closed, tester,
   return (
     <Card id="horizon-call" accent>
       <div class="flex flex-wrap items-baseline justify-between gap-3">
-        <div class="flex flex-col gap-1"><Eyebrow>The call sheet · {thisWeek.n ? `week ${thisWeek.n}` : "a short week"} · {thisWeek.words}</Eyebrow><H2>The week with a coach</H2></div>
-        <span class="font-mono text-[12px] font-medium text-text-2">{cur?.call_at ? `Call · ${callWords(cur.call_at)}` : "No call set this week"}{kept && kept.of ? ` · calls kept ${kept.kept} of ${kept.of}` : ""}</span>
+        <div class="flex flex-col gap-1"><Eyebrow>The call sheet · {thisWeek.paused ? "paused this week" : thisWeek.n ? `week ${thisWeek.n}` : "a short week"} · {thisWeek.words}</Eyebrow><H2>The week with a coach</H2></div>
+        <span class="font-mono text-[12px] font-medium text-text-2">{thisWeek.paused ? "No call: this week is paused" : cur?.call_at ? `Call · ${callWords(cur.call_at)}` : "No call set this week"}{kept && kept.of ? ` · calls kept ${kept.kept} of ${kept.of}` : ""}</span>
       </div>
       <Quiet>One sheet both of you see. On Monday the Guide writes; then a person calls. The call is not recorded, and three lines are kept after it.</Quiet>
 
       <Eyebrow>Last week against the plan{lastWeek ? ` · ${lastWeek.words}` : ""}</Eyebrow>
       {!lastWeek ? <Quiet>No full week of this horizon has ended yet.</Quiet>
-        : prev?.away ? <p class="m-0 text-[14px] leading-relaxed text-text-2">Marked away. The plan holds where it was, and the week is not judged.</p>
+        : lastWeek.paused ? <p class="m-0 text-[14px] leading-relaxed text-text-2">Paused. The plan holds where it was, and the week is not judged.</p>
         : review ? <div class="flex flex-col">{review.lines.map((l) => <div class="grid grid-cols-[minmax(0,1.4fr)_repeat(2,minmax(0,.7fr))_minmax(0,1.2fr)] items-baseline gap-3 border-t border-border py-2 first:border-t-0" key={l.key}><span class="text-[14px] text-text">{l.label}</span><span class="text-right font-mono text-[13px] text-text-3">{l.plan}</span><span class="text-right font-mono text-[14px] font-semibold text-text">{l.done}</span><span class={`text-[12px] ${l.state === "short" ? "text-caution" : "text-text-2"}`}>{l.word}</span></div>)}</div>
         : adherence.length ? <div class="flex flex-col">{adherence.map((a, i) => <div class="grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1.2fr)] items-baseline gap-3 border-t border-border py-2 first:border-t-0" key={i}><span class="text-[14px] text-text">{a.label}</span><span class="text-right font-mono text-[13px] text-text">{a.done != null && a.of != null ? `${a.done} of ${a.of}` : ""}</span><span class={`text-[12px] ${a.tone === "caution" ? "text-caution" : "text-text-2"}`}>{a.word}</span></div>)}</div>
         : <Quiet>No plan was on file for that week.</Quiet>}
 
-      {lastWeek && (short || prev?.way) ? (
+      {judged && (short || prev?.way) ? (
         <div class="flex flex-col gap-2">
           <Eyebrow>What got in the way · {owner ? "your answer" : "their answer"}</Eyebrow>
-          <div class="flex flex-wrap gap-1.5">{WAYS.map((w) => <Chip key={w.key} on={prev?.way === w.key} disabled={!owner || closed || busy} onPick={owner && !closed ? () => void write(lastWeek.from, { way: prev?.way === w.key ? null : w.key, away: prev?.way === w.key ? false : isAwayWay(w.key) }) : undefined}>{w.label}</Chip>)}</div>
-          <Quiet>Asked only when a line was not done. Travel or illness marks the week as away: it is shown as the days it had and is not judged.</Quiet>
+          <div class="flex flex-wrap gap-1.5">{WAYS.map((w) => <Chip key={w.key} on={prev?.way === w.key} disabled={!owner || closed || busy} onPick={owner && !closed ? () => void write(judged.from, { way: prev?.way === w.key ? null : w.key }) : undefined}>{w.label}</Chip>)}</div>
+          {back && onSetAside ? (
+            <div class="flex flex-col gap-1.5">
+              <div><Button disabled={!!pausing} onClick={() => onSetAside(back)}>{pausing ? "Pausing…" : "Set last week aside"}</Button></div>
+              <span class="text-[13px] leading-relaxed text-text-2">Uses {pause!.allowed === 1 ? "this horizon's pause" : "one of this horizon's pauses"}. {pause!.moves ? `Your date moves to ${new Date(back.ends_on + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).replace(",", "")}.` : "Your date stays where it is."} It can be done until Sunday night.</span>
+            </div>
+          ) : null}
+          <Quiet>Asked only when a line was not done. The answer is a note for the call, and changes nothing about how the week is read.</Quiet>
         </div>
       ) : null}
 
@@ -486,21 +501,22 @@ export function CallCard({ sb, h, targets, person, today, owner, closed, tester,
       )}
 
       <Eyebrow>This week asks</Eyebrow>
-      {view ? <div class="grid grid-cols-2 gap-2 md:grid-cols-4">{view.tiles.map((t) => <div class="flex flex-col gap-0.5 rounded-[10px] border border-border bg-alt p-3" key={t.key}><span class="font-mono text-[10px] text-text-3">{t.small}</span><span class="t-figure-row font-semibold text-text">{t.big}</span></div>)}</div>
+      {thisWeek.paused ? <Quiet>Nothing. This week is paused{view?.paused ? `, and week ${view.week} starts on Monday ${dayMonthLong(view.paused.resumes)}` : ""}.</Quiet>
+        : view ? <div class="grid grid-cols-2 gap-2 md:grid-cols-4">{view.tiles.map((t) => <div class="flex flex-col gap-0.5 rounded-[10px] border border-border bg-alt p-3" key={t.key}><span class="font-mono text-[10px] text-text-3">{t.small}</span><span class="t-figure-row font-semibold text-text">{t.big}</span></div>)}</div>
         : planRows.length ? <div class="flex flex-col gap-1">{planRows.map((r, i) => <span class="text-[14px] text-text" key={i}>{r.label}</span>)}</div>
         : <Quiet>{owner ? "Your coach has not written the week yet." : "No plan on file. Write the week in the plan above."}</Quiet>}
 
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div class="flex flex-col gap-2">
           <Eyebrow>The call this week</Eyebrow>
-          {closed ? <span class="text-[14px] text-text-2">{callWords(cur?.call_at ?? null)}</span> : (
+          {thisWeek.paused ? <span class="text-[14px] text-text-2">No call this week. A paused week is not counted.</span> : closed ? <span class="text-[14px] text-text-2">{callWords(cur?.call_at ?? null)}</span> : (
             <label class="flex flex-wrap items-center gap-2 text-[13px] text-text-2">
               <input type="datetime-local" value={localInput(cur?.call_at ?? null)} disabled={busy} onChange={(e) => { const v = (e.currentTarget as HTMLInputElement).value; void write(thisWeek.from, { call_at: v ? new Date(v).toISOString() : null }); }} class={`${inputClass} font-mono text-[13px]`} aria-label="The time of this week's call" />
               <span>Either of you can set it. About twenty minutes.</span>
             </label>
           )}
           <label class="flex items-center gap-2 text-[14px] text-text">
-            <input type="checkbox" checked={cur?.call_kept === true} disabled={!coachSide || closed || busy} onChange={(e) => void write(thisWeek.from, { call_kept: (e.currentTarget as HTMLInputElement).checked })} class="h-5 w-5 accent-accent" />
+            <input type="checkbox" checked={cur?.call_kept === true} disabled={!coachSide || closed || busy || thisWeek.paused} onChange={(e) => void write(thisWeek.from, { call_kept: (e.currentTarget as HTMLInputElement).checked })} class="h-5 w-5 accent-accent" />
             <span>The call was kept</span>
           </label>
           <Quiet>The coach marks it. Kept calls are counted, and nothing else about a call is scored.</Quiet>
@@ -544,7 +560,8 @@ function MondayList({ sb, open }: { sb: SupabaseClient; open: (personId: string)
       if (!clients.length) { setRows([]); return; }
       const today = new Date().toLocaleDateString("en-CA");
       // only what each person shares is readable here: row-level security answers for it
-      const { data: hs } = await sb.from("horizons").select("id, person_id, title, starts_on, ends_on, programme, closed_at").in("person_id", clients.map((c) => c.id)).is("closed_at", null);
+      // (every column, so a paused week is read here as the client's page reads it, and a column a later file brings is not asked for by name)
+      const { data: hs } = await sb.from("horizons").select("*").in("person_id", clients.map((c) => c.id)).is("closed_at", null);
       const mine = ((hs ?? []) as any[]).filter((h) => parseProgramme(h.programme));
       if (!mine.length) { if (on) setRows([]); return; }
       const ids = mine.map((h) => h.id);

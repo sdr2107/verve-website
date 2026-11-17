@@ -40,10 +40,11 @@ import {
   latestOf, historyOf, weeklyHistory, pacesOf, impliedPace, adherenceOf, guideDraftPlan, roadOf, weekOf, daysToGo, nextCheckins, checkinInputs, checkinLinesOf, landedLine,
   outcomesOf, lastRoadWords, nextSpan, horizonMondays, toTarget, typicalOf, targetKeyOf, vo2Line, ML_PER_MET, type MarkerDef, type Reading,
   fmtValue, addMonths, longDate, dayMonth, dayMonthLong, dayMonthYear, weekdayDayMonth, clockOf, round, numberWord,
-  horizonSpans, spanOf, daysWords, weeksWords, weekWords, fitnessBy, type Pace,
+  horizonSpans, spanOf, daysWords, weeksWords, weekWords, fitnessBy, pausedWeeksWords, PAUSED_WORD, type Pace,
 } from "../horizon/derive.ts";
+import { movedWords, pauseState, pauseWhyWords, type PauseChoice, type PauseKey, type PauseState, type PauseWhy } from "../horizon/pause.ts";
 import {
-  listHorizons, startHorizon, requestCheckin, grantConsent, savePlan, updateHorizon, stopHorizon, addTarget, removeTarget, updateTarget, saveGuidePlan, ERROR_WORDS,
+  listHorizons, startHorizon, requestCheckin, grantConsent, savePlan, updateHorizon, deleteHorizon, pauseHorizon, addTarget, removeTarget, updateTarget, saveGuidePlan, ERROR_WORDS,
   fetchAccess, guidePlanReady, programmeTester,
   type HorizonFull, type PlanAuthor, type StartTarget, type ApiError, type HorizonAccess,
 } from "../horizon/api.ts";
@@ -119,7 +120,7 @@ function ProCard({ goTab }: { goTab: (t: string) => void }) {
     <Card>
       <Eyebrow>Pro</Eyebrow>
       <div class="text-[18px] font-semibold text-text">Horizon is part of Pro on the website.</div>
-      <p class="m-0 text-[15px] leading-relaxed text-text-2">A horizon is a date, the markers you want different by then, and the week that gets you there. Free has one week of it, on the first horizon you set, and keeps the Overview, Body, Reports and the Guide's first read. A horizon can be stopped any time; the readings stay.</p>
+      <p class="m-0 text-[15px] leading-relaxed text-text-2">A horizon is a date, the markers you want different by then, and the week that gets you there. Free has one week of it, on the first horizon you set, and keeps the Overview, Body, Reports and the Guide's first read. A horizon can be deleted any time; the readings stay.</p>
       <div class="flex flex-wrap gap-2">
         <a href="/plans" class="inline-flex min-h-10 items-center rounded-[10px] bg-accent px-4 text-[13px] font-semibold text-canvas">See the plans</a>
         <button type="button" onClick={() => goTab("overview")} class="min-h-10 px-3 text-[13px] font-semibold text-text-2 hover:text-text">Not now</button>
@@ -175,7 +176,7 @@ function standsWords(def: MarkerDef, now: Reading | null, typical: number | null
   if (def.kind === "weekly") return ` · last week ${fig}${typical != null ? ` · a typical week ${fmtValue(def, typical)}` : ""}`;
   return def.kind === "blood" ? ` · ${fig} on ${dayMonthLong(now.on)}` : ` · today ${fig}`;
 }
-/** Read to its date: closed, with the read of the whole road on file. A horizon the person stopped has no such read and leaves the page. */
+/** Read to its date: closed, with the read of the whole road on file. A horizon stopped before 17 November 2026 (when "Stop" became "Delete") has no such read and is not listed. */
 const isDone = (h: HorizonFull) => !!h.closed_at && h.checkins.some((c) => c.kind === "final");
 /** The horizons read to their date, newest first; the sidebar and the chips keep the last three. */
 const doneOf = (list: HorizonFull[]) => list.filter(isDone).sort((a, b) => b.ends_on.localeCompare(a.ends_on)).slice(0, 3);
@@ -344,7 +345,7 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
             onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); }}
             onError={onApiError} onCancel={() => { route.value = ""; history.replaceState(null, "", "#horizon"); }} />
         : current && isDone(current)
-          ? <FinalView deps={deps} h={current} person={person} today={today} owner={owner} nav={nav} personId={personId} hasOpen={open.length > 0} access={access} guideOn={guideOn}
+          ? <FinalView deps={deps} h={current} person={person} today={today} owner={owner} nav={nav} personId={personId} hasOpen={open.length > 0} access={access} guideOn={guideOn} setNotice={setNotice} reload={load}
               onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); }} onError={onApiError} />
         : current
           ? <View deps={deps} h={current} person={person} today={today} owner={owner} nav={nav} busy={busy} setBusy={setBusy} onError={onApiError} setNotice={setNotice} reload={load} userId={userId} access={access} guideOn={guideOn} tester={tester} />
@@ -367,16 +368,19 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   const [adding, setAdding] = useState(false);
   /** The target whose number is being changed, and what is typed. */
   const [changing, setChanging] = useState<{ marker: MarkerKey; value: string } | null>(null);
-  const { week, weeks, short } = weekOf(h, today);
-  // every full week is behind once the short last week has begun
-  const weeksBehindNow = short === "last" ? weeks : Math.max(0, week - 1);
+  const { week, weeks, short, paused: pausedWeek } = weekOf(h, today);
+  // every full week is behind once the short last week has begun; in a paused week, every week before it
+  const weeksBehindNow = short === "last" ? weeks : pausedWeek ? week : Math.max(0, week - 1);
+  // a pause (board 13): offered to test accounts until the lawyers have answered; the function checks the same list
+  const pause = useMemo(() => (owner && tester && !h.closed_at ? pauseState(h, today) : null), [h, today, owner, tester]);
+  const [pauseAsk, setPauseAsk] = useState<PauseKey | null>(null);
   const togo = daysToGo(h, today);
   const targets = openTargets(h.targets).map(toTarget);
   const paces = useMemo(() => (person ? pacesOf(targets, h, person, today) : []), [person, h, today]);
   // Only what your device shares (derive/arrivals): a goal set on a reading that has stopped arriving is kept, and says it is paused.
   const arrivalList = person ? arrivalsOf(person.doc.weeks) : null;
   const paused = (marker: string) => pausedWords(arrivalList, marker);
-  const spans = useMemo(() => horizonSpans(h), [h.starts_on, h.ends_on]);
+  const spans = useMemo(() => horizonSpans(h), [h.starts_on, h.ends_on, (h.pauses ?? []).join()]);
   // the header names the week today is in by its days: "a short first week, Tue 17 to Sun 22 Nov", "week 3 of 13, Mon 30 Nov to Sun 6 Dec"
   const thisSpan = spanOf(h, today);
   const weekLine = `${weekWords(h, today)}${thisSpan ? `, ${daysWords(thisSpan.from, thisSpan.to)}` : ""}`;
@@ -395,7 +399,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
     if (def?.kind !== "weekly") return [];
     const out: string[] = [];
     const w = p.week;
-    if (w) out.push(`This week so far: ${daysWords(w.from, w.upto)}${w.full ? "" : ", a short week"}.${w.value == null ? " No session on file yet." : ""}`);
+    if (w) out.push(`This week so far: ${daysWords(w.from, w.upto)}${w.paused ? ", paused" : w.full ? "" : ", a short week"}.${w.value == null ? " No session on file yet." : ""}`);
     out.push(p.judged ? `Pace is read from the last full week, ${daysWords(p.judged.from, p.judged.to)}: ${p.judged.text}.`
       : firstFull ? `Pace is read from full weeks. The first ends ${daysWords(firstFull.to, firstFull.to)}.` : "Pace is read from full weeks, and this horizon holds none.");
     const typical = typicalOf(p.marker, person, h.starts_on);
@@ -405,7 +409,8 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   };
   const planRows = h.plan?.rows ?? [];
   const thisMonday = nextCheckins(h, today).thisMonday;
-  const adherence = person && planRows.length ? adherenceOf(planRows, person, thisMonday, today, h.starts_on) : [];
+  // a paused week is asked nothing, so the plan's lines carry no count for it
+  const adherence = person && planRows.length && !pausedWeek ? adherenceOf(planRows, person, thisMonday, today, h.starts_on) : [];
   const latest = h.checkins[0] ?? null;
   const next = nextCheckins(h, today);
   const road = roadOf(h, today);
@@ -485,10 +490,22 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
     const err = await updateHorizon(deps.supabase, h.id, { [key]: value } as Partial<Pick<HorizonFull, "checkin_monday" | "checkin_month" | "send_to_coach" | "email_checkin">>);
     if (err) setNotice(`Could not change that: ${err}`); else await reload();
   }
-  async function stop() {
-    if (!confirm(`Stop the horizon "${h.title}"? Its targets, plan and check-ins stay on file; it leaves this page.`)) return;
-    const err = await stopHorizon(deps.supabase, h.id);
-    if (err) setNotice(`Could not stop it: ${err}`); else { route.value = ""; await reload(); }
+  async function remove() {
+    const err = await deleteAfterAsking(deps.supabase, h, access);
+    if (err === undefined) return;
+    if (err) setNotice(`Could not delete it: ${err}`); else { route.value = ""; history.replaceState(null, "", "#horizon"); await reload(); }
+  }
+  /** Set a week aside. The function holds the rule and writes the week and the date; the page reads the horizon again. */
+  async function setAside(c: PauseChoice) {
+    setBusy("pause"); setNotice("");
+    const res = await pauseHorizon(deps.supabase, { horizon_id: h.id, week: c.monday, timezone: browserZone() });
+    setBusy("");
+    if (!res.ok) {
+      if (res.error === "pause_refused") setNotice(pauseWhyWords(res.detail as PauseWhy) || ERROR_WORDS.pause_refused);
+      else onError(res.error, () => void setAside(c));
+      return;
+    }
+    setPauseAsk(null); await reload();
   }
 
   return (
@@ -498,7 +515,9 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
           <Eyebrow>Horizon · set {dayMonthYear(h.starts_on)} · {weekLine}{closed ? " · stopped" : ""}</Eyebrow>
           <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-[-0.01em] text-text">{h.title}, {longDate(h.ends_on)}</h1>
           <p class="m-0 text-[15px] leading-relaxed text-text-2">A horizon is a date, the markers you want different by then, and the week that gets you there. The Guide checks the pace every Monday and reads the month at its end.{h.plan?.author === "coach" ? (owner ? " Your coach sees all of it and writes the plan." : " You see all of it and write the plan.") : stored ? (owner ? " The Guide wrote the plan from your targets. A coach you share your page with sees all of it." : " The Guide wrote the plan from their targets.") : owner ? " A coach you share your page with sees all of it and can write the plan." : ""}</p>
+          {movedWords(h) ? <p class="m-0 text-[13px] leading-relaxed text-text-2">{movedWords(h)}</p> : null}
           {weeksWords(h) ? <p class="m-0 text-[13px] leading-relaxed text-text-3">{weeksWords(h)}</p> : null}
+          {pausedWeeksWords(h) ? <p class="m-0 text-[13px] leading-relaxed text-text-3">{pausedWeeksWords(h)}</p> : null}
           {programme ? <ProgrammeLine programme={programme} /> : null}
           <div class="mt-1">{nav}</div>
         </div>
@@ -525,9 +544,9 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
               <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">I want</span><span class="font-mono text-[15px] font-semibold text-accent-text">{p.mode ? <span class="mr-1 font-sans text-[12px] font-normal text-text-2">{p.mode === "floor" ? "at least" : p.mode === "ceiling" ? "at most" : `${p.lowText ?? "—"} to`}</span> : null}{p.targetText}</span></span>
               <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">{p.week ? "This week" : "Now"}</span><span class="font-mono text-[15px] font-semibold text-text">{p.week ? p.week.text : p.nowText}{p.unit && (p.week ? p.week.value != null : p.now != null) ? <span class="ml-1 whitespace-nowrap font-mono text-[11px] font-medium text-text-3">{p.unit === "sessions" && (p.week ? p.week.value : p.now) === 1 ? "session" : p.unit}</span> : null}</span>{p.week ? <span class="hidden font-mono text-[10px] text-text-3 md:block">this week</span> : null}</span>
               <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">On {dayMonth(h.starts_on)}</span><span class="font-mono text-[15px] font-semibold text-text-3">{p.startText}</span></span>
-              <span class="col-span-3 md:col-span-1"><Track progress={p.progress} elapsed={p.elapsed} tone={p.tone} /></span>
-              <span class={`col-span-3 flex items-center justify-between text-[13px] font-medium md:col-span-1 ${TONE_TEXT[p.tone]}`}>
-                {p.pace_word}
+              <span class="col-span-3 md:col-span-1"><Track progress={p.progress} elapsed={p.elapsed} tone={p.paused ? "neutral" : p.tone} /></span>
+              <span class={`col-span-3 flex items-center justify-between text-[13px] font-medium md:col-span-1 ${TONE_TEXT[p.paused ? "neutral" : p.tone]}`}>
+                {p.paused ? PAUSED_WORD : p.pace_word}
                 {owner && !closed && <span class="ml-2 flex shrink-0 gap-3 text-[12px] font-normal">
                   <button type="button" onClick={() => setChanging(changing?.marker === p.marker ? null : { marker: p.marker, value: String(round(p.target, MARKER_BY_KEY[p.marker]?.decimals ?? 1)) })} class="min-h-8 text-accent-text hover:text-text" aria-label={`Change the number for ${p.label}`}>Change</button>
                   {targets.length > 1 && <button type="button" onClick={async () => { const t = targets.find((x) => x.marker === p.marker); const uid = await userId(); if (!t?.id || !uid) return; const err = await keepPlanBefore(p.marker, uid) ?? await removeTarget(deps.supabase, t.id); if (err) setNotice(err); else await reload(); }} class="min-h-8 text-text-3 hover:text-text" aria-label={`Remove ${p.label}`}>Remove</button>}
@@ -570,6 +589,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
               onAdd={async (t) => { const uid = await userId(); if (!uid) return; const kept = await keepPlanBefore(t.marker, uid); if (kept) { setNotice(kept); return; } const res = await addTarget(deps.supabase, { horizon_id: h.id, user_id: uid, ...t }); if (!res.ok) setNotice(res.detail || ERROR_WORDS.unknown); else { if (draft && t.marker === draft.def.key) setGuideDraft(null); setAdding(false); await reload(); } }}
               onCancel={() => setAdding(false)} />
           : <div><button type="button" onClick={() => setAdding(true)} class="rounded-full border border-border px-3 py-1 text-[12px] text-text-2 hover:border-accent-border">Add a target</button></div>)}
+        {pausedWeek ? <Quiet>This week is paused. No pace is read and the line to your date stands still. A reading you take still counts as a reading.</Quiet> : null}
         <Quiet>You set every number under "I want", and can change it. Verve sets none, and promises none: it tells you the pace your number implies and whether the weeks are keeping it. Any of the {TARGET_MARKERS.length} markers on this page can be a target.</Quiet>
         {/* blood markers are out of Horizon pending the lawyers' review: a target set before that is kept in its row, unread, and the page says so */}
         {h.targets.length > targets.length && <Quiet>Blood markers are not offered as targets for now. The {h.targets.length - targets.length === 1 ? "one you set is" : `${numberWord(h.targets.length - targets.length)} you set are`} kept, and not shown or checked while this stands.</Quiet>}
@@ -610,12 +630,14 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
                 {!closed && <Button onClick={() => setEditingPlan(true)}>{owner ? "Write the plan" : "Write the plan for them"}</Button>}
                 {owner && !closed && person && !guideOn && <Button onClick={() => void savePlanRows(guideDraftPlan(person, today), "guide")} disabled={busy === "plan"}>Let the Guide draft one</Button>}
               </div>}
+        {pausedWeek && planRows.length ? <Quiet>Paused this week: nothing is asked, and nothing in it is judged.</Quiet> : null}
         <Quiet>{guideOn ? "Without a coach, the Guide writes the plan from your targets and you change it." : "Without a coach, the Guide drafts the plan from your last eight weeks and you edit it."} The plan is intent for a week, not a session for each day; what you did comes from your sessions, never from a tick box.</Quiet>
         </>}
       </Card>
 
       {programme && (programme.writer !== "guide" || !owner || tester)
-        ? <CallCard sb={deps.supabase} h={h} targets={targets} person={person} today={today} owner={owner} closed={closed} tester={tester} programme={programme} planRows={planRows} guideOn={guideOn} userId={userId} setNotice={setNotice} />
+        ? <CallCard sb={deps.supabase} h={h} targets={targets} person={person} today={today} owner={owner} closed={closed} tester={tester} programme={programme} planRows={planRows} guideOn={guideOn} userId={userId} setNotice={setNotice}
+            pause={pause} pausing={busy === "pause"} onSetAside={(c) => { if (confirm(`Set last week aside, ${c.words}?\n\n${pauseLines(h, c, pause!).join("\n")}`)) void setAside(c); }} />
         : null}
 
       <Card id="horizon-checkin">
@@ -675,16 +697,20 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
             ))}
           </div>
           {"email_checkin" in h && <Quiet>The email carries the check-in's words and your figures. One click in any email turns it off.</Quiet>}
+          {pause && pauseAsk ? <PauseAsk h={h} state={pause} pick={pauseAsk} setPick={setPauseAsk} busy={busy === "pause"} onPause={(c) => void setAside(c)} onCancel={() => setPauseAsk(null)} /> : null}
           <div class="flex flex-wrap items-center gap-3">
-            {!closed && <Button onClick={() => void stop()}>Stop this horizon</Button>}
-            <Quiet>Check-ins describe pace. They do not change the plan; your coach does, or you do. Stopping keeps the readings.</Quiet>
+            {pause && !pauseAsk && pause.left > 0 ? <Button disabled={!pause.open} onClick={() => setPauseAsk((pause.choices.find((c) => c.key === "this" && c.ok) ?? pause.choices.find((c) => c.ok))!.key)}>Pause for a week</Button> : null}
+            {pause && pause.used > 0 ? <span class="inline-flex min-h-10 items-center rounded-[10px] border border-dashed border-border-strong px-4 text-[13px] font-semibold text-text-3">Paused {pause.used === 1 ? "once" : pause.used === 2 ? "twice" : `${numberWord(pause.used)} times`} · {pause.taken.join(" and ")}</span> : null}
+            <Button disabled={busy === "delete"} onClick={() => void remove()}>Delete this horizon</Button>
           </div>
+          {pause && pause.left > 0 && !pause.open ? <Quiet>{pauseWhyWords(pause.choices.find((c) => c.key === "this")?.why)}</Quiet> : null}
+          <Quiet>{pause ? `${pause.words} ` : ""}Deleting removes the horizon for good and keeps your readings. Check-ins describe pace. They do not change the plan; your coach does, or you do.</Quiet>
         </Card>
       )}
 
       <div class="flex flex-wrap items-center gap-3 rounded-[16px] border border-accent-border bg-accent-fill px-5 py-4 text-[13px] text-text-2">
         <span class="font-mono text-[11px] font-medium text-accent-text">Pro</span>
-        <span>Horizon is part of Pro on the website. Free has one week of it, with the plan and one question about the plan, and keeps the Overview, Body, Reports and the Guide's first read. A horizon can be stopped any time; the readings stay.</span>
+        <span>Horizon is part of Pro on the website. Free has one week of it, with the plan and one question about the plan, and keeps the Overview, Body, Reports and the Guide's first read. A horizon can be deleted any time; the readings stay.</span>
       </div>
     </>
   );
@@ -716,11 +742,16 @@ function prefillOf(h: HorizonFull, person: PersonData | null, today: string): Pr
   };
 }
 
-function FinalView({ deps, h, person, today, owner, nav, personId, hasOpen, onStarted, onError, access, guideOn }: {
+function FinalView({ deps, h, person, today, owner, nav, personId, hasOpen, onStarted, onError, access, guideOn, setNotice, reload }: {
   deps: HorizonDeps; h: HorizonFull; person: PersonData | null; today: string; owner: boolean; nav: any; personId: string; hasOpen: boolean;
   onStarted: (id: string) => Promise<void>; onError: (e: ApiError, retry: () => void) => boolean;
-  access: HorizonAccess | null; guideOn: boolean;
+  access: HorizonAccess | null; guideOn: boolean; setNotice: (s: string) => void; reload: () => Promise<void>;
 }) {
+  async function remove() {
+    const err = await deleteAfterAsking(deps.supabase, h, access);
+    if (err === undefined) return;
+    if (err) setNotice(`Could not delete it: ${err}`); else { route.value = ""; history.replaceState(null, "", "#horizon"); await reload(); }
+  }
   // with another horizon already running, the next one waits behind a button
   const [later, setLater] = useState(hasOpen);
   const final = h.checkins.find((c) => c.kind === "final")!;
@@ -795,7 +826,67 @@ function FinalView({ deps, h, person, today, owner, nav, personId, hasOpen, onSt
       {owner && prefill && (later
         ? <div><Button onClick={() => setLater(false)}>Set the next horizon</Button></div>
         : <Setup deps={deps} person={person} today={today} personId={personId} hasOthers={false} nav={null} prefill={prefill} onStarted={onStarted} onError={onError} onCancel={() => setLater(true)} access={access} guideOn={guideOn} />)}
+
+      {owner && (
+        <div class="flex flex-wrap items-center gap-3">
+          <Button onClick={() => void remove()}>Delete this horizon</Button>
+          <Quiet>Deleting removes this horizon and its read for good. Your readings stay.</Quiet>
+        </div>
+      )}
     </>
+  );
+}
+
+// ── board 13: deleting a horizon, and pausing it for a week ──
+
+/**
+ * The person is asked once, in the words of what happens, and the horizon is removed. Undefined when they said no;
+ * null when it is gone; otherwise why it is not.
+ */
+async function deleteAfterAsking(sb: SupabaseClient, h: HorizonFull, access: HorizonAccess | null): Promise<string | null | undefined> {
+  // Free has one horizon, and its week does not begin again: said before the person removes the only one they can set
+  const free = access && !access.pro ? " Free has one horizon: setting another after this is part of Pro." : "";
+  if (!confirm(`Delete the horizon "${h.title}"? Its targets, plan, check-ins and notes are removed for good. Your readings stay.${free} This cannot be undone.`)) return undefined;
+  return deleteHorizon(sb, h.id);
+}
+
+const shortDay = (d: string, year = false) => new Date(d + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", ...(year ? { year: "numeric" } : {}) }).replace(",", "");
+/** What a pause of one week does, as the lines the person reads before they press it. The same lines for the ask at the foot and for last week's on the call sheet. */
+function pauseLines(h: HorizonFull, c: PauseChoice, state: PauseState): string[] {
+  return [
+    state.moves ? `Your date moves from ${shortDay(h.ends_on)} to ${shortDay(c.ends_on, true)}.` : `Your date stays, ${shortDay(h.ends_on, true)}. The plan closes up by one week.`,
+    c.key === "last" ? "Nothing in that week is judged. This week takes its number and asks what it asked." : "Nothing in the paused week is asked or judged.",
+    state.allowed === 1 ? "This can be done once on this horizon, and it cannot be taken back." : `This horizon has ${numberWord(state.left)} of its ${numberWord(state.allowed)} pauses left. A pause cannot be taken back.`,
+    "Your plan and what you pay for it do not pause.",
+  ];
+}
+
+/** The ask before a pause (board 13, card 2): which week, what it does, and the two buttons. No reason is asked. */
+function PauseAsk({ h, state, pick, setPick, busy, onPause, onCancel }: { h: HorizonFull; state: PauseState; pick: PauseKey; setPick: (k: PauseKey) => void; busy: boolean; onPause: (c: PauseChoice) => void; onCancel: () => void }) {
+  const LABEL: Record<PauseKey, string> = { last: "Last week", this: "This week", next: "Next week" };
+  // last week is offered only while it can still be set aside; this week and next week are always shown, with why not
+  const shown = state.choices.filter((c) => c.key !== "last" || c.ok);
+  const chosen = shown.find((c) => c.key === pick && c.ok) ?? shown.find((c) => c.ok) ?? null;
+  return (
+    <div id="horizon-pause" class="flex flex-col gap-3 rounded-[14px] border border-border-strong bg-alt p-4">
+      <span class="text-[15px] font-semibold text-text">Pause this horizon for a week?</span>
+      <div class={`grid grid-cols-1 gap-2 ${shown.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`} role="radiogroup" aria-label="The week to pause">
+        {shown.map((c) => (
+          <button type="button" role="radio" aria-checked={chosen?.key === c.key} disabled={!c.ok || busy} onClick={() => setPick(c.key)} key={c.key}
+            class={`flex min-h-[52px] flex-col justify-center gap-0.5 rounded-[10px] border px-3 py-1.5 text-left text-[13px] font-semibold disabled:opacity-50 ${chosen?.key === c.key ? "border-accent-border bg-accent-fill text-accent-text" : "border-border-strong bg-card text-text"}`}>
+            <span>{LABEL[c.key]}</span>
+            <span class="font-mono text-[11px] font-medium">{c.words}</span>
+            {!c.ok ? <span class="text-[11px] font-normal">{pauseWhyWords(c.why)}</span> : null}
+          </button>
+        ))}
+      </div>
+      {chosen ? <ul class="m-0 flex list-disc flex-col gap-1 pl-5 text-[13px] leading-relaxed text-text-2">{pauseLines(h, chosen, state).map((l) => <li key={l}>{l}</li>)}</ul> : null}
+      <div class="flex flex-wrap gap-2">
+        <Button primary disabled={!chosen || busy} onClick={() => chosen && onPause(chosen)}>{busy ? "Pausing…" : "Pause the week"}</Button>
+        <Button onClick={onCancel}>Not now</Button>
+      </div>
+      <Quiet>No reason is asked.</Quiet>
+    </div>
   );
 }
 

@@ -237,10 +237,12 @@ export const BARRIERS: { key: string; label: string; does: string }[] = [
   { key: "unsure", label: "I am not sure what to do", does: "Every line of the Guide's plan names the published rule it comes from." },
   { key: "alone", label: "No one checks on me", does: "A coach is offered where the plan's writer is chosen." },
   { key: "stop_start", label: "I start, then stop", does: "A week short of its line is asked again, never added to the next." },
-  { key: "travel", label: "Travel", does: "A week can be marked away. It is shown as the days it had and is not judged." },
+  { key: "travel", label: "Travel", does: "A week can be paused. It is shown, not judged, and the date moves with it." },
   { key: "none", label: "Nothing, I am consistent", does: "" },
 ];
-/** The one-tap answer when a week fell short of the plan (board 08). */
+/**
+ * The one-tap answer when a week fell short of the plan (board 08). A note for the call and nothing more: from
+ * 17 November 2026 no answer changes how a week is read. A week is set aside by a pause (board 13,
+ * ../my-health/horizon/pause.ts), which is the only way one is.
+ */
 export const WAYS = [{ key: "time", label: "Time" }, { key: "travel", label: "Travel" }, { key: "illness", label: "Illness" }, { key: "unsure", label: "Not sure what to do" }, { key: "other", label: "Something else" }];
-/** Travel or illness marks the week as away. */
-export const AWAY_WAYS = new Set(["travel", "illness"]);

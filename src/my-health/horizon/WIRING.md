@@ -132,10 +132,37 @@ What `derive.ts` gained, and the horizon function must copy (`tools/sync-horizon
 - **A number that is held** (`Target.mode`): `floor` (at least), `ceiling` (at most), `band` (between `low_value` and the number). A weekly marker set as a floor is read like the dose, by the full weeks that reached it (`isStanding`). Any other held number has no line to the date: it is "Held", "Inside your band", or under or over by the gap (`isHeld`, `paceOf`). A move from the start smaller than two readings of one person differ by is not a change (`noChangeOf`: 5 kg for grip, 5% for a fitness test).
 - **Fitness by its door** (`Target.method`, `doorOfMethod`, `fitnessBy`): a fitness target kept to a method is read, paced, moved and judged on the date by that method's readings alone. A newer reading by another method rides on the row as `Pace.other`: shown, never compared. A test at its number is "At your number", not "Reached", while the move is inside 5% of the start.
 
-Stored (METTracker `supabase/migrations/20261116_horizon_programme.sql`): `horizons.programme` (jsonb), `horizon_targets.mode`, `.low_value`, `.method`, the table `horizon_weeks` (one row a week: the person's answer when a week fell short, a week away, the call and the three lines kept after it; both sides read and write) and `programme_testers`. The function's `start` does not take the new fields: the page writes them after the horizon is set, under the owner's row-level security.
+Stored (METTracker `supabase/migrations/20261116_horizon_programme.sql`): `horizons.programme` (jsonb), `horizon_targets.mode`, `.low_value`, `.method`, the table `horizon_weeks` (one row a week: the person's answer when a week fell short, the call and the three lines kept after it; both sides read and write. Its `away` column is no longer written or read: see the pause, below) and `programme_testers`. The function's `start` does not take the new fields: the page writes them after the horizon is set, under the owner's row-level security.
 
 Two more pieces ride with it. `src/pages/horizon.astro` is the way in (board 03): five questions that end in "Set a three-month horizon". It is linked from nowhere and marked `noindex` while it is tried; its answers stay in the browser (`localStorage["verve-way-in"]`) until the set-up reads them. And the group page mounts `mountMondayList` (board 11): for a coach, one row for each client who shares a programme horizon, read from `horizons`, `horizon_weeks` and the latest Monday check-in under row-level security. It draws nothing when no client has one.
 
 **A panel for test accounts.** `views/TesterPanel.tsx` draws a row of `programme_panels`, a table only an account in `programme_testers` can read. The row's words are not in this repository: the file draws whatever the row holds and puts a horizon's own counts into its sentences (`horizon/facts.ts`: targets that read reached today, calls kept, plan weeks kept). It is mounted on a programme horizon for its owner (key `horizon`) and on `/plans` for a signed-in account (key `plans`). With no row, or for anyone not on the list, it draws nothing.
 
 Not built here: the person adding a waist or a grip reading on the website (they come from the app), a distance marker for the marathon goal, and the Guide's rules for a marathon (a coach writes that plan).
+
+## A pause, and deleting (17 November 2026)
+
+Canvas "Verve, Horizon as a programme", board 13. The founder's rule: a horizon can be paused for one week, for illness, travel or anything else. Nothing in the paused week is asked or judged, the date moves seven days later, and the person is not behind for it. The plan they pay for runs on. Three additions he agreed the next day: the pause can reach back to the week that has just ended, until the following Sunday; a horizon has one pause for every three months it was set for (one, two, four), and at most two side by side; on the marathon goal the date stays and the plan closes up by a week.
+
+| File | What it is |
+|---|---|
+| `src/my-health/horizon/pause.ts` | THE ONE RULE: how many pauses a horizon has, which weeks can be set aside today, and what a pause writes. Pure; `tests/pause.test.mjs`. The page asks it what to offer; the horizon function asks it before it writes. |
+| `src/my-health/horizon/derive.ts` | How a paused week is read. `HorizonLike.pauses` is the Mondays set aside; `horizonSpans` lists such a week with `paused` set and `full` not, and no number. Every reader that judges a week already asks `full`, so none of them needed to learn about a pause. |
+
+What follows from the one list, with nothing else changed: the week count stays what it was (the weeks after a pause keep their numbers); a weekly target is read from the weeks that are judged; the calls are counted over the weeks that are judged; the Guide's plan (`horizonMondays`) does not hold the paused week, so the week after it asks what the paused one would have asked.
+
+What was added by hand:
+
+- **The line to the date stands still** (`activeDays`, `elapsedShare`): a paused week's days are in neither count, so a number to reach is exactly as far along on the Monday after a pause as it was on the Monday the pause began.
+- **The page says "Paused this week"** in each pace word's place while today is in a paused week (`Pace.paused`, `PAUSED_WORD`). The word itself is kept: the Monday check-in written that morning reads the week before, as usual.
+- **The Monday after**, the check-in is two fixed lines written by no model (`pausedCheckinLines`: "The week", "The date"), and the Guide is shown no figure of the paused week (`guideView`).
+- **The Guide's plan in a paused week** is shown as it will stand on the Monday it picks up again (`guidePlan`, `GuidePlanView.paused`): the week before the pause is finished and judged, nothing is asked, and "so far" is empty.
+- **"A week away" is gone.** Travel or illness used to mark a week away, with no limit and the date unmoved. `WAYS` is now a note for the call and nothing more; `AWAY_WAYS` and `isAwayWay` are removed. The pause is the only way a week is set aside.
+
+Stored (METTracker `supabase/migrations/20261117_horizon_pause.sql`): `horizons.pauses` (the Mondays) and `horizons.ends_on_set` (the date as first set, once a pause has moved it). The page never writes either: the database refuses both to a signed-in person, and the function's `pause` action is their only writer, after `pause.ts` has agreed. So "once" is kept by the server. Both columns are read with the row; before that file is run they are absent, which reads as never paused.
+
+**Offered to test accounts only**, like the rest of the programme: the page shows "Pause for a week" to an owner in `programme_testers`, and the function checks the same list. What the pause must say about payment is with the lawyers.
+
+**"Stop this horizon" became "Delete this horizon"**, for every account. Stopping only set `closed_at`: the horizon left the page and every row stayed where nobody saw it again. Deleting removes the horizon's row, and with it its targets, plan, check-ins, questions, week notes and three health answers (each of those tables is tied to the horizon and goes with it). The person's readings are not the horizon's and are not touched. A horizon read to its date can be deleted the same way. The one free week of a Free account is kept apart from the horizon it began on (the function's `horizon_first`), so deleting a horizon does not hand the week back.
+
+Not changed: the date and the starting numbers of a horizon can still be written by its owner under row-level security. Before anything is earned on a horizon's outcome they need the same lock the pause has.

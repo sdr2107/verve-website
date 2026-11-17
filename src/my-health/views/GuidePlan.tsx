@@ -192,7 +192,8 @@ function Week({ v }: { v: GuidePlanView }) {
   return (
     <>
       <div class="flex flex-col gap-2">
-        <Kicker>{v.started ? "Your week, this week" : `Your week, from ${weekdayDayMonth(v.firstMonday)}`}</Kicker>
+        <Kicker>{v.paused ? `Paused this week · your week, from ${weekdayDayMonth(v.paused.resumes)}` : v.started ? "Your week, this week" : `Your week, from ${weekdayDayMonth(v.firstMonday)}`}</Kicker>
+        {v.paused ? <Quiet>Nothing is asked this week, and nothing in it is judged. The lines below are the ones the plan picks up with.</Quiet> : null}
         <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {v.tiles.map((t) => (
             <div class="flex min-w-0 flex-col gap-1 rounded-[12px] border border-border bg-canvas p-3" key={t.key}>
