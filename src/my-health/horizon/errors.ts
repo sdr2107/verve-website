@@ -3,7 +3,8 @@
  * not being in place yet (the tables unrun, the function undeployed). Pure, so
  * tests/horizon-errors.test.mjs can read it without a client.
  */
-export type ApiError = "pro_required" | "consent_required" | "allowance" | "week_limit" | "no_plan" | "forbidden" | "horizon_closed" | "not_open" | "not_switched_on" | "bad_request" | "offline" | "unknown";
+export type ApiError = "pro_required" | "consent_required" | "allowance" | "week_limit" | "no_plan" | "forbidden" | "horizon_closed" | "not_open" | "not_switched_on" | "bad_request" | "offline" | "unknown"
+  | "pause_refused" | "pause_not_offered" | "pause_changed";
 
 /** What a status and body from the function mean, in the page's words. */
 export function mapError(status: number, out: any): ApiError {
@@ -11,6 +12,10 @@ export function mapError(status: number, out: any): ApiError {
   // the chat about the plan: the week's questions are used up, or there is no plan in use to ask about
   if (code === "weekly_limit") return "week_limit";
   if (code === "no_plan") return "no_plan";
+  // a pause (pause.ts): the rule said no (the body's `why` says which part), it is not offered to this account, or the horizon changed meanwhile
+  if (code === "pause_refused") return "pause_refused";
+  if (code === "pause_not_offered") return "pause_not_offered";
+  if (code === "pause_changed") return "pause_changed";
   if (status === 402 || code === "pro_required") return "pro_required";
   if (status === 412 || code === "consent_required") return "consent_required";
   if (status === 429) return "allowance";
@@ -36,6 +41,9 @@ export const ERROR_WORDS: Record<ApiError, string> = {
   bad_request: "Something in the horizon did not pass the writer's checks.",
   offline: "Could not reach the writer. Try again in a moment.",
   unknown: "Could not write it.",
+  pause_refused: "That week cannot be paused.",
+  pause_not_offered: "Pausing a horizon is not switched on for this account yet.",
+  pause_changed: "The horizon changed while this was being kept. Look again, then try once more.",
 };
 
 /** A PostgREST answer that says the table is not there: the Horizon SQL has not been run for this project yet. */

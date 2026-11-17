@@ -11,7 +11,7 @@
  */
 import { addDays, daysBetween } from "../derive/format.ts";
 import { weightSeries } from "../derive/lenses.ts";
-import { AWAY_WAYS, DOORS, DOOR_BY_KEY, GOAL_BY_KEY, GRIP, WEIGHT, type Door, type GoalKey, type Mode } from "../../data/programme.ts";
+import { DOORS, DOOR_BY_KEY, GOAL_BY_KEY, GRIP, WEIGHT, type Door, type GoalKey, type Mode } from "../../data/programme.ts";
 import {
   MARKER_BY_KEY, dayMonthLong, daysWords, fitnessReadings, fmtValue, fullWeeksSoFar, horizonSpans, isTargetable, latestOf, round, typicalWeek, weekWords, windowWords,
   type DoorReading, type HorizonLike, type MarkerDef, type MarkerKey, type Person, type Reading, type Target,
@@ -234,32 +234,33 @@ export function threeSigns(h: HorizonLike, targets: Target[], person: Person, to
 /** One week of a horizon as the person and the coach keep it (horizon_weeks). */
 export type WeekNote = {
   horizon_id: string; week_start: string;
-  /** The person's one-tap answer when the week fell short: a key of WAYS. */ way: string | null;
-  /** Marked away: the week is shown as the days it had and is not judged, and its call is not counted. */ away: boolean;
+  /** The person's one-tap answer when the week fell short: a key of WAYS. A note for the call; it changes nothing about how the week is read. */ way: string | null;
+  /** No longer written or read (17 November 2026): a week is set aside by a pause, kept on the horizon's own row. The column stays. */ away: boolean;
   call_at: string | null; call_kept: boolean | null;
   /** Up to three lines kept after the call, written by the coach and read by both. */ lines: string[];
   lines_by: string | null; updated_at?: string;
 };
 export const noteFor = (notes: WeekNote[], weekStart: string): WeekNote | null => notes.find((n) => n.week_start === weekStart) ?? null;
-/** Whether an answer marks the week as away: travel or illness. */
-export const isAwayWay = (way: string | null | undefined): boolean => !!way && AWAY_WAYS.has(way);
 /**
- * The calls kept so far: one for each full week of the horizon that has ended, less the weeks marked away. Nothing
- * else about a call is scored.
+ * The calls kept so far: one for each full week of the horizon that has ended. A paused week is not a full week
+ * (derive.ts horizonSpans), so it has no call and is not counted; `paused` says how many of the weeks behind were
+ * set aside. Nothing else about a call is scored.
  */
-export function callsKept(notes: WeekNote[], h: HorizonLike, today: string): { kept: number; of: number; away: number } {
-  const ended = horizonSpans(h).filter((s) => s.full && s.to < today);
-  const away = ended.filter((s) => noteFor(notes, s.from)?.away).length;
-  const counted = ended.filter((s) => !noteFor(notes, s.from)?.away);
-  return { kept: counted.filter((s) => noteFor(notes, s.from)?.call_kept === true).length, of: counted.length, away };
+export function callsKept(notes: WeekNote[], h: HorizonLike, today: string): { kept: number; of: number; paused: number } {
+  const spans = horizonSpans(h);
+  const counted = spans.filter((s) => s.full && s.to < today);
+  return { kept: counted.filter((s) => noteFor(notes, s.from)?.call_kept === true).length, of: counted.length, paused: spans.filter((s) => s.paused && s.to < today).length };
 }
-/** The week a call sheet is for: the one today is in, and the full week before it, each by its days. */
-export function sheetWeeks(h: HorizonLike, today: string): { thisWeek: { from: string; to: string; words: string; n: number | null; full: boolean } | null; lastWeek: { from: string; to: string; words: string; n: number | null } | null } {
+/**
+ * The week a call sheet is for: the one today is in, and the week of seven days before it, each by its days. Either
+ * may be a paused one, and says so: a paused week is shown and not judged.
+ */
+export function sheetWeeks(h: HorizonLike, today: string): { thisWeek: { from: string; to: string; words: string; n: number | null; full: boolean; paused: boolean } | null; lastWeek: { from: string; to: string; words: string; n: number | null; paused: boolean } | null } {
   const spans = horizonSpans(h);
   const cur = spans.find((s) => today >= s.from && today <= s.to) ?? null;
-  const prev = [...spans].reverse().find((s) => s.to < today && s.full) ?? null;
-  return { thisWeek: cur ? { from: cur.from, to: cur.to, words: daysWords(cur.from, cur.to), n: cur.week, full: cur.full } : null,
-    lastWeek: prev ? { from: prev.from, to: prev.to, words: daysWords(prev.from, prev.to), n: prev.week } : null };
+  const prev = [...spans].reverse().find((s) => s.to < today && s.days === 7) ?? null;
+  return { thisWeek: cur ? { from: cur.from, to: cur.to, words: daysWords(cur.from, cur.to), n: cur.week, full: cur.full, paused: cur.paused } : null,
+    lastWeek: prev ? { from: prev.from, to: prev.to, words: daysWords(prev.from, prev.to), n: prev.week, paused: prev.paused } : null };
 }
 /** The Monday a note is kept under for a day: the week's own first day inside the horizon. */
 export const weekStartOf = (h: HorizonLike, day: string): string | null => horizonSpans(h).find((s) => day >= s.from && day <= s.to)?.from ?? null;
@@ -267,13 +268,13 @@ export const weekStartOf = (h: HorizonLike, day: string): string | null => horiz
 
 export type MondayRow = {
   /** "Build fitness · week 4 of 13" */ horizon: string;
-  /** "Zone 2 a week: 48 of 60", "All lines done", "Marked away", "No check-in yet" */ lastWeek: string;
+  /** "Zone 2 a week: 48 of 60", "All lines done", "Paused", "No check-in yet" */ lastWeek: string;
   /** "Call today, 18:30", "Call Wed 18 Nov, 18:30", "No call set" */ call: string;
   /** The call is today and has not been marked kept: the row a trainer starts from. */ today: boolean;
 };
 const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 /**
- * A client's horizon as one row. Last week is read from what the horizon already holds: a week marked away, or the
+ * A client's horizon as one row. Last week is read from what the horizon already holds: a week that was paused, or the
  * lines of the latest Monday check-in (what the plan asked and what the week did). Nothing about the person's page
  * is read that they did not share.
  */
@@ -281,12 +282,12 @@ export function mondayRow(h: HorizonLike & { title?: string; programme?: unknown
   const prog = parseProgramme(h.programme);
   const goal = prog ? GOAL_BY_KEY[prog.goal]?.title ?? "Own targets" : (h.title ?? "Horizon").split(",")[0];
   const { thisWeek, lastWeek } = sheetWeeks(h, today);
-  const prev = lastWeek ? noteFor(notes, lastWeek.from) : null, cur = thisWeek ? noteFor(notes, thisWeek.from) : null;
+  const cur = thisWeek ? noteFor(notes, thisWeek.from) : null;
   const short = (adherence ?? []).find((a) => a.done != null && a.of != null && a.done < a.of);
-  const last = !lastWeek ? "No full week yet" : prev?.away ? "Marked away" : adherence == null ? "No check-in yet" : short ? `${short.label}: ${short.done} of ${short.of}` : adherence.length ? "All lines done" : "No plan line to read";
+  const last = !lastWeek ? "No full week yet" : lastWeek.paused ? "Paused" : adherence == null ? "No check-in yet" : short ? `${short.label}: ${short.done} of ${short.of}` : adherence.length ? "All lines done" : "No plan line to read";
   const at = cur?.call_at ?? null;
   const isToday = !!at && new Date(at).toLocaleDateString("en-CA") === today;
-  const call = cur?.away ? "No call: away" : !at ? "No call set" : cur?.call_kept ? `Kept, ${new Date(at).toLocaleDateString("en-GB", { weekday: "short" })}` : isToday ? `Call today, ${clock(at)}` : `Call ${new Date(at).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}, ${clock(at)}`;
+  const call = thisWeek?.paused ? "No call: paused" : !at ? "No call set" : cur?.call_kept ? `Kept, ${new Date(at).toLocaleDateString("en-GB", { weekday: "short" })}` : isToday ? `Call today, ${clock(at)}` : `Call ${new Date(at).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}, ${clock(at)}`;
   return { horizon: `${goal} · ${weekWords(h, today)}`, lastWeek: last, call, today: isToday && cur?.call_kept !== true };
 }
 export { addDays };

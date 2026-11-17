@@ -44,7 +44,9 @@ export function horizonFacts(a: { h: HorizonLike; paces: Pace[]; targets: Target
     judged: judged.length, reached, targets_ok: targetsOk,
     weight_read: weightRead, weight_ok: weightOk,
     method_kept: a.paces.some((p) => p.marker === "mets" && !!p.method) ? true : null,
-    calls_kept: calls.kept, calls_of: calls.of, calls_need: calls.of ? needOf(calls.of, share) : null, weeks_away: calls.away, calls_ok: callsOk,
+    calls_kept: calls.kept, calls_of: calls.of, calls_need: calls.of ? needOf(calls.of, share) : null,
+    // the weeks behind that were paused; `weeks_away` is the name a panel written before 17 November 2026 may still use
+    weeks_paused: calls.paused, weeks_away: calls.paused, calls_ok: callsOk,
     plan_kept: plan?.kept ?? null, plan_of: plan?.of ?? null, plan_need: plan ? needOf(plan.of, share) : null, plan_ok: planOk,
     // every target reads reached and the calls were kept; or the plan's weeks and the calls were; or neither yet
     standing: targetsOk == null && callsOk == null ? "none" : targetsOk && callsOk ? "targets" : planOk && callsOk ? "weeks" : "not_yet",

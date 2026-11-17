@@ -178,7 +178,14 @@ export function noChangeOf(marker: string, start: number | null | undefined): nu
   if ((marker === "mets" || marker === "vo2") && start != null && Number.isFinite(start)) return Math.abs(start) * FITNESS_RULES.noChangeShare;
   return null;
 }
-export type HorizonLike = { starts_on: string; ends_on: string; title?: string };
+/**
+ * A horizon as the arithmetic reads it. `pauses` is the Mondays of the weeks its owner set aside (board 13, 17 November
+ * 2026; horizons.pauses, written only by the horizon function): a paused week is shown, is never judged and has no
+ * number, exactly as a short week. Absent or empty on a horizon that was never paused.
+ */
+export type HorizonLike = { starts_on: string; ends_on: string; title?: string; pauses?: string[] | null };
+/** The Mondays a horizon's owner set aside, as dates; empty when there are none. */
+export const pausesOf = (h: { pauses?: unknown }): string[] => (Array.isArray(h.pauses) ? h.pauses.map((d) => String(d).slice(0, 10)).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort() : []);
 
 export const round = (v: number, d: number) => Math.round(v * 10 ** d) / 10 ** d;
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
@@ -244,16 +251,23 @@ export function weekFigures(person: Person, weekStart: string): WeekFigures {
  * to the Sunday, the weeks after it from Monday to Sunday, and its last from the Monday to its date. A week short at
  * either end is shown as the days it holds and is never judged against a weekly number. THE ONE LIST: the week
  * count, the week a day falls in, a weekly target's figures and the check-in's week are all read from it.
+ *
+ * A week the owner set aside (HorizonLike.pauses) is in the list as a week of seven days with `paused` set and `full`
+ * not: it is shown as it was, is never judged, and has no number, so the weeks after it keep the numbers they had.
+ * Every reader that judges a week asks `full`, so none of them needs to know about a pause.
  */
-export type Span = { /** Its place in the list, from 1. */ n: number; from: string; to: string; days: number; /** Monday to Sunday. */ full: boolean;
-  /** The week's number: the count starts on the first Monday, so a short week at either end has none. */ week: number | null };
+export type Span = { /** Its place in the list, from 1. */ n: number; from: string; to: string; days: number; /** Monday to Sunday, and not set aside: a week that is judged. */ full: boolean;
+  /** Set aside by the horizon's owner: Monday to Sunday, shown and not judged. */ paused: boolean;
+  /** The week's number: the count starts on the first Monday, so a short week at either end has none, and neither has a paused one. */ week: number | null };
 export function horizonSpans(h: HorizonLike): Span[] {
   const out: Span[] = [];
+  const set = new Set(pausesOf(h));
   for (let from = h.starts_on; from <= h.ends_on && out.length < 600;) {
     const sunday = addDays(mondayOf(new Date(from + "T00:00:00")), 6);
     const to = sunday < h.ends_on ? sunday : h.ends_on;
     const days = daysBetween(from, to) + 1;
-    out.push({ n: out.length + 1, from, to, days, full: days === 7, week: null });
+    const paused = days === 7 && set.has(from);
+    out.push({ n: out.length + 1, from, to, days, full: days === 7 && !paused, paused, week: null });
     from = addDays(to, 1);
   }
   let k = 0;
@@ -276,13 +290,39 @@ export function weeksWords(h: HorizonLike): string {
   const spans = horizonSpans(h);
   const first = spans[0], last = spans[spans.length - 1];
   const full = spans.filter((s) => s.full).length;
-  if (!first || full === spans.length) return "";
+  if (!first || (first.days === 7 && last.days === 7)) return "";
   const parts: string[] = [];
-  if (!first.full) parts.push(`a short first week, ${daysWords(first.from, first.to)}`);
+  if (first.days < 7) parts.push(`a short first week, ${daysWords(first.from, first.to)}`);
   if (full) parts.push(`${full} week${full === 1 ? "" : "s"} from Monday to Sunday`);
-  if (spans.length > 1 && !last.full) parts.push(`a short last week, ${daysWords(last.from, last.to)}`);
+  if (spans.length > 1 && last.days < 7) parts.push(`a short last week, ${daysWords(last.from, last.to)}`);
   const list = parts.join(", then ");
   return `This horizon reads from the day it was set: ${list}. A short week is shown as the days it holds and is not judged against a weekly number.`;
+}
+/**
+ * A horizon's paused weeks in one sentence, for the page: "Paused: Mon 21 to Sun 27 Dec. A paused week is shown as it
+ * was, is not judged, and has no number." Two side by side are said as one stretch. Empty when none was set aside.
+ */
+export function pausedWeeksWords(h: HorizonLike): string {
+  const weeks = horizonSpans(h).filter((s) => s.paused);
+  if (!weeks.length) return "";
+  const runs: { from: string; to: string }[] = [];
+  for (const w of weeks) { const last = runs[runs.length - 1]; if (last && addDays(last.to, 1) === w.from) last.to = w.to; else runs.push({ from: w.from, to: w.to }); }
+  return `Paused: ${listWords(runs.map((r) => daysWords(r.from, r.to)))}. A paused week is shown as it was, is not judged, and has no number.`;
+}
+/** The paused week a day falls in; null on any other day. */
+export const pausedSpanOn = (h: HorizonLike, day: string): Span | null => horizonSpans(h).find((s) => s.paused && day >= s.from && day <= s.to) ?? null;
+/**
+ * The stretch of paused weeks a day falls in (one week, or two side by side): its first and last day, and the Monday
+ * the horizon picks up again. Null on any other day.
+ */
+export function pausedRunOn(h: HorizonLike, day: string): { from: string; to: string; resumes: string } | null {
+  const spans = horizonSpans(h);
+  const i = spans.findIndex((s) => s.paused && day >= s.from && day <= s.to);
+  if (i < 0) return null;
+  let a = i, b = i;
+  while (a > 0 && spans[a - 1].paused) a--;
+  while (b < spans.length - 1 && spans[b + 1].paused) b++;
+  return { from: spans[a].from, to: spans[b].to, resumes: addDays(spans[b].to, 1) };
 }
 /**
  * One horizon week's figures, up to today for the week in progress. A full week reads as any week does (the app's own
@@ -290,7 +330,7 @@ export function weeksWords(h: HorizonLike): string {
  * from its own days (countedFigures).
  */
 export function spanFigures(person: Person, s: Span): WeekFigures {
-  return s.full ? weekFigures(person, s.from) : countedFigures(person, s.from, addDays(s.to, 1));
+  return s.days === 7 ? weekFigures(person, s.from) : countedFigures(person, s.from, addDays(s.to, 1));
 }
 export const lastCompleteMonday = (today: string) => addDays(mondayOf(new Date(today + "T00:00:00")), -7);
 const weeklyValue = (f: WeekFigures, key: MarkerKey): number | null =>
@@ -618,12 +658,32 @@ export type Pace = {
   /** A band's lower edge, as words. */ lowText?: string | null;
   /** The method a fitness row is kept to, and a newer reading by another method that is shown and not compared. */
   method?: string | null; other?: { method: string | null; on: string; text: string } | null;
+  /**
+   * Today is in a week the owner set aside. The word and the figures are as they stood when the week began (the line
+   * to the date stands still through it); the page prints PAUSED_WORD in the word's place, because nothing is judged
+   * in a paused week. The Monday check-in, which reads the week before, keeps the word.
+   */
+  paused?: boolean;
 };
-export type WeekSoFar = { n: number; of: number; from: string; to: string; /** The last day counted: today, or the week's last day. */ upto: string; days: number; full: boolean; value: number | null; text: string };
+/** What the page prints in a pace word's place while today is in a paused week. */
+export const PAUSED_WORD = "Paused this week";
+export type WeekSoFar = { n: number; of: number; from: string; to: string; /** The last day counted: today, or the week's last day. */ upto: string; days: number; full: boolean; /** Set aside by the owner: shown, and not judged. */ paused?: boolean; value: number | null; text: string };
 
 const monthName = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-GB", { month: "long" });
-/** The track's tick: the share of the horizon's days that have passed, clamped to the horizon. */
-export const elapsedShare = (h: HorizonLike, today: string) => { const total = daysBetween(h.starts_on, h.ends_on); return total > 0 ? clamp01(daysBetween(h.starts_on, today) / total) : 1; };
+/**
+ * The days from one day to another that count towards a horizon's line: the days of a paused week are left out, so
+ * the line stands still through it and the person is not behind for a week they set aside.
+ */
+export function activeDays(h: HorizonLike, from: string, to: string): number {
+  let days = daysBetween(from, to);
+  for (const m of pausesOf(h)) {
+    const a = m > from ? m : from, b = addDays(m, 7) < to ? addDays(m, 7) : to;
+    if (b > a) days -= daysBetween(a, b);
+  }
+  return days;
+}
+/** The track's tick: the share of the horizon's days that have passed, clamped to the horizon. A paused week's days are in neither count. */
+export const elapsedShare = (h: HorizonLike, today: string) => { const total = activeDays(h, h.starts_on, h.ends_on); return total > 0 ? clamp01(activeDays(h, h.starts_on, today) / total) : 1; };
 
 /**
  * Pace: what has moved against what the date needs. Within five per cent of the whole way either side is on pace;
@@ -697,7 +757,7 @@ export function paceOf(target: Target, horizon: HorizonLike, now: Reading | null
   const gap = progress - elapsed;
   if (Math.abs(gap) <= 0.05) return { ...base, expected_today, progress, pace_word: "On pace", tone: "good" };
   if (gap > 0) return { ...base, expected_today, progress, pace_word: "Ahead of pace", tone: "good" };
-  const weeksIn = daysBetween(target.start_on ?? horizon.starts_on, today) / 7;
+  const weeksIn = activeDays(horizon, target.start_on ?? horizon.starts_on, today) / 7;
   if (progress <= 0 && weeksIn >= 4) return { ...base, expected_today, progress, pace_word: "Not yet moving", tone: "caution" };
   const behind = round(Math.abs(gap) * needed, def.decimals);
   return { ...base, expected_today, progress, pace_word: behind > 0 ? `${cap(amountWords(def, behind))} behind` : "Slightly behind", tone: "caution" };
@@ -722,9 +782,10 @@ export function horizonLinesByCard(h: HorizonLike, targets: Target[], person: Pe
     if (!def) continue;
     const named = p.marker === "mets" || p.marker === "dose" ? "" : `${def.label} `;
     // the pace's words run on inside the line; a month's name keeps its capital ("October's report")
-    const pace = /^(January|February|March|April|May|June|July|August|September|October|November|December)\b/.test(p.pace_word) ? p.pace_word : p.pace_word.charAt(0).toLowerCase() + p.pace_word.slice(1);
+    const word = p.paused ? PAUSED_WORD : p.pace_word;
+    const pace = /^(January|February|March|April|May|June|July|August|September|October|November|December)\b/.test(word) ? word : word.charAt(0).toLowerCase() + word.slice(1);
     const held = p.mode && def.kind !== "weekly";
-    const line = p.mode === "floor" && def.kind === "weekly" ? `${named}at least ${p.targetText} a week · ${pace.replace(/ (full )?weeks?$/, "")}`
+    const line = p.mode === "floor" && def.kind === "weekly" ? `${named}at least ${p.targetText} a week · ${p.paused ? pace : pace.replace(/ (full )?weeks?$/, "")}`
       : held ? `${named}${p.mode === "band" ? `${p.lowText ?? "—"} to ${p.targetText}` : `${p.mode === "floor" ? "at least" : "at most"} ${p.targetText}`}${p.unit ? ` ${p.unit}` : ""} · ${pace}`
       : `${named}${p.targetText}${named && p.unit ? ` ${p.unit}` : ""} by ${dayMonthLong(h.ends_on)} · ${pace}`;
     (by[CARD_OF_GROUP[def.group]] ??= []).push(line);
@@ -808,7 +869,7 @@ export function weekSoFar(person: Person, key: MarkerKey, h: HorizonLike, today:
   const f = spanFigures(person, s);
   // a week with no session on file yet is a dash with its reason, never a nought: not "0 sessions", not "0 minutes"
   const v = f.sessions === 0 ? null : weeklyValue(f, key);
-  return { n: s.n, of: spans.length, from: s.from, to: s.to, upto: today, days: s.days, full: s.full, value: v, text: fmtValue(def, v) };
+  return { n: s.n, of: spans.length, from: s.from, to: s.to, upto: today, days: s.days, full: s.full, ...(s.paused ? { paused: true } : {}), value: v, text: fmtValue(def, v) };
 }
 /** A rolling average's days in words: "8 to 14 Nov"; with fewer than seven on file, "5 days on file, 10 to 14 Nov". */
 export function windowWords(r: Reading | null, want = 7): string | null {
@@ -822,6 +883,10 @@ export function windowWords(r: Reading | null, want = 7): string | null {
  * week in progress rides beside it, and a week from before the horizon is never read.
  */
 export function pacesOf(targets: Target[], horizon: HorizonLike, person: Person, today: string): Pace[] {
+  const pausedNow = pausedSpanOn(horizon, today) != null;
+  return pacesAsRead(targets, horizon, person, today).map((p) => (pausedNow ? { ...p, paused: true } : p));
+}
+function pacesAsRead(targets: Target[], horizon: HorizonLike, person: Person, today: string): Pace[] {
   // a target on a marker that is out of Horizon (blood, pending review) is not paced: the page, the Overview's card
   // and the check-in's inputs all read their rows from here
   return openTargets(targets).map((t) => {
@@ -1025,29 +1090,31 @@ export const weekdayDayMonth = (d: string) => new Date(d + "T00:00:00").toLocale
 export const daysToGo = (h: HorizonLike, today: string) => Math.max(0, daysBetween(today, h.ends_on));
 /**
  * Week k of n. The count starts on the horizon's first Monday (horizonSpans), so it is the same count a plan's weeks
- * carry: n is the weeks that run Monday to Sunday, and a day in a short week at either end has `short` set and no
- * number of its own (0 in the short first week, n in the short last one).
+ * carry: n is the weeks that run Monday to Sunday and are judged, and a day in a short week at either end has `short`
+ * set and no number of its own (0 in the short first week, n in the short last one). A day in a paused week has
+ * `paused` set, and `week` is the number of the last week before it: the weeks behind.
  */
-export function weekOf(h: HorizonLike, today: string): { week: number; weeks: number; short: "first" | "last" | null } {
+export function weekOf(h: HorizonLike, today: string): { week: number; weeks: number; short: "first" | "last" | null; paused?: boolean } {
   const spans = horizonSpans(h);
   const weeks = Math.max(1, spans.filter((s) => s.full).length);
   const s = spans.find((x) => today <= x.to) ?? spans[spans.length - 1];
   if (!s) return { week: 1, weeks, short: null };
   if (s.week != null) return { week: s.week, weeks, short: null };
+  if (s.paused) return { week: spans.filter((x) => x.full && x.to < s.from).length, weeks, short: null, paused: true };
   return s.n === 1 ? { week: 0, weeks, short: "first" } : { week: weeks, weeks, short: "last" };
 }
-/** The week today is in, in words: "week 3 of 13", "a short first week", "the short last week". */
+/** The week today is in, in words: "week 3 of 13", "a short first week", "the short last week", "paused this week". */
 export function weekWords(h: HorizonLike, today: string): string {
-  const { week, weeks, short } = weekOf(h, today);
-  return short === "first" ? "a short first week" : short === "last" ? "the short last week" : `week ${week} of ${weeks}`;
+  const { week, weeks, short, paused } = weekOf(h, today);
+  return paused ? "paused this week" : short === "first" ? "a short first week" : short === "last" ? "the short last week" : `week ${week} of ${weeks}`;
 }
 export type Stop = { date: string; label: string; sub: string; state: "past" | "now" | "future" | "end" };
 /** The road: the day it was set, each month's read, today, the date. */
 export function roadOf(h: HorizonLike, today: string): Stop[] {
   const stops: Stop[] = [{ date: h.starts_on, label: dayMonth(h.starts_on), sub: "set", state: "past" }];
   for (let d = addMonths(h.starts_on.slice(0, 7) + "-01", 1); d < h.ends_on; d = addMonths(d, 1)) if (d > h.starts_on) stops.push({ date: d, label: dayMonth(d), sub: "month read", state: d <= today ? "past" : "future" });
-  const { week, short } = weekOf(h, today);
-  if (today > h.starts_on && today < h.ends_on) stops.push({ date: today, label: "Today", sub: short ? "a short week" : `week ${week}`, state: "now" });
+  const { week, short, paused } = weekOf(h, today);
+  if (today > h.starts_on && today < h.ends_on) stops.push({ date: today, label: "Today", sub: paused ? "paused" : short ? "a short week" : `week ${week}`, state: "now" });
   stops.push({ date: h.ends_on, label: dayMonth(h.ends_on), sub: h.title ? h.title.split(",")[0].split(" ").slice(0, 2).join(" ") : "the date", state: "end" });
   return stops.sort((a, b) => a.date.localeCompare(b.date) || (a.state === "now" ? 1 : -1));
 }
@@ -1077,12 +1144,17 @@ export function upTo(person: Person, day: string): Person {
     labsShown: (person.labsShown ?? []).filter((r) => day10(r?.measured_on) <= day),
   };
 }
-/** The Mondays of the complete weeks inside a horizon: from the first Monday on or after its start to the last week that ends by its date. */
+/**
+ * The Mondays of the complete weeks inside a horizon that are judged: from the first Monday on or after its start to
+ * the last week that ends by its date, less the weeks its owner set aside. A plan's weeks are these, so a paused week
+ * is not one of them and the week after it carries the number the paused one would have had.
+ */
 export function horizonMondays(h: HorizonLike): string[] {
   const out: string[] = [];
+  const set = new Set(pausesOf(h));
   let m = mondayOf(new Date(h.starts_on + "T00:00:00"));
   if (m < h.starts_on) m = addDays(m, 7);
-  for (; addDays(m, 6) <= h.ends_on; m = addDays(m, 7)) out.push(m);
+  for (; addDays(m, 6) <= h.ends_on; m = addDays(m, 7)) if (!set.has(m)) out.push(m);
   return out;
 }
 /** A weekly marker over every complete week of a horizon, oldest first; a week with no sessions and no row is null. */
@@ -1190,13 +1262,20 @@ export type CheckinInputs = {
    * many days it holds, and whether it is a short one (the first week of a horizon set mid-week, the last of one
    * that ends mid-week). Every figure is null, and days 0, when no week of the horizon has ended yet.
    */
-  week: { from: string | null; to: string | null; days: number; short: boolean; dose: number | null; goal: number | null; sessions: number; zone2: number | null; zone3: number | null; strength: number; sleep_avg: number | null; rhr: number | null; hrv: number | null };
-  /** week_of counts from the horizon's first Monday: 0 on a day in a short first week, which `short_week` names. */
-  horizon: { title: string; ends_on: string; week_of: number; weeks_total: number; days_to_go: number; short_week: "first" | "last" | null };
+  week: { from: string | null; to: string | null; days: number; short: boolean; dose: number | null; goal: number | null; sessions: number; zone2: number | null; zone3: number | null; strength: number; sleep_avg: number | null; rhr: number | null; hrv: number | null;
+    /** The week that has just ended was set aside by the horizon's owner: nothing in it is judged, and the check-in says so in fixed words (pausedCheckinLines). Absent on any other week. */
+    paused?: boolean };
+  /**
+   * week_of counts from the horizon's first Monday: 0 on a day in a short first week, which `short_week` names.
+   * `pauses` lists the weeks set aside so far, by their days, and `date_set` is the date as first set when a pause has
+   * moved it; both are absent on a horizon that was never paused.
+   */
+  horizon: { title: string; ends_on: string; week_of: number; weeks_total: number; days_to_go: number; short_week: "first" | "last" | null;
+    pauses?: { from: string; to: string }[]; date_set?: string };
   /** The two lines of a Monday check-in that are counted and not written (countedLines). Absent before 16 November 2026. */
   lines?: CheckinLine[];
 };
-export function checkinInputs(h: HorizonLike & { title: string }, targets: Target[], plan: PlanRow[], person: Person, today: string): CheckinInputs {
+export function checkinInputs(h: HorizonLike & { title: string; ends_on_set?: string | null }, targets: Target[], plan: PlanRow[], person: Person, today: string): CheckinInputs {
   // the horizon week that has just ended: a short first or last one is reported as the days it holds, and a week
   // from before the horizon was set is never read
   const span = [...horizonSpans(h)].reverse().find((s) => s.to < today) ?? null;
@@ -1204,6 +1283,8 @@ export function checkinInputs(h: HorizonLike & { title: string }, targets: Targe
   const inSpan = (s: any) => { const d = String(s?.day ?? "").slice(0, 10); return span != null && d >= span.from && d <= span.to; };
   const avg = (col: string) => { const xs = person.signals.filter((s) => s?.[col] != null && inSpan(s)).map((s) => Number(s[col])); return xs.length ? round(mean(xs)!, 0) : null; };
   const { week, weeks, short } = weekOf(h, today);
+  // the weeks set aside up to today: a week paused ahead of time is not named until it has begun
+  const set = horizonSpans(h).filter((s) => s.paused && s.from <= today);
   const pace = pacesOf(targets, h, person, today).map((p) => {
     const def = MARKER_BY_KEY[p.marker];
     return { marker: p.marker, label: p.label, unit: p.unit, start: p.start, now: p.now != null ? round(p.now, 2) : null, target: p.target, expected_today: p.expected_today != null ? round(p.expected_today, 2) : null, pace_word: p.pace_word, measured_on: p.measured_on,
@@ -1219,9 +1300,12 @@ export function checkinInputs(h: HorizonLike & { title: string }, targets: Targe
     plan: plan.map((r) => ({ kind: r.kind, label: r.label, n: r.n ?? null })),
     // a hand-written plan's weekly counts are read against a full week only
     adherence: span?.full ? adherenceOf(plan, person, span.from, span.to).map((a) => ({ label: a.label, done: a.done, of: a.of, word: a.word })) : [],
-    week: { from: span?.from ?? null, to: span?.to ?? null, days: span?.days ?? 0, short: span != null && !span.full,
-      dose: f?.dose ?? null, goal: f?.goal ?? null, sessions: f?.sessions ?? 0, zone2: f?.zone2 ?? null, zone3: f?.zone3 ?? null, strength: f?.strength ?? 0, sleep_avg: avg("sleep_minutes"), rhr: avg("resting_hr"), hrv: avg("hrv_night_ms") },
-    horizon: { title: h.title, ends_on: h.ends_on, week_of: week, weeks_total: weeks, days_to_go: daysToGo(h, today), short_week: short },
+    week: { from: span?.from ?? null, to: span?.to ?? null, days: span?.days ?? 0, short: span != null && span.days < 7,
+      dose: f?.dose ?? null, goal: f?.goal ?? null, sessions: f?.sessions ?? 0, zone2: f?.zone2 ?? null, zone3: f?.zone3 ?? null, strength: f?.strength ?? 0, sleep_avg: avg("sleep_minutes"), rhr: avg("resting_hr"), hrv: avg("hrv_night_ms"),
+      ...(span?.paused ? { paused: true } : {}) },
+    horizon: { title: h.title, ends_on: h.ends_on, week_of: week, weeks_total: weeks, days_to_go: daysToGo(h, today), short_week: short,
+      ...(set.length ? { pauses: set.map((s) => ({ from: s.from, to: s.to })) } : {}),
+      ...(h.ends_on_set && String(h.ends_on_set).slice(0, 10) !== h.ends_on ? { date_set: String(h.ends_on_set).slice(0, 10) } : {}) },
   };
 }
 
@@ -1239,7 +1323,7 @@ export function checkinInputs(h: HorizonLike & { title: string }, targets: Targe
 
 export type CheckinLine = { head: string; text: string };
 /** The heads a Monday check-in can carry, in the order they are shown. A text is read as lines only when every row opens with one of them. */
-export const CHECKIN_HEADS = { week: "The week", on: "On pace", off: "Not on pace", waitingWeek: "Waiting on a full week", waiting: "Waiting", plan: "The plan" } as const;
+export const CHECKIN_HEADS = { week: "The week", on: "On pace", off: "Not on pace", waitingWeek: "Waiting on a full week", waiting: "Waiting", plan: "The plan", date: "The date" } as const;
 /** The Guide's last line when it finds nothing to say about the plan: fixed words, so the null answer always reads the same. */
 export const PLAN_NOTHING = "Nothing in this week's figures argues for more or less than it asks.";
 
@@ -1307,6 +1391,27 @@ export function countedLines(pace: PaceRow[], firstFullWeekEnds: string | null):
   return out;
 }
 
+/** "Tuesday 23 February 2027", from the date's own digits. */
+const plainDate = (d: string) => `${plainDay(d)} ${d.slice(0, 4)}`;
+/**
+ * The Monday check-in for a week the owner set aside (board 13): two lines of fixed words, written by no model. The
+ * week is named and nothing in it is judged; then where the date stands. A date a pause moved is said with how far;
+ * one that stays (a day that cannot move) says that the plan closes up. Null when the week was not a paused one.
+ */
+export function pausedCheckinLines(inputs: Pick<CheckinInputs, "week" | "horizon">): CheckinLine[] | null {
+  const w = inputs.week, hz = inputs.horizon;
+  if (!w?.paused || !w.from || !w.to) return null;
+  const end = hz?.ends_on ? plainDate(hz.ends_on) : null;
+  const moved = hz?.date_set && hz.ends_on ? Math.round(daysBetween(hz.date_set, hz.ends_on) / 7) : 0;
+  const date = !end ? "It is where the horizon's page shows it."
+    : moved > 0 ? `${end}, ${numberWord(moved)} week${moved === 1 ? "" : "s"} later than first set.`
+    : `${end}, where it was. The plan closes up by one week.`;
+  return [
+    { head: CHECKIN_HEADS.week, text: `Paused, ${daysWords(w.from, w.to)}. Nothing in it was asked or judged.` },
+    { head: CHECKIN_HEADS.date, text: date },
+  ];
+}
+
 /** A check-in's lines as the one column of text keeps them: one line to a row, "Head: words". */
 export const linesText = (lines: CheckinLine[]) => lines.map((l) => `${l.head}: ${l.text}`).join("\n");
 /**
@@ -1341,8 +1446,9 @@ export function guideView(inputs: CheckinInputs, kind: "week" | "month" | "final
   const n = (v: number) => Math.round(v).toLocaleString("en-GB");
   const big = (v: number) => (Math.abs(v) >= 1000 ? n(v) : v);
   const w = inputs.week;
-  const week: Record<string, unknown> = { from: w.from, to: w.to, days: w.days, short: w.short };
-  if (w.from != null) {
+  const week: Record<string, unknown> = { from: w.from, to: w.to, days: w.days, short: w.short, ...(w.paused ? { paused: true } : {}) };
+  // a week the person set aside is named and nothing else: the Guide has no figure of it to judge
+  if (w.from != null && !w.paused) {
     week.sessions = w.sessions > 0 ? `${n(w.sessions)} ${w.sessions === 1 ? "session" : "sessions"}` : "none on file";
     if (w.dose != null && w.dose > 0) week.dose = `${n(w.dose)} MET-min`;
     // a short week is never read against a weekly number, so it is not shown one
@@ -1383,6 +1489,7 @@ export function weekLine(inputs: CheckinInputs): string | null {
   const v = guideView(inputs, "week").week as Record<string, string | undefined>;
   const figures = [v.sessions !== "none on file" ? v.sessions : null, v.dose ? (v.goal ? `${v.dose} against your goal of ${v.goal}` : v.dose) : null, v.zone2 ? `${v.zone2} in zone 2` : null, v.strength ?? null].filter((x): x is string => !!x);
   const days = daysWords(w.from, w.to);
+  if (w.paused) return `Paused, ${days}. Nothing in it was asked or judged.`;
   if (w.short) return `A short week of ${w.days} day${w.days === 1 ? "" : "s"}, ${days}${figures.length ? `: ${listWords(figures)}` : ", with no session on file"}. A short week is not read against a weekly number.`;
   return figures.length ? `${cap(listWords(figures))}.` : `No session on file for ${days}.`;
 }

@@ -29,7 +29,7 @@ import { addDays, localDay, mondayOf } from "../derive/format.ts";
 import { restingBPOf } from "../derive/markers.ts";
 import RULES from "../../data/plan-rules.ts";
 import {
-  MARKER_BY_KEY, dayMonthLong, dedupeSessions, horizonMondays, lastCompleteMonday, latestOf, numberWord, round, typicalWeek, weekFigures,
+  MARKER_BY_KEY, dayMonthLong, daysWords, dedupeSessions, horizonMondays, horizonSpans, lastCompleteMonday, latestOf, numberWord, pausedRunOn, pausesOf, round, typicalWeek, weekFigures,
   type HorizonLike, type Person, type PlanRow, type Target,
 } from "./derive.ts";
 
@@ -342,6 +342,12 @@ export type Answer = { marker: string; label: string; text: string };
 export type GuidePlanView = {
   mode: "full" | "easy4" | "easy"; noHarder: boolean;
   weeks: number; /** The plan's week today is in, from 1; 0 before its first Monday. */ week: number; firstMonday: string; started: boolean;
+  /**
+   * Today is in a week the horizon's owner set aside (board 13): nothing is asked and nothing is judged. The plan is
+   * shown as it will stand on the Monday it picks up again, so `week` and the lines are that week's, and the page says
+   * the days of the pause and the day the week starts. Null on any other day.
+   */
+  paused: { from: string; to: string; resumes: string } | null;
   status: string; lead: string; tiles: Tile[];
   fitt: { letter: string; name: string; now: string; by: string }[];
   why: { head: string; text: string }[];
@@ -391,11 +397,16 @@ function doneOf(person: Person, monday: string): Done {
 }
 
 export function guidePlan(args: GuidePlanArgs): GuidePlanView {
-  const { horizon, person, today } = args;
+  const { horizon, person } = args;
+  // A paused week is not one of the plan's weeks (derive.ts horizonMondays leaves it out). While today is in one, the
+  // plan is read as it will stand on the Monday it picks up again: the week before the pause is finished and judged,
+  // and the week after it is the one shown. Nothing of the paused week is read against a line.
+  const paused = pausedRunOn(horizon, args.today);
+  const today = paused ? paused.resumes : args.today;
   const self = args.self !== false;
   const stored = args.stored ?? null;
-  const base = stored?.base ?? baseOf(person, today);
-  const aims = aimsOf(args.targets, person, today);
+  const base = stored?.base ?? baseOf(person, args.today);
+  const aims = aimsOf(args.targets, person, args.today);
   const mode = stored?.mode ?? args.mode ?? "full";
   const noHarder = pressureHigh(person);
   const tier = tierOf(aims.mets);
@@ -414,7 +425,11 @@ export function guidePlan(args: GuidePlanArgs): GuidePlanView {
   const types = base.types.filter((t) => !leaveOut.includes(t));
 
   // The week the plan was last changed in (GuideStored.leg): the weeks before it read as they were asked, the climb goes on from it.
-  const legAt = stored?.leg ? mondays.indexOf(stored.leg.monday) : -1;
+  // (a week that was set aside after the change was made in it hands the change to the week the plan picks up in)
+  const set = new Set(pausesOf(horizon));
+  let legMonday = stored?.leg?.monday ?? null;
+  while (legMonday && set.has(legMonday)) legMonday = addDays(legMonday, 7);
+  const legAt = legMonday ? mondays.indexOf(legMonday) : -1;
   const leg = legAt >= 0 ? stored!.leg! : null;
   const L = Math.max(0, legAt);
   const pastBy = new Map((stored?.past ?? []).map((w) => [w.monday, w] as const));
@@ -600,7 +615,7 @@ export function guidePlan(args: GuidePlanArgs): GuidePlanView {
     if (r >= n - 1) return { week: r + 1, monday: mondays[r], sunday: addDays(mondays[r], 6), lines, summary, gap, outcome: "end" as const,
       after: [{ small: "The plan", head: "That was the plan's last week", text: `The horizon's date is ${dayMonthLong(horizon.ends_on)}. The read of the whole road is written on it.` }] };
     const nx = climbRows[r + 1];
-    const small = r + 1 === wk ? `This week · week ${r + 2}` : `Week ${r + 2}`;
+    const small = paused ? `Week ${r + 2} · from ${dayMonthLong(paused.resumes)}` : r + 1 === wk ? `This week · week ${r + 2}` : `Week ${r + 2}`;
     const o: WeekOutcome | "hold" | "changed" = r < L ? "changed" : !moving ? "hold" : prog.outcomeOfWeek[r] ?? "on";
     const rest = cap(andList([...(nx.harder > 0 ? [`harder minutes ${nx.harder === row.harder ? "stay at" : "are"} ${nx.harder}`] : []), `strength ${nx.strengthDays === row.strengthDays ? "stays at" : "is"} ${nx.strengthDays}`, ...(nx.steps != null ? [`steps ${row.steps != null && nx.steps > row.steps ? "go on to" : "are"} ${thousands(nx.steps)} a day`] : [])]));
     const wouldBe = steps[Math.min(n - 1, prog.stepOfWeek[r] + 1)].zone2;
@@ -664,6 +679,9 @@ export function guidePlan(args: GuidePlanArgs): GuidePlanView {
   ];
 
   const notes: string[] = [];
+  const setAside = horizonSpans(horizon).filter((s) => s.paused && s.from <= args.today && s.from >= mondays[0]);
+  if (paused) notes.push(`Paused, ${daysWords(paused.from, paused.to)}. Nothing is asked and nothing in it is judged. Week ${wk + 1} starts on Monday ${dayMonthLong(paused.resumes)}, and asks what it would have asked.`);
+  else if (setAside.length) notes.push(`${setAside.length === 1 ? "One week was" : `${cap(numberWord(setAside.length))} weeks were`} paused and ${setAside.length === 1 ? "is" : "are"} not among the plan's weeks: ${andList(setAside.map((s) => daysWords(s.from, s.to)))}.`);
   if (prog.steppedBack) notes.push("Two weeks in a row were under the plan's zone 2 figure, so the plan has stepped back one week.");
   else if (prog.repeated > 0) notes.push(`${prog.repeated === 1 ? "One week was" : `${cap(numberWord(prog.repeated))} weeks were`} under the plan's zone 2 figure, so ${prog.repeated === 1 ? "its zone 2 minutes are" : "their zone 2 minutes are"} asked again. Nothing is added to a later week.`);
   if (zoneShort) notes.push(`At this pace zone 2 reaches ${last.zone2} minutes by the date, short of your ${aims.zone2}.`);
@@ -700,9 +718,11 @@ export function guidePlan(args: GuidePlanArgs): GuidePlanView {
     rows: [{ label: "Type", from: orList(types), to: orList(base.types) }], choices: { ...pickedNow, leave_out: [] } });
 
   return {
-    mode, noHarder, weeks: n, week: started ? wk + 1 : 0, firstMonday: mondays[0], started,
-    status: started ? `Week ${wk + 1} of ${n}${prog.repeated > 0 ? " · zone 2 asked again" : ""}` : `Starts Monday · ${plural(n, "week")}`,
-    lead: lead.join(" "), tiles, fitt, why, climbs: moving, climb: climbRows, climbNote, moves, soFar, review, answers, changing, testWeeks,
+    mode, noHarder, weeks: n, week: started ? wk + 1 : 0, firstMonday: mondays[0], started, paused,
+    status: paused && started ? `Paused this week · week ${wk + 1} of ${n} starts Monday ${dayMonthLong(paused.resumes)}`
+      : started ? `Week ${wk + 1} of ${n}${prog.repeated > 0 ? " · zone 2 asked again" : ""}` : `Starts Monday · ${plural(n, "week")}`,
+    // a paused week has no "so far": nothing is asked of it
+    lead: lead.join(" "), tiles, fitt, why, climbs: moving, climb: climbRows, climbNote, moves, soFar: paused ? [] : soFar, review, answers, changing, testWeeks,
     strength: { days: strengthDays, layout, layoutLine: layoutLine(strengthDays, layout), each: eachGroup(strengthDays, layout), sets,
       hard: [
         ["Sets", base.strength >= RULES.strength.minDays ? "Two to three." : `One to two in the plan's first ${numberWord(RULES.strength.lowSetsWeeks)} weeks. Two to three after.`],

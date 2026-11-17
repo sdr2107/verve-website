@@ -41,6 +41,12 @@ export type HorizonRow = {
   email_checkin?: boolean;
   /** What a horizon set up as a programme keeps: its goal, the person's aims, the days they train (./programme.ts Programme). Absent before 20261116_horizon_programme.sql, null on a horizon of the person's own targets. */
   programme?: unknown;
+  /**
+   * The Mondays of the weeks its owner set aside, and the date as first set once a pause has moved it (./pause.ts).
+   * Written only by the horizon function: the database refuses both to a signed-in person. Absent before
+   * 20261117_horizon_pause.sql, which reads as never paused.
+   */
+  pauses?: string[] | null; ends_on_set?: string | null;
 };
 export type TargetRow = {
   id: string; horizon_id: string; user_id: string; marker: MarkerKey; label: string; unit: string | null;
@@ -141,10 +147,25 @@ export async function updateHorizon(sb: SupabaseClient, id: string, patch: Parti
   const { error } = await sb.from("horizons").update(patch).eq("id", id);
   return error ? error.message : null;
 }
-/** Stopping keeps every row; the readings stay and the horizon leaves the open list. */
-export async function stopHorizon(sb: SupabaseClient, id: string): Promise<string | null> {
-  const { error } = await sb.from("horizons").update({ closed_at: new Date().toISOString() }).eq("id", id);
-  return error ? error.message : null;
+/**
+ * Deleting a horizon removes it for good: its row, and with it its targets, plan, check-ins, questions, week notes
+ * and three health answers (every one of those tables is tied to the horizon and goes with it). The person's
+ * readings are not the horizon's and are not touched. It took the place of "Stop this horizon" on 17 November 2026,
+ * which only hid the horizon and kept every row where nobody saw it again. The owner's own row, under row-level
+ * security; the answer says so when nothing was removed.
+ */
+export async function deleteHorizon(sb: SupabaseClient, id: string): Promise<string | null> {
+  const { data, error } = await sb.from("horizons").delete().eq("id", id).select("id");
+  if (error) return error.message;
+  return data && data.length ? null : "Nothing was removed. Only the person whose horizon it is can delete it.";
+}
+/**
+ * Set a week aside (./pause.ts; board 13). The function checks the rule and writes the week and the date; the page
+ * only names the week's Monday. The answer is the horizon's new date.
+ */
+export async function pauseHorizon(sb: SupabaseClient, payload: { horizon_id: string; week: string; timezone?: string | null }): Promise<Result<{ ends_on: string; pauses: string[] }>> {
+  const { ok, status, out } = await callHorizon(sb, { action: "pause", ...payload });
+  return ok && out?.ends_on ? { ok: true, data: { ends_on: String(out.ends_on), pauses: Array.isArray(out.pauses) ? out.pauses.map(String) : [] } } : fail(status, out);
 }
 export async function addTarget(sb: SupabaseClient, t: Omit<TargetRow, "id" | "created_at">): Promise<Result<TargetRow>> {
   const { data, error } = await sb.from("horizon_targets").insert(t).select("*").single();
@@ -266,7 +287,7 @@ export async function setTargetHold(sb: SupabaseClient, horizonId: string, marke
   const { error } = await sb.from("horizon_targets").update(patch).eq("horizon_id", horizonId).eq("marker", marker);
   return error ? error.message : null;
 }
-/** The weeks a horizon has kept notes for: the person's answer, a week away, the call and its three lines. Empty when the table is not there. */
+/** The weeks a horizon has kept notes for: the person's answer, the call and its three lines. Empty when the table is not there. */
 export async function listWeekNotes(sb: SupabaseClient, horizonId: string): Promise<WeekNote[]> {
   const { data, error } = await sb.from("horizon_weeks").select("horizon_id, week_start, way, away, call_at, call_kept, lines, lines_by, updated_at").eq("horizon_id", horizonId).order("week_start", { ascending: true });
   return error || !data ? [] : (data as any[]).map((r) => ({ ...r, week_start: String(r.week_start).slice(0, 10), away: !!r.away, lines: Array.isArray(r.lines) ? r.lines.filter((l: unknown) => typeof l === "string") : [] })) as WeekNote[];

@@ -14,7 +14,7 @@ import {
 } from "../src/my-health/horizon/derive.ts";
 import { GOALS, SOURCES, DOORS, GRIP, WEIGHT, FITNESS_RULES, BARRIERS, WAYS, doiUrl } from "../src/data/programme.ts";
 import {
-  parseProgramme, goalDraft, alreadyReads, doorsOnFile, startingMethod, doorLine, weightPace, threeSigns, callsKept, sheetWeeks, isAwayWay, mondayRow,
+  parseProgramme, goalDraft, alreadyReads, doorsOnFile, startingMethod, doorLine, weightPace, threeSigns, callsKept, sheetWeeks, mondayRow,
 } from "../src/my-health/horizon/programme.ts";
 
 const TODAY = "2026-11-08";                                   // a Sunday
@@ -260,12 +260,14 @@ test("the set-up lays out what is on file, each with where it came from, and say
 
 // ── the week with a coach ──
 
-test("calls are counted over the full weeks that have ended, and a week away is not counted", () => {
+test("calls are counted over the full weeks that have ended, and a paused week is not counted", () => {
   const note = (week_start, extra) => ({ horizon_id: "h1", week_start, way: null, away: false, call_at: null, call_kept: null, lines: [], lines_by: null, ...extra });
-  const notes = [note("2026-09-07", { call_kept: true }), note("2026-09-14", { call_kept: true }), note("2026-09-21", { away: true, way: "travel" }), note("2026-09-28", { call_kept: false })];
-  assert.deepEqual(callsKept(notes, H, "2026-10-06"), { kept: 2, of: 3, away: 1 });     // four full weeks ended, one of them away
-  assert.deepEqual(callsKept([], H, "2026-09-09"), { kept: 0, of: 0, away: 0 });
-  assert.ok(isAwayWay("travel")); assert.ok(isAwayWay("illness")); assert.equal(isAwayWay("time"), false);
+  const notes = [note("2026-09-07", { call_kept: true }), note("2026-09-14", { call_kept: true }), note("2026-09-21", { way: "travel" }), note("2026-09-28", { call_kept: false })];
+  // four full weeks ended; "Travel" is a note for the call and takes no week out of the count (tests/pause.test.mjs)
+  assert.deepEqual(callsKept(notes, H, "2026-10-06"), { kept: 2, of: 4, paused: 0 });
+  // the same weeks with the third one paused: three are counted
+  assert.deepEqual(callsKept(notes, { ...H, pauses: ["2026-09-21"] }, "2026-10-06"), { kept: 2, of: 3, paused: 1 });
+  assert.deepEqual(callsKept([], H, "2026-09-09"), { kept: 0, of: 0, paused: 0 });
   assert.deepEqual(WAYS.map((w) => w.key), ["time", "travel", "illness", "unsure", "other"]);
 });
 
@@ -287,9 +289,9 @@ test("the trainer's list reads a client's week from what the horizon already hol
   assert.equal(r.lastWeek, "Zone 2 minutes: 48 of 60");
   assert.match(r.call, /^Call today, 13:00$/);
   assert.equal(r.today, true);
-  // a call already kept is not the row to start from; a week away says so; no check-in is said, never guessed
+  // a call already kept is not the row to start from; a paused week says so; no check-in is said, never guessed
   assert.equal(mondayRow(h, [note("2026-10-12", { call_at: "2026-10-14T13:00:00", call_kept: true })], lines, day).today, false);
-  assert.equal(mondayRow(h, [note("2026-10-05", { away: true })], lines, day).lastWeek, "Marked away");
+  assert.equal(mondayRow({ ...h, pauses: ["2026-10-05"] }, [], lines, day).lastWeek, "Paused");
   assert.equal(mondayRow(h, [], null, day).lastWeek, "No check-in yet");
   assert.equal(mondayRow(h, [], [{ label: "Strength sessions", done: 2, of: 2 }], day).lastWeek, "All lines done");
   assert.equal(mondayRow(h, [], null, day).call, "No call set");

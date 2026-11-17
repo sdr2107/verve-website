@@ -475,3 +475,64 @@ test("the second question is in plain words, and says what it does not count", (
   assert.match(SCREEN_QUESTIONS[1].help, /High blood pressure by itself is not counted here: the plan reads your pressure from your page\./);
   assert.equal(SCREEN_QUESTIONS[0].help, undefined);
 });
+
+// ── a paused week (board 13 of "Verve, Horizon as a programme") ──
+
+test("a paused week is not one of the plan's weeks: nothing is asked in it, and the week after asks what it would have asked", () => {
+  const stored = storeOf(plan(), TODAY);
+  // week 3 of the plan, Mon 16 to Sun 22 Nov, set aside; the date moved a week, so the plan still has thirteen weeks
+  const PAUSED = { ...H, ends_on: "2027-02-08", ends_on_set: "2027-02-01", pauses: ["2026-11-16"] };
+  const at = (h, today, planWeeks) => guidePlan({ horizon: h, targets: TARGETS, person: person({ today, planWeeks }), today, stored });
+  const weeks = [[50, 120], [30, 100]];                                 // week 2 came in under its 60
+  // without a pause, week 3 asks for 60 again
+  const plain = at(H, "2026-11-18", weeks);
+  assert.equal(plain.paused, null);
+  assert.equal(plain.status, "Week 3 of 13 · zone 2 asked again");
+
+  // in the paused week: the plan is shown as it picks up, and says the week is paused
+  const during = at(PAUSED, "2026-11-18", weeks);
+  assert.deepEqual(during.paused, { from: "2026-11-16", to: "2026-11-22", resumes: "2026-11-23" });
+  assert.equal(during.status, "Paused this week · week 3 of 13 starts Monday 23 November");
+  assert.equal(during.weeks, 13);
+  assert.deepEqual(during.soFar, [], "nothing is asked of a paused week, so it has no count so far");
+  assert.equal(zone2Of(during), zone2Of(plain), "week 3's lines, as they would have been");
+  assert.ok(during.notes.some((n) => /^Paused, Mon 16 to Sun 22 Nov\. Nothing is asked and nothing in it is judged\. Week 3 starts on Monday 23 November/.test(n)));
+  assert.ok(!during.climb.some((w) => w.monday === "2026-11-16"));
+  assert.deepEqual([during.climb[2].monday, during.climb[2].state, during.climb[12].monday], ["2026-11-23", "now", "2027-02-01"]);
+  // the week before the pause is the one reviewed, and what follows is named by its own day, not as "this week"
+  assert.deepEqual([during.review.week, during.review.monday], [2, "2026-11-09"]);
+  assert.equal(during.review.after[0].small, "Week 3 · from 23 November");
+
+  // the Monday it picks up: week 3, the same lines, and one line that says a week was paused
+  const after = at(PAUSED, "2026-11-25", weeks);
+  assert.equal(after.paused, null);
+  assert.equal(after.status, plain.status);
+  assert.deepEqual(after.rows, plain.rows);
+  assert.ok(after.notes.some((n) => n === "One week was paused and is not among the plan's weeks: Mon 16 to Sun 22 Nov."));
+  // the paused week is never read against a line: the last week reviewed is still week 2
+  assert.deepEqual([after.review.week, after.review.monday, after.review.after[0].small], [2, "2026-11-09", "This week · week 3"]);
+});
+
+test("a date that cannot move: the plan closes up by the paused week", () => {
+  const stored = storeOf(plan(), TODAY);
+  const fixed = { ...H, pauses: ["2026-11-16"] };                       // the date stays where it was
+  const v = guidePlan({ horizon: fixed, targets: TARGETS, person: person({ today: "2026-11-25", planWeeks: [[50, 120], [60, 110]] }), today: "2026-11-25", stored });
+  assert.equal(v.weeks, 12);
+  assert.equal(v.status, "Week 3 of 12");
+});
+
+test("a number changed in a week that is then set aside is carried to the week the plan picks up in", () => {
+  const stored = storeOf(plan(), TODAY);
+  const today = "2026-11-18";
+  const weeks = [[50, 120], [60, 110]];
+  // the person changes a number the plan follows in week 3; the plan keeps that week's figures as the place it goes on from
+  const before = guidePlan({ horizon: H, targets: TARGETS, person: person({ today, planWeeks: weeks }), today, stored });
+  const frozen = freezeOf(before, stored, true);
+  assert.equal(frozen.leg.monday, "2026-11-16");
+  // then week 3 is set aside from the Monday after
+  const PAUSED = { ...H, ends_on: "2027-02-08", ends_on_set: "2027-02-01", pauses: ["2026-11-16"] };
+  const v = guidePlan({ horizon: PAUSED, targets: TARGETS, person: person({ today: "2026-11-25", planWeeks: weeks }), today: "2026-11-25", stored: frozen });
+  assert.equal(v.status, "Week 3 of 13");
+  assert.equal(zone2Of(v), zone2Of(before), "the week it picks up in asks what the paused one asked");
+  assert.ok(v.notes.some((n) => /A number the plan follows was changed in week 3/.test(n)));
+});
