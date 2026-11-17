@@ -640,6 +640,7 @@ import { STORY } from "../data/story";
            Pro on the website. The door is here from the first paint; the pages come with the Horizon build. -->
       <div id="tab-horizon" class="mt-6 hidden">
         <div id="horizonroot" class="min-h-40"></div>
+        <div id="fitcardroot"></div>
       </div>
       <div id="tab-reports" class="mt-6 hidden">
         <p class="mb-5 max-w-3xl text-[13.5px] leading-relaxed text-text-secondary"><span class="font-semibold text-text-primary">This page:</span> the paper, and the years. The files every value came from, by year and month, and the history you brought in: the app's exports and workout CSVs. Every row stays on the Overview, however far back it reaches.</p>
@@ -1008,6 +1009,8 @@ import { STORY } from "../data/story";
   import { mountBody } from "../my-health/views/Body";
   import { mountDepth } from "../my-health/views/Depth";
   import { mountHorizon } from "../my-health/views/Horizon.tsx";
+  import { mountFitnessCard, openFitnessRead } from "../my-health/views/FitnessEntry.tsx";
+  import { programmeTester } from "../my-health/horizon/api.ts";
   import { mountMondayList } from "../my-health/views/Programme.tsx";
   import { mountPlanSheet } from "../my-health/views/PlanSheet.tsx";
   import { mountSettings, planInfoSignal } from "../my-health/views/Settings.tsx";
@@ -3628,6 +3631,8 @@ import { STORY } from "../data/story";
         filedN++; last = { name: f.name, out, path, filed };
       } else if (out.doc_type === "other") {
         qset(rowId(i), "ARCHIVED", "ok", `Read as: ${out.kind ?? "a medical document"} — kept as a PDF; its type is on the roadmap`);
+      } else if (out.doc_type === "exercise_test" || out.doc_type === "diet_chart") {
+        qset(rowId(i), "ARCHIVED", "ok", await afterOtherRead(out, path, f.name, filedUnder));
       } else {
         const filed = await archiveLab(out, path, filedUnder);
         const auto = await autoSendToApp(filed, path, out.lpa_unit ?? null, ldlMethodOf(out.ldl_method), filedUnder);
@@ -3705,12 +3710,12 @@ import { STORY } from "../data/story";
   // every stage instead of each doing it their own way. ──────────────────
 
   /** Call the parser. Throws with a user-facing message on any failure. */
-  async function readReport(path: string): Promise<any> {
+  async function readReport(path: string, expect?: "exercise_test" | "diet_chart"): Promise<any> {
     const { data: { session } } = await supabase.auth.getSession();
     const resp = await fetch(`${SUPABASE_URL}/functions/v1/report-parser`, {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${session?.access_token}`, apikey: SUPABASE_ANON_KEY },
-      body: JSON.stringify({ path }),
+      body: JSON.stringify(expect ? { path, expect } : { path }),
     });
     const out = await resp.json().catch(() => ({ error: "Unreadable response" }));
     if (!resp.ok || out.error) {
@@ -3722,6 +3727,63 @@ import { STORY } from "../data/story";
         `Could not read it${out.detail ? ` — ${out.detail}` : `: ${out.error ?? resp.status}`}`);
     }
     return out;
+  }
+
+  /**
+   * A treadmill or mask-test report, or a diet chart, that arrived by the page's own drop zone (boards 16 and 17,
+   * 17 November 2026; test accounts only). The file is kept as every file is. A test report opens the fitness card on
+   * what was read, on the person's own page; a diet chart is added from its horizon's page. Returns the line to show.
+   */
+  async function afterOtherRead(out: any, path: string, name: string, who: Person): Promise<string> {
+    const tester = await programmeTester(supabase as any);
+    if (out.doc_type === "diet_chart") return tester ? "Read as a diet chart. It is kept here. Add it to a horizon from that horizon's page." : "Read as a diet chart. It is kept as a file.";
+    if (!tester || !who.self) return "Read as a treadmill or exercise test. It is kept as a file.";
+    return openFitnessRead(out, path, pretty(name)) ? "Read as a treadmill or exercise test. Check what was read in the card that has opened." : "Read as a treadmill or exercise test. Nothing in it could be read as a result, so it is kept as a file.";
+  }
+  /**
+   * One file, asked for by a view: chosen, shrunk if it is a photo, kept in the archive and read (actions.readFile).
+   * The view that asked decides what to do with what was read. A file that could not be read stays in the archive.
+   */
+  function readOneFile(expect: "exercise_test" | "diet_chart"): Promise<{ path: string; name: string; out: any } | { error: string } | null> {
+    return new Promise((resolve) => {
+      if (!person || !canWrite()) { resolve({ error: "This page is not yours to add a file to." }); return; }
+      const input = document.createElement("input");
+      input.type = "file"; input.accept = "application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif";
+      let settled = false;
+      const done = (v: { path: string; name: string; out: any } | { error: string } | null) => { if (!settled) { settled = true; resolve(v); } };
+      // closing the picker without a file: the browser says so only where it supports the event
+      input.addEventListener("cancel", () => done(null));
+      input.addEventListener("change", async () => {
+        const f = input.files?.[0];
+        if (!f) { done(null); return; }
+        const isPdf = f.type === "application/pdf" || /\.pdf$/i.test(f.name);
+        const isPhoto = PHOTO_TYPES.has(f.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name);
+        if (!isPdf && !isPhoto) { done({ error: "Choose a PDF, or a photograph of the page (JPG, PNG or WebP)." }); return; }
+        if (f.size > 15 * 1024 * 1024) { done({ error: "That file is over 15 MB." }); return; }
+        let blob: Blob = f, ext = "pdf", contentType = "application/pdf";
+        if (isPhoto) {
+          try { blob = await shrinkPhoto(f); } catch { done({ error: "This browser cannot read that photo format. Save it as a JPEG and try again." }); return; }
+          ext = "jpg"; contentType = "image/jpeg";
+        }
+        const base = f.name.replace(/\.[^.]+$/, "").replace(/[^\w.\-]+/g, "_") || (expect === "diet_chart" ? "diet_chart" : "test_report");
+        const path = `${folder()}/${Date.now()}-${base}.${ext}`;
+        busyStart(`Reading ${f.name}…`);
+        const { error } = await supabase.storage.from("reports").upload(path, blob, { contentType });
+        if (error) { busyEnd(`Could not keep ${f.name}`, error.message, false); done({ error: `Could not keep the file: ${error.message}` }); return; }
+        let out: any;
+        try { out = await readReport(path, expect); }
+        catch (e: any) {
+          busyEnd(`Could not read ${f.name}`, e.message ?? "Could not read this file", false);
+          await refresh();
+          done({ error: `${e.message ?? "Could not read this file."} The file is kept in Reports.` }); return;
+        }
+        busyEnd(`Read ${f.name}`, "Check what was read before it is kept.", true);
+        await rememberReport(path, person!, out, nameVerdict(out.patient_name, person!));
+        await refresh();
+        done({ path, name: pretty(path.split("/").pop() ?? f.name), out });
+      });
+      input.click();
+    });
   }
 
   /** Single-file path — the cards' Read values button. */
@@ -3753,6 +3815,11 @@ import { STORY } from "../data/story";
     }
     if (out.doc_type === "other") {
       msg("upmsg", `Read as: ${out.kind ?? "a medical document"}. Verve files echo reports and lab panels today — this PDF stays safe in your archive, and its type is on the roadmap.`);
+      return;
+    }
+    if (out.doc_type === "exercise_test" || out.doc_type === "diet_chart") {
+      msg("upmsg", await afterOtherRead(out, path, name, person!));
+      await refresh();
       return;
     }
     const filed = await archiveLab(out, path);
@@ -4301,6 +4368,8 @@ import { STORY } from "../data/story";
     if (kind === "remove" && person) { void removePerson(person); }
   };
   actions.tabCount = setTabCount;
+  actions.readFile = readOneFile;
+  mountFitnessCard($("fitcardroot"), { supabase: supabase as any, userId: () => userId || null, refresh: () => refresh() });
   // The Reports view asks; the page, which owns the upload and review flows, does.
   actions.report = async (kind, name, extra) => {
     if (kind === "pick") { pickReport(); return; }   // the Body view's "Add a lab report"

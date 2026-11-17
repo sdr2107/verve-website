@@ -1,0 +1,245 @@
+{
+  "note": "Worked examples of the fitness-test equations in lib/calculations.ts, with invented people. The website copies the equations and this table (verve-website tools/sync-app-equations.mjs) and tests its copy against it, so a result typed there and one logged here give the same METs. Change an equation and this table changes with it, then the website is synced again.",
+  "examples": [
+    {
+      "fn": "estimateCRFFromBruceProtocol",
+      "args": [
+        9.2
+      ],
+      "mets": 8.83
+    },
+    {
+      "fn": "estimateCRFFromBruceProtocol",
+      "args": [
+        10
+      ],
+      "mets": 9.73
+    },
+    {
+      "fn": "estimateCRFFromBruceProtocol",
+      "args": [
+        12.5
+      ],
+      "mets": 12.73
+    },
+    {
+      "fn": "estimateCRFFromBruceProtocol",
+      "args": [
+        0
+      ],
+      "mets": 0
+    },
+    {
+      "fn": "estimateCRFFromBruceProtocol",
+      "args": [
+        31
+      ],
+      "mets": 0
+    },
+    {
+      "fn": "estimateCRFFrom6MinuteWalk",
+      "args": [
+        560,
+        {
+          "age": 45,
+          "sex": "female",
+          "weightKg": 62,
+          "heightCm": 160
+        }
+      ],
+      "mets": 5.63,
+      "vo2Max": 19.7,
+      "source": "hong2019"
+    },
+    {
+      "fn": "estimateCRFFrom6MinuteWalk",
+      "args": [
+        600,
+        {
+          "age": 45,
+          "sex": "male",
+          "weightKg": 80
+        }
+      ],
+      "mets": 8,
+      "vo2Max": 28,
+      "source": "hong2019"
+    },
+    {
+      "fn": "estimateCRFFrom6MinuteWalk",
+      "args": [
+        480,
+        {
+          "age": 66,
+          "sex": "male",
+          "weightKg": 74,
+          "heightCm": 170
+        }
+      ],
+      "mets": 8.4,
+      "vo2Max": 29.4,
+      "source": "sagat2023"
+    },
+    {
+      "fn": "estimateCRFFrom6MinuteWalk",
+      "args": [
+        520,
+        null
+      ],
+      "mets": 5.59,
+      "vo2Max": 19.6,
+      "source": "cahalin1996"
+    },
+    {
+      "fn": "estimateCRFFrom6MinuteWalk",
+      "args": [
+        0,
+        null
+      ],
+      "mets": 0,
+      "vo2Max": 0,
+      "source": "cahalin1996"
+    },
+    {
+      "fn": "estimateCRFFrom6MinuteWalk",
+      "args": [
+        1600,
+        {
+          "age": 45,
+          "sex": "female",
+          "weightKg": 62,
+          "heightCm": 160
+        }
+      ],
+      "mets": 0,
+      "vo2Max": 0,
+      "source": "cahalin1996"
+    },
+    {
+      "fn": "estimateCRFFrom1MileWalk",
+      "args": [
+        14.5,
+        132,
+        {
+          "age": 45,
+          "sex": "female",
+          "weightKg": 62
+        }
+      ],
+      "mets": 10.54,
+      "vo2Max": 36.9,
+      "source": "kline1987"
+    },
+    {
+      "fn": "estimateCRFFrom1MileWalk",
+      "args": [
+        13,
+        140,
+        {
+          "age": 38,
+          "sex": "male",
+          "weightKg": 80
+        }
+      ],
+      "mets": 13.29,
+      "vo2Max": 46.5,
+      "source": "kline1987"
+    },
+    {
+      "fn": "estimateCRFFrom1MileWalk",
+      "args": [
+        14,
+        130,
+        null
+      ],
+      "mets": 0,
+      "vo2Max": 0,
+      "source": "kline1987"
+    },
+    {
+      "fn": "estimateCRFFrom1MileWalk",
+      "args": [
+        7,
+        130,
+        {
+          "age": 38,
+          "sex": "male",
+          "weightKg": 80
+        }
+      ],
+      "mets": 0,
+      "vo2Max": 0,
+      "source": "kline1987"
+    },
+    {
+      "fn": "estimateCRFFromCooperRun",
+      "args": [
+        2400
+      ],
+      "mets": 12.11,
+      "vo2Max": 42.4
+    },
+    {
+      "fn": "estimateCRFFromCooperRun",
+      "args": [
+        1800
+      ],
+      "mets": 8.27,
+      "vo2Max": 29
+    },
+    {
+      "fn": "estimateCRFFromCooperRun",
+      "args": [
+        300
+      ],
+      "mets": 0,
+      "vo2Max": 0
+    },
+    {
+      "fn": "estimateCRFFrom1_5MileRun",
+      "args": [
+        12,
+        {
+          "sex": "male",
+          "weightKg": 70
+        }
+      ],
+      "mets": 13.4,
+      "vo2Max": 46.9,
+      "source": "george1993"
+    },
+    {
+      "fn": "estimateCRFFrom1_5MileRun",
+      "args": [
+        14.5,
+        {
+          "sex": "female",
+          "weightKg": 62
+        }
+      ],
+      "mets": 10.74,
+      "vo2Max": 37.6,
+      "source": "george1993"
+    },
+    {
+      "fn": "estimateCRFFrom1_5MileRun",
+      "args": [
+        13,
+        null
+      ],
+      "mets": 11.62,
+      "vo2Max": 40.7,
+      "source": "generic"
+    },
+    {
+      "fn": "estimateCRFFrom1_5MileRun",
+      "args": [
+        4,
+        null
+      ],
+      "mets": 0,
+      "vo2Max": 0,
+      "source": "generic"
+    }
+  ]
+}

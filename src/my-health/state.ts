@@ -104,6 +104,8 @@ export const guideAsk = signal<{ window: WindowKey; working: Record<string, unkn
 // ── Horizon, for the pages beside it ──
 /** The person's horizons, open and closed, as the Horizon view last read them; null before it has. The Overview's cards and the Guide's doors read it. */
 export const horizons = signal<HorizonFull[] | null>(null);
+/** The signed-in account is on the list of test accounts for Horizon as a programme (horizon/api.ts programmeTester); set by the Horizon view once it knows. */
+export const isTester = signal(false);
 /**
  * A line the Guide wrote, carried to Horizon as a draft: "Make it a target".
  * It is not a target until the person sets a number; "Leave it" clears it. Kept
@@ -129,6 +131,12 @@ export const actions = {
   tabCount: (_tab: string, _text: string, _tone?: string) => {},
   /** The Reports tab's writes: parse, view, del, send, rename, rmimport. */
   report: (_kind: string, _name: string, _extra?: string) => {},
+  /**
+   * Ask the person for one file, keep it in their archive and have it read (boards 16 and 17, 17 November 2026): a
+   * treadmill or mask-test report, or a diet chart. The page owns the upload, as it does for every report; the view
+   * that asked decides what to do with what was read. Null when no file was chosen.
+   */
+  readFile: (_expect: "exercise_test" | "diet_chart"): Promise<{ path: string; name: string; out: any } | { error: string } | null> => Promise.resolve(null),
   /** The People control: open someone's page, the group, the forms, the access sheet. */
   person: (_kind: "switch" | "add" | "ask" | "access" | "everyone" | "edit" | "remove" | "health" | "clients", _id?: string) => {},
 };

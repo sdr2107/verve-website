@@ -33,7 +33,7 @@ import { signal } from "@preact/signals";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PersonData } from "../derive/person.ts";
 import { addDays, daysBetween, todayStr } from "../derive/format.ts";
-import { horizons as horizonsSignal, guideDraft, setGuideDraft } from "../state.ts";
+import { horizons as horizonsSignal, guideDraft, setGuideDraft, isTester } from "../state.ts";
 import { arrivalsOf, followable, leftOff, pausedWords } from "../derive/arrivals.ts";
 import {
   TARGET_MARKERS, isTargetable, openTargets, MARKER_BY_KEY, GROUP_LABEL, FIRST_MARKERS, type MarkerKey, type PlanRow, type PlanKind, type Tone,
@@ -45,9 +45,14 @@ import {
 import { movedWords, pauseState, pauseWhyWords, type PauseChoice, type PauseKey, type PauseState, type PauseWhy } from "../horizon/pause.ts";
 import {
   listHorizons, startHorizon, requestCheckin, grantConsent, savePlan, updateHorizon, deleteHorizon, pauseHorizon, addTarget, removeTarget, updateTarget, saveGuidePlan, ERROR_WORDS,
-  fetchAccess, guidePlanReady, programmeTester,
+  fetchAccess, rememberedAccess, guidePlanReady, programmeTester, loadDayName,
   type HorizonFull, type PlanAuthor, type StartTarget, type ApiError, type HorizonAccess,
 } from "../horizon/api.ts";
+import { midweekOf, planRowsNow } from "../horizon/midweek.ts";
+import { dayKindOf } from "../horizon/programme.ts";
+import type { EntryKey } from "../../data/programme.ts";
+import { MidweekCard, ChartCard, chartSoFar, loadChartState, type ChartState } from "./Beside.tsx";
+import { openFitnessCard } from "./FitnessEntry.tsx";
 import { guidePlan, freezeOf, isGuideStored, PLAN_MARKERS, type GuideStored } from "../horizon/guidePlan.ts";
 import { GuidePlanCard, GuideOffer, GuideLocked } from "./GuidePlan.tsx";
 import { ProgrammeSetup, ProgrammeLine, WeightCard, CallCard, holdNotes, parseProgramme } from "./Programme.tsx";
@@ -252,7 +257,8 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
   const [consent, setConsent] = useState<null | (() => void)>(null);
   const [busy, setBusy] = useState("");
   // what the account may do (Pro, or the one free week), and whether the Guide's plan can be kept for this project
-  const [access, setAccess] = useState<HorizonAccess | null>(null);
+  // the page opens on the function's last answer for this tab, and asks again behind it (api.ts rememberedAccess)
+  const [access, setAccess] = useState<HorizonAccess | null>(() => rememberedAccess());
   const [guideOn, setGuideOn] = useState(false);
   // Horizon as a programme is built for test accounts only (api.ts programmeTester); "My own targets" opens the set-up as it was
   const [tester, setTester] = useState(false);
@@ -263,8 +269,12 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
   async function load() {
     if (!personId) { setList([]); horizonsSignal.value = []; return; }
     try {
-      // the closed ones come too: a horizon read to its date stays reachable, with the next one prefilled under it
-      const hs = await listHorizons(deps.supabase, personId, true);
+      // the closed ones come too: a horizon read to its date stays reachable, with the next one prefilled under it.
+      // The two things that decide which page is drawn (the test list, the Guide's plan) are asked beside the horizons
+      // and set with them, so the page is drawn once. They used to arrive a moment later, and the page drew itself
+      // twice: the plain set-up, then the programme's; the horizon, then its cards (the founder, 17 November 2026).
+      const [hs, isTest, guide] = await Promise.all([listHorizons(deps.supabase, personId, true), programmeTester(deps.supabase), guidePlanReady(deps.supabase)]);
+      setTester(isTest); isTester.value = isTest; setGuideOn(guide);
       setList(hs); horizonsSignal.value = hs; setLoadError(""); setOff(false); deps.onOff?.(false);
       if (hs.length) setPro("yes");
       deps.onHorizons?.([...hs.filter((h) => !h.closed_at), ...doneOf(hs)].map((h) => ({ id: h.id, title: h.title, ends_on: h.ends_on, done: !!h.closed_at })));
@@ -278,8 +288,6 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
   useEffect(() => {
     let on = true;
     void fetchAccess(deps.supabase).then((a) => { if (on) setAccess(a); });
-    void guidePlanReady(deps.supabase).then((ok) => { if (on) setGuideOn(ok); });
-    void programmeTester(deps.supabase).then((ok) => { if (on) setTester(ok); });
     return () => { on = false; };
   }, [personId, _tick]);
 
@@ -336,7 +344,7 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
       {consent && <ConsentBox onAgree={() => void agreeConsent()} busy={busy === "consent"} />}
       {showSetup && tester && owner && !ownTargets && (open.length > 0 || !done[0] || !!parseProgramme(done[0].programme))
         ? <ProgrammeSetup sb={deps.supabase} person={person} today={today} personId={personId} nav={nav} hasOthers={open.length > 0 || done.length > 0} access={access} guideOn={guideOn} userId={userId}
-            after={!open.length && done[0] ? parseProgramme(done[0].programme)?.goal ?? null : null} key={!open.length && done[0] ? `after-${done[0].id}` : "programme"}
+            after={!open.length && done[0] ? parseProgramme(done[0].programme)?.goal ?? null : null} afterDay={!open.length && !!done[0] && !!dayKindOf(done[0].programme)} key={!open.length && done[0] ? `after-${done[0].id}` : "programme"}
             onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); }}
             onError={onApiError} onCancel={() => { route.value = ""; history.replaceState(null, "", "#horizon"); }} onOwn={() => setOwnTargets(true)} />
         : showSetup
@@ -365,6 +373,19 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   const [editingPlan, setEditingPlan] = useState(false);
   // a horizon set up as a programme keeps its goal, the person's own words and who writes the plan
   const programme = parseProgramme(h.programme);
+  // a horizon set for a day (board 14): the kind is on the row; the name the person gave it is theirs alone
+  const dayKind = dayKindOf(h.programme);
+  const [dayName, setDayName] = useState<string | null>(null);
+  useEffect(() => {
+    let on = true;
+    setDayName(null);
+    if (owner && dayKind) void loadDayName(deps.supabase, h.id).then((n) => { if (on) setDayName(n); });
+    return () => { on = false; };
+  }, [h.id, owner, dayKind?.key]);
+  // a diet chart kept with the horizon (board 17): the owner's alone, test accounts only
+  const [chartState, setChartState] = useState<ChartState | null>(null);
+  const loadCharts = async () => { setChartState(await loadChartState(deps.supabase, h.id)); };
+  useEffect(() => { setChartState(null); if (owner && tester) void loadCharts(); }, [h.id, owner, tester]);
   const [adding, setAdding] = useState(false);
   /** The target whose number is being changed, and what is typed. */
   const [changing, setChanging] = useState<{ marker: MarkerKey; value: string } | null>(null);
@@ -408,6 +429,12 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
     return out;
   };
   const planRows = h.plan?.rows ?? [];
+  // the midweek note (board 15): Thursday's, counted, for the owner of a test account; off when they switched it off
+  const midweek = useMemo(() => (person && owner && tester && !h.closed_at && h.checkin_midweek !== false ? midweekOf({ horizon: h, person, today, plan: planRowsNow(h, targets, person, today), targets }) : null), [person, h, today, owner, tester]);
+  const chartLine = chartSoFar(chartState, h, today);
+  // the fitness number's own test, for the card that adds a result (board 16)
+  const fitnessTarget = targets.find((t) => t.marker === "mets") ?? null;
+  const KINDS_FOR: Record<string, EntryKey[]> = { lab: ["mask"], walk: ["walk6"], "one-mile-walk": ["walk1"], run: ["cooper", "run15"], treadmill: ["treadmill"], watch: ["watch"] };
   const thisMonday = nextCheckins(h, today).thisMonday;
   // a paused week is asked nothing, so the plan's lines carry no count for it
   const adherence = person && planRows.length && !pausedWeek ? adherenceOf(planRows, person, thisMonday, today, h.starts_on) : [];
@@ -486,8 +513,8 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
     if (err) { setNotice(`Could not change that number: ${err}`); return; }
     setChanging(null); await reload();
   }
-  async function toggle(key: "checkin_monday" | "checkin_month" | "send_to_coach" | "email_checkin", value: boolean) {
-    const err = await updateHorizon(deps.supabase, h.id, { [key]: value } as Partial<Pick<HorizonFull, "checkin_monday" | "checkin_month" | "send_to_coach" | "email_checkin">>);
+  async function toggle(key: "checkin_monday" | "checkin_month" | "send_to_coach" | "email_checkin" | "checkin_midweek", value: boolean) {
+    const err = await updateHorizon(deps.supabase, h.id, { [key]: value } as Partial<Pick<HorizonFull, "checkin_monday" | "checkin_month" | "send_to_coach" | "email_checkin" | "checkin_midweek">>);
     if (err) setNotice(`Could not change that: ${err}`); else await reload();
   }
   async function remove() {
@@ -512,9 +539,10 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
     <>
       <header class="flex flex-wrap items-start justify-between gap-6">
         <div class="flex max-w-[680px] flex-col gap-2">
-          <Eyebrow>Horizon · set {dayMonthYear(h.starts_on)} · {weekLine}{closed ? " · stopped" : ""}</Eyebrow>
+          <Eyebrow>Horizon · set {dayMonthYear(h.starts_on)}{dayKind ? ` · for ${dayKind.forWords}` : ""} · {weekLine}{closed ? " · stopped" : ""}</Eyebrow>
           <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-[-0.01em] text-text">{h.title}, {longDate(h.ends_on)}</h1>
           <p class="m-0 text-[15px] leading-relaxed text-text-2">A horizon is a date, the markers you want different by then, and the week that gets you there. The Guide checks the pace every Monday and reads the month at its end.{h.plan?.author === "coach" ? (owner ? " Your coach sees all of it and writes the plan." : " You see all of it and write the plan.") : stored ? (owner ? " The Guide wrote the plan from your targets. A coach you share your page with sees all of it." : " The Guide wrote the plan from their targets.") : owner ? " A coach you share your page with sees all of it and can write the plan." : ""}</p>
+          {dayKind && dayName ? <p class="m-0 text-[13px] leading-relaxed text-text-2">{dayName}. Shown to you only.</p> : null}
           {movedWords(h) ? <p class="m-0 text-[13px] leading-relaxed text-text-2">{movedWords(h)}</p> : null}
           {weeksWords(h) ? <p class="m-0 text-[13px] leading-relaxed text-text-3">{weeksWords(h)}</p> : null}
           {pausedWeeksWords(h) ? <p class="m-0 text-[13px] leading-relaxed text-text-3">{pausedWeeksWords(h)}</p> : null}
@@ -598,7 +626,14 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
 
       {/* a panel for test accounts: its words are a row only they can read, filled with this horizon's counts */}
       {programme && person && tester && owner && !closed ? <HorizonPanel sb={deps.supabase} h={h} targets={targets} person={person} today={today} guideOn={guideOn} /> : null}
-      {programme && person ? <WeightCard h={h} targets={targets} person={person} today={today} programme={programme} /> : null}
+      {programme && person ? <WeightCard h={h} targets={targets} person={person} today={today} programme={programme} chartLine={chartLine ? chartLine.replace(/^./, (c) => c.toUpperCase()) : null} /> : null}
+      {fitnessTarget && owner && tester && !closed ? (
+        <div class="flex flex-wrap items-center gap-3">
+          <Button onClick={() => openFitnessCard({ kinds: fitnessTarget.method ? KINDS_FOR[fitnessTarget.method] : undefined })}>Add a fitness test result</Button>
+          <span class="text-[12px] text-text-3">{fitnessTarget.method ? "Typed here, or taken in the app. The same test as the start." : "Typed here, or taken in the app."} Test account.</span>
+        </div>
+      ) : null}
+      {midweek ? <MidweekCard note={midweek} chartLine={chartLine ? chartLine.replace(/^./, (c) => c.toUpperCase()) : null} /> : null}
 
       <Card id="horizon-plan">
         {guide && stored && !editingPlan ? (locked
@@ -639,6 +674,8 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
         ? <CallCard sb={deps.supabase} h={h} targets={targets} person={person} today={today} owner={owner} closed={closed} tester={tester} programme={programme} planRows={planRows} guideOn={guideOn} userId={userId} setNotice={setNotice}
             pause={pause} pausing={busy === "pause"} onSetAside={(c) => { if (confirm(`Set last week aside, ${c.words}?\n\n${pauseLines(h, c, pause!).join("\n")}`)) void setAside(c); }} />
         : null}
+
+      {owner && tester && chartState && !chartState.off ? <ChartCard sb={deps.supabase} h={h} today={today} state={chartState} closed={closed} userId={userId} reload={loadCharts} /> : null}
 
       <Card id="horizon-checkin">
         <div class="flex flex-wrap items-baseline justify-between gap-3">
@@ -689,10 +726,12 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
           <div class="flex flex-col">
             {([["checkin_monday", "Monday morning check-in against the targets"], ["checkin_month", "A Guide read at each month's end"], ["send_to_coach", "Send each check-in to my coach"],
               // the email switch appears once the horizon's row carries it (the column arrives with the function that sends the email)
-              ...("email_checkin" in h ? [["email_checkin", "Email me each check-in"] as const] : [])] as const).map(([key, label], i) => (
+              ...("email_checkin" in h ? [["email_checkin", "Email me each check-in"] as const] : []),
+              // the midweek note's switch appears once the row carries it, for test accounts (board 15)
+              ...("checkin_midweek" in h && tester ? [["checkin_midweek", "A midweek note on Thursday, on this page and in The Guide"] as const] : [])] as const).map(([key, label], i) => (
               <label class={`flex items-center justify-between gap-3 py-3 text-[15px] text-text ${i ? "border-t border-border" : ""}`} key={key}>
                 <span>{label}</span>
-                <input type="checkbox" checked={!!h[key]} disabled={closed} onChange={(e) => void toggle(key, (e.currentTarget as HTMLInputElement).checked)} class="h-5 w-5 accent-accent" />
+                <input type="checkbox" checked={key === "checkin_midweek" ? h.checkin_midweek !== false : !!h[key]} disabled={closed} onChange={(e) => void toggle(key, (e.currentTarget as HTMLInputElement).checked)} class="h-5 w-5 accent-accent" />
               </label>
             ))}
           </div>

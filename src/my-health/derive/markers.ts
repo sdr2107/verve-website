@@ -181,7 +181,7 @@ export const rangeText = (pt: Pt | null) => !pt ? "" : pt.lo != null && pt.hi !=
  */
 export const CRF_RETEST = { due: 56, overdue: 112 };          // the app's own reminder: eight weeks, overdue at sixteen
 export const BODY_RETEST = 182;                               // a body assessment every six months, the app's cadence
-export const METHOD_LABEL: Record<string, string> = { cpet: "CPET", "treadmill-test": "treadmill test", "bruce-protocol": "Bruce protocol", "cooper-run": "Cooper run", "1.5-mile-run": "1.5-mile run", "six-minute-walk": "six-minute walk", "one-mile-walk": "one-mile walk" };
+export const METHOD_LABEL: Record<string, string> = { cpet: "CPET", "treadmill-test": "treadmill test", "bruce-protocol": "Bruce protocol", "cooper-run": "Cooper run", "1.5-mile-run": "1.5-mile run", "six-minute-walk": "six-minute walk", "one-mile-walk": "one-mile walk", "non-exercise-formula": "watch's estimate" };
 export const MAXIMAL = new Set(["cpet", "treadmill-test", "bruce-protocol", "cooper-run", "1.5-mile-run"]);
 export const methodLabel = (m: unknown) => METHOD_LABEL[String(m ?? "")] ?? String(m ?? "").replace(/-/g, " ");
 

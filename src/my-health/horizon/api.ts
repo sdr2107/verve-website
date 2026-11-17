@@ -25,6 +25,7 @@ import { mapError, isMissingRelation, HorizonOffError, type ApiError } from "./e
 import type { GuideStored, ScreenAnswers } from "./guidePlan.ts";
 import { parseAccess, type HorizonAccess } from "./access.ts";
 import type { Programme, WeekNote } from "./programme.ts";
+import type { ChartAnswer, ChartDay, ChartRead, ChartRow } from "./chart.ts";
 export { mapError, ERROR_WORDS, isMissingRelation, HorizonOffError, type ApiError } from "./errors.ts";
 
 export type HorizonKind = "date" | "months";
@@ -47,6 +48,8 @@ export type HorizonRow = {
    * 20261117_horizon_pause.sql, which reads as never paused.
    */
   pauses?: string[] | null; ends_on_set?: string | null;
+  /** The midweek note is shown (./midweek.ts, board 15). Absent before 20261118_horizon_days_midweek_chart.sql, which reads as on. */
+  checkin_midweek?: boolean | null;
 };
 export type TargetRow = {
   id: string; horizon_id: string; user_id: string; marker: MarkerKey; label: string; unit: string | null;
@@ -143,7 +146,7 @@ export async function savePlan(sb: SupabaseClient, horizonId: string, rows: Plan
   const { error } = await sb.from("horizon_plans").upsert({ horizon_id: horizonId, rows, author, updated_by: updatedBy, updated_at: new Date().toISOString() }, { onConflict: "horizon_id" });
   return error ? error.message : null;
 }
-export async function updateHorizon(sb: SupabaseClient, id: string, patch: Partial<Pick<HorizonRow, "title" | "ends_on" | "checkin_monday" | "checkin_month" | "send_to_coach" | "timezone" | "email_checkin">>): Promise<string | null> {
+export async function updateHorizon(sb: SupabaseClient, id: string, patch: Partial<Pick<HorizonRow, "title" | "ends_on" | "checkin_monday" | "checkin_month" | "send_to_coach" | "timezone" | "email_checkin" | "checkin_midweek">>): Promise<string | null> {
   const { error } = await sb.from("horizons").update(patch).eq("id", id);
   return error ? error.message : null;
 }
@@ -244,8 +247,29 @@ export async function askGuide(sb: SupabaseClient, payload: { horizon_id: string
 export { parseAccess, type HorizonAccess } from "./access.ts";
 export async function fetchAccess(sb: SupabaseClient): Promise<HorizonAccess | null> {
   const { ok, out } = await callHorizon(sb, { action: "plan" });
-  return ok ? parseAccess(out) : null;
+  const access = ok ? parseAccess(out) : null;
+  if (access) rememberAccess(out);
+  return access;
 }
+/**
+ * The function's last answer about what the account may do, kept for this tab (17 November 2026: the founder found
+ * the page slow to settle). The function takes a second or more to answer, and until it did the page drew itself
+ * without knowing, then drew itself again. The page now opens on the last answer and asks again behind it. The
+ * function still decides every write, so a stale answer can only show a button that the function then refuses.
+ */
+const ACCESS_KEY = "verve-horizon-access";
+const ACCESS_KEEP_MS = 30 * 60_000;
+function rememberAccess(out: unknown) {
+  try { sessionStorage.setItem(ACCESS_KEY, JSON.stringify({ at: Date.now(), out })); } catch { /* a private window: asked again next time */ }
+}
+export function rememberedAccess(): HorizonAccess | null {
+  try {
+    const kept = JSON.parse(sessionStorage.getItem(ACCESS_KEY) ?? "null");
+    return kept && typeof kept.at === "number" && Date.now() - kept.at < ACCESS_KEEP_MS ? parseAccess(kept.out) : null;
+  } catch { return null; }
+}
+/** Forget the kept answer: on signing out, and after anything that changes it (a horizon set, a plan bought). */
+export function forgetAccess() { try { sessionStorage.removeItem(ACCESS_KEY); } catch { /* nothing was kept */ } }
 
 // ── Horizon as a programme (canvas "Verve, Horizon as a programme"; built for test accounts, 16 November 2026) ──
 
@@ -295,5 +319,66 @@ export async function listWeekNotes(sb: SupabaseClient, horizonId: string): Prom
 /** One week's note, written by the person or by the coach they share with; `updatedBy` must be the signed-in user's id (the policy checks it). */
 export async function saveWeekNote(sb: SupabaseClient, horizonId: string, weekStart: string, patch: Partial<Pick<WeekNote, "way" | "away" | "call_at" | "call_kept" | "lines" | "lines_by">>, updatedBy: string): Promise<string | null> {
   const { error } = await sb.from("horizon_weeks").upsert({ horizon_id: horizonId, week_start: weekStart, ...patch, updated_by: updatedBy, updated_at: new Date().toISOString() }, { onConflict: "horizon_id,week_start" });
+  return error ? error.message : null;
+}
+
+// ── a day to be ready for (board 14, 17 November 2026) ──
+
+/**
+ * The name a person gave the day their horizon is for ("My sister's wedding"). It is theirs alone: it is kept in
+ * horizon_days, which only its owner can read, and never on the horizon's own row, which a coach reads and the
+ * function sends on. A table that is not there yet reads as no name.
+ */
+export async function loadDayName(sb: SupabaseClient, horizonId: string): Promise<string | null> {
+  try {
+    const { data, error } = await sb.from("horizon_days").select("name").eq("horizon_id", horizonId).maybeSingle();
+    const name = (data as { name?: unknown } | null)?.name;
+    return error || typeof name !== "string" || !name.trim() ? null : name;
+  } catch { return null; }
+}
+export async function saveDayName(sb: SupabaseClient, horizonId: string, userId: string, name: string): Promise<string | null> {
+  const { error } = await sb.from("horizon_days").upsert({ horizon_id: horizonId, user_id: userId, name: name.trim().slice(0, 80) }, { onConflict: "horizon_id" });
+  return error ? error.message : null;
+}
+
+// ── a fitness test, typed or read from a report (board 16) ──
+
+/** A reading filed where the app files its own tests, so the page and the phone read one list (./fitnessEntry.ts crfRow). */
+export async function keepFitnessReading(sb: SupabaseClient, row: Record<string, unknown>): Promise<string | null> {
+  const { error } = await sb.from("crf_entries").insert(row);
+  return error ? error.message : null;
+}
+
+// ── a diet chart, beside the horizon (board 17) ──
+
+/** A horizon's charts, oldest first; null when the tables are not there yet (the card is then not offered). */
+export async function listCharts(sb: SupabaseClient, horizonId: string): Promise<ChartRow[] | null> {
+  try {
+    const { data, error } = await sb.from("horizon_charts").select("*").eq("horizon_id", horizonId).is("removed_at", null).order("given_on", { ascending: true });
+    if (error) return isMissingRelation(error) ? null : [];
+    return ((data ?? []) as any[]).map((r) => ({ ...r, given_on: String(r.given_on).slice(0, 10), review_on: r.review_on ? String(r.review_on).slice(0, 10) : null,
+      meals: Array.isArray(r.meals) ? r.meals : [], notes: Array.isArray(r.notes) ? r.notes : [], totals: Array.isArray(r.totals) ? r.totals : [] })) as ChartRow[];
+  } catch { return null; }
+}
+export async function keepChart(sb: SupabaseClient, row: { horizon_id: string; user_id: string; report_path: string | null } & ChartRead & { given_on: string }): Promise<string | null> {
+  const { error } = await sb.from("horizon_charts").insert(row);
+  return error ? error.message : null;
+}
+/** Take a chart off its horizon. The file stays in Reports: it is the person's paper, not the horizon's. */
+export async function removeChart(sb: SupabaseClient, id: string): Promise<string | null> {
+  const { error } = await sb.from("horizon_charts").update({ removed_at: new Date().toISOString() }).eq("id", id);
+  return error ? error.message : null;
+}
+export async function listChartDays(sb: SupabaseClient, horizonId: string): Promise<ChartDay[]> {
+  try {
+    const { data, error } = await sb.from("horizon_chart_days").select("day, answer").eq("horizon_id", horizonId).order("day", { ascending: true });
+    return error ? [] : ((data ?? []) as any[]).map((r) => ({ day: String(r.day).slice(0, 10), answer: r.answer }));
+  } catch { return []; }
+}
+/** One day's answer; null takes the answer back, and the day is a dash again. */
+export async function saveChartDay(sb: SupabaseClient, horizonId: string, userId: string, day: string, answer: ChartAnswer | null): Promise<string | null> {
+  const { error } = answer
+    ? await sb.from("horizon_chart_days").upsert({ horizon_id: horizonId, user_id: userId, day, answer, updated_at: new Date().toISOString() }, { onConflict: "horizon_id,day" })
+    : await sb.from("horizon_chart_days").delete().eq("horizon_id", horizonId).eq("day", day);
   return error ? error.message : null;
 }

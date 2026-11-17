@@ -218,7 +218,7 @@ export type WeekFigures = { week_start: string; dose: number | null; goal: numbe
  * sessions themselves (the interim rule), the zone minutes from the app's own days (daily_signals zone2_min and
  * zone3_min, which add up to its week row) when it sent them, else from the sessions.
  */
-function countedFigures(person: Person, from: string, toExclusive: string): WeekFigures {
+export function countedFigures(person: Person, from: string, toExclusive: string): WeekFigures {
   const sessions = dedupeSessions(person.acts).filter((a) => { const d = localDay(a.timestamp); return d >= from && d < toExclusive; });
   const longest = sessions.reduce((m, a) => Math.max(m, Number(a.duration_minutes) || 0), 0);
   const strength = sessions.filter((a) => a.activity_type === "strength").length;
@@ -408,7 +408,12 @@ export function doorOfMethod(method: unknown): FitnessDoor | null {
   if (m === "non-exercise-formula") return "watch";
   return null;
 }
-/** What two readings must share to be compared: the door, or for a method with none, the method itself. */
+/**
+ * What two readings must share to be compared: the door, or for a method with none, the method itself. The one-mile
+ * walk has no door of its own (it borrows no other test's error) and is its own family: the set-up lists it beside
+ * the six-minute walk as a walk test (board 16, ../../data/programme.ts FITNESS_TESTS), and a horizon that starts on
+ * one is never read against the other.
+ */
 export const methodFamily = (method: unknown): string | null => doorOfMethod(method) ?? (String(method ?? "").trim() ? String(method).toLowerCase().replace(/[\s_]+/g, "-") : null);
 export type DoorReading = Reading & { door: FitnessDoor | null; family: string | null };
 /** Every fitness reading on file in METs, oldest first, each with its door. */
@@ -1323,7 +1328,7 @@ export function checkinInputs(h: HorizonLike & { title: string; ends_on_set?: st
 
 export type CheckinLine = { head: string; text: string };
 /** The heads a Monday check-in can carry, in the order they are shown. A text is read as lines only when every row opens with one of them. */
-export const CHECKIN_HEADS = { week: "The week", on: "On pace", off: "Not on pace", waitingWeek: "Waiting on a full week", waiting: "Waiting", plan: "The plan", date: "The date" } as const;
+export const CHECKIN_HEADS = { week: "The week", on: "On pace", off: "Not on pace", waitingWeek: "Waiting on a full week", waiting: "Waiting", plan: "The plan", date: "The date", chart: "The chart" } as const;
 /** The Guide's last line when it finds nothing to say about the plan: fixed words, so the null answer always reads the same. */
 export const PLAN_NOTHING = "Nothing in this week's figures argues for more or less than it asks.";
 
