@@ -45,7 +45,7 @@ export const GROUPS: { key: VideoGroup; label: string; blurb: string }[] = [
 ];
 
 export const VIDEOS: Video[] = [
-  { slug: "crf-explained", title: "What is cardiorespiratory fitness?", seconds: 29, group: "fitness", topic: "crf", posts: { substack: "https://roplekarsudeep.substack.com/p/what-is-vo2max-cardiorespiratory-fitness-guide" } },
+  { slug: "crf-explained", title: "What is cardiorespiratory fitness?", seconds: 29, group: "fitness", topic: "crf", posts: { substack: "https://roplekarsudeep.substack.com/p/what-is-vo2max-cardiorespiratory-fitness-guide", x: "https://x.com/RoplekarSudeep/status/2085251474519708132" } },
   { slug: "crf-tiers-thread", title: "Fitness is a vital sign. Yours is probably not on file.", seconds: 49, group: "fitness", topic: "crf" },
   { slug: "2026-09-29-tier-not-score", title: "A tier, not a score", seconds: 14, group: "fitness", topic: "crf", youtube: "rN41_e4baiI", posts: { substack: "https://roplekarsudeep.substack.com/p/fitness-tiers-for-vo2max-more-reliable" } },
   { slug: "arc-crf-prescription", title: "Exercise matched to your fitness: one prescription does not fit all", seconds: 176, group: "fitness", topic: "crf", youtube: "Qhb1QzZ270c", posts: { substack: "https://roplekarsudeep.substack.com/p/how-to-know-if-your-exercise-routine", x: "https://x.com/RoplekarSudeep/status/2086682174850515317" } },
@@ -102,7 +102,7 @@ export const VIDEOS: Video[] = [
   { slug: "the-guide", title: "The Guide: win, next, body", seconds: 14, group: "how-verve-works" },
   { slug: "the-guide-explained", title: "The Guide, explained (Pro)", seconds: 54, group: "how-verve-works", posts: { x: "https://x.com/RoplekarSudeep/status/2105185512122368133" } },
   { slug: "feature-guide", title: "Verve feature of the day: The Guide", seconds: 129, group: "how-verve-works", posts: { x: "https://x.com/RoplekarSudeep/status/2105185512122368133" } },
-  { slug: "ascvd-prevention", title: "Built slowly, prevented daily: lifestyle and ASCVD", seconds: 56, group: "wider-picture" },
+  { slug: "ascvd-prevention", title: "Built slowly, prevented daily: lifestyle and ASCVD", seconds: 56, group: "wider-picture", posts: { x: "https://x.com/RoplekarSudeep/status/2107828903486345602" } },
   { slug: "scot-heart-ct", title: "Heart CT scans: can a scan prevent heart attacks?", seconds: 45, group: "wider-picture", youtube: "LzB3Xs5qPaM", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-360750788", x: "https://x.com/RoplekarSudeep/status/2110353846811992539" } },
   { slug: "arc-coronary-inflammation", title: "Coronary inflammation: what a normal CT can miss", seconds: 174, group: "wider-picture", posts: { substack: "https://roplekarsudeep.substack.com/p/coronary-inflammation-the-biomarker" } },
   { slug: "interheart-risk-factors", title: "Heart attacks: how much does each risk factor matter?", seconds: 158, group: "wider-picture", youtube: "fNY0GHN8iv0", posts: { substack: "https://roplekarsudeep.substack.com/p/what-are-the-risk-factors-that-lead", x: "https://x.com/RoplekarSudeep/status/2114074361783357658" } },
