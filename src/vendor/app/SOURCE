@@ -1,0 +1,3 @@
+METTracker bb53b78
+lib/calculations.ts: estimateCRFFromBruceProtocol, estimateCRFFrom6MinuteWalk, estimateCRFFrom1MileWalk, estimateCRFFromCooperRun, estimateCRFFrom1_5MileRun
+__tests__/fixtures/crfEquationExamples.json

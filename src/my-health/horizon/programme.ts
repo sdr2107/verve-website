@@ -11,7 +11,7 @@
  */
 import { addDays, daysBetween } from "../derive/format.ts";
 import { weightSeries } from "../derive/lenses.ts";
-import { DOORS, DOOR_BY_KEY, GOAL_BY_KEY, GRIP, WEIGHT, type Door, type GoalKey, type Mode } from "../../data/programme.ts";
+import { DAY_BY_KEY, DOORS, DOOR_BY_KEY, GOAL_BY_KEY, GRIP, WEIGHT, type DayKey, type DayKind, type Door, type GoalKey, type GoalMarker, type Mode } from "../../data/programme.ts";
 import {
   MARKER_BY_KEY, dayMonthLong, daysWords, fitnessReadings, fmtValue, fullWeeksSoFar, horizonSpans, isTargetable, latestOf, round, typicalWeek, weekWords, windowWords,
   type DoorReading, type HorizonLike, type MarkerDef, type MarkerKey, type Person, type Reading, type Target,
@@ -30,6 +30,11 @@ export type Programme = {
   days: number[];
   place: "home" | "gym" | "both" | null;
   writer: Writer;
+  /**
+   * The day the horizon was set for (board 14, 17 November 2026): its kind only. A name the person gave the day is not
+   * here, because a coach reads this row. It is kept where only its owner reads it (horizon_days).
+   */
+  day?: { kind: DayKey } | null;
 };
 const GOAL_KEYS = new Set<string>(["lose_weight", "build_fitness", "hold", "marathon", "own"]);
 const strings = (x: unknown, max: number): string[] => (Array.isArray(x) ? x.filter((s): s is string => typeof s === "string" && s.trim() !== "").map((s) => s.trim().slice(0, 80)).slice(0, max) : []);
@@ -41,7 +46,24 @@ export function parseProgramme(x: unknown): Programme | null {
   const days = Array.isArray(r.days) ? [...new Set(r.days.map(Number).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort() : [];
   return { v: 1, goal: r.goal as GoalKey, aims: strings(r.aims, 6), barriers: strings(r.barriers, 6), days,
     place: r.place === "home" || r.place === "gym" || r.place === "both" ? r.place : null,
-    writer: r.writer === "coach" || r.writer === "both" ? r.writer : "guide" };
+    writer: r.writer === "coach" || r.writer === "both" ? r.writer : "guide",
+    day: dayOf(r) };
+}
+/** The day a stored programme was set for; null when it was set for a length of time. */
+function dayOf(r: Record<string, unknown>): { kind: DayKey } | null {
+  const d = r.day && typeof r.day === "object" ? (r.day as Record<string, unknown>).kind : null;
+  return typeof d === "string" && DAY_BY_KEY[d] ? { kind: d as DayKey } : null;
+}
+/** The kind of day a horizon was set for, read from horizons.programme; null for any other horizon. */
+export const dayKindOf = (programme: unknown): DayKind | null => { const k = parseProgramme(programme)?.day?.kind; return k ? DAY_BY_KEY[k] ?? null : null; };
+/**
+ * A day, counted from today (board 14): the days to it, the full weeks a horizon set today would hold, and the short
+ * weeks at either end that are shown and never judged. Null for a day that is not ahead of today.
+ */
+export function dayCount(today: string, on: string): { days: number; full: number; short: number } | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(on) || on <= today) return null;
+  const spans = horizonSpans({ starts_on: today, ends_on: on });
+  return { days: daysBetween(today, on), full: spans.filter((s) => s.full).length, short: spans.filter((s) => !s.full).length };
 }
 export const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -54,10 +76,12 @@ export type DraftRow = { marker: MarkerKey; def: MarkerDef; mode: Mode;
  * The markers a goal starts a person with. A marker that is out of Horizon (blood) or one the catalogue does not hold
  * is left out; one nothing is sending is kept and marked, so the person sees what the goal would read.
  */
-export function goalDraft(goal: GoalKey, canFollow: (marker: MarkerKey) => boolean = () => true): DraftRow[] {
+export function goalDraft(goal: GoalKey, canFollow: (marker: MarkerKey) => boolean = () => true, adds: GoalMarker[] = []): DraftRow[] {
   const g = GOAL_BY_KEY[goal];
   if (!g) return [];
-  return g.markers.flatMap((m) => {
+  // a day adds markers to the goal's own (board 14); one the goal already holds is not listed twice
+  const markers = [...g.markers, ...adds.filter((a) => !g.markers.some((m) => m.marker === a.marker))];
+  return markers.flatMap((m) => {
     const def = MARKER_BY_KEY[m.marker];
     if (!def || !isTargetable(m.marker)) return [];
     return [{ marker: def.key, def, mode: m.mode, missing: !canFollow(def.key) }];

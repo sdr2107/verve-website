@@ -37,8 +37,16 @@ export const PAUSES_MOST = 4;
 
 /** The date the person set, before any pause moved it. */
 export const dateAsSet = (h: PauseHorizon): string => (h.ends_on_set ? String(h.ends_on_set).slice(0, 10) : h.ends_on);
-/** Whether a pause moves the date. Not on the marathon goal: the race's day is not the page's to move. */
-export const pauseMovesDate = (h: PauseHorizon): boolean => (h.programme && typeof h.programme === "object" ? (h.programme as { goal?: unknown }).goal : null) !== "marathon";
+/**
+ * Whether a pause moves the date. Not on the marathon goal, and not on a horizon set for a day (board 14, 17 November
+ * 2026): a race, a wedding or a birthday is on the day it is on, so the week is set aside and the plan closes up.
+ */
+export const pauseMovesDate = (h: PauseHorizon): boolean => {
+  const p = h.programme && typeof h.programme === "object" ? (h.programme as { goal?: unknown; day?: unknown }) : null;
+  if (!p) return true;
+  const day = p.day && typeof p.day === "object" ? (p.day as { kind?: unknown }).kind : null;
+  return p.goal !== "marathon" && !(typeof day === "string" && day !== "");
+};
 
 /**
  * How many weeks a horizon may set aside: one for every three months it was set for. A horizon set by its months says

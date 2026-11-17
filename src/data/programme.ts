@@ -23,6 +23,7 @@ export type Source = { cite: string; doi: string | null; checked: Checked };
 /** The papers, by the short name the page prints. A null DOI is one still to be confirmed against the paper. */
 export const SOURCES: Record<string, Source> = {
   "Jensen 2013": { cite: "Jensen and others, 2013 AHA/ACC/TOS guideline for the management of overweight and obesity in adults", doi: "10.1161/01.cir.0000437739.71477.ee", checked: "abstract" },
+  "Kline 1987": { cite: "Kline and others, Medicine and Science in Sports and Exercise 1987;19(3):253-9 (PubMed 3600239)", doi: null, checked: "abstract" },
   "Madhu 2022": { cite: "Madhu and others, Endocrine Society of India position statement on obesity, 2022", doi: "10.4103/2230-8210.356236", checked: "abstract" },
   "Heymsfield 2014": { cite: "Heymsfield and others, Obesity Reviews 2014;15(4):310-21", doi: "10.1111/obr.12143", checked: "abstract" },
   "Sardeli 2018": { cite: "Sardeli and others, Nutrients 2018;10(4):423", doi: "10.3390/nu10040423", checked: "abstract" },
@@ -246,3 +247,105 @@ export const BARRIERS: { key: string; label: string; does: string }[] = [
  * ../my-health/horizon/pause.ts), which is the only way one is.
  */
 export const WAYS = [{ key: "time", label: "Time" }, { key: "travel", label: "Travel" }, { key: "illness", label: "Illness" }, { key: "unsure", label: "Not sure what to do" }, { key: "other", label: "Something else" }];
+
+// ── a day to be ready for (board 14, 17 November 2026) ──
+
+/**
+ * The days the set-up suggests. A day is a reason and a date. It is not a goal: it sets the horizon's date, says which
+ * goals are offered first, and may add a marker to the goal's own. It fills no field and sets no number (rule A).
+ * A name the person gives the day is theirs alone (horizon_days, owner only); the Guide and a coach are given the
+ * kind and the date.
+ */
+export type DayKey = "wedding" | "race" | "race_long" | "trek" | "match" | "work_test" | "birthday" | "trip" | "reunion" | "other";
+export type DayKind = {
+  key: DayKey;
+  /** The chip. */ label: string;
+  /** The horizon's title, the one a coach and the Guide see: "A wedding". */ title: string;
+  /** After "for": "a wedding". */ forWords: string;
+  /** The goals offered first, in order. Empty: all of them, none picked. One: it is picked. */
+  goals: GoalKey[];
+  /** Markers the day adds to the chosen goal's own. */
+  adds: GoalMarker[];
+  /** The one line the day adds, under the goals. */
+  note: string;
+  /** Not a chip of its own: reached from another day's second question. */ under?: DayKey;
+};
+export const DAYS: DayKind[] = [
+  { key: "wedding", label: "A wedding", title: "A wedding", forWords: "a wedding", goals: [], adds: [],
+    note: "No goal is picked for you. A weight number is read as a pace to the day, and the horizon offered after it is \"Hold what I have\"." },
+  { key: "race", label: "A race", title: "A race", forWords: "a race", goals: ["build_fitness"], adds: [{ marker: "longest_session", mode: "reach" }],
+    note: "The longest session joins the goal's markers. If you run, fitness can be kept to the timed run." },
+  { key: "race_long", label: "A half or full marathon", title: "A race", forWords: "a race", goals: ["marathon"], adds: [], under: "race",
+    note: "The Guide has no rules for the long runs yet, so a coach writes this plan." },
+  { key: "trek", label: "A trek or a climb", title: "A trek or a climb", forWords: "a trek or a climb", goals: ["build_fitness"],
+    adds: [{ marker: "longest_session", mode: "reach" }, { marker: "steps", mode: "reach" }, { marker: "chair_stands", mode: "ceiling" }],
+    note: "Days on foot ask for the legs, so the longest session, steps and the five chair rises sit beside fitness." },
+  { key: "match", label: "A match or a season", title: "A match or a season", forWords: "a match or a season", goals: ["build_fitness", "hold"], adds: [],
+    note: "The sport's own training is not the plan's to write. The plan holds the week around it." },
+  { key: "work_test", label: "A fitness test for work", title: "A fitness test", forWords: "a fitness test", goals: ["build_fitness"], adds: [],
+    note: "The test names its own number, and you type it. Verve does not hold any employer's standard. Keep fitness to the walk or the run the test uses." },
+  { key: "birthday", label: "A round birthday", title: "A birthday", forWords: "a birthday", goals: ["build_fitness", "hold"], adds: [],
+    note: "Fitness tiers are read by age. A birthday can move you to the next row of the table, where the same METs sit in a different tier." },
+  { key: "trip", label: "A trip on foot", title: "A trip", forWords: "a trip", goals: [], adds: [], note: "" },
+  { key: "reunion", label: "A reunion", title: "A reunion", forWords: "a reunion", goals: [], adds: [], note: "" },
+  { key: "other", label: "Something else", title: "A day of my own", forWords: "a day of your own", goals: [], adds: [], note: "" },
+];
+export const DAY_BY_KEY: Record<string, DayKind> = Object.fromEntries(DAYS.map((d) => [d.key, d]));
+/** The chips, in order: every day that is not reached from another's second question. */
+export const DAY_CHIPS: DayKind[] = DAYS.filter((d) => !d.under);
+/** Under this many full weeks, a day offers only what a week can count: two fitness tests differ by 5% with nothing changed (Katch 1982; Edgett 2018). */
+export const DAY_FEWEST_FULL_WEEKS = 4;
+/** The markers a week can count, offered when the day is under DAY_FEWEST_FULL_WEEKS full weeks away. */
+export const WEEK_COUNTED = new Set<string>(["dose", "zone2_week", "strength_week", "steps", "longest_session"]);
+export const DAY_SHORT_WORDS = "This day is under four full weeks away. Two fitness tests of one person differ by 5% with nothing changed, and a scale moves by more than a week's change. So the page offers only what a week can count: sessions, minutes and steps.";
+/**
+ * What a length of time is long enough for, beside the day: the same lines the templates carry, each with its paper.
+ * `least` is the fewest full weeks at which the line is shown; under it the row says the time is short.
+ */
+export const LONG_ENOUGH: { key: string; label: string; least: number; line: Line; short: string }[] = [
+  { key: "fitness", label: "Fitness", least: DAY_FEWEST_FULL_WEEKS, line: { text: "+1.1 METs is the average gain across trials of about twelve weeks. People differ widely on the same programme.", cites: ["Lin 2015", "Ross 2019"] }, short: "Too short to show a move. Two tests differ by 5% with nothing changed." },
+  { key: "weight", label: "Weight", least: DAY_FEWEST_FULL_WEEKS, line: { text: "0.5 to 1 kg a week is the one weekly figure a guideline states. Your number is read against it.", cites: ["Madhu 2022"] }, short: "Too short to read a pace from." },
+  { key: "waist", label: "Waist", least: DAY_FEWEST_FULL_WEEKS, line: { text: "About 3 cm with aerobic exercise in trials.", cites: ["Armstrong 2022"] }, short: "Too short to show a move." },
+  { key: "week", label: "The week itself", least: 1, line: { text: "Sessions, minutes and steps are counted from the first full week.", cites: [] }, short: "No full week fits before the day." },
+  { key: "grip", label: "Grip", least: 24, line: { text: "In 24 weeks of training grip rose by 1.3 kg, less than two readings of one person differ by. It is a number to hold.", cites: ["Tieland 2015", "Abe 2025"] }, short: "Not in this time. It is a number to hold." },
+];
+/** After a horizon set for a day, the next one offered. */
+export const DAY_AFTER = "Your last horizon was for a day, and the day has passed. This one opens on \"Hold what I have\": floors, from where you ended. Any other goal can be chosen below.";
+
+// ── fitness: the five tests the set-up asks about (board 16, 17 November 2026) ──
+
+/** What can be typed into the fitness card: one of the app's own methods each (METTracker lib/types.ts CRFEntry.estimationMethod). */
+export type EntryKey = "mask" | "walk6" | "walk1" | "cooper" | "run15" | "treadmill" | "watch";
+export const ENTRY_METHOD: Record<EntryKey, string> = {
+  mask: "cpet", walk6: "six-minute-walk", walk1: "one-mile-walk", cooper: "cooper-run", run15: "1.5-mile-run", treadmill: "treadmill-test", watch: "non-exercise-formula",
+};
+export const ENTRY_LABEL: Record<EntryKey, string> = {
+  mask: "Mask", walk6: "Six-minute walk", walk1: "One-mile walk", cooper: "Twelve-minute run", run15: "1.5-mile run", treadmill: "Treadmill", watch: "Watch",
+};
+export type FitnessTest = {
+  /** The door it opens (DOORS). */ door: DoorKey;
+  title: string; what: string; who: string;
+  /** How far off it can be: the figure, then the words under it. */ error: string; errorSub: string;
+  /** The method families whose readings count as this test being on file (derive.ts methodFamily). */ families: string[];
+  /** What can be typed for it, the first shown first. */ entries: EntryKey[];
+  /** A report of it can be read. */ report: boolean;
+  /** It is timed in the app, which asks its own health questions first. */ inApp: boolean;
+};
+export const FITNESS_TESTS: FitnessTest[] = [
+  { door: "lab", title: "A test with a mask", what: "Done at a clinic or a lab. It measures the gas you breathe.", who: "Anyone who has had one. The reference the others are judged against.",
+    error: "the reference", errorSub: "Two tests still differ by about 5%.", families: ["lab"], entries: ["mask"], report: true, inApp: false },
+  { door: "walk", title: "A walk test", what: "Six minutes on a flat stretch, or one mile with your heart rate at the end.", who: "Anyone. The only field test for someone who does not run.",
+    error: "about 1 MET", errorSub: "either way, for the six-minute walk.", families: ["walk", "one-mile-walk"], entries: ["walk6", "walk1"], report: false, inApp: true },
+  { door: "run", title: "A timed run", what: "Twelve minutes, or a mile and a half, as hard as you can.", who: "Someone who already runs. The app asks its health questions before it times one.",
+    error: "about 1 MET", errorSub: "either way, for the 1.5-mile run.", families: ["run"], entries: ["cooper", "run15"], report: false, inApp: true },
+  { door: "treadmill", title: "A treadmill test", what: "Done elsewhere, with no mask. Often part of a health check.", who: "Anyone who has the report.",
+    error: "can read 2.3 METs high", errorSub: "from the time alone.", families: ["treadmill"], entries: ["treadmill"], report: true, inApp: false },
+  { door: "watch", title: "Your watch's estimate", what: "No test to do. Always shown with the word \"estimate\".", who: "Anyone whose device makes one. If it does not send it, the figure can be typed from the device's own app.",
+    error: "13% off on average", errorSub: "up to 2.8 METs either way for one person.", families: ["watch"], entries: ["watch"], report: false, inApp: false },
+];
+/** Rule 4 (board 16): the test a horizon starts on has to be one the person can do again. */
+export const AGAIN_RULE: Line = { text: "One you can do again. A clinic's test at the start needs the clinic again on the date. Where that will not happen, a walk or a run taken this week is a start you can repeat.", cites: [] };
+/** The one-mile walk beside the six-minute walk: its own error, and why the two are not swapped mid-horizon. */
+export const ONE_MILE_NOTE: Line = { text: "The one-mile walk tracked a treadmill test closely in the group it was checked on, with an error of 0.355 litres of oxygen a minute. A horizon that starts on a six-minute walk ends on a six-minute walk, not on the mile.", cites: ["Kline 1987"] };
+/** A watch's estimate that was typed, not sent. */
+export const WATCH_TYPED = "Typed from your device's own app. It is the device's estimate, not a test, and is shown with that word.";

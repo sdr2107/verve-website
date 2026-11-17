@@ -166,3 +166,36 @@ Stored (METTracker `supabase/migrations/20261117_horizon_pause.sql`): `horizons.
 **"Stop this horizon" became "Delete this horizon"**, for every account. Stopping only set `closed_at`: the horizon left the page and every row stayed where nobody saw it again. Deleting removes the horizon's row, and with it its targets, plan, check-ins, questions, week notes and three health answers (each of those tables is tied to the horizon and goes with it). The person's readings are not the horizon's and are not touched. A horizon read to its date can be deleted the same way. The one free week of a Free account is kept apart from the horizon it began on (the function's `horizon_first`), so deleting a horizon does not hand the week back.
 
 Not changed: the date and the starting numbers of a horizon can still be written by its owner under row-level security. Before anything is earned on a horizon's outcome they need the same lock the pause has.
+
+## A day, a midweek note, a typed fitness test, a diet chart (17 November 2026)
+
+Canvas "Verve, Horizon as a programme", boards 14 to 17. Built for test accounts (`programme_testers`), like the rest of
+the programme. Tables and the one new column: METTracker `supabase/migrations/20261118_horizon_days_midweek_chart.sql`.
+
+- **A day to be ready for** (`../../data/programme.ts` DAYS, `programme.ts` dayCount / dayKindOf). The set-up's first
+  question. A day sets the horizon's date and says which goals are offered first; it may add markers to the goal's own
+  (`goalDraft(goal, canFollow, adds)`). It fills no field. The horizon's `title` is the KIND of day ("A wedding"), which
+  a coach and the Guide may read. A name the person gives the day is kept in `horizon_days`, which only its owner
+  reads, and never on the horizon's row. A day cannot move, so `pause.ts pauseMovesDate` is false for it: a paused week
+  is set aside and the plan closes up. Under `DAY_FEWEST_FULL_WEEKS` full weeks the draft offers only `WEEK_COUNTED`.
+- **The midweek note** (`midweek.ts midweekOf`). Thursday's four lines, read to Wednesday night, counted from the days
+  (`derive.ts countedFigures`, never the app's week row, which may hold Thursday). No model. Null before Thursday and
+  in a week that is not judged. What the week asks is `askedOf`: the plan's lines when there are any, else the weekly
+  numbers the person set. Drawn on the horizon's page (`views/Beside.tsx MidweekCard`) and first in The Guide
+  (`views/Reads.ts midweekBlock`), from the same function. The switch is `horizons.checkin_midweek` (absent reads as on).
+- **A fitness test, typed or read** (`fitnessEntry.ts`, `views/FitnessEntry.tsx`). The set-up asks how fitness will be
+  measured: `FITNESS_TESTS`, the surest first. A result is typed into one card, or read from a report by the page
+  (`state.ts actions.readFile`, the `report-parser` function's `exercise_test`). THE EQUATIONS ARE THE APP'S:
+  `src/vendor/app/crfEquations.ts` is copied word for word by `tools/sync-app-equations.mjs`, with the app's table of
+  worked examples, and both repositories test against that table. Nothing in `src/vendor/app` is edited by hand. The
+  reading is one row in the app's own table (`crf_entries`), so Overview, the horizon and the phone read one list. A
+  watch's estimate can be typed; it is kept as the device's estimate. The one-mile walk has no door of its own (it
+  borrows no other test's error) and is its own family: the set-up lists it beside the six-minute walk.
+- **A diet chart** (`chart.ts`, `views/Beside.tsx ChartCard`). Kept in `horizon_charts` as it was read (its own words,
+  its own script), with one answer a day in `horizon_chart_days`. Both are the owner's alone. The count is said in
+  one sentence (`chartCountWords`) and joined to nothing. `chart.ts` is copied into the horizon function, which adds
+  the same sentence to Monday's check-in under the head `CHECKIN_HEADS.chart`, after the model has written, so the
+  model never sees it. Nothing is worked out from a chart, and the Guide's chat still stops at food.
+- **The page's first paint** (`views/Horizon.tsx load`, `api.ts rememberedAccess`). The test list and the Guide's plan
+  are asked beside the horizons and set with them, so the page is drawn once. The function's answer about access is
+  kept for the tab and asked again behind it. The set-up's writes after `start` are sent together.

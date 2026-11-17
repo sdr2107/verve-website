@@ -32,7 +32,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { effect } from "@preact/signals";
 import { addDays, esc, fmtDay, mondayOf, round0, todayStr } from "../derive/format";
 import { dueLineOf } from "../derive/reads";
-import { derived, guideAsk, horizons, openOverTime, setGuideDraft } from "../state.ts";
+import { derived, guideAsk, horizons, isTester, openOverTime, setGuideDraft } from "../state.ts";
+import { midweekOf, planRowsNow } from "../horizon/midweek.ts";
 import { weekFiguresOf } from "../derive/snapshot.ts";
 import { fmtHMin } from "../derive/signals.ts";
 import { restingBPOf } from "../derive/markers.ts";
@@ -271,10 +272,35 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
       <aside class="flex flex-col gap-3">${yourReads(null)}${notCard()}</aside></section>`;
   }
 
+  /**
+   * The midweek note, first in The Guide (canvas "Verve, Horizon as a programme", board 15; test accounts): the four
+   * lines the horizon's page shows, counted by ../horizon/midweek.ts and written by no model. Empty before Thursday,
+   * in a week that is not judged, with the note switched off, and on a page that is not the viewer's to keep.
+   */
+  let midweekDrawn = "";
+  function midweekBlock(): string {
+    const p = derived.value;
+    if (!ctx || !ctx.owner || !isTester.value || !p) return "";
+    const today = todayStr();
+    for (const h of horizons.value ?? []) {
+      if (h.closed_at || h.checkin_midweek === false || h.person_id !== ctx.personId) continue;
+      const targets = openTargets(h.targets);
+      const note = midweekOf({ horizon: h, person: p, today, plan: planRowsNow(h, targets, p, today), targets });
+      if (!note) continue;
+      const lines = note.lines.map((l, i) => `<div class="grid grid-cols-1 gap-x-4 gap-y-1 py-2.5 md:grid-cols-[140px_minmax(0,1fr)] ${i ? "border-t border-border" : ""}"><span class="font-mono text-[11px] font-medium uppercase tracking-wider text-text-3">${esc(l.head)}</span><span class="text-[15px] leading-relaxed text-text">${esc(l.text)}</span></div>`).join("");
+      return `<section class="mb-5 flex flex-col gap-2 rounded-[16px] border border-accent-border bg-card p-5" aria-label="The midweek note">
+        <div class="font-mono text-[11px] font-medium text-accent-text">Midweek · ${esc(longDay(note.on))}${note.week != null ? ` · week ${note.week} of ${note.weeks}` : ""} · read to Wednesday night</div>
+        <div class="flex flex-col">${lines}</div>
+        <p class="m-0 text-[12px] leading-relaxed text-text-3">Counted from your week, not written by a model. <button type="button" data-onhorizon class="font-semibold text-accent-text underline-offset-2 hover:underline">On your horizon &rarr;</button></p>
+      </section>`;
+    }
+    return "";
+  }
   function drawTab() {
     if (!ctx) { tab.innerHTML = ""; return; }
     const r = open ?? reads[0] ?? null;
-    tab.innerHTML = state === "premium" ? premium() : state === "writing" ? writingPage() : !r ? firstRead() : readPage(r);
+    midweekDrawn = midweekBlock();
+    tab.innerHTML = midweekDrawn + (state === "premium" ? premium() : state === "writing" ? writingPage() : !r ? firstRead() : readPage(r));
     const note = tab.querySelector("[data-r=notebox]") as HTMLTextAreaElement | null;
     note?.addEventListener("blur", async () => {
       if (!r) return;
@@ -360,6 +386,11 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
   }
 
   function draw() { drawBand(); drawTab(); }
+  // the horizons, the week's rows and the test list arrive after the tab is drawn: draw again only when the note itself changes
+  effect(() => {
+    const next = midweekBlock();
+    if (ctx && next !== midweekDrawn && state !== "writing") drawTab();
+  });
 
   const onClick = async (e: Event) => {
     const t = e.target as HTMLElement;

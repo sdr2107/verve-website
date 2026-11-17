@@ -24,16 +24,20 @@ import {
   addMonths, adherenceOf, dayMonthLong, doorOfMethod, dayMonthYear, fitnessBy, fmtValue, historyOf, impliedPace, latestOf, round, typicalOf, vo2Line, weekMoves, weeklyHistory,
   type MarkerDef, type MarkerKey, type PlanRow, type Reading, type Target,
 } from "../horizon/derive.ts";
-import { DOOR_BY_KEY, FEWEST_AEROBIC_DAYS, FITNESS_RULES, GOALS, GOAL_BY_KEY, GRIP, LENGTH_FOR, OWN_GOAL, BARRIERS, TEMPLATE_KEEPS, WAYS, WEIGHT, doiUrl, type GoalKey, type Line, type Mode } from "../../data/programme.ts";
 import {
-  DAY_NAMES, MODE_WORDS, alreadyReads, callsKept, doorLine, doorsOnFile, goalDraft, mondayRow, noteFor, parseProgramme, sheetWeeks, startingMethod, threeSigns, weightPace,
+  DAY_AFTER, DAY_BY_KEY, DAY_CHIPS, DAY_FEWEST_FULL_WEEKS, DAY_SHORT_WORDS, DOOR_BY_KEY, FEWEST_AEROBIC_DAYS, FITNESS_RULES, GOALS, GOAL_BY_KEY, GRIP, LENGTH_FOR, LONG_ENOUGH, OWN_GOAL, BARRIERS, TEMPLATE_KEEPS, WAYS, WEEK_COUNTED, WEIGHT, doiUrl,
+  type DayKey, type GoalKey, type Line, type Mode,
+} from "../../data/programme.ts";
+import {
+  DAY_NAMES, MODE_WORDS, alreadyReads, callsKept, dayCount, doorLine, goalDraft, mondayRow, noteFor, parseProgramme, sheetWeeks, startingMethod, threeSigns, weightPace,
   type MondayRow, type Programme, type WeekNote, type Writer,
 } from "../horizon/programme.ts";
 import { guidePlan, rowsWith, screenOutcome, storeOf, isGuideStored, SCREEN_QUESTIONS, SCREEN_WORDS, type GuideStored, type ScreenAnswers } from "../horizon/guidePlan.ts";
 import { methodLabel } from "../derive/markers.ts";
 import type { PauseChoice, PauseState } from "../horizon/pause.ts";
+import { FitnessChooser } from "./FitnessEntry.tsx";
 import {
-  startHorizon, saveProgramme, setTargetHold, saveScreen, saveGuidePlan, listWeekNotes, saveWeekNote, ERROR_WORDS,
+  startHorizon, saveProgramme, setTargetHold, saveScreen, saveGuidePlan, saveDayName, forgetAccess, listWeekNotes, saveWeekNote, ERROR_WORDS,
   type ApiError, type HorizonAccess, type HorizonFull, type StartTarget,
 } from "../horizon/api.ts";
 
@@ -84,7 +88,7 @@ const clearWayIn = () => { try { localStorage.removeItem(WAY_IN_KEY); } catch { 
 type Field = { ticked: boolean; value: string; low: string };
 type Length = 3 | 6 | 12 | "date";
 
-export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, access, guideOn, userId, onStarted, onError, onCancel, onOwn, after }: {
+export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, access, guideOn, userId, onStarted, onError, onCancel, onOwn, after, afterDay }: {
   sb: SupabaseClient; person: PersonData | null; today: string; personId: string; nav: any; hasOthers: boolean;
   access: HorizonAccess | null; guideOn: boolean; userId: () => Promise<string | null>;
   onStarted: (id: string) => Promise<void>; onError: (e: ApiError, retry: () => void) => boolean; onCancel: () => void;
@@ -92,6 +96,8 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
   onOwn: () => void;
   /** The goal of the horizon just read to its date. After a weight horizon the next one offered is "Hold what I have". */
   after?: GoalKey | null;
+  /** The horizon just read to its date was set for a day (board 14): the next one opens on "Hold what I have". */
+  afterDay?: boolean;
 }) {
   const wayIn = useMemo(readWayIn, []);
   // "Time" gets in the way: the Guide's plan opens on the fewest aerobic days it offers. The person can change it in the plan.
@@ -99,7 +105,10 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
   const [length, setLength] = useState<Length>(3);
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
-  const [goal, setGoal] = useState<GoalKey | null>(after === "lose_weight" ? "hold" : null);
+  const [goal, setGoal] = useState<GoalKey | null>(after === "lose_weight" || afterDay ? "hold" : null);
+  // a day to be ready for (board 14): the day sets the date; a name for it is the person's alone
+  const [day, setDay] = useState<DayKey | null>(null);
+  const [dayName, setDayName] = useState("");
   const [writer, setWriter] = useState<Writer>("guide");
   const [days, setDays] = useState<number[]>([]);
   const [place, setPlace] = useState<"home" | "gym" | "both" | null>(null);
@@ -111,13 +120,16 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
   const [problem, setProblem] = useState("");
 
   const g = goal ? GOAL_BY_KEY[goal] : null;
+  const dayKind = day ? DAY_BY_KEY[day] : null;
   const endsOn = length === "date" ? date : addMonths(today, length);
+  const count = dayKind && date ? dayCount(today, date) : null;
+  // under four full weeks a day offers only what a week can count
+  const shortDay = !!count && count.full < DAY_FEWEST_FULL_WEEKS;
   const weeks = endsOn && endsOn > today ? Math.max(1, Math.ceil(daysBetween(today, endsOn) / 7)) : 0;
   // Only what your device shares: a marker nothing is sending is shown, and cannot be ticked
   const off = leftOff(person ? arrivalsOf(person.doc.weeks) : null);
-  const rows = useMemo(() => (goal ? goalDraft(goal, (m) => followable(off, m)) : []), [goal, person]);
+  const rows = useMemo(() => (goal ? goalDraft(goal, (m) => followable(off, m), dayKind?.adds ?? []).filter((r) => !shortDay || WEEK_COUNTED.has(r.marker)) : []), [goal, person, day, shortDay]);
   const onFile = useMemo(() => (person ? alreadyReads(person, today) : []), [person, today]);
-  const doors = useMemo(() => (person ? doorsOnFile(person) : []), [person]);
   const guideWrites = writer !== "coach" && !g?.writer;
   const answered = SCREEN_QUESTIONS.every((q) => typeof screen[q.key] === "boolean");
   const outcome = answered ? screenOutcome(screen as ScreenAnswers) : null;
@@ -131,7 +143,15 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
     const gg = GOAL_BY_KEY[goal];
     if (gg?.writer === "coach") setWriter("coach");
     if (gg && length !== "date" && !gg.suits.includes(length)) setLength(gg.suits[0]);
-  }, [goal]);
+  }, [goal, day, shortDay]);
+  /** Pick a day, or none. A day sets the date's kind and says which goals come first; one goal offered is the goal picked. */
+  function pickDay(k: DayKey | null) {
+    setDay(k); setPreview(false);
+    if (!k) { if (length === "date") setLength(3); return; }
+    setLength("date");
+    const d = DAY_BY_KEY[k];
+    setGoal(d.goals.length === 1 ? d.goals[0] : null);
+  }
 
   const field = (k: string): Field => fields[k] ?? { ticked: false, value: "", low: "" };
   const setField = (k: string, patch: Partial<Field>) => { setFields((f) => ({ ...f, [k]: { ...field(k), ...patch } })); setPreview(false); };
@@ -161,9 +181,10 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
 
   function check(): string {
     if (!g || !goal) return "Choose what this horizon is for.";
-    if (length === "date" && !title.trim()) return "Give the date a name: the race, the event.";
-    if (!endsOn || endsOn <= today) return "The date has to be ahead of today.";
+    if (length === "date" && !dayKind) return "Choose the day this horizon is for, or a length of time.";
+    if (!endsOn || endsOn <= today) return dayKind ? "Give the day's date. It has to be ahead of today." : "The date has to be ahead of today.";
     if (!draftTargets.length) return "Set at least one number. Every field is empty until you type in it.";
+    if (field("mets").ticked && num(field("mets").value) != null && !method) return "A fitness number needs a test on file. Choose how fitness will be measured, or untick Fitness.";
     if (rows.some((r) => r.mode === "band" && field(r.marker).ticked && field(r.marker).value !== "" && !(num(field(r.marker).low) != null && num(field(r.marker).low)! < num(field(r.marker).value)!))) return "A band needs both ends: the lower number first.";
     if (guideWrites && guideOn && !answered) return "Answer the three questions about your health, or choose a coach to write the plan.";
     return "";
@@ -173,8 +194,9 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
     const why = check();
     if (why) { setProblem(why); return; }
     const targets = chosen();
-    const programme: Programme = { v: 1, goal: goal!, aims: wayIn.aims, barriers: wayIn.barriers, days: [...days].sort(), place, writer: g!.writer === "coach" ? "coach" : writer };
-    const name = length === "date" ? title.trim() : `${g!.title}, ${length} months`;
+    const programme: Programme = { v: 1, goal: goal!, aims: wayIn.aims, barriers: wayIn.barriers, days: [...days].sort(), place, writer: g!.writer === "coach" ? "coach" : writer, day: dayKind ? { kind: dayKind.key } : null };
+    // the horizon's title is the kind of day, which a coach and the Guide may read; the name the person gave it is kept apart
+    const name = dayKind ? dayKind.title : `${g!.title}, ${length} months`;
     const go = async () => {
       setBusy(true); setProblem("");
       const res = await startHorizon(sb, {
@@ -184,20 +206,24 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
       });
       if (!res.ok) { setBusy(false); if (!onError(res.error, () => void go())) setProblem(res.detail ? `${ERROR_WORDS[res.error]} ${res.detail}` : ERROR_WORDS[res.error]); return; }
       const id = res.data.id;
-      // what the function does not take: the programme, how each number is held, the method a fitness number is kept to
-      const problems: string[] = [];
-      const say = (e: string | null) => { if (e) problems.push(e); };
-      say(await saveProgramme(sb, id, programme));
-      for (const t of targets) if (t.hold) say(await setTargetHold(sb, id, t.marker, t.hold));
+      // what the function does not take: the programme, how each number is held, the method a fitness number is kept to,
+      // the day's name, the three answers and the Guide's plan. They do not depend on one another, so they are sent
+      // together and not one after another (17 November 2026: keeping a horizon took a second or two to show it).
       const uid = await userId();
+      const writes: Promise<string | null>[] = [saveProgramme(sb, id, programme)];
+      for (const t of targets) if (t.hold) writes.push(setTargetHold(sb, id, t.marker, t.hold));
+      if (uid && dayKind && dayName.trim()) writes.push(saveDayName(sb, id, uid, dayName));
       if (uid && guideWrites && guideOn && answered) {
-        say(await saveScreen(sb, id, uid, screen as ScreenAnswers));
+        writes.push(saveScreen(sb, id, uid, screen as ScreenAnswers));
         const oc = screenOutcome(screen as ScreenAnswers);
         if (oc !== "none" && person) {
           const v = guidePlan({ horizon: { starts_on: today, ends_on: endsOn }, targets: targets.map((t) => ({ marker: t.marker, target_value: t.target_value })), person, today, mode: oc, choices: planChoices });
-          say(await saveGuidePlan(sb, id, rowsWith(v, []), storeOf(v, today), uid));
+          writes.push(saveGuidePlan(sb, id, rowsWith(v, []), storeOf(v, today), uid));
         }
       }
+      const problems = (await Promise.all(writes)).filter((e): e is string => !!e);
+      // a horizon set changes what the account may do (the free week has begun): the kept answer is asked again
+      forgetAccess();
       setBusy(false);
       clearWayIn();
       if (problems.length) setProblem(`The horizon is kept. One part of it was not: ${problems[0]}`);
@@ -212,31 +238,66 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
         <Eyebrow>Horizon · new · test account</Eyebrow>
         <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-[-0.01em] text-text">Set a horizon</h1>
         <p class="m-0 text-[15px] leading-relaxed text-text-2">Three choices, then the page shows what it already reads about you. It asks only what it cannot read, and you set every number.</p>
+        {afterDay && after !== "lose_weight" ? <Evidence line={{ text: DAY_AFTER, cites: [] }} /> : null}
         {after === "lose_weight" ? <Evidence line={{ text: `Your last horizon was for weight, so this one opens on "Hold what I have": a floor, not another loss. ${WEIGHT.after.text} Any other goal can be chosen below.`, cites: WEIGHT.after.cites }} /> : null}
         {wayIn.aims.length > 0 && <p class="m-0 text-[13px] leading-relaxed text-text-2">You said you want: {wayIn.aims.map((a) => `"${a}"`).join(", ")}. It is kept above your numbers.</p>}
         <p class="m-0 text-[13px] text-text-2"><a href="/horizon/" class="font-semibold text-accent-text underline-offset-2 hover:underline">{wayIn.aims.length || wayIn.barriers.length ? "Change your answers to the five questions" : "Start from the five questions"}</a></p>
         {hasOthers && <div class="mt-1">{nav}</div>}
       </header>
 
-      <Step n={1} title="How far ahead?">
-        <div class="grid grid-cols-1 gap-2 md:grid-cols-4">
-          {([3, 6, 12] as const).map((m) => <Opt key={m} on={length === m} onPick={() => setLength(m)} title={m === 12 ? "1 year" : `${m} months`} sub={LENGTH_FOR[m]} foot={`to ${dayMonthYear(addMonths(today, m))}`} />)}
-          <Opt on={length === "date"} onPick={() => setLength("date")} title="A date of my own" sub="A race, a wedding, a birthday." />
+      <Step n={1} title="Is there a day you want to be ready for?">
+        <div class="flex flex-wrap gap-1.5">
+          {DAY_CHIPS.map((d) => <Chip key={d.key} on={day === d.key || (d.key === "race" && day === "race_long")} onPick={() => pickDay(d.key)}>{d.label}</Chip>)}
         </div>
-        {length === "date" && (
-          <div class="flex flex-wrap items-end gap-3">
-            <label class="flex flex-1 basis-[260px] flex-col gap-1"><Eyebrow>Name</Eyebrow><input type="text" value={title} maxLength={80} onInput={(e) => setTitle((e.currentTarget as HTMLInputElement).value)} placeholder="The city marathon" class={inputClass} /></label>
-            <label class="flex flex-col gap-1"><Eyebrow>Date</Eyebrow><input type="date" value={date} min={today} onInput={(e) => setDate((e.currentTarget as HTMLInputElement).value)} class={`${inputClass} font-mono`} /></label>
-            {weeks > 0 && <span class="pb-2 text-[13px] text-text-2">{weeks} weeks</span>}
+        <div class="flex flex-wrap gap-1.5">
+          <button type="button" aria-pressed={!day} onClick={() => pickDay(null)} class={`inline-flex min-h-9 items-center rounded-full border border-dashed px-3 text-[13px] font-medium ${!day ? "border-accent-border bg-accent-fill text-accent-text" : "border-border-strong bg-alt text-text-2 hover:border-accent-border"}`}>No day. Three months, six months or a year</button>
+        </div>
+        {!dayKind ? (
+          <div class="grid grid-cols-1 gap-2 md:grid-cols-3">
+            {([3, 6, 12] as const).map((m) => <Opt key={m} on={length === m} onPick={() => setLength(m)} title={m === 12 ? "1 year" : `${m} months`} sub={LENGTH_FOR[m]} foot={`to ${dayMonthYear(addMonths(today, m))}`} />)}
+          </div>
+        ) : (
+          <div class="flex flex-col gap-4">
+            {day === "race" || day === "race_long" ? (
+              <div class="flex flex-col gap-2"><span class="text-[14px] font-semibold text-text">How far is it?</span>
+                <div class="flex flex-wrap gap-1.5"><Chip on={day === "race"} onPick={() => pickDay("race")}>Up to 10 km</Chip><Chip on={day === "race_long"} onPick={() => pickDay("race_long")}>A half or full marathon</Chip></div></div>
+            ) : null}
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+              <div class="flex flex-col gap-3">
+                <label class="flex flex-col gap-1"><Eyebrow>When is it?</Eyebrow><input type="date" value={date} min={today} onInput={(e) => { setDate((e.currentTarget as HTMLInputElement).value); setPreview(false); }} class={`${inputClass} font-mono`} /></label>
+                {count ? (
+                  <div class="grid grid-cols-3 gap-2">
+                    {[[count.days, count.days === 1 ? "day from today" : "days from today"], [count.full, count.full === 1 ? "full week" : "full weeks"], [count.short, count.short === 1 ? "short week, not judged" : "short weeks, not judged"]].map(([n, w]) => (
+                      <div class="flex flex-col gap-0.5 rounded-[10px] border border-border bg-alt px-3 py-2" key={String(w)}><span class="t-figure-row font-semibold text-text">{n}</span><span class="text-[12px] leading-snug text-text-2">{w}</span></div>
+                    ))}
+                  </div>
+                ) : date ? <Quiet>The day has to be ahead of today.</Quiet> : null}
+                <label class="flex flex-col gap-1"><Eyebrow>A name for it · optional</Eyebrow><input type="text" value={dayName} maxLength={80} onInput={(e) => setDayName((e.currentTarget as HTMLInputElement).value)} placeholder="My sister's wedding" class={inputClass} /></label>
+                <Quiet>Only you see this name. The Guide and a coach are told "{dayKind.forWords}" and the date.</Quiet>
+                <Quiet>The day cannot move. A paused week is set aside and the plan closes up, and the date stays.</Quiet>
+              </div>
+              <div class="flex flex-col gap-2">
+                <Eyebrow>{count ? `What ${count.full} full ${count.full === 1 ? "week is" : "weeks are"} long enough for` : "What the time is long enough for"}</Eyebrow>
+                {count ? LONG_ENOUGH.map((l) => count.full >= l.least
+                  ? <div class="grid grid-cols-[92px_minmax(0,1fr)] gap-3 border-t border-border pt-2 first:border-t-0" key={l.key}><span class="text-[13px] font-semibold text-text">{l.label}</span><Evidence line={l.line} /></div>
+                  : <div class="grid grid-cols-[92px_minmax(0,1fr)] gap-3 border-t border-border pt-2 first:border-t-0" key={l.key}><span class="text-[13px] font-semibold text-text">{l.label}</span><span class="text-[13px] leading-relaxed text-text-2">{l.short}</span></div>)
+                  : <Quiet>Give the day's date, and the page shows what the time to it is long enough for.</Quiet>}
+                <Quiet>The lines the goals carry, picked by the time you have. No field is filled in.</Quiet>
+              </div>
+            </div>
+            {shortDay ? <p class="m-0 rounded-[10px] border border-border-strong bg-alt px-4 py-3 text-[13px] leading-relaxed text-text-2">{DAY_SHORT_WORDS}</p> : null}
           </div>
         )}
+        <Quiet>A day is a reason and a date. It is not a goal: what the horizon is for comes next.</Quiet>
       </Step>
 
       <Step n={2} title="What is this horizon for?">
         <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
-          {GOALS.map((x) => <Opt key={x.key} on={goal === x.key} onPick={() => setGoal(x.key)} title={x.title} sub={x.lead} foot={x.suitsWords} />)}
+          {(dayKind?.goals.length ? [...GOALS].sort((a, b) => (dayKind.goals.includes(a.key) ? dayKind.goals.indexOf(a.key) : 99) - (dayKind.goals.includes(b.key) ? dayKind.goals.indexOf(b.key) : 99)) : GOALS)
+            .map((x) => <Opt key={x.key} on={goal === x.key} onPick={() => setGoal(x.key)} title={x.title} sub={x.lead} foot={dayKind ? (dayKind.goals.includes(x.key) ? `Offered first for ${dayKind.forWords}` : undefined) : x.suitsWords} />)}
           <Opt on={false} onPick={onOwn} title={OWN_GOAL.title} sub={OWN_GOAL.lead} />
         </div>
+        {dayKind?.note ? <p class="m-0 text-[13px] leading-relaxed text-text-2">{dayKind.note}</p> : null}
         <Quiet>A goal ticks its markers and shows what studies report beside each number. It fills no field in.</Quiet>
       </Step>
 
@@ -285,7 +346,7 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
         <Quiet>The days and the place are kept with the horizon, for the plan and for your coach. Both can be left empty.</Quiet>
       </Step>
 
-      <Step n={6} title={g ? `Your horizon, drafted · ${g.title}${weeks ? ` · ${weeks} weeks` : ""}` : "Your horizon, drafted"}>
+      <Step n={6} title={g ? `Your horizon, drafted · ${g.title}${count ? ` · ${count.full} full ${count.full === 1 ? "week" : "weeks"}` : weeks ? ` · ${weeks} weeks` : ""}` : "Your horizon, drafted"}>
         {!g ? <Quiet>Choose what the horizon is for, above. The goal ticks its markers here.</Quiet> : (
           <div class="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
             <div class="flex flex-col">
@@ -310,13 +371,12 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
                     </span>
                     <span class="col-start-2 text-[12px] text-text-3 md:col-start-auto"><span class="font-mono text-[11px]">{unit}</span> · {stands}</span>
                     <span class={`col-span-2 text-[12px] leading-relaxed md:col-span-4 md:pl-8 ${f.ticked ? "text-text-2" : "text-text-3"}`}>{note}{r.marker === "mets" && person && f.ticked ? ` ${vo2Line(person, today, v, method && now ? now.value : null)}` : ""}</span>
-                    {r.marker === "mets" && f.ticked && doors.length > 0 ? (
-                      <div class="col-span-2 flex flex-col gap-1.5 md:col-span-4 md:pl-8">
-                        <span class="text-[12px] font-semibold text-text-2">Measured by one method, from start to end</span>
-                        <div class="flex flex-wrap gap-1.5">{doors.map((d) => <Chip key={d.door.key} on={method === d.door.key} onPick={() => { setMethod(d.door.key); setPreview(false); }}>{d.door.title.replace(/^(A|Your) /, "").replace(/^./, (c) => c.toUpperCase())} · {fmtValue(r.def, d.reading.value)} on {dayMonthLong(d.reading.on)}</Chip>)}</div>
-                        {method && DOOR_BY_KEY[method] ? <Evidence line={DOOR_BY_KEY[method].errorNote} /> : method ? <Quiet>Kept to {methodLabel(method)}. No published error is on file for it here.</Quiet> : null}
-                        {v != null && now && Math.abs(v - now.value) < now.value * FITNESS_RULES.noChangeShare ? <Quiet>Your number is inside the 5% two tests of one person differ by with nothing changed. A test at your number will not be called reached.</Quiet> : null}
-                      </div>
+                    {r.marker === "mets" && f.ticked && person ? (
+                      <>
+                        <FitnessChooser person={person} method={method} onPick={(family) => { setMethod(family); setPreview(false); }} />
+                        {v != null && now && Math.abs(v - now.value) < now.value * FITNESS_RULES.noChangeShare ? <div class="col-span-2 md:col-span-4 md:pl-8"><Quiet>Your number is inside the 5% two tests of one person differ by with nothing changed. A test at your number will not be called reached.</Quiet></div> : null}
+                        {v != null && now && method === "watch" && Math.abs(v - now.value) < now.value * 0.13 ? <div class="col-span-2 md:col-span-4 md:pl-8"><Quiet>Your number is a smaller move than a watch's estimate can be off by. A walk or a run at the start and on the date can show it.</Quiet></div> : null}
+                      </>
                     ) : null}
                     {r.marker === "grip" && f.ticked ? <div class="col-span-2 md:col-span-4 md:pl-8"><Evidence line={GRIP.moves} /></div> : null}
                   </div>
@@ -373,7 +433,8 @@ export function ProgrammeLine({ programme }: { programme: Programme }) {
 
 // ── weight, read safely (board 07) ──
 
-export function WeightCard({ h, targets, person, today, programme }: { h: HorizonFull; targets: Target[]; person: PersonData; today: string; programme: Programme | null }) {
+export function WeightCard({ h, targets, person, today, programme, chartLine }: { h: HorizonFull; targets: Target[]; person: PersonData; today: string; programme: Programme | null;
+  /** The diet chart's count for the week so far, in its own sentence (board 17): shown under the three signs, and joined to none of them. */ chartLine?: string | null }) {
   const t = targets.find((x) => x.marker === "weight" && !x.mode);
   if (!t || t.start_value == null) return null;
   const weeks = Math.max(1, Math.ceil(daysBetween(t.start_on ?? h.starts_on, h.ends_on) / 7));
@@ -409,6 +470,7 @@ export function WeightCard({ h, targets, person, today, programme }: { h: Horizo
         ))}
       </div>
       <p class="m-0 rounded-[12px] border border-border-strong bg-card px-4 py-3 text-[15px] leading-relaxed text-text">{signs.read}</p>
+      {chartLine ? <p class="m-0 text-[14px] leading-relaxed text-text-2"><span class="font-mono text-[11px] font-medium uppercase tracking-wider text-text-3">The chart</span> · {chartLine} It is shown beside the three signs, and is not read as the cause of any of them.</p> : null}
       <Quiet>{signs.stops} The page writes no diet.</Quiet>
       {programme?.goal === "lose_weight" ? <Evidence line={{ text: `On the date, the next horizon offered is "Hold what I have". ${WEIGHT.after.text}`, cites: WEIGHT.after.cites }} /> : null}
       <Quiet>Read from the papers' abstracts on 15 November 2026. Shown to test accounts only.</Quiet>
