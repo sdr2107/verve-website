@@ -858,6 +858,7 @@ import { STORY } from "../data/story";
           <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-scope="activity" class="h-4 w-4 accent-accent" />Activity and fitness</label>
           <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-scope="body" class="h-4 w-4 accent-accent" />Body measurements</label>
           <label class="flex min-h-9 items-center gap-2"><input type="checkbox" data-scope="heart" class="h-4 w-4 accent-accent" />Sleep and heart</label>
+          <label class="hidden min-h-9 items-center gap-2"><input type="checkbox" data-scope="chart" class="h-4 w-4 accent-accent" />Diet chart</label>
         </fieldset>
         <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
           <button type="submit" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas transition-opacity hover:opacity-90">Send the invitation</button>
@@ -1019,7 +1020,7 @@ import { STORY } from "../data/story";
   import { mountReports } from "../my-health/views/Reports";
   import { mountPeople } from "../my-health/views/People";
   import { REPORT_EXT, pretty, stampOf, isPhotoName, unitFits, APP_KEYS, appBoundFor, isSent, reportAppState, pendingReports, uncheckedInApp, type AppBound } from "../my-health/derive/reports";
-  import { SCOPE_LABEL, ALL_SCOPES, scopeList } from "../my-health/derive/scopes";
+  import { SCOPE_LABEL, ALL_SCOPES, TEST_SCOPES, offeredScopes, scopeList } from "../my-health/derive/scopes";
   import { exportCSV, exportJSON, download } from "../my-health/export";
   import { mountMessages } from "../my-health/views/Messages";
   import { mountReads } from "../my-health/views/Reads";
@@ -1708,11 +1709,15 @@ import { STORY } from "../data/story";
   async function loadSharing() {
     const p = person;
     if (!p?.id || !p.mine) return;
+    // a diet chart's tick is offered to test accounts only (board 17); it is in no preset, so it starts unticked
+    const tester = await programmeTester(supabase as any);
     // activity and body come from the app, which only a person with an account has
     $("shareform").querySelectorAll<HTMLInputElement>("[data-scope]").forEach((c) => {
       const appOnly = c.dataset.scope === "activity" || c.dataset.scope === "body" || c.dataset.scope === "heart";
-      c.closest("label")!.classList.toggle("hidden", appOnly && !p.account_id);
-      if (appOnly && !p.account_id) c.checked = false;
+      const off = (appOnly && !p.account_id) || (TEST_SCOPES.has(c.dataset.scope!) && !tester);
+      const label = c.closest("label")!;
+      label.classList.toggle("hidden", off); label.classList.toggle("flex", !off);
+      if (off) c.checked = false;
     });
     const d = await ensureDocument();
     if (person?.id !== p.id) return;   // switched away meanwhile
@@ -1728,8 +1733,7 @@ import { STORY } from "../data/story";
     const titleOf = (email: string) => pros.get(String(email).toLowerCase())?.title ?? "";
     $("accesssub").textContent = rows.length ? `${rows.length} ${rows.length === 1 ? "person" : "people"}` : "";
     $("setsharingline").textContent = rows.length ? `${rows.length} ${rows.length === 1 ? "person" : "people"} can see this page` : "Only you, so far";
-    const APP_SCOPES = new Set(["activity", "body", "heart"]);
-    const offered = Object.keys(SCOPE_LABEL).filter((k) => k !== "notes" && (p.account_id || !APP_SCOPES.has(k)));
+    const offered = offeredScopes({ hasAccount: !!p.account_id, tester });
     $("sharelist").innerHTML = rows.length ? rows.map((g: any) => `
       <div class="rounded-xl border border-ink/[0.08] px-3.5 py-2.5 text-[13px]" data-grant="${g.id}">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1">

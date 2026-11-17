@@ -33,7 +33,8 @@ import { signal } from "@preact/signals";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PersonData } from "../derive/person.ts";
 import { addDays, daysBetween, todayStr } from "../derive/format.ts";
-import { horizons as horizonsSignal, guideDraft, setGuideDraft, isTester } from "../state.ts";
+import { horizons as horizonsSignal, guideDraft, setGuideDraft, isTester, doc as docSignal } from "../state.ts";
+import { chartSharedWith } from "../horizon/chart.ts";
 import { arrivalsOf, followable, leftOff, pausedWords } from "../derive/arrivals.ts";
 import {
   TARGET_MARKERS, isTargetable, openTargets, MARKER_BY_KEY, GROUP_LABEL, FIRST_MARKERS, type MarkerKey, type PlanRow, type PlanKind, type Tone,
@@ -51,7 +52,7 @@ import {
 import { midweekOf, planRowsNow } from "../horizon/midweek.ts";
 import { dayKindOf } from "../horizon/programme.ts";
 import type { EntryKey } from "../../data/programme.ts";
-import { MidweekCard, ChartCard, chartSoFar, loadChartState, type ChartState } from "./Beside.tsx";
+import { MidweekCard, ChartCard, chartSoFar, chartLastWeek, loadChartState, type ChartState } from "./Beside.tsx";
 import { openFitnessCard } from "./FitnessEntry.tsx";
 import { guidePlan, freezeOf, isGuideStored, PLAN_MARKERS, type GuideStored } from "../horizon/guidePlan.ts";
 import { GuidePlanCard, GuideOffer, GuideLocked } from "./GuidePlan.tsx";
@@ -382,10 +383,12 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
     if (owner && dayKind) void loadDayName(deps.supabase, h.id).then((n) => { if (on) setDayName(n); });
     return () => { on = false; };
   }, [h.id, owner, dayKind?.key]);
-  // a diet chart kept with the horizon (board 17): the owner's alone, test accounts only
+  // a diet chart kept with the horizon (board 17): its owner's, for test accounts. Someone it is shared with (the
+  // share's "Diet chart" tick) is given its rows by the database and reads them; anyone else is given none.
   const [chartState, setChartState] = useState<ChartState | null>(null);
   const loadCharts = async () => { setChartState(await loadChartState(deps.supabase, h.id)); };
-  useEffect(() => { setChartState(null); if (owner && tester) void loadCharts(); }, [h.id, owner, tester]);
+  useEffect(() => { setChartState(null); if (!owner || tester) void loadCharts(); }, [h.id, owner, tester]);
+  const who = owner ? "you" : "they";
   const [adding, setAdding] = useState(false);
   /** The target whose number is being changed, and what is typed. */
   const [changing, setChanging] = useState<{ marker: MarkerKey; value: string } | null>(null);
@@ -431,7 +434,8 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   const planRows = h.plan?.rows ?? [];
   // the midweek note (board 15): Thursday's, counted, for the owner of a test account; off when they switched it off
   const midweek = useMemo(() => (person && owner && tester && !h.closed_at && h.checkin_midweek !== false ? midweekOf({ horizon: h, person, today, plan: planRowsNow(h, targets, person, today), targets }) : null), [person, h, today, owner, tester]);
-  const chartLine = chartSoFar(chartState, h, today);
+  const chartLine = chartSoFar(chartState, h, today, who);
+  const chartLast = chartLastWeek(chartState, h, today, who);
   // the fitness number's own test, for the card that adds a result (board 16)
   const fitnessTarget = targets.find((t) => t.marker === "mets") ?? null;
   const KINDS_FOR: Record<string, EntryKey[]> = { lab: ["mask"], walk: ["walk6"], "one-mile-walk": ["walk1"], run: ["cooper", "run15"], treadmill: ["treadmill"], watch: ["watch"] };
@@ -672,10 +676,12 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
 
       {programme && (programme.writer !== "guide" || !owner || tester)
         ? <CallCard sb={deps.supabase} h={h} targets={targets} person={person} today={today} owner={owner} closed={closed} tester={tester} programme={programme} planRows={planRows} guideOn={guideOn} userId={userId} setNotice={setNotice}
+            chartLine={chartLast ? chartLast.replace(/^./, (c) => c.toUpperCase()) : null}
             pause={pause} pausing={busy === "pause"} onSetAside={(c) => { if (confirm(`Set last week aside, ${c.words}?\n\n${pauseLines(h, c, pause!).join("\n")}`)) void setAside(c); }} />
         : null}
 
-      {owner && tester && chartState && !chartState.off ? <ChartCard sb={deps.supabase} h={h} today={today} state={chartState} closed={closed} userId={userId} reload={loadCharts} /> : null}
+      {owner && tester && chartState && !chartState.off ? <ChartCard sb={deps.supabase} h={h} today={today} state={chartState} closed={closed} userId={userId} reload={loadCharts} sharedWith={chartSharedWith((docSignal.value as { sharing?: { status?: unknown; scopes?: unknown }[] } | null)?.sharing)} /> : null}
+      {!owner && chartState && chartState.charts.length ? <ChartCard sb={deps.supabase} h={h} today={today} state={chartState} closed={closed} userId={userId} reload={loadCharts} readOnly /> : null}
 
       <Card id="horizon-checkin">
         <div class="flex flex-wrap items-baseline justify-between gap-3">

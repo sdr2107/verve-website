@@ -483,11 +483,13 @@ export function WeightCard({ h, targets, person, today, programme, chartLine }: 
 const callWords = (iso: string | null) => { if (!iso) return "No time set"; const d = new Date(iso); return `${d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}, ${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`; };
 const localInput = (iso: string | null) => { if (!iso) return ""; const d = new Date(iso); const p = (n: number) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
 
-export function CallCard({ sb, h, targets, person, today, owner, closed, tester, programme, planRows, guideOn, userId, setNotice, pause, pausing, onSetAside }: {
+export function CallCard({ sb, h, targets, person, today, owner, closed, tester, programme, planRows, guideOn, userId, setNotice, pause, pausing, onSetAside, chartLine }: {
   sb: SupabaseClient; h: HorizonFull; targets: Target[]; person: PersonData | null; today: string; owner: boolean; closed: boolean;
   /** A test account may write the coach's side of its own horizon, so the sheet can be tried by one person. */
   tester: boolean; programme: Programme; planRows: PlanRow[]; guideOn: boolean;
   userId: () => Promise<string | null>; setNotice: (s: string) => void;
+  /** The diet chart's count for last week, in its own sentence, when a chart is kept and this viewer may read it (board 17). */
+  chartLine?: string | null;
   /** The horizon's pauses (../horizon/pause.ts), when its owner may use one; null for a coach and for an account it is not offered to. */
   pause?: PauseState | null; pausing?: boolean;
   /** The owner sets last week aside (board 13, A): the page asks, then the function writes it. */
@@ -540,6 +542,7 @@ export function CallCard({ sb, h, targets, person, today, owner, closed, tester,
         : review ? <div class="flex flex-col">{review.lines.map((l) => <div class="grid grid-cols-[minmax(0,1.4fr)_repeat(2,minmax(0,.7fr))_minmax(0,1.2fr)] items-baseline gap-3 border-t border-border py-2 first:border-t-0" key={l.key}><span class="text-[14px] text-text">{l.label}</span><span class="text-right font-mono text-[13px] text-text-3">{l.plan}</span><span class="text-right font-mono text-[14px] font-semibold text-text">{l.done}</span><span class={`text-[12px] ${l.state === "short" ? "text-caution" : "text-text-2"}`}>{l.word}</span></div>)}</div>
         : adherence.length ? <div class="flex flex-col">{adherence.map((a, i) => <div class="grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1.2fr)] items-baseline gap-3 border-t border-border py-2 first:border-t-0" key={i}><span class="text-[14px] text-text">{a.label}</span><span class="text-right font-mono text-[13px] text-text">{a.done != null && a.of != null ? `${a.done} of ${a.of}` : ""}</span><span class={`text-[12px] ${a.tone === "caution" ? "text-caution" : "text-text-2"}`}>{a.word}</span></div>)}</div>
         : <Quiet>No plan was on file for that week.</Quiet>}
+      {chartLine && lastWeek && !lastWeek.paused ? <p class="m-0 text-[14px] leading-relaxed text-text-2"><span class="font-mono text-[11px] font-medium uppercase tracking-wider text-text-3">The diet chart</span> · {chartLine} It is a count of days, and is not read as the cause of anything above.</p> : null}
 
       {judged && (short || prev?.way) ? (
         <div class="flex flex-col gap-2">

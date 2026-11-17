@@ -18,6 +18,7 @@ import { addDays } from "../derive/format.ts";
 import { dayMonthLong, dayMonthYear, spanOf, type HorizonLike } from "../horizon/derive.ts";
 import type { Midweek } from "../horizon/midweek.ts";
 import { CHART_ANSWERS, CHART_HEAD, chartCount, chartCountWords, chartInForce, mealsOn, parseChart, type ChartAnswer, type ChartDay, type ChartRead, type ChartRow } from "../horizon/chart.ts";
+import { horizonSpans } from "../horizon/derive.ts";
 import { keepChart, listChartDays, listCharts, removeChart, saveChartDay } from "../horizon/api.ts";
 
 const Eyebrow = ({ children, accent }: { children: any; accent?: boolean }) => <div class={`font-mono text-[11px] font-medium ${accent ? "text-accent-text" : "text-text-3"}`}>{children}</div>;
@@ -69,16 +70,24 @@ export async function loadChartState(sb: SupabaseClient, horizonId: string): Pro
   return { charts, days: charts.length ? await listChartDays(sb, horizonId) : [], off: false };
 }
 /** The chart's count for the week today is in, up to today: the sentence for the midweek note and the weight card. Empty when no day was marked. */
-export function chartSoFar(state: ChartState | null, h: HorizonLike, today: string): string {
+export function chartSoFar(state: ChartState | null, h: HorizonLike, today: string, who: "you" | "they" = "you"): string {
   if (!state || !state.charts.length) return "";
   const span = spanOf(h, today);
   if (!span) return "";
-  return chartCountWords(chartCount(state.charts, state.days, span.from, today < span.to ? today : span.to), true);
+  return chartCountWords(chartCount(state.charts, state.days, span.from, today < span.to ? today : span.to), true, who);
+}
+/** The chart's count for the last whole week that has ended, for the call sheet. Empty when no day of it was marked. */
+export function chartLastWeek(state: ChartState | null, h: HorizonLike, today: string, who: "you" | "they" = "you"): string {
+  if (!state || !state.charts.length) return "";
+  const last = [...horizonSpans(h)].reverse().find((s) => s.days === 7 && s.to < today);
+  return last ? chartCountWords(chartCount(state.charts, state.days, last.from, last.to), false, who) : "";
 }
 
-export function ChartCard({ sb, h, today, state, closed, userId, reload }: {
+export function ChartCard({ sb, h, today, state, closed, userId, reload, readOnly, sharedWith }: {
   sb: SupabaseClient; h: HorizonLike & { id: string }; today: string; state: ChartState; closed: boolean;
   userId: () => Promise<string | null>; /** Read the charts and the days again. */ reload: () => Promise<void>;
+  /** The viewer is someone the chart is shared with: they read it and the count, and change nothing. */ readOnly?: boolean;
+  /** How many people the chart is shared with, for its owner; null when the page cannot say. */ sharedWith?: number | null;
 }) {
   const [reading, setReading] = useState(false);
   const [note, setNote] = useState("");
@@ -142,6 +151,27 @@ export function ChartCard({ sb, h, today, state, closed, userId, reload }: {
       ))}
     </div>
   );
+
+  // someone the chart is shared with: its lines and the count, and nothing to press
+  if (readOnly) {
+    if (!chart) return null;
+    const theirs = chartCountWords(count, false, "they");
+    return (
+      <section id="horizon-chart" class="flex flex-col gap-4 rounded-[16px] border border-border bg-card p-5">
+        <div class="flex flex-col gap-1">
+          <Eyebrow accent>Their diet chart{chart.written_by ? ` · ${chart.written_by}` : ""} · given {dayMonthLong(chart.given_on)} · shared with you</Eyebrow>
+          <H2>Today, as the chart has it</H2>
+        </div>
+        {todays.length ? <Meals meals={showAll ? chart.meals : todays} /> : <Quiet>The chart has no line for today.</Quiet>}
+        {chart.notes.length ? <div class="flex flex-col gap-1">{chart.notes.map((n) => <p class="m-0 border-l-[3px] border-border-strong pl-3 text-[13px] leading-relaxed text-text-2" key={n}>"{n}"</p>)}</div> : null}
+        {chart.totals.length ? <p class="m-0 text-[13px] leading-relaxed text-text-2">Printed on the chart: {chart.totals.map((t) => `${t.name} ${t.value}`).join(" · ")}</p> : null}
+        {chart.meals.length > todays.length ? <button type="button" class="self-start text-[13px] font-semibold text-text-2 hover:text-text" onClick={() => setShowAll((v) => !v)}>{showAll ? "Today only" : "Every day of the chart"}</button> : null}
+        <p class="m-0 text-[14px] leading-relaxed text-text">{theirs ? `This week so far: ${theirs}` : "No day is marked this week yet."}</p>
+        <Quiet>The chart is as its writer wrote it, read from the page they uploaded. The count is their own word, one answer a day. You can read both and change neither. Verve works nothing out from a chart, and does not tie the count to any other number.</Quiet>
+        {chart.review_on ? <Quiet>The chart says it is to be reviewed on {dayMonthYear(chart.review_on)}.</Quiet> : null}
+      </section>
+    );
+  }
 
   // nothing kept yet, and nothing being checked: the way in
   if (!chart && !draft) {
@@ -218,6 +248,9 @@ export function ChartCard({ sb, h, today, state, closed, userId, reload }: {
       {c.review_on ? <Quiet>The chart says it is to be reviewed on {dayMonthYear(c.review_on)}. That date is the chart's. Verve sends no reminder of it.</Quiet> : null}
       {note ? <p class="m-0 text-[13px] leading-relaxed text-caution">{note}</p> : null}
       {!closed ? <div class="flex flex-wrap gap-3"><Button onClick={() => void add()} disabled={reading}>{reading ? "Reading the chart…" : "Add a newer chart"}</Button><Button onClick={() => void takeOff()}>Take it off this horizon</Button></div> : null}
+      {sharedWith != null ? <Quiet>{sharedWith > 0
+        ? `Shared with ${sharedWith === 1 ? "one person" : `${sharedWith} people`}: they read the chart's lines and your count, and change nothing. The tick is "Diet chart", under Settings, where you gave them access.`
+        : "Only you see this chart and your count. To share them with a coach, tick \"Diet chart\" where you give them access, under Settings. It is off until you tick it."}</Quiet> : null}
       <Quiet>Verve shows the chart and counts the days. It does not write a chart, grade one or change one, and the Guide does not answer questions about food. A question about a line is for the person who wrote it.</Quiet>
     </section>
   );
