@@ -491,7 +491,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
     if (err) setNotice(`Could not change that: ${err}`); else await reload();
   }
   async function remove() {
-    const err = await deleteAfterAsking(deps.supabase, h);
+    const err = await deleteAfterAsking(deps.supabase, h, access);
     if (err === undefined) return;
     if (err) setNotice(`Could not delete it: ${err}`); else { route.value = ""; history.replaceState(null, "", "#horizon"); await reload(); }
   }
@@ -748,7 +748,7 @@ function FinalView({ deps, h, person, today, owner, nav, personId, hasOpen, onSt
   access: HorizonAccess | null; guideOn: boolean; setNotice: (s: string) => void; reload: () => Promise<void>;
 }) {
   async function remove() {
-    const err = await deleteAfterAsking(deps.supabase, h);
+    const err = await deleteAfterAsking(deps.supabase, h, access);
     if (err === undefined) return;
     if (err) setNotice(`Could not delete it: ${err}`); else { route.value = ""; history.replaceState(null, "", "#horizon"); await reload(); }
   }
@@ -843,8 +843,10 @@ function FinalView({ deps, h, person, today, owner, nav, personId, hasOpen, onSt
  * The person is asked once, in the words of what happens, and the horizon is removed. Undefined when they said no;
  * null when it is gone; otherwise why it is not.
  */
-async function deleteAfterAsking(sb: SupabaseClient, h: HorizonFull): Promise<string | null | undefined> {
-  if (!confirm(`Delete the horizon "${h.title}"? Its targets, plan, check-ins and notes are removed for good. Your readings stay. This cannot be undone.`)) return undefined;
+async function deleteAfterAsking(sb: SupabaseClient, h: HorizonFull, access: HorizonAccess | null): Promise<string | null | undefined> {
+  // Free has one horizon, and its week does not begin again: said before the person removes the only one they can set
+  const free = access && !access.pro ? " Free has one horizon: setting another after this is part of Pro." : "";
+  if (!confirm(`Delete the horizon "${h.title}"? Its targets, plan, check-ins and notes are removed for good. Your readings stay.${free} This cannot be undone.`)) return undefined;
   return deleteHorizon(sb, h.id);
 }
 
