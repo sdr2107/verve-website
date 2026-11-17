@@ -199,3 +199,12 @@ the programme. Tables and the one new column: METTracker `supabase/migrations/20
 - **The page's first paint** (`views/Horizon.tsx load`, `api.ts rememberedAccess`). The test list and the Guide's plan
   are asked beside the horizons and set with them, so the page is drawn once. The function's answer about access is
   kept for the tab and asked again behind it. The set-up's writes after `start` are sent together.
+- **Sharing a chart** (`chart.ts` CHART_SCOPE / chartSharedWith, `../derive/scopes.ts` TEST_SCOPES / offeredScopes;
+  17 November 2026). The chart has its own tick where access is given, "Diet chart": the share's scope `chart`. It is
+  offered to test accounts only, is in no preset, and starts unticked. The database lets a person with that tick AND
+  the horizon's own tick (`activity`) read `horizon_charts` and `horizon_chart_days`, and write neither (METTracker
+  `20261119_horizon_chart_share.sql`). So the page never decides who sees a chart: a viewer's page asks for the rows
+  and draws `ChartCard readOnly` when the database hands them over, with the count said as "by their own count", and
+  the same count for last week on the call sheet. The file the chart was read from is not shared by this tick, and
+  the day's name is never shared. Monday's check-in goes to a coach with the chart's line only on a share that
+  carries the tick (the function's `lines.ts checkinFor`).

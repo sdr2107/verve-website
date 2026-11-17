@@ -66,3 +66,35 @@ test("the count can sit in a check-in as a line of its own, and nothing in this 
   // no calories, no score, no grade: the file exports nothing of the kind
   assert.ok(!Object.keys(chartRules).some((k) => /calor|energy|score|grade|macro/i.test(k)));
 });
+
+// ── sharing a chart with a coach (17 November 2026) ──
+
+test("the chart has its own tick: offered to test accounts only, in no preset, and counted only on a share that also holds the horizon", async () => {
+  const { SCOPE_LABEL, TEST_SCOPES, offeredScopes, scopeList } = await import("../src/my-health/derive/scopes.ts");
+  const { chartSharedWith, CHART_SCOPE } = chartRules;
+  assert.equal(CHART_SCOPE, "chart");
+  assert.equal(SCOPE_LABEL.chart, "Diet chart");
+  assert.ok(TEST_SCOPES.has("chart"));
+  // anyone else is offered exactly what they were offered before
+  assert.deepEqual(offeredScopes({ hasAccount: true, tester: false }), ["labs", "imaging", "activity", "body", "heart"]);
+  assert.deepEqual(offeredScopes({ hasAccount: false, tester: false }), ["labs", "imaging"]);
+  assert.deepEqual(offeredScopes({ hasAccount: true, tester: true }), ["labs", "imaging", "activity", "body", "heart", "chart"]);
+  assert.equal(scopeList(["activity", "chart"]), "Activity and fitness · Diet chart");
+  // shared with: active, the chart's tick, and the horizon's own tick; a waiting invitation and a stopped share are not counted
+  const shares = [
+    { status: "active", scopes: ["activity", "chart"] }, { status: "active", scopes: ["activity", "body"] }, { status: "active", scopes: ["chart"] },
+    { status: "invited", scopes: ["activity", "chart"] }, { status: "stopped", scopes: ["activity", "chart"] },
+  ];
+  assert.equal(chartSharedWith(shares), 1);
+  assert.equal(chartSharedWith([]), 0);
+  assert.equal(chartSharedWith(null), 0);
+});
+
+test("said to a coach, the count is the person's own word and not the coach's", () => {
+  const charts = [chart({ given_on: "2026-11-14" })];
+  const days = [{ day: "2026-11-30", answer: "yes" }, { day: "2026-12-01", answer: "yes" }, { day: "2026-12-02", answer: "mostly" }];
+  assert.equal(chartCountWords(chartCount(charts, days, "2026-11-30", "2026-12-06"), false, "they"), "yes on 2 of the 3 days they marked, mostly on 1, by their own count.");
+  assert.equal(chartCountWords(chartCount(charts, days, "2026-11-30", "2026-12-02"), true, "they"), "yes on 2 of 3 days so far, mostly on 1, by their own count.");
+  // the person's own sentence is unchanged
+  assert.equal(chartCountWords(chartCount(charts, days, "2026-11-30", "2026-12-02"), true), "yes on 2 of 3 days so far, mostly on 1, by your own count.");
+});

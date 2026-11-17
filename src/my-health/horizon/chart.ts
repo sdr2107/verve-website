@@ -80,15 +80,26 @@ export function chartCount(charts: ChartRow[], answers: ChartDay[], from: string
   return c;
 }
 /**
- * The count in one sentence, with no head: "yes on 5 of 7 days, mostly on 1, by your own count." A day with no answer
+ * The count in one sentence, with no head: "yes on 5 of 7 days, mostly on 1, by your own count." Said to a coach it
+ * is "by their own count". A day with no answer
  * is not a "no", so the sentence counts the days that were marked and says so when some were not. Empty when no day
  * was marked: there is nothing to say, and nothing is said.
  */
-export function chartCountWords(c: ChartCount, soFar = false): string {
+export function chartCountWords(c: ChartCount, soFar = false, who: "you" | "they" = "you"): string {
   if (!c.marked) return "";
-  const of = c.marked === c.days ? `${c.marked} ${c.marked === 1 ? "day" : "days"}` : `the ${c.marked} ${c.marked === 1 ? "day" : "days"} you marked`;
-  return `yes on ${c.yes} of ${of}${soFar ? " so far" : ""}${c.mostly ? `, mostly on ${c.mostly}` : ""}, by your own count.`;
+  const of = c.marked === c.days ? `${c.marked} ${c.marked === 1 ? "day" : "days"}` : `the ${c.marked} ${c.marked === 1 ? "day" : "days"} ${who} marked`;
+  return `yes on ${c.yes} of ${of}${soFar ? " so far" : ""}${c.mostly ? `, mostly on ${c.mostly}` : ""}, by ${who === "they" ? "their" : "your"} own count.`;
 }
+/**
+ * Sharing a chart (17 November 2026; board 17, "the chart has its own tick when you give a coach access"). The tick
+ * is the share's scope "chart". A person with it and with the horizon's own tick ("activity") reads the chart's lines
+ * and the count of days, and changes nothing: only its owner adds a chart, marks a day or takes a chart off. The file
+ * the chart was read from is not shared by this tick.
+ */
+export const CHART_SCOPE = "chart";
+/** How many people a chart is shared with: the active shares of the page that carry the chart's tick and the horizon's. */
+export const chartSharedWith = (shares: { status?: unknown; scopes?: unknown }[] | null | undefined): number =>
+  (shares ?? []).filter((g) => g?.status === "active" && Array.isArray(g.scopes) && g.scopes.includes(CHART_SCOPE) && g.scopes.includes("activity")).length;
 /** The head the count carries in a check-in and in the midweek note. */
 export const CHART_HEAD = "The chart";
 /** What the page says where a chart's own words would otherwise be answered about. */
