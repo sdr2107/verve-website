@@ -37,7 +37,7 @@ import { horizons as horizonsSignal, guideDraft, setGuideDraft } from "../state.
 import { arrivalsOf, followable, leftOff, pausedWords } from "../derive/arrivals.ts";
 import {
   TARGET_MARKERS, isTargetable, openTargets, MARKER_BY_KEY, GROUP_LABEL, FIRST_MARKERS, type MarkerKey, type PlanRow, type PlanKind, type Tone,
-  latestOf, historyOf, weeklyHistory, pacesOf, impliedPace, adherenceOf, guideDraftPlan, roadOf, weekOf, daysToGo, nextCheckins, checkinInputs, landedLine,
+  latestOf, historyOf, weeklyHistory, pacesOf, impliedPace, adherenceOf, guideDraftPlan, roadOf, weekOf, daysToGo, nextCheckins, checkinInputs, checkinLinesOf, landedLine,
   outcomesOf, lastRoadWords, nextSpan, horizonMondays, toTarget, typicalOf, targetKeyOf, vo2Line, ML_PER_MET, type MarkerDef, type Reading,
   fmtValue, addMonths, longDate, dayMonth, dayMonthLong, dayMonthYear, weekdayDayMonth, clockOf, round, numberWord,
   horizonSpans, spanOf, daysWords, weeksWords, weekWords, fitnessBy, type Pace,
@@ -93,6 +93,25 @@ const Button = ({ children, onClick, primary, disabled, type = "button" }: { chi
   <button type={type} disabled={disabled} onClick={onClick} class={`inline-flex min-h-10 items-center justify-center rounded-[10px] px-4 text-[13px] font-semibold disabled:opacity-50 ${primary ? "bg-accent text-canvas" : "border border-border-strong bg-alt text-text hover:border-accent-border"}`}>{children}</button>
 );
 const Quiet = ({ children }: { children: any }) => <p class="m-0 text-[12px] leading-relaxed text-text-3">{children}</p>;
+/**
+ * A check-in's words. A Monday check-in kept as short lines (from 16 November 2026) is a list, one line to a job,
+ * its head in bold; anything older, a month's read and the whole road are the paragraph they were written as.
+ */
+function CheckinText({ text, small }: { text: string; small?: boolean }) {
+  const lines = checkinLinesOf(text);
+  const type = small ? "leading-relaxed" : "text-[16px] leading-[1.65] text-text";
+  if (!lines) return <p class={`m-0 max-w-[640px] whitespace-pre-line ${small ? "mt-1 " : ""}${type}`}>{text}</p>;
+  return (
+    <ul class={`m-0 flex max-w-[640px] list-none flex-col p-0 ${small ? "mt-1 gap-1" : "gap-2"}`}>
+      {lines.map((l) => (
+        <li class={`flex gap-2.5 ${type}`} key={l.head}>
+          <span aria-hidden="true" class="text-text-3">•</span>
+          <span><span class="font-semibold text-text">{l.head}:</span> {l.text}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 const inputClass = "min-h-10 rounded-[10px] border border-border bg-alt px-3 text-[15px] text-text outline-none focus:border-accent-border";
 
 function ProCard({ goTab }: { goTab: (t: string) => void }) {
@@ -609,7 +628,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
           <p class="m-0 max-w-[640px] rounded-[10px] border border-border-strong bg-alt px-4 py-3 text-[13px] leading-relaxed text-text-2" key={`${l.marker}-${l.on}`}>{landedLine(l, targets.find((t) => t.marker === l.marker))}</p>
         ))}
         {latest
-          ? <p class="m-0 max-w-[640px] text-[16px] leading-[1.65] text-text">{latest.text}</p>
+          ? <CheckinText text={latest.text} />
           : <p class="m-0 text-[15px] text-text-2">{owner ? "No check-in yet. The first one arrives on the Monday morning after the horizon is set, once the app has synced the week." : "No check-in yet."}</p>}
         {latest && asOfLine(latest) && <Quiet>{asOfLine(latest)}</Quiet>}
         {((missingWeek && pastMondayNine) || missingMonth || finalDue) && (
@@ -626,7 +645,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
           <details class="text-[13px] text-text-2">
             <summary class="cursor-pointer text-text-3">Earlier check-ins · {h.checkins.length - 1}</summary>
             <div class="mt-3 flex flex-col gap-4">
-              {h.checkins.slice(1).map((c) => <div key={c.id}><div class="font-mono text-[11px] text-text-3">{c.kind === "week" ? "Monday" : c.kind === "month" ? "Month read" : "The whole road"} · {dayMonthYear(c.for_date)}</div><p class="m-0 mt-1 max-w-[640px] leading-relaxed">{c.text}</p></div>)}
+              {h.checkins.slice(1).map((c) => <div key={c.id}><div class="font-mono text-[11px] text-text-3">{c.kind === "week" ? "Monday" : c.kind === "month" ? "Month read" : "The whole road"} · {dayMonthYear(c.for_date)}</div><CheckinText text={c.text} small /></div>)}
             </div>
           </details>
         )}
@@ -767,7 +786,7 @@ function FinalView({ deps, h, person, today, owner, nav, personId, hasOpen, onSt
           <details class="text-[13px] text-text-2">
             <summary class="cursor-pointer text-text-3">The road's check-ins · {earlier.length}</summary>
             <div class="mt-3 flex flex-col gap-4">
-              {earlier.map((c) => <div key={c.id}><div class="font-mono text-[11px] text-text-3">{c.kind === "week" ? "Monday" : "Month read"} · {dayMonthYear(c.for_date)}</div><p class="m-0 mt-1 max-w-[640px] leading-relaxed">{c.text}</p></div>)}
+              {earlier.map((c) => <div key={c.id}><div class="font-mono text-[11px] text-text-3">{c.kind === "week" ? "Monday" : "Month read"} · {dayMonthYear(c.for_date)}</div><CheckinText text={c.text} small /></div>)}
             </div>
           </details>
         )}

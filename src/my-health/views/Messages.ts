@@ -19,6 +19,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { esc, fmtDay } from "../derive/format";
 import { dueLineOf } from "../derive/reads";
+import { checkinLinesOf } from "../horizon/derive";
 import { actions } from "../state.ts";
 
 export type Thread = { id: string; label: string; status: string };
@@ -104,6 +105,13 @@ export function mountMessages(root: HTMLElement, supabase: SupabaseClient, onUnr
     return `<div class="r-card mt-1 border border-border bg-alt p-3"><div class="grid grid-cols-2 gap-3 sm:grid-cols-5">${cells.map(([v, l]) => `<div><div class="t-figure-row text-[18px] text-text">${v}</div><div class="t-caption text-text-3">${l}</div></div>`).join("")}</div>${pl || tests ? `<p class="t-caption mt-2 text-text-2">${[pl, tests ? `Tests: ${esc(tests)}` : ""].filter(Boolean).join(" · ")}</p>` : ""}<p class="t-caption mt-1 text-text-3">Only what the share allows. Counted the way the app counts it.</p></div>`;
   }
 
+  /** A read's words: a Monday check-in kept as short lines is shown line by line, its heads in bold; anything else is its paragraph. */
+  function leadHtml(lead: unknown): string {
+    const text = String(lead ?? ""), lines = checkinLinesOf(text);
+    if (!lines) return `<p class="t-small mt-1.5 text-text-2">${esc(text)}</p>`;
+    return lines.map((l) => `<p class="t-small mt-1.5 text-text-2"><span class="font-semibold text-text">${esc(l.head)}:</span> ${esc(l.text)}</p>`).join("");
+  }
+
   function bubble(m: any, isNew: boolean): string {
     if (m.kind === "report") {
       const p = m.payload ?? {}, open = openReports.has(m.id);
@@ -119,7 +127,7 @@ export function mountMessages(root: HTMLElement, supabase: SupabaseClient, onUnr
       return `<div class="${mine(m) ? "ml-auto" : ""} r-card w-full max-w-xl border border-accent-border bg-card p-4">
         <div class="t-eyebrow text-accent-text">The Guide · ${esc(fmtDay(day(p.on ?? m.created_at)))}</div>
         <div class="t-title mt-1 text-text">${esc(String(p.title ?? m.body ?? ""))}</div>
-        <p class="t-small mt-1.5 text-text-2">${esc(String(p.lead ?? ""))}</p>${items}${dueLineOf(p.due, p.on ?? m.created_at) ? `<p class="t-caption mt-2 text-text-3">Due: ${esc(dueLineOf(p.due, p.on ?? m.created_at))}</p>` : ""}${metaLine(m, isNew)}</div>`;
+        ${leadHtml(p.lead)}${items}${dueLineOf(p.due, p.on ?? m.created_at) ? `<p class="t-caption mt-2 text-text-3">Due: ${esc(dueLineOf(p.due, p.on ?? m.created_at))}</p>` : ""}${metaLine(m, isNew)}</div>`;
     }
     const file = m.file_path ? `<button type="button" data-file="${esc(m.file_path)}" class="r-btn mt-2 flex w-full items-center gap-2.5 border border-border bg-alt px-3 py-2 text-left hover:border-border-strong"><span class="text-text-3">${ICON.file}</span><span class="min-w-0"><span class="t-small block truncate font-semibold text-text">${esc(m.file_name ?? "file")}</span><span class="t-caption text-text-3">${m.file_size ? kb(m.file_size) : ""} · open</span></span></button>` : "";
     if (m.kind === "plan") return systemLine(`Plan pinned · ${esc(m.body ?? "")}`, m.file_path ? `<button type="button" data-file="${esc(m.file_path)}" class="t-caption font-semibold text-accent-text hover:text-text">${esc(m.file_name ?? "plan.pdf")}</button>` : "");
