@@ -107,23 +107,33 @@ export function mountTesterPanel(root: HTMLElement, deps: { supabase: SupabaseCl
   render(<Keyed sb={deps.supabase} panel={deps.panel} />, root);
 }
 
-/** The panel on a horizon: the row keyed "horizon", filled with this horizon's counts. */
-export function HorizonPanel({ sb, h, targets, person, today, guideOn }: { sb: SupabaseClient; h: HorizonFull; targets: Target[]; person: PersonData; today: string; guideOn: boolean }) {
-  const [body, setBody] = useState<PanelBody | null>(null);
+/**
+ * A horizon's counts, as a panel's sentences are filled with them: the page's own arithmetic (../horizon/facts.ts),
+ * with the week's notes read once. `share` is the part a row counts as kept; `on` is false until there is a row to fill.
+ */
+export function useHorizonFacts(sb: SupabaseClient, a: { h: HorizonFull | null; targets: Target[]; person: PersonData | null; today: string; guideOn: boolean; share: number | undefined; on: boolean }): Facts {
+  const { h, targets, person, today, guideOn, share, on } = a;
   const [notes, setNotes] = useState<WeekNote[]>([]);
   useEffect(() => {
-    let on = true;
-    void loadPanel(sb, "horizon").then((b) => { if (on) setBody(b as PanelBody | null); });
-    void listWeekNotes(sb, h.id).then((n) => { if (on) setNotes(n); });
-    return () => { on = false; };
-  }, [h.id]);
-  const facts = useMemo(() => {
-    if (!body) return {};
+    let live = true;
+    setNotes([]);
+    if (h) void listWeekNotes(sb, h.id).then((n) => { if (live) setNotes(n); });
+    return () => { live = false; };
+  }, [h?.id]);
+  return useMemo(() => {
+    if (!on || !h || !person) return {};
     const stored: GuideStored | null = guideOn && h.plan?.author === "guide" && isGuideStored(h.plan?.guide) ? (h.plan!.guide as GuideStored) : null;
     let planWeeks: { kept: number; of: number } | null = null;
     try { if (stored) { const past = guidePlan({ horizon: h, targets, person, today, stored }).climb.filter((r) => r.state === "past" && r.done); planWeeks = { kept: past.filter((r) => !r.short.length).length, of: past.length }; } } catch { planWeeks = null; }
-    return horizonFacts({ h, paces: pacesOf(targets, h, person, today), targets, notes, today, planWeeks, share: typeof body.share === "number" ? body.share : undefined });
-  }, [body, notes, targets, person, today, h.id]);
+    return horizonFacts({ h, paces: pacesOf(targets, h, person, today), targets, notes, today, planWeeks, share });
+  }, [on, share, notes, targets, person, today, h?.id, guideOn]);
+}
+
+/** The panel on a horizon: the row keyed "horizon", filled with this horizon's counts. */
+export function HorizonPanel({ sb, h, targets, person, today, guideOn }: { sb: SupabaseClient; h: HorizonFull; targets: Target[]; person: PersonData; today: string; guideOn: boolean }) {
+  const [body, setBody] = useState<PanelBody | null>(null);
+  useEffect(() => { let on = true; void loadPanel(sb, "horizon").then((b) => { if (on) setBody(b as PanelBody | null); }); return () => { on = false; }; }, [h.id]);
+  const facts = useHorizonFacts(sb, { h, targets, person, today, guideOn, share: typeof body?.share === "number" ? body.share : undefined, on: !!body });
   return body ? <Panel body={body} facts={facts} id="horizon-panel" /> : null;
 }
 
