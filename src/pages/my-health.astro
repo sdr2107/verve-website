@@ -1011,7 +1011,8 @@ import { STORY } from "../data/story";
   import { mountDepth } from "../my-health/views/Depth";
   import { mountHorizon } from "../my-health/views/Horizon.tsx";
   import { mountFitnessCard, openFitnessRead } from "../my-health/views/FitnessEntry.tsx";
-  import { programmeTester } from "../my-health/horizon/api.ts";
+  import { programmeTester, forgetAccess } from "../my-health/horizon/api.ts";
+  import { clearSetup } from "../my-health/horizon/setupCards.ts";
   import { mountMondayList } from "../my-health/views/Programme.tsx";
   import { mountPlanSheet } from "../my-health/views/PlanSheet.tsx";
   import { mountSettings, planInfoSignal } from "../my-health/views/Settings.tsx";
@@ -1784,6 +1785,32 @@ import { STORY } from "../data/story";
     }));
   }
 
+  /**
+   * Invite someone to the open person's page: the share's row, then its email. One path for the access sheet and for
+   * the sixth card of Horizon's set-up (board 18), so an invitation reads the same wherever it was made.
+   */
+  async function inviteTo(emailTyped: string, scopes: string[]): Promise<{ ok: boolean; words: string }> {
+    const p = person;
+    if (!p?.id || !p.mine) return { ok: false, words: "Only the person whose page this is can give access to it." };
+    const email = emailTyped.trim().toLowerCase();
+    if (!email) return { ok: false, words: "Give their email." };
+    if (email === userEmail.toLowerCase()) return { ok: false, words: "That is you." };
+    if (!scopes.length) return { ok: false, words: "Tick at least one thing for them to see." };
+    const { data, error } = await supabase.from("grants").insert({
+      person_id: p.id, owner_id: userId, viewer_email: email, scopes,
+      person_name: p.self ? (fullName || "their page") : p.name,
+      inviter_name: fullName || userEmail,
+    }).select("id").maybeSingle();
+    if (error || !data) return { ok: false, words: error?.code === "23505" ? `${email} already has an invitation to this page.` : `Could not invite: ${error?.message ?? "no row came back"}` };
+    const sent = await sendInvite({ grant_id: data.id });
+    invalidateDocument();
+    return { ok: true, words: sent
+      ? `Invited. ${email} gets an email; the moment they accept, they see what you ticked, and you see it here.`
+      : `Invited, but the email did not go${inviteWhy ? ` (${inviteWhy})` : ""}. ${email} still finds the invitation under their greeting when they sign in with that address.` };
+  }
+  actions.invite = inviteTo;
+  actions.myEmail = () => userEmail;
+
   $("shareform").addEventListener("submit", async (e) => {
     e.preventDefault();
     const p = person;
@@ -1792,23 +1819,11 @@ import { STORY } from "../data/story";
     const scopes = [...$("shareform").querySelectorAll<HTMLInputElement>("[data-scope]")]
       .filter((c) => c.checked && !c.closest("label")!.classList.contains("hidden")).map((c) => c.dataset.scope!);
     if (!email) return;
-    if (email === userEmail.toLowerCase()) { msg("sharemsg", "That is you.", true); return; }
-    if (!scopes.length) { msg("sharemsg", "Tick at least one thing for them to see.", true); return; }
-    const { data, error } = await supabase.from("grants").insert({
-      person_id: p.id, owner_id: userId, viewer_email: email, scopes,
-      person_name: p.self ? (fullName || "their page") : p.name,
-      inviter_name: fullName || userEmail,
-    }).select("id").maybeSingle();
-    if (error || !data) {
-      msg("sharemsg", error?.code === "23505" ? `${email} already has an invitation to this page.` : `Could not invite: ${error?.message ?? "no row came back"}`, true);
-      return;
-    }
+    const res = await inviteTo(email, scopes);
+    msg("sharemsg", res.words, !res.ok);
+    if (!res.ok) return;
     ($("shareemail") as HTMLInputElement).value = "";
-    const sent = await sendInvite({ grant_id: data.id });
-    msg("sharemsg", sent
-      ? `Invited. ${email} gets an email; the moment they accept, they see what you ticked, and you see it here.`
-      : `Invited, but the email did not go${inviteWhy ? ` (${inviteWhy})` : ""}. ${email} still finds the invitation under their greeting when they sign in with that address.`);
-    invalidateDocument(); await loadSharing();
+    await loadSharing();
   });
 
   /** The email, through the share-invite function, for an invitation or a request; false when it could not go. */
@@ -3252,6 +3267,8 @@ import { STORY } from "../data/story";
   /** Sign out: the account menu's last row, and the header's button where the header carries one. */
   async function signOut() {
     if (userId) await clearDocuments(userId);
+    // what Horizon kept for this tab goes with the session: a set-up's answers, and the last answer about access
+    clearSetup(); forgetAccess();
     await supabase.auth.signOut();
     boot();
   }
@@ -3271,6 +3288,7 @@ import { STORY } from "../data/story";
       return;
     }
     if (userId) await clearDocuments(userId);
+    clearSetup(); forgetAccess();
     await supabase.auth.signOut();
     boot();
   });

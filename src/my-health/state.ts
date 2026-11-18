@@ -137,6 +137,14 @@ export const actions = {
    * that asked decides what to do with what was read. Null when no file was chosen.
    */
   readFile: (_expect: "exercise_test" | "diet_chart"): Promise<{ path: string; name: string; out: any } | { error: string } | null> => Promise.resolve(null),
+  /**
+   * Invite someone to the open person's page: the share's row, then its email, exactly as the access sheet does it
+   * (board 18, 18 November 2026: a coach can be invited from the set-up's sixth card, and is invited when the horizon
+   * is kept). The page owns it, because the page holds who the person is and what the invitation says.
+   */
+  invite: (_email: string, _scopes: string[]): Promise<{ ok: boolean; words: string }> => Promise.resolve({ ok: false, words: "The page is not ready to send an invitation." }),
+  /** The email the signed-in account uses, so a card can say "That is you" before anything is sent. */
+  myEmail: (): string => "",
   /** The People control: open someone's page, the group, the forms, the access sheet. */
   person: (_kind: "switch" | "add" | "ask" | "access" | "everyone" | "edit" | "remove" | "health" | "clients", _id?: string) => {},
 };
