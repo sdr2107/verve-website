@@ -32,8 +32,9 @@ const HOLDS: { mode: Mode; label: string }[] = [{ mode: "floor", label: "At leas
  * targets): they are not listed. `added` are the ones picked here, shown lit; pressing a lit one takes it off.
  * `only` narrows what a pick can be: the horizon's page offers "watch" alone, since a number there is "Add a target".
  */
-export function AddMarkerPanel({ taken, added, canFollow, rules, only, current, onPick, onDrop, onMode, onClose }: {
+export function AddMarkerPanel({ taken, added, canFollow, rules, only, current, hint, onPick, onDrop, onMode, onClose }: {
   taken: string[]; added: Added[]; canFollow: (marker: MarkerKey) => boolean; rules: AddRules; only?: Way;
+  /** A small grey word on a chip before it is picked (board 21): "no reading yet", "from 2 Sep". It can still be picked. */ hint?: (marker: MarkerKey) => string | null;
   /** The marker whose way of being held is shown under the lists. */ current: MarkerKey | null;
   onPick: (marker: MarkerKey, mode: Mode) => void; onDrop: (marker: MarkerKey) => void; onMode: (marker: MarkerKey, mode: Mode) => void; onClose: () => void;
 }) {
@@ -53,6 +54,7 @@ export function AddMarkerPanel({ taken, added, canFollow, rules, only, current, 
           <button type="button" key={c.def.key} aria-pressed={on} disabled={c.missing} onClick={() => press(c)}
             class={`inline-flex min-h-9 items-center rounded-full border px-3 text-[13px] font-medium disabled:cursor-default ${on ? "border-accent-border bg-accent-fill font-semibold text-accent-text" : c.missing ? "border-dashed border-border-strong text-text-3" : blood ? "border-border-strong bg-card text-text-2 hover:border-accent-border" : "border-border-strong bg-alt text-text hover:border-accent-border"}`}>
             {c.def.label}{c.missing ? " · nothing is sending this" : !blood && c.watchOnly && only !== "watch" ? " · to watch" : ""}
+            {!c.missing && !on && hint?.(c.def.key) ? <span class="ml-1.5 font-mono text-[10px] font-medium text-text-3">{hint(c.def.key)}</span> : null}
           </button>
         );
       })}

@@ -23,7 +23,7 @@ import type { PersonData } from "../derive/person.ts";
 import { daysBetween } from "../derive/format.ts";
 import { arrivalsOf, followable, leftOff } from "../derive/arrivals.ts";
 import {
-  MARKER_BY_KEY, addMonths, adherenceOf, dayMonthLong, doorOfMethod, dayMonthYear, fitnessBy, fmtValue, historyOf, impliedPace, latestOf, round, typicalOf, vo2Line, weekMoves, weeklyHistory,
+  MARKER_BY_KEY, addMonths, adherenceOf, dayMonth, dayMonthLong, doorOfMethod, dayMonthYear, fitnessBy, fmtValue, historyOf, impliedPace, latestOf, round, typicalOf, vo2Line, weekMoves, weeklyHistory,
   type MarkerDef, type MarkerKey, type PlanRow, type Reading, type Target,
 } from "../horizon/derive.ts";
 import {
@@ -40,6 +40,8 @@ import type { PauseChoice, PauseState } from "../horizon/pause.ts";
 import { FitnessChooser } from "./FitnessEntry.tsx";
 import { ChartCheck, readChartFile, type ChartChecked, type ChartDraft } from "./Beside.tsx";
 import { AddMarkerPanel, type Added } from "./Watched.tsx";
+import { DoorTiles, WhereLine } from "./Doors.tsx";
+import { STATE_WORDS, ageWords, doorsFor, stateOf, storeOf as healthStoreOf, syncNote, type Door, type ReadingState, type Who } from "../horizon/doors.ts";
 import { actions, doc as docSignal, person as personSignal } from "../state.ts";
 import { SCOPE_LABEL, offeredScopes } from "../derive/scopes.ts";
 import { CHART_SCOPE } from "../horizon/chart.ts";
@@ -182,6 +184,37 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
   });
   const rows: Row[] = [...goalRows, ...addedRows];
   const onFile = useMemo(() => (person ? alreadyReads(person, today) : []), [person, today]);
+  // a reading that is not there says where it is added (board 21): the doors that exist for this person's phone
+  const who: Who = { store: healthStoreOf(person ? arrivalsOf(person.doc.weeks) : null), synced: !!person?.synced };
+  const sync = person ? syncNote(person.doc.weeks, person.synced, new Date()) : null;
+  /**
+   * Card 4's rows (board 21): what the set-up always lays out, then any other marker of the draft, each with how its
+   * reading stands and, where it is missing or from a while ago, the doors it is added by. The two rows that are part
+   * of "A typical week" share its weeks, so they carry no doors of their own and are not counted twice.
+   */
+  type FileRow = { key: string; label: string; sub?: string; value: string | null; from: string; state: ReadingState; doors: Door[]; part?: boolean; blood?: boolean };
+  const BASE_MARKER: Record<string, MarkerKey> = { fitness: "mets", week: "zone2_week", steps: "steps", weight: "weight", waist: "waist", grip: "grip" };
+  const sentence = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+  const fileRows: FileRow[] = !person ? [] : [
+    ...onFile.map((r): FileRow => {
+      const marker = BASE_MARKER[r.key];
+      if (!marker) return { key: r.key, label: r.label, value: r.value, from: r.from, state: r.value ? "on_file" : "missing", doors: [], part: true };
+      const now = marker === "zone2_week" ? null : latestOf(marker, person, today);
+      const state: ReadingState = !r.value ? (followable(off, marker) ? "missing" : "not_sent") : marker === "zone2_week" ? "on_file" : stateOf(marker, now, today);
+      const from = state === "old" && now ? `${r.from.replace(/\.$/, "")}. ${sentence(ageWords(now.on, today))}.` : r.from;
+      return { key: r.key, label: r.label, value: r.value, from, state, doors: state === "on_file" ? [] : doorsFor(marker, who) };
+    }),
+    ...rows.filter((r) => r.def.kind !== "weekly" && !Object.values(BASE_MARKER).includes(r.marker)).map((r): FileRow => {
+      const blood = r.def.kind === "blood";
+      const now = latestOf(r.marker, person, today);
+      const state = stateOf(r.marker, now, today, !r.missing);
+      const sub = r.added ? (r.mode === "watch" ? "you added it to watch" : "you added it") : r.mode === "watch" ? "watched" : "";
+      const value = now ? `${blood ? watchedValue(r.def, now) : now.display ?? fmtValue(r.def, now.value)}${r.def.hm ? "" : ` ${now.unit ?? r.def.unit}`}`.trim() : null;
+      const from = now ? `${blood ? "Report of" : `${sentence(r.def.how)},`} ${dayMonthLong(now.on)}.${state === "old" ? ` ${sentence(ageWords(now.on, today))}.` : ""}`
+        : blood ? "Shown only because you added it. Verve does not ask for a blood test." : r.missing ? "It comes from a device, and cannot be typed." : sentence(r.def.how) + ".";
+      return { key: r.marker, label: r.def.label, sub, value, from, state, doors: state === "on_file" ? [] : doorsFor(r.marker, who), blood };
+    }),
+  ];
   const guideWrites = writer !== "coach" && !g?.writer;
   const answered = SCREEN_QUESTIONS.every((q) => typeof screen[q.key] === "boolean");
   const outcome = answered ? screenOutcome(screen as ScreenAnswers) : null;
@@ -347,6 +380,14 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
   }
 
   const goalTicked = goalRows.filter((r) => r.mode !== "watch" && !r.missing).length;
+  /** The small grey word on a chip of the picker (board 21): a marker with no reading yet, or one from a while ago. A blood marker, a weekly count and a reading that is fresh carry none. */
+  const chipHint = (m: MarkerKey): string | null => {
+    const def = MARKER_BY_KEY[m];
+    if (!person || !def || def.kind === "blood" || def.kind === "weekly" || !followable(off, m)) return null;
+    const now = latestOf(m, person, today);
+    const state = stateOf(m, now, today);
+    return state === "missing" ? "no reading yet" : state === "old" && now ? `from ${dayMonth(now.on)}` : null;
+  };
   const draftTitle = g ? `Your horizon, drafted · ${g.title}${count ? ` · ${count.full} full ${count.full === 1 ? "week" : "weeks"}` : weeks ? ` · ${weeks} weeks` : ""}` : "Your horizon, drafted";
 
   return (
@@ -453,17 +494,24 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
       {cardKey === "reads" ? (
         <Frame title="What the page already reads" card={card} needs={needs} onBack={back} onNext={next}>
           {!person && <Quiet>Reading your numbers…</Quiet>}
+          {person ? (
+            <div class="flex flex-wrap items-center gap-2 text-[13px] text-text-2">
+              {(["on_file", "old", "missing"] as const).map((k) => { const n = fileRows.filter((r) => !r.part && (k === "missing" ? r.state === "missing" || r.state === "not_sent" : r.state === k)).length; return n ? <span class="inline-flex h-7 items-center rounded-full border border-border-strong bg-alt px-3 font-mono text-[11px] font-semibold text-text" key={k}>{n} {STATE_WORDS[k]}</span> : null; })}
+              <span>None of them stops you. A reading that is missing says where it is added.</span>
+            </div>
+          ) : null}
+          {sync ? <p class="m-0 rounded-[10px] border border-border-strong bg-alt px-4 py-3 text-[13px] leading-relaxed text-text-2"><span class="font-semibold text-text">{sync.lead}</span> {sync.words}</p> : null}
           <div class="flex flex-col">
-            {onFile.map((r, i) => (
-              <div class={`grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-baseline gap-x-3 gap-y-1 py-2.5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,2fr)_auto] ${i ? "border-t border-border" : ""}`} key={r.key}>
-                <span class="text-[15px] font-medium text-text">{r.label}</span>
-                <span class={r.value ? "font-mono text-[14px] font-semibold text-text" : "text-[13px] text-caution"}>{r.value ?? "Not on file"}</span>
+            {fileRows.map((r, i) => (
+              <div class={`grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-baseline gap-x-3 gap-y-1 py-2.5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,2fr)] ${i ? "border-t border-border" : ""}`} key={r.key}>
+                <span class="text-[15px] font-medium text-text">{r.label}{r.sub ? <span class="block font-mono text-[11px] font-normal text-text-3">{r.sub}</span> : null}</span>
+                <span class={r.value ? "font-mono text-[14px] font-semibold text-text" : "text-[13px] text-caution"}>{r.value ?? (r.state === "not_sent" ? "Nothing is sending this" : r.blood ? "No report on file" : "Not on file")}</span>
                 <span class="col-span-2 text-[12px] leading-relaxed text-text-3 md:col-span-1">{r.from}</span>
-                {r.action ? <a href={r.action.href} class="text-[12px] font-semibold text-accent-text md:text-right">{r.action.label}</a> : <span class="hidden md:block" />}
+                {r.doors.length ? <div class="col-span-2 md:col-span-3"><DoorTiles doors={r.doors} /></div> : null}
               </div>
             ))}
           </div>
-          <Quiet>Nothing here is typed by you unless it is missing. A goal that needs a reading the page does not hold says so before the horizon starts, and never guesses one.</Quiet>
+          <Quiet>Nothing here is typed by you unless it is missing, and nothing is filled in for you. A goal that needs a reading the page does not hold says so before the horizon starts, and never guesses one. Only the places that exist for your phone are named.</Quiet>
         </Frame>
       ) : null}
 
@@ -549,6 +597,8 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
                     const held = (r.mode === "floor" || r.mode === "ceiling" || r.mode === "band") && !r.def.standing ? { mode: r.mode, low: lo } : null;
                     // a watched row takes no number: the goal's own can still be given one by ticking it, a blood marker never
                     const noNumber = r.mode === "watch" && (blood || r.added || !f.ticked);
+                    // no reading on file, and no typical week to read a weekly number against (board 21): the row says so, and where one is added
+                    const noReading = !now && !r.missing && typical == null;
                     const stands = blood ? (now ? `${watchedValue(r.def, now)} ${unit}, report of ${dayMonthLong(now.on)}` : "no report on file holds it yet")
                       : !now ? (typical != null ? `a typical week ${fmtValue(r.def, typical)}` : "no reading yet") : r.def.kind === "weekly" ? `last week ${fmtValue(r.def, now.value)}${typical != null ? ` · a typical week ${fmtValue(r.def, typical)}` : ""}` : `today ${now.display ?? fmtValue(r.def, now.value)}`;
                     const note = r.missing ? "Nothing is sending this reading from your devices, so it could not be followed. Settings › Devices says why."
@@ -556,6 +606,7 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
                       : noNumber ? (r.added ? "Watched: shown, not judged." : watchOn ? "Watched: shown, not judged. Tick it only if you want a number on it." : "Watched: no number is needed. Tick it only if you want one.")
                       : !f.ticked ? r.def.how
                       : v == null ? "Set the number."
+                      : noReading ? "No reading yet, so no pace can be read. Your number is kept. The pace starts from the first reading that arrives."
                       : r.marker === "weight" && r.mode === "reach" && now && weeks ? weightPace(now.value, v, weeks).words
                       : person ? impliedPace(r.def, now, v, Math.max(1, weeks), historyOf(r.marker, person, today), today, r.def.standing || r.mode === "floor" ? weeklyHistory(person, r.marker, today, 13) : undefined, typical, held as any) : "";
                     const sub = [blood ? "blood" : "", r.added ? "added by you" : "", r.mode === "reach" ? (r.added ? "reach" : "") : blood ? "watched only" : HELD_WORDS[r.mode]].filter(Boolean).join(" · ");
@@ -575,6 +626,7 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
                         </span>
                         <span class="col-start-2 text-[12px] text-text-3 md:col-start-auto">{blood ? stands : <><span class="font-mono text-[11px]">{unit}</span> · {stands}</>}</span>
                         <span class={`col-span-2 text-[12px] leading-relaxed md:col-span-4 md:pl-8 ${f.ticked || noNumber ? "text-text-2" : "text-text-3"}`}>{note}{r.marker === "mets" && person && f.ticked && !noNumber ? ` ${vo2Line(person, today, v, method && now ? now.value : null)}` : ""}</span>
+                        {noReading && (f.ticked || noNumber) ? <div class="col-span-2 md:col-span-4 md:pl-8"><WhereLine doors={doorsFor(r.marker, who)} /></div> : null}
                         {r.added ? <span class="col-span-2 flex flex-wrap gap-x-5 gap-y-1 text-[12px] font-semibold md:col-span-4 md:pl-8">
                           {!blood && waysFor(r.marker, addRules).length > 1 ? <button type="button" class="min-h-8 text-accent-text hover:text-text" onClick={() => { setCurrent(r.marker); setAdding(true); }}>Change how it is held</button> : null}
                           <button type="button" class="min-h-8 text-text-2 hover:text-text" onClick={() => dropMarker(r.marker)}>Take it off</button>
@@ -594,7 +646,7 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
                     {!adding ? <Button onClick={() => { setCurrent(null); setAdding(true); }}>Add a marker</Button> : null}
                     <span class="text-[12px] leading-relaxed text-text-3">The goal ticked {goalTicked}.{addedRows.length ? ` You added ${addedRows.length}.` : ""} Every field is empty until you type in it, and any row can be unticked or taken off.</span>
                   </div>
-                  {adding ? <div class="mt-3"><AddMarkerPanel taken={goalRows.map((r) => r.marker)} added={addedRows.map((r) => ({ marker: r.marker, mode: r.mode }))} canFollow={(m) => followable(off, m)} rules={addRules} current={current} onPick={addMarker} onDrop={dropMarker} onMode={holdMarker} onClose={() => setAdding(false)} /></div> : null}
+                  {adding ? <div class="mt-3"><AddMarkerPanel taken={goalRows.map((r) => r.marker)} added={addedRows.map((r) => ({ marker: r.marker, mode: r.mode }))} canFollow={(m) => followable(off, m)} rules={addRules} current={current} hint={chipHint} onPick={addMarker} onDrop={dropMarker} onMode={holdMarker} onClose={() => setAdding(false)} /></div> : null}
                   {addedRows.length ? <Quiet>A marker you add has no study beside it unless the page holds one for it.</Quiet> : null}
                 </div>
                 <div class="flex flex-col gap-3">

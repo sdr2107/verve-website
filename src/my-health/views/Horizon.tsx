@@ -59,6 +59,8 @@ import { GuidePlanCard, GuideOffer, GuideLocked } from "./GuidePlan.tsx";
 import { ProgrammeSetup, ProgrammeLine, WeightCard, CallCard, holdNotes, parseProgramme } from "./Programme.tsx";
 import { HorizonPanel } from "./TesterPanel.tsx";
 import { WatchedCard } from "./Watched.tsx";
+import { WhereLine } from "./Doors.tsx";
+import { doorsFor, storeOf, type Who } from "../horizon/doors.ts";
 import type { WatchedRow } from "../horizon/watch.ts";
 import { cardOfRoute, routeOfCard } from "../horizon/setupCards.ts";
 
@@ -440,6 +442,8 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   // Only what your device shares (derive/arrivals): a goal set on a reading that has stopped arriving is kept, and says it is paused.
   const arrivalList = person ? arrivalsOf(person.doc.weeks) : null;
   const paused = (marker: string) => pausedWords(arrivalList, marker);
+  // a target with no reading yet says where one is added (board 21): the doors that exist for this person's phone
+  const whoHas: Who = { store: storeOf(arrivalList), synced: !!person?.synced };
   const spans = useMemo(() => horizonSpans(h), [h.starts_on, h.ends_on, (h.pauses ?? []).join()]);
   // the header names the week today is in by its days: "a short first week, Tue 17 to Sun 22 Nov", "week 3 of 13, Mon 30 Nov to Sun 6 Dec"
   const thisSpan = spanOf(h, today);
@@ -639,6 +643,13 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
                   </form>
                 );
               })() : null}
+              {/* a target with no reading yet (board 21): the dash keeps its reason, and the row says where a reading is added. A weekly count has its own lines above. */}
+              {owner && tester && !closed && person && p.now == null && !paused(p.marker) && MARKER_BY_KEY[p.marker]?.kind !== "weekly" ? (
+                <div class="col-span-3 flex flex-col gap-1 md:col-span-6">
+                  <span class="text-[12.5px] leading-relaxed text-text-2">Waiting for a first reading. Your number is kept, and the pace starts from the first reading that arrives.</span>
+                  <WhereLine doors={doorsFor(p.marker, whoHas)} />
+                </div>
+              ) : null}
               {/* a blood target's two guards, under its row: where the move sits against the marker's usual swing, and a medicine on file */}
               {p.swing || p.medicine ? <span class="col-span-3 text-[12px] leading-relaxed text-text-3 md:col-span-6">{[p.swing?.words, p.medicine].filter(Boolean).join(" ")}</span> : null}
             </div>

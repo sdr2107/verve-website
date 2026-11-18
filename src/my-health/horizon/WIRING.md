@@ -266,3 +266,22 @@ not follow them (`guidePlan.ts PLAN_MARKERS` is unchanged). The two weekly count
 `derive.ts` and `data/programme.ts` are copied into the horizon function, and the function refuses a marker it does
 not know. So the function takes its new copy and is deployed BEFORE this reaches the site: until then a horizon
 kept with one of the four is refused with "unknown marker".
+
+## A reading that is not there (18 November 2026)
+
+Canvas "Verve, Horizon as a programme", board 21. For test accounts, in three places, each beside the reading it is
+about: card 4 of the set-up, a row of the draft and the picker's chips, and a target on the horizon's page.
+
+- **The doors** (`doors.ts doorsFor`, `views/Doors.tsx`). For each marker: the phone's health store, the app, this
+  page, or Settings › Devices. Only the doors that exist for the person are named. The store is the one the app's
+  own list names (`derive/arrivals.ts ArrivalList.store`); with no list the page names both and says which holds
+  what. WEIGHT AND WAIST NAME THE HEALTH STORE FIRST AND THE WEBSITE TAKES NEITHER (the founder, 18 November 2026: a
+  reading added there flows everywhere). Health Connect has no waist and no recovery reading, and the app asks it
+  for no fitness estimate: what each store carries was read from the app's code that day, and changes there.
+- **How a reading stands** (`stateOf`, `ageWords`). On file, from a while ago (a reading a person takes now and then,
+  past 90 days), not on file, or not sent. An age is stated and nothing else: no "test again", no reminder, no red
+  mark. A blood marker is never called old, and its doors are named only once the person has added it.
+- **The phone's last sync** (`syncNote`). Named on card 4 past three days, from the newest week row the app wrote
+  (`web_weeks.synced_at`, written on every sync for any signed-in account). Under that the page says nothing.
+- **Nothing is filled in and Next is never held back.** One rule stands as it was: a fitness number needs a test on
+  file. Monday's check-in is not changed: a target with no reading already has its own "Waiting" line there.
