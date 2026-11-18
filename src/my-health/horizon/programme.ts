@@ -116,8 +116,8 @@ export function alreadyReads(person: Person, today: string): OnFile[] {
     { key: "strength", label: "Strength", value: has ? `${fmtValue(MARKER_BY_KEY.strength_week, tw.strength)} ${round(tw.strength, 0) === 1 ? "session" : "sessions"} a week` : null, from: has ? "The same weeks" : "" },
     { key: "steps", label: "Steps", value: steps ? `${fmtValue(MARKER_BY_KEY.steps, steps.value)} a day` : null, from: steps ? `Seven-day average, ${windowWords(steps) ?? dated(steps)}` : "Nothing is sending steps." },
     { key: "weight", label: "Weight", value: weight ? `${fmtValue(MARKER_BY_KEY.weight, weight.value)} kg` : null, from: weight ? `The scale, ${dated(weight)}` : "No weighing on file." },
-    { key: "waist", label: "Waist", value: waist ? `${fmtValue(MARKER_BY_KEY.waist, waist.value)} cm` : null, from: waist ? `The tape, ${dated(waist)}` : "A tape, at the navel. One minute, in the app." },
-    { key: "grip", label: "Grip strength", value: grip ? `${fmtValue(MARKER_BY_KEY.grip, grip.value)} kg` : null, from: grip ? `A hand dynamometer, ${dated(grip)}` : "A hand dynamometer. It can be added later, in the app." },
+    { key: "waist", label: "Waist", value: waist ? `${fmtValue(MARKER_BY_KEY.waist, waist.value)} cm` : null, from: waist ? `The tape, ${dated(waist)}` : "A tape, at the navel. One minute." },
+    { key: "grip", label: "Grip strength", value: grip ? `${fmtValue(MARKER_BY_KEY.grip, grip.value)} kg` : null, from: grip ? `A hand dynamometer, ${dated(grip)}` : "It needs a hand dynamometer, and can be left out." },
   ];
 }
 
