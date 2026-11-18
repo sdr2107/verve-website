@@ -104,12 +104,28 @@ export function FitnessChooser({ person, method, onPick }: { person: PersonData;
     if (!openFitnessRead(res.out, res.path, res.name)) setNote("That file was not read as a treadmill test or a test with a mask. It is kept in Reports, and nothing was filed from it.");
   }
   const picked = method ? rows.find((r) => r.test.families.includes(method)) ?? null : null;
+  // with a test on file the row says it in one line, and the five tests open only on "Change the test" (board 23: in the
+  // recording they stood open inside the first row and made the page seven screens long). With none, they are shown.
+  const [open, setOpen] = useState(false);
+  const cur = method ? rows.flatMap((r) => r.readings).find((r) => r.family === method) ?? null : null;
+  useEffect(() => { if (kept) setOpen(false); }, [kept?.at]);
+  if (cur && !open) {
+    return (
+      <div class="col-span-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[12px] leading-relaxed text-text-2 md:col-span-4 md:pl-8">
+        <span>Measured by {familyWords(cur)}, {fmtValue(def, cur.value)} METs on {dayMonthLong(cur.on)}. One test, from the first day to the date.</span>
+        <button type="button" onClick={() => setOpen(true)} class="min-h-8 font-semibold text-accent-text hover:text-text">Change the test</button>
+      </div>
+    );
+  }
 
   return (
     <div class="col-span-2 flex flex-col gap-3 rounded-[12px] border border-accent-border bg-card p-4 md:col-span-4">
-      <div class="flex flex-col gap-1">
-        <span class="text-[15px] font-semibold text-text">How will fitness be measured on this horizon?</span>
-        <span class="text-[13px] leading-relaxed text-text-2">One test, from the first day to the date. The surest comes first. Choose one you can do again.</span>
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="flex flex-col gap-1">
+          <span class="text-[15px] font-semibold text-text">How will fitness be measured on this horizon?</span>
+          <span class="text-[13px] leading-relaxed text-text-2">One test, from the first day to the date. The surest comes first. Choose one you can do again.</span>
+        </div>
+        {cur ? <button type="button" onClick={() => setOpen(false)} class="min-h-8 text-[13px] font-semibold text-text-2 hover:text-text">Done</button> : null}
       </div>
       <div class="flex flex-col">
         {rows.map(({ test, readings }, i) => {

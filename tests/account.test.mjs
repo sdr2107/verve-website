@@ -106,7 +106,7 @@ test("the weekly email's switch has three states; it goes every Monday whether o
 });
 
 test("Settings has six sections and knows its own links", () => {
-  assert.deepEqual(SETTINGS_SECTIONS.map(([k]) => k), ["profile", "plan", "email", "sharing", "devices", "data", "appearance"]);
+  assert.deepEqual(SETTINGS_SECTIONS.map(([k]) => k), ["profile", "plan", "email", "sharing", "devices", "data", "appearance", "team"]);
   assert.equal(isSettingsSection("plan"), true);
   assert.equal(isSettingsSection("billing"), false);
 });

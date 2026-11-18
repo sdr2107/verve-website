@@ -41,6 +41,7 @@ import { FitnessChooser } from "./FitnessEntry.tsx";
 import { ChartCheck, readChartFile, type ChartChecked, type ChartDraft } from "./Beside.tsx";
 import { AddMarkerPanel, type Added } from "./Watched.tsx";
 import { DoorTiles, WhereLine } from "./Doors.tsx";
+import { Sheet } from "./Sheet.tsx";
 import { STATE_WORDS, ageWords, doorsFor, stateOf, storeOf as healthStoreOf, syncNote, type Door, type ReadingState, type Who } from "../horizon/doors.ts";
 import { actions, doc as docSignal, person as personSignal } from "../state.ts";
 import { SCOPE_LABEL, offeredScopes } from "../derive/scopes.ts";
@@ -101,18 +102,19 @@ const COACH_TICKS = ["activity", "body", "heart"];
 
 /** The frame every card sits in: its question, what it asks, and Next and Back at its foot. On a phone the foot stays at the bottom of the screen. */
 const Frame = ({ title, children, card, needs, hint, onBack, onNext }: { title: string; children: any; card: number; /** Why Next is not lit; "" when it is. */ needs: string; hint?: string; onBack: () => void; onNext: () => void }) => (
-  <section class="flex flex-col gap-4 rounded-[16px] border border-accent-border bg-card p-5" aria-label={title}>
+  // every card is at least this tall, so Next stays where the hand left it (board 23); the first card has no Back
+  <section class="flex min-h-[440px] flex-col gap-4 rounded-[16px] border border-accent-border bg-card p-5" aria-label={title}>
     <h2 class="m-0 text-[20px] font-semibold leading-snug tracking-[-0.01em] text-text">{title}</h2>
-    {children}
+    <div class="flex flex-1 flex-col gap-4">{children}</div>
     <div class="sticky bottom-0 -mx-5 -mb-5 flex flex-wrap items-center gap-2 rounded-b-[16px] border-t border-border bg-card px-5 py-3 md:static">
-      <Button onClick={onBack} disabled={card === 1}>Back</Button>
+      {card > 1 ? <Button onClick={onBack}>Back</Button> : null}
       <Button primary disabled={!!needs} onClick={onNext}>Next</Button>
       <span class={`ml-auto text-right text-[12px] leading-snug ${needs ? "text-text-2" : "text-text-3"}`}>{needs || hint || "Nothing is kept yet"}</span>
     </div>
   </section>
 );
 
-export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, access, guideOn, userId, onStarted, onError, onCancel, onOwn, after, afterDay, card: asked, goCard, watchOn }: {
+export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, access, guideOn, userId, onStarted, onError, onCancel, onOwn, after, afterDay, card: asked, goCard, watchOn, onNote }: {
   sb: SupabaseClient; person: PersonData | null; today: string; personId: string; nav: any; hasOthers: boolean;
   access: HorizonAccess | null; guideOn: boolean; userId: () => Promise<string | null>;
   onStarted: (id: string) => Promise<void>; onError: (e: ApiError, retry: () => void) => boolean; onCancel: () => void;
@@ -126,6 +128,8 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
   card: number;
   /** Open a card: a step in the browser's history, so its own Back returns to the card it came from. */
   goCard: (n: number) => void;
+  /** A line for the page once the horizon is open: whether the invitation's email went. It is sent behind the page, so it never holds the horizon up. */
+  onNote?: (words: string) => void;
   /** Watched markers can be kept (api.ts watchedReady): a goal's watched row and one the person adds join the horizon; until then neither is offered. */
   watchOn: boolean;
 }) {
@@ -162,6 +166,10 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
   const [seen, setSeen] = useState<number>(kept?.seen ?? 1);
   const [preview, setPreview] = useState(false);
   const [busy, setBusy] = useState(false);
+  /** What "Keep this horizon" is doing, said where the button was (board 23): 0 the horizon, 1 what goes with it, 2 opening it. */
+  const [keepStep, setKeepStep] = useState(0);
+  /** The studies, read in a sheet over the page and closed by its cross (the founder, 18 November 2026). */
+  const [studies, setStudies] = useState(false);
   const [problem, setProblem] = useState<{ why: string; card: number } | null>(null);
 
   const g = goal ? GOAL_BY_KEY[goal] : null;
@@ -261,8 +269,12 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
   const drawn = useRef(false);
   useEffect(() => {
     if (!drawn.current) { drawn.current = true; return; }
-    try { document.getElementById("horizon-setup")?.scrollIntoView({ block: "start" }); } catch { /* an old browser: the page stays where it is */ }
+    // the page moves only when the set-up's top is out of sight (after the long last page): a card that is already in view stays where it is
+    try { const el = document.getElementById("horizon-setup"); const top = el?.getBoundingClientRect().top ?? 0; if (el && (top < 0 || top > window.innerHeight * 0.6)) el.scrollIntoView({ block: "start" }); } catch { /* an old browser: the page stays where it is */ }
   }, [card]);
+
+  // the page's greeting steps aside while a horizon is being set, so the card keeps one place (board 23)
+  useEffect(() => { actions.quietHead(true); return () => actions.quietHead(false); }, []);
 
   /** Pick a day, or none. A day sets the date's kind and says which goals come first; one goal offered is the goal picked. */
   function pickDay(k: DayKey | null) {
@@ -332,7 +344,7 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
     // the horizon's title is the kind of day, which a coach and the Guide may read; the name the person gave it is kept apart
     const name = dayKind ? dayKind.title : `${g!.title}, ${length} months`;
     const go = async () => {
-      setBusy(true); setProblem(null);
+      setBusy(true); setKeepStep(0); setProblem(null);
       const res = await startHorizon(sb, {
         person_id: personId, title: name.slice(0, 80), kind: length === "date" ? "date" : "months", months: length === "date" ? null : length, starts_on: today, ends_on: endsOn,
         targets: targets.map(({ hold: _hold, ...t }) => t), plan: { rows: [], author: null },
@@ -340,6 +352,7 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
       });
       if (!res.ok) { setBusy(false); if (!onError(res.error, () => void go())) setProblem({ why: res.detail ? `${ERROR_WORDS[res.error]} ${res.detail}` : ERROR_WORDS[res.error], card: NUMBERS_CARD }); return; }
       const id = res.data.id;
+      setKeepStep(1);
       // what the function does not take: the programme, how each number is held, the method a fitness number is kept to,
       // the day's name, the three answers, the Guide's plan, what is watched, a diet chart, and the invitation to a coach.
       // They do not depend on one another, so they are sent together and not one after another (17 November 2026: keeping
@@ -358,14 +371,16 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
       }
       if (uid && watched.length) writes.push(keepWatched(sb, id, uid, watched.map((r) => watchedStart(r.marker, nowOf(r.marker), today))));
       if (uid && chart?.checked) writes.push(keepChart(sb, { horizon_id: id, user_id: uid, report_path: chart.draft.path, ...chart.checked, meals: chart.draft.read.meals, notes: chart.draft.read.notes, totals: chart.draft.read.totals }));
-      if (facts.coach === "ok") writes.push(actions.invite(coachEmail, scopesSent).then((r) => (r.ok ? null : r.words)));
+      // the invitation's email is sent behind the page (in the recording it held "Keeping…" for seconds): the horizon says in one line whether it went
+      if (facts.coach === "ok") { const to = coachEmail.trim().toLowerCase(); void actions.invite(coachEmail, scopesSent).then((r) => onNote?.(r.ok ? `The invitation to ${to} was sent.` : `The invitation to ${to} did not go. ${r.words} Sharing can send it again.`)); }
       const problems = (await Promise.all(writes)).filter((e): e is string => !!e);
       // a horizon set changes what the account may do (the free week has begun): the kept answer is asked again
       forgetAccess();
-      setBusy(false);
       clearWayIn(); clearSetup();
-      if (problems.length) setProblem({ why: `The horizon is kept. One part of it was not: ${problems[0]}`, card: NUMBERS_CARD });
+      if (problems.length) onNote?.(`The horizon is kept. One part of it was not: ${problems[0]}`);
+      setKeepStep(2);
       await onStarted(id);
+      setBusy(false);
     };
     await go();
   }
@@ -412,7 +427,7 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
             return (
               <button type="button" key={c.key} disabled={!can} aria-current={on ? "step" : undefined} onClick={() => { setProblem(null); goCard(n); }}
                 class={`inline-flex min-h-8 items-center gap-1.5 rounded-full border px-3 text-[12px] disabled:cursor-default ${on ? "border-accent bg-accent-fill font-semibold text-accent-text" : n <= reach ? "border-accent-border text-accent-text hover:border-accent" : c.key === "beside" && besideOptional(facts) ? "border-dashed border-border-strong text-text-3" : "border-border-strong text-text-3"}`}>
-                <span class="font-mono text-[10.5px] font-semibold">{n}</span>{c.label}{c.key === "beside" && besideOptional(facts) ? " · optional" : ""}
+                <span class="font-mono text-[10.5px] font-semibold">{n}</span>{n <= reach || n === CARD_COUNT ? `${c.label}${c.key === "beside" && besideOptional(facts) ? " · optional" : ""}` : null}
               </button>
             );
           })}
@@ -587,75 +602,64 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
           <Card accent>
             <div class="flex flex-wrap items-center gap-3"><Button onClick={back}>Back</Button><H2>{draftTitle}</H2></div>
             {!g ? <Quiet>Choose what the horizon is for, on the second card. The goal ticks its markers here.</Quiet> : (
-              <div class="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-                <div class="flex flex-col">
-                  {rows.map((r, i) => {
-                    const f = field(r.marker), v = num(f.value), lo = num(f.low);
-                    const blood = r.def.kind === "blood";
-                    const now = nowOf(r.marker), unit = now?.unit ?? r.def.unit;
-                    const typical = person ? typicalOf(r.marker, person, today) : null;
-                    const held = (r.mode === "floor" || r.mode === "ceiling" || r.mode === "band") && !r.def.standing ? { mode: r.mode, low: lo } : null;
-                    // a watched row takes no number: the goal's own can still be given one by ticking it, a blood marker never
-                    const noNumber = r.mode === "watch" && (blood || r.added || !f.ticked);
-                    // no reading on file, and no typical week to read a weekly number against (board 21): the row says so, and where one is added
-                    const noReading = !now && !r.missing && typical == null;
-                    const stands = blood ? (now ? `${watchedValue(r.def, now)} ${unit}, report of ${dayMonthLong(now.on)}` : "no report on file holds it yet")
-                      : !now ? (typical != null ? `a typical week ${fmtValue(r.def, typical)}` : "no reading yet") : r.def.kind === "weekly" ? `last week ${fmtValue(r.def, now.value)}${typical != null ? ` · a typical week ${fmtValue(r.def, typical)}` : ""}` : `today ${now.display ?? fmtValue(r.def, now.value)}`;
-                    const note = r.missing ? "Nothing is sending this reading from your devices, so it could not be followed. Settings › Devices says why."
-                      : blood ? "Watched only: shown with its date, and never given a number, a pace or a place in the Guide's words."
-                      : noNumber ? (r.added ? "Watched: shown, not judged." : watchOn ? "Watched: shown, not judged. Tick it only if you want a number on it." : "Watched: no number is needed. Tick it only if you want one.")
-                      : !f.ticked ? r.def.how
-                      : v == null ? "Set the number."
-                      : noReading ? "No reading yet, so no pace can be read. Your number is kept. The pace starts from the first reading that arrives."
-                      : r.marker === "weight" && r.mode === "reach" && now && weeks ? weightPace(now.value, v, weeks).words
-                      : person ? impliedPace(r.def, now, v, Math.max(1, weeks), historyOf(r.marker, person, today), today, r.def.standing || r.mode === "floor" ? weeklyHistory(person, r.marker, today, 13) : undefined, typical, held as any) : "";
-                    const sub = [blood ? "blood" : "", r.added ? "added by you" : "", r.mode === "reach" ? (r.added ? "reach" : "") : blood ? "watched only" : HELD_WORDS[r.mode]].filter(Boolean).join(" · ");
-                    return (
-                      <div class={`grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 py-3 md:grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1.2fr)] ${r.added ? "my-1 rounded-[10px] border border-accent-border bg-accent-fill px-3" : i ? "border-t border-border" : ""}`} key={r.marker}>
-                        {r.added
-                          ? <input type="checkbox" checked onChange={() => dropMarker(r.marker)} aria-label={`${r.def.label}: take it off the draft`} class="h-5 w-5 accent-accent" />
-                          : <input type="checkbox" checked={f.ticked} disabled={r.missing} onChange={(e) => setField(r.marker, { ticked: (e.currentTarget as HTMLInputElement).checked })} aria-label={r.def.label} class="h-5 w-5 accent-accent" />}
-                        <span class="text-[15px] text-text">{r.def.label}{sub ? <span class="block font-mono text-[11px] text-text-3">{sub}</span> : null}</span>
-                        <span class="col-start-2 flex items-center gap-1.5 md:col-start-auto">
-                          {noNumber ? <span class="inline-flex min-h-10 w-28 items-center justify-center rounded-[10px] border border-dashed border-border-strong font-mono text-[11px] font-medium text-text-3">no number</span> : (
-                            <>
-                              {r.mode === "band" ? <><input type="number" step={10 ** -r.def.decimals} value={f.low} placeholder="between" disabled={!f.ticked} onInput={(e) => setField(r.marker, { low: (e.currentTarget as HTMLInputElement).value })} aria-label={`${r.def.label}: the lower end`} class={`${inputClass} w-28 font-mono`} /><span class="text-[12px] text-text-3">and</span></> : null}
-                              <input type="number" step={10 ** -r.def.decimals} value={f.value} placeholder={r.mode === "band" ? "and" : MODE_WORDS[r.mode === "watch" ? "reach" : r.mode]} disabled={!f.ticked} onInput={(e) => setField(r.marker, { value: (e.currentTarget as HTMLInputElement).value })} aria-label={`${r.def.label}: ${r.mode === "band" ? "the upper end" : "the number you want"}`} class={`${inputClass} w-28 font-mono`} />
-                            </>
-                          )}
-                        </span>
-                        <span class="col-start-2 text-[12px] text-text-3 md:col-start-auto">{blood ? stands : <><span class="font-mono text-[11px]">{unit}</span> · {stands}</>}</span>
-                        <span class={`col-span-2 text-[12px] leading-relaxed md:col-span-4 md:pl-8 ${f.ticked || noNumber ? "text-text-2" : "text-text-3"}`}>{note}{r.marker === "mets" && person && f.ticked && !noNumber ? ` ${vo2Line(person, today, v, method && now ? now.value : null)}` : ""}</span>
-                        {noReading && (f.ticked || noNumber) ? <div class="col-span-2 md:col-span-4 md:pl-8"><WhereLine doors={doorsFor(r.marker, who)} /></div> : null}
-                        {r.added ? <span class="col-span-2 flex flex-wrap gap-x-5 gap-y-1 text-[12px] font-semibold md:col-span-4 md:pl-8">
-                          {!blood && waysFor(r.marker, addRules).length > 1 ? <button type="button" class="min-h-8 text-accent-text hover:text-text" onClick={() => { setCurrent(r.marker); setAdding(true); }}>Change how it is held</button> : null}
-                          <button type="button" class="min-h-8 text-text-2 hover:text-text" onClick={() => dropMarker(r.marker)}>Take it off</button>
-                        </span> : null}
-                        {r.marker === "mets" && f.ticked && !noNumber && person ? (
+              <div class="flex flex-col">
+                {rows.map((r, i) => {
+                  const f = field(r.marker), v = num(f.value), lo = num(f.low);
+                  const blood = r.def.kind === "blood";
+                  const now = nowOf(r.marker), unit = now?.unit ?? r.def.unit;
+                  const typical = person ? typicalOf(r.marker, person, today) : null;
+                  const held = (r.mode === "floor" || r.mode === "ceiling" || r.mode === "band") && !r.def.standing ? { mode: r.mode, low: lo } : null;
+                  // a watched row takes no number: the goal's own can still be given one by ticking it, a blood marker never
+                  const noNumber = r.mode === "watch" && (blood || r.added || !f.ticked);
+                  // no reading on file, and no typical week to read a weekly number against (board 21): the row says so, and where one is added
+                  const noReading = !now && !r.missing && typical == null;
+                  const stands = blood ? (now ? `${watchedValue(r.def, now)} ${unit}, report of ${dayMonthLong(now.on)}` : "no report on file holds it yet")
+                    : !now ? (typical != null ? `a typical week ${fmtValue(r.def, typical)}` : "no reading yet") : r.def.kind === "weekly" ? `last week ${fmtValue(r.def, now.value)}${typical != null ? ` · a typical week ${fmtValue(r.def, typical)}` : ""}` : `today ${now.display ?? fmtValue(r.def, now.value)}`;
+                  // the one sentence a number gets (board 24, "the pace words"): shown under every row that has a number, in quiet type
+                  const note = r.missing ? "Nothing is sending this reading from your devices, so it could not be followed. Settings › Devices says why."
+                    : blood ? "Watched only: shown with its date, and never given a number, a pace or a place in the Guide's words."
+                    : noNumber ? (r.added ? "Watched: shown, not judged." : watchOn ? "Watched: shown, not judged. Tick it only if you want a number on it." : "Watched: no number is needed. Tick it only if you want one.")
+                    : !f.ticked ? ""
+                    : v == null ? ""
+                    : noReading ? "No reading yet, so no pace can be read. Your number is kept. The pace starts from the first reading that arrives."
+                    : r.marker === "weight" && r.mode === "reach" && now && weeks ? weightPace(now.value, v, weeks).words
+                    : person ? impliedPace(r.def, now, v, Math.max(1, weeks), historyOf(r.marker, person, today), today, r.def.standing || r.mode === "floor" ? weeklyHistory(person, r.marker, today, 13) : undefined, typical, held as any) : "";
+                  const sub = [blood ? "blood" : "", r.added ? "added by you" : "", r.mode === "reach" ? (r.added ? "reach" : "") : blood ? "watched only" : HELD_WORDS[r.mode]].filter(Boolean).join(" · ");
+                  return (
+                    <div class={`grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 py-2.5 md:grid-cols-[auto_minmax(0,1.1fr)_auto_minmax(0,1.5fr)] ${i ? "border-t border-border" : ""}`} key={r.marker}>
+                      {r.added
+                        ? <input type="checkbox" checked onChange={() => dropMarker(r.marker)} aria-label={`${r.def.label}: take it off the draft`} class="h-5 w-5 accent-accent" />
+                        : <input type="checkbox" checked={f.ticked} disabled={r.missing} onChange={(e) => setField(r.marker, { ticked: (e.currentTarget as HTMLInputElement).checked })} aria-label={r.def.label} class="h-5 w-5 accent-accent" />}
+                      <span class="text-[15px] text-text">{r.def.label}{sub ? <span class="block font-mono text-[11px] text-text-3">{sub}</span> : null}</span>
+                      <span class="col-start-2 flex items-center gap-1.5 md:col-start-auto">
+                        {noNumber ? <span class="inline-flex min-h-10 w-28 items-center justify-center rounded-[10px] border border-dashed border-border-strong font-mono text-[11px] font-medium text-text-3">no number</span> : (
                           <>
-                            <FitnessChooser person={person} method={method} onPick={(family) => { setMethod(family); setPreview(false); }} />
-                            {v != null && now && Math.abs(v - now.value) < now.value * FITNESS_RULES.noChangeShare ? <div class="col-span-2 md:col-span-4 md:pl-8"><Quiet>Your number is inside the 5% two tests of one person differ by with nothing changed. A test at your number will not be called reached.</Quiet></div> : null}
-                            {v != null && now && method === "watch" && Math.abs(v - now.value) < now.value * 0.13 ? <div class="col-span-2 md:col-span-4 md:pl-8"><Quiet>Your number is a smaller move than a watch's estimate can be off by. A walk or a run at the start and on the date can show it.</Quiet></div> : null}
+                            {r.mode === "band" ? <><input type="number" step={10 ** -r.def.decimals} value={f.low} placeholder="between" disabled={!f.ticked} onInput={(e) => setField(r.marker, { low: (e.currentTarget as HTMLInputElement).value })} aria-label={`${r.def.label}: the lower end`} class={`${inputClass} w-28 font-mono`} /><span class="text-[12px] text-text-3">and</span></> : null}
+                            <input type="number" step={10 ** -r.def.decimals} value={f.value} placeholder={r.mode === "band" ? "and" : MODE_WORDS[r.mode === "watch" ? "reach" : r.mode]} disabled={!f.ticked} onInput={(e) => setField(r.marker, { value: (e.currentTarget as HTMLInputElement).value })} aria-label={`${r.def.label}: ${r.mode === "band" ? "the upper end" : "the number you want"}`} class={`${inputClass} w-28 font-mono`} />
                           </>
-                        ) : null}
-                        {r.marker === "grip" && f.ticked && !noNumber ? <div class="col-span-2 md:col-span-4 md:pl-8"><Evidence line={GRIP.moves} /></div> : null}
-                      </div>
-                    );
-                  })}
-                  <div class="flex flex-wrap items-center gap-3 border-t border-border pt-3">
-                    {!adding ? <Button onClick={() => { setCurrent(null); setAdding(true); }}>Add a marker</Button> : null}
-                    <span class="text-[12px] leading-relaxed text-text-3">The goal ticked {goalTicked}.{addedRows.length ? ` You added ${addedRows.length}.` : ""} Every field is empty until you type in it, and any row can be unticked or taken off.</span>
-                  </div>
-                  {adding ? <div class="mt-3"><AddMarkerPanel taken={goalRows.map((r) => r.marker)} added={addedRows.map((r) => ({ marker: r.marker, mode: r.mode }))} canFollow={(m) => followable(off, m)} rules={addRules} current={current} hint={chipHint} onPick={addMarker} onDrop={dropMarker} onMode={holdMarker} onClose={() => setAdding(false)} /></div> : null}
-                  {addedRows.length ? <Quiet>A marker you add has no study beside it unless the page holds one for it.</Quiet> : null}
-                </div>
-                <div class="flex flex-col gap-3">
-                  <Eyebrow>Beside the numbers</Eyebrow>
-                  {g.evidence.map((l) => <Evidence line={l} key={l.text} />)}
-                  <Eyebrow>What the plan does</Eyebrow>
-                  <p class="m-0 text-[13px] leading-relaxed text-text-2">{g.plan}</p>
-                  <Quiet>{TEMPLATE_KEEPS}</Quiet>
-                  <Quiet>These figures were read from the papers' abstracts on 15 November 2026 and are shown to test accounts only.</Quiet>
+                        )}
+                      </span>
+                      <span class="col-start-2 flex flex-wrap items-baseline gap-x-3 text-[12px] text-text-3 md:col-start-auto">
+                        <span>{blood ? stands : <><span class="font-mono text-[11px]">{unit}</span> · {stands}</>}</span>
+                        {r.added && !blood && waysFor(r.marker, addRules).length > 1 ? <button type="button" class="font-semibold text-accent-text hover:text-text" onClick={() => { setCurrent(r.marker); setAdding(true); }}>Change</button> : null}
+                        {r.added ? <button type="button" class="font-semibold text-text-2 hover:text-text" onClick={() => dropMarker(r.marker)}>Take it off</button> : null}
+                      </span>
+                      {note || (r.marker === "mets" && person && f.ticked && !noNumber) ? <span class="col-span-2 text-[12px] leading-relaxed text-text-2 md:col-span-4 md:pl-8">{note}{r.marker === "mets" && person && f.ticked && !noNumber ? ` ${vo2Line(person, today, v, method && now ? now.value : null)}` : ""}</span> : null}
+                      {noReading && (f.ticked || noNumber) ? <div class="col-span-2 md:col-span-4 md:pl-8"><WhereLine doors={doorsFor(r.marker, who)} /></div> : null}
+                      {r.marker === "mets" && f.ticked && !noNumber && person ? (
+                        <>
+                          <FitnessChooser person={person} method={method} onPick={(family) => { setMethod(family); setPreview(false); }} />
+                          {v != null && now && Math.abs(v - now.value) < now.value * FITNESS_RULES.noChangeShare ? <div class="col-span-2 md:col-span-4 md:pl-8"><Quiet>Your number is inside the 5% two tests of one person differ by with nothing changed. A test at your number will not be called reached.</Quiet></div> : null}
+                          {v != null && now && method === "watch" && Math.abs(v - now.value) < now.value * 0.13 ? <div class="col-span-2 md:col-span-4 md:pl-8"><Quiet>Your number is a smaller move than a watch's estimate can be off by. A walk or a run at the start and on the date can show it.</Quiet></div> : null}
+                        </>
+                      ) : null}
+                    </div>
+                  );
+                })}
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border pt-3">
+                  <Button onClick={() => { setCurrent(null); setAdding(true); }}>Add a marker</Button>
+                  <Button onClick={() => setStudies(true)}>What the studies say</Button>
+                  <span class="text-[12px] leading-relaxed text-text-3">The goal ticked {goalTicked}.{addedRows.length ? ` You added ${addedRows.length}.` : ""} Every field is empty until you type in it.</span>
                 </div>
               </div>
             )}
@@ -671,19 +675,54 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
                 <Eyebrow>Kept with it, on the same press</Eyebrow>
                 {watching().length ? <span class="text-[13px] leading-relaxed text-text-2">Watched, with no number: {watching().map((r) => r.def.label).join(", ")}.</span> : null}
                 {chart?.checked ? <span class="text-[13px] leading-relaxed text-text-2">A diet chart, given {dayMonthLong(chart.checked.given_on)}.</span> : null}
-                {facts.coach === "ok" ? <span class="text-[13px] leading-relaxed text-text-2">An invitation to {coachEmail.trim().toLowerCase()}: {scopesSent.map((k) => SCOPE_LABEL[k]).join(", ")}.</span> : null}
+                {/* an email leaves this page for someone else: it is named before the press, with a way to drop it (in the recording a made-up address became a real invitation) */}
+                {facts.coach === "ok" ? <span class="text-[13px] leading-relaxed text-text"><b class="font-semibold">An email will go to {coachEmail.trim().toLowerCase()}</b> when you keep this horizon. They are offered: {scopesSent.map((k) => SCOPE_LABEL[k]).join(", ")}. <button type="button" class="font-semibold text-accent-text hover:text-text" onClick={() => { setCoachEmail(""); if (facts.coachNeeded) setCoachLater(true); }}>Do not send it</button></span> : null}
               </div>
             ) : null}
           </Card>
 
           {problem && <div class="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-caution/40 bg-alt px-4 py-3 text-[13px] text-caution"><span>{problem.why}</span>{problem.card !== card ? <button type="button" class="min-h-8 font-semibold text-text hover:text-accent-text" onClick={() => { const c = problem.card; setProblem(null); goCard(c); }}>Open that card</button> : null}</div>}
-          <div class="flex flex-wrap items-center gap-3">
-            <Button onClick={() => { const why = check(); setProblem(why); setPreview(!why); }}>See the first week</Button>
-            <Button type="submit" primary disabled={busy}>{busy ? "Keeping…" : "Keep this horizon"}</Button>
-            <Button onClick={leave}>Cancel</Button>
-            <span class="ml-auto text-[12px] text-text-3">{access && !access.pro && access.free.available ? "Free for one week, then Pro. The horizon and your readings stay." : "Stop it any time, the readings stay"}</span>
-          </div>
+          {busy ? (
+            // what the press is doing, said where the button was, each line ticked as it is done
+            <div class="flex flex-col gap-1.5 rounded-[12px] border border-accent-border bg-card px-4 py-3" role="status" aria-live="polite">
+              {["Keeping your horizon", "Your numbers, the plan and what goes with it", "Opening your horizon"].map((words, i) => (
+                <div class={`flex items-center gap-2.5 text-[13.5px] ${i > keepStep ? "text-text-3" : "text-text"}`} key={words}>
+                  <span class={`inline-block h-3.5 w-3.5 rounded-full border ${i < keepStep ? "border-accent bg-accent" : i === keepStep ? "border-accent ring-2 ring-accent-fill" : "border-border-strong"}`} aria-hidden="true" />{words}{i < keepStep ? <span class="sr-only"> · done</span> : null}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div class="flex flex-wrap items-center gap-3">
+              <Button onClick={() => { const why = check(); setProblem(why); setPreview(!why); }}>See the first week</Button>
+              <Button type="submit" primary>Keep this horizon</Button>
+              <Button onClick={leave}>Cancel</Button>
+              <span class="ml-auto text-[12px] text-text-3">{access && !access.pro && access.free.available ? "Free for one week, then Pro. The horizon and your readings stay." : "Stop it any time, the readings stay"}</span>
+            </div>
+          )}
           <Quiet>The first week is shown before anything is kept, so the decision is made looking at the plan.</Quiet>
+
+          {/* the picker, as a sheet over the page: the rows and Keep stay where they were (board 23) */}
+          {adding && g ? (
+            <Sheet title="Add a marker" kicker={`${g.title} · beside the goal's own`} wide onClose={() => setAdding(false)}>
+              <AddMarkerPanel bare taken={goalRows.map((r) => r.marker)} added={addedRows.map((r) => ({ marker: r.marker, mode: r.mode }))} canFollow={(m) => followable(off, m)} rules={addRules} current={current} hint={chipHint} onPick={addMarker} onDrop={dropMarker} onMode={holdMarker} onClose={() => setAdding(false)} />
+              <div class="flex flex-wrap items-center gap-3"><Button primary onClick={() => setAdding(false)}>Done</Button><span class="text-[12px] text-text-3">A marker you add has no study beside it unless the page holds one for it.</span></div>
+            </Sheet>
+          ) : null}
+          {/* the studies, read in a sheet and closed by its cross: off the page until asked for (the founder, 18 November 2026) */}
+          {studies && g ? (
+            <Sheet title="What the studies say" kicker={g.title} onClose={() => setStudies(false)}>
+              <div class="flex flex-col gap-3">
+                {g.evidence.map((l) => <Evidence line={l} key={l.text} />)}
+                {rows.some((r) => r.marker === "grip") ? <Evidence line={GRIP.moves} /> : null}
+              </div>
+              <div class="flex flex-col gap-2 border-t border-border pt-4">
+                <Eyebrow>What the plan does</Eyebrow>
+                <p class="m-0 text-[14px] leading-relaxed text-text">{g.plan}</p>
+              </div>
+              <Quiet>{TEMPLATE_KEEPS}</Quiet>
+              <Quiet>These figures were read from the papers' abstracts on 15 November 2026 and are shown to test accounts only.</Quiet>
+            </Sheet>
+          ) : null}
         </>
       ) : (
         <div class="flex flex-wrap items-center gap-3"><button type="button" onClick={leave} class="min-h-8 text-[13px] font-semibold text-text-2 hover:text-text">Leave the set-up</button><span class="text-[12px] text-text-3">Your answers are dropped, and nothing was kept.</span></div>

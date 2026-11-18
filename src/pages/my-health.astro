@@ -333,6 +333,8 @@ import { STORY } from "../data/story";
           <button type="button" class="mh-tab" data-settings="devices"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="6" width="10" height="12" rx="3"/><path d="M9 6V3h6v3M9 18v3h6v-3"/></svg><span>Devices</span></button>
           <button type="button" class="mh-tab" data-settings="data"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span>Data</span></button>
           <button type="button" class="mh-tab" data-settings="appearance"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span>Appearance</span></button>
+          <!-- Verve's own notes: drawn only for the named test accounts (views/TesterPanel TeamPage) -->
+          <button type="button" id="settingsteamnav" class="mh-tab hidden" data-settings="team"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h8M8 13h5"/></svg><span>For the team</span></button>
         </nav>
         <!-- the account, at the bottom-left: the name and the plan as the server knows it; the menu opens above it -->
         <div id="acct" class="relative mt-4 lg:mt-auto" data-dim="1">
@@ -802,6 +804,10 @@ import { STORY } from "../data/story";
             <section id="settings-appearance" data-settings-section="appearance" aria-labelledby="settingstitle" class="hidden rounded-[16px] border border-border bg-card p-5">
               <div id="setappearanceroot"></div>
             </section>
+            <section id="settings-team" data-settings-section="team" aria-labelledby="settingstitle" class="hidden rounded-[16px] border border-border bg-card p-5">
+              <!-- our own notes, for the named test accounts only: the panel that used to stand in the middle of a horizon -->
+              <div id="setteamroot"></div>
+            </section>
         </div>
       </div>
 
@@ -1005,6 +1011,8 @@ import { STORY } from "../data/story";
   import { derivePerson, type PersonData } from "../my-health/derive/person";
   import { labsJudged, SECTIONS, SECTION_ORDER, searchTermsOf, landsAll, dateHay } from "../my-health/derive/labs";
   import { effect } from "@preact/signals";
+  import { mountTeamPage } from "../my-health/views/TesterPanel.tsx";
+  import { isTester as isTesterSignal } from "../my-health/state";
   import { derived as derivedSignal, doc as docSignal, person as personSignal, people as peopleSignal, firstName as firstNameSignal, myRole as myRoleSignal, section as sectionSignal, setSection as setSectionState, sectionFor, latestRead as latestReadSignal, readOf, activeTab as activeTabSignal, searchQuery as searchQuerySignal, depthLocked as depthLockedSignal, depthWorking as depthWorkingSignal, actions, openLabs, space as spaceSignal, isClient } from "../my-health/state";
   import { mountOverview } from "../my-health/views/Overview";
   import { mountBody } from "../my-health/views/Body";
@@ -1809,6 +1817,8 @@ import { STORY } from "../data/story";
       : `Invited, but the email did not go${inviteWhy ? ` (${inviteWhy})` : ""}. ${email} still finds the invitation under their greeting when they sign in with that address.` };
   }
   actions.invite = inviteTo;
+  // the greeting steps aside while a horizon is being set, so its cards keep one place (board 23)
+  actions.quietHead = (quiet) => { headQuiet = quiet; paintHead(); };
   actions.myEmail = () => userEmail;
 
   $("shareform").addEventListener("submit", async (e) => {
@@ -2538,11 +2548,12 @@ import { STORY } from "../data/story";
   actions.step = step;
 
   /** The greeting belongs to a tab's own page; a section's page opens with its own heading. */
+  let headQuiet = false;   // Horizon's set-up is on the page: the greeting is not drawn above it
   function paintHead() {
     const tab = activeTabSignal.value, sec = sectionSignal.value;
     const group = tab === "group", settings = tab === "settings";
     const sectionPage = (tab === "overview" || tab === "depth" || tab === "body") && sec !== "all";
-    show("pagehead", !group && !settings && !sectionPage);
+    show("pagehead", !group && !settings && !sectionPage && !(headQuiet && tab === "horizon"));
     $("tab-overview").toggleAttribute("data-section-open", tab === "overview" && sec !== "all");
   }
   function setTab(t: string) {
@@ -4273,6 +4284,9 @@ import { STORY } from "../data/story";
   $("acctplan").addEventListener("click", () => planSheet.open());
 
   // ── Settings, and the account at the bottom-left (boards 07 and 08) ──────
+  // Settings › For the team: our own notes, for the named test accounts; its door is drawn only for them
+  mountTeamPage($("setteamroot"), { supabase: supabase as any });
+  effect(() => { $("settingsteamnav").classList.toggle("hidden", !isTesterSignal.value); });
   const settingsView = mountSettings({ plan: $("setplanroot"), email: $("setemailroot"), appearance: $("setappearanceroot"), devices: $("setdevicesroot") }, {
     supabase: supabase as any, url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY,
     userId: () => userId,
