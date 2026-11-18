@@ -296,7 +296,7 @@ export const DAY_CHIPS: DayKind[] = DAYS.filter((d) => !d.under);
 /** Under this many full weeks, a day offers only what a week can count: two fitness tests differ by 5% with nothing changed (Katch 1982; Edgett 2018). */
 export const DAY_FEWEST_FULL_WEEKS = 4;
 /** The markers a week can count, offered when the day is under DAY_FEWEST_FULL_WEEKS full weeks away. */
-export const WEEK_COUNTED = new Set<string>(["dose", "zone2_week", "strength_week", "steps", "longest_session"]);
+export const WEEK_COUNTED = new Set<string>(["dose", "zone2_week", "strength_week", "steps", "longest_session", "sessions_week", "vigorous_week"]);
 export const DAY_SHORT_WORDS = "This day is under four full weeks away. Two fitness tests of one person differ by 5% with nothing changed, and a scale moves by more than a week's change. So the page offers only what a week can count: sessions, minutes and steps.";
 /**
  * What a length of time is long enough for, beside the day: the same lines the templates carry, each with its paper.

@@ -43,10 +43,10 @@ export const isBlood = (marker: string): boolean => MARKER_BY_KEY[marker]?.kind 
  * opens on Hold (grip: ../../data/programme.ts GRIP); a time in seconds, and sitting, are held at most.
  */
 const OPENS_ON: Partial<Record<MarkerKey, Mode>> = {
-  mets: "reach", dose: "floor", zone2_week: "reach", longest_session: "reach", strength_week: "reach", steps: "reach", background: "reach", cadence: "reach", pal: "reach",
+  mets: "reach", dose: "floor", zone2_week: "reach", longest_session: "reach", strength_week: "reach", sessions_week: "reach", vigorous_week: "reach", steps: "reach", background: "reach", cadence: "reach", pal: "reach",
   sitting: "ceiling", sleep: "reach", sri: "reach",
   rhr: "watch", hrv: "watch", hrr: "watch", bp: "watch", breathing: "watch", spo2: "watch",
-  weight: "reach", waist: "reach", body_fat: "reach", almi: "floor", ffmi: "floor", grip: "floor", chair_stands: "ceiling", sppb: "floor",
+  weight: "reach", waist: "reach", body_fat: "reach", almi: "floor", ffmi: "floor", grip: "floor", chair_stands: "ceiling", sppb: "floor", gait_speed: "floor", balance: "floor",
 };
 
 export type AddRules = {

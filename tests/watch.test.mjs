@@ -16,9 +16,9 @@ test("the picker lists every marker the page can follow, once, less the goal's o
   assert.deepEqual(keys(lists.often), OFTEN_ADDED);
   assert.deepEqual(keys(lists.often), ["steps", "grip", "chair_stands", "weight", "waist", "sleep", "hrv", "longest_session"]);
   assert.deepEqual(lists.groups.map((g) => g.label), ["Movement", "Sleep and vitals", "Body"]);
-  assert.deepEqual(keys(lists.groups[0].items), ["background", "sitting", "pal", "cadence"]);
+  assert.deepEqual(keys(lists.groups[0].items), ["sessions_week", "vigorous_week", "background", "sitting", "pal", "cadence"]);
   assert.deepEqual(keys(lists.groups[1].items), ["sri", "hrr", "bp", "breathing", "spo2"]);
-  assert.deepEqual(keys(lists.groups[2].items), ["almi", "body_fat", "ffmi", "sppb"]);
+  assert.deepEqual(keys(lists.groups[2].items), ["almi", "body_fat", "ffmi", "gait_speed", "balance", "sppb"]);
   assert.deepEqual(keys(lists.blood), BLOOD_WATCHED);
   const listed = all(lists);
   assert.equal(new Set(listed).size, listed.length, "no marker is listed twice");
@@ -66,6 +66,8 @@ test("the picker opens on the way that suits the marker, and Hold remembers its 
   assert.equal(opensOn("sitting"), "ceiling");
   assert.equal(opensOn("rhr"), "watch");
   assert.equal(opensOn("hrv"), "watch");
+  // the four added on 18 November 2026: the weekly counts to reach, the two tests to hold
+  assert.deepEqual(["sessions_week", "vigorous_week", "gait_speed", "balance"].map((k) => opensOn(k)), ["reach", "reach", "floor", "floor"]);
   // nowhere to keep a watched row: a marker that suits Watch opens on a number
   assert.equal(opensOn("hrv", { canWatch: false }), "reach");
   assert.deepEqual(waysFor("steps", { canWatch: false }), ["reach", "hold"]);
@@ -86,7 +88,7 @@ test("a day under four full weeks away gives a number only to what a week can co
   assert.equal(lists.often.find((c) => c.def.key === "waist").watchOnly, true);
   assert.equal(lists.often.find((c) => c.def.key === "steps").watchOnly, false);
   // with nothing to watch, a short day lists only what a week can count
-  assert.deepEqual(all(addChoices({ taken: [], short: true, canWatch: false })).sort(), ["dose", "longest_session", "steps", "strength_week", "zone2_week"]);
+  assert.deepEqual(all(addChoices({ taken: [], short: true, canWatch: false })).sort(), ["dose", "longest_session", "sessions_week", "steps", "strength_week", "vigorous_week", "zone2_week"]);
 });
 
 test("a marker nothing is sending is shown and cannot be picked", () => {

@@ -107,7 +107,7 @@ export const LANE_FOR: Record<string, string> = {
   // the Overview's sections
   fitness: "fitness", vitals: "rhr", sleep: "sleep", exertion: "dose", movement: "dose", body: "weight",
   // Horizon's markers (horizon/derive MarkerKey)
-  mets: "fitness", vo2: "fitness", dose: "dose", zone2_week: "dose", strength_week: "dose", longest_session: "dose",
+  mets: "fitness", vo2: "fitness", dose: "dose", zone2_week: "dose", strength_week: "dose", longest_session: "dose", sessions_week: "dose", vigorous_week: "dose",
   rhr: "rhr", steps: "steps", weight: "weight",
   ldl: "ldl_mgdl", apob: "apo_b_mgdl", hba1c: "hba1c_pct", fasting_glucose: "glucose_mgdl", triglycerides: "triglycerides_mgdl", hs_crp: "hs_crp_mgl",
 };
