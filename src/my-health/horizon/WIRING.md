@@ -285,3 +285,34 @@ about: card 4 of the set-up, a row of the draft and the picker's chips, and a ta
   (`web_weeks.synced_at`, written on every sync for any signed-in account). Under that the page says nothing.
 - **Nothing is filled in and Next is never held back.** One rule stands as it was: a fitness number needs a test on
   file. Monday's check-in is not changed: a target with no reading already has its own "Waiting" line there.
+
+## A horizon in small pages, and the set-up tightened (18 November 2026)
+
+Canvas "Verve, Horizon as a programme", boards 22, 23 and 24. Built after the founder set a real horizon and sent a
+recording of it: the page after "Keep this horizon" was eleven blocks and about nine screens.
+
+- **Four small pages** (`pages.ts`, `views/Horizon.tsx View`). Glance, Targets, This week, The science, and "Notes and
+  settings" apart. Each has an address (`#horizon-<id>-week`; `horizonRoute`, `routeOfPage`), so the browser's Back
+  works. FOR ITS OWNER ON A TEST ACCOUNT FIRST (`paged`): anyone else, a coach among them, is shown the one page as
+  before, from the same blocks. `on(page)` decides which blocks a page draws; no block was rewritten for it.
+- **The glance** is three tiles and the latest check-in. The tiles read what the page already works out (`pacesOf`,
+  the plan's `soFar`): nothing new is computed for them.
+- **Targets** is one line a target; the lines that sat under every row open when the row is pressed.
+- **This week** and **The science** are the Guide's plan card drawn in two parts (`views/GuidePlan.tsx PlanPart`): the
+  week and its climb, then the six FITT-VP letters as six small cards, why they apply, and the rules with their
+  sources. The plan's arithmetic and words are untouched.
+- **What left the horizon.** The panel of our own notes (the offer) is under Settings › For the team, drawn only for
+  the named test accounts (`views/TesterPanel.tsx TeamPage`). The week with a coach is drawn only where a coach
+  writes or edits the plan.
+- **The set-up** (`views/Programme.tsx`). The first card has no Back. Every card has one least height and stays where
+  it is (the page moves only when the set-up's top is out of sight). The page's greeting steps aside while a horizon
+  is being set (`state.ts actions.quietHead`). "Your numbers" is one column: the fitness test is one line with
+  "Change the test" (`views/FitnessEntry.tsx`), every row with a number carries its one sentence in quiet type, and
+  the picker and the studies are sheets over the page (`views/Sheet.tsx`), closed by a cross. Markers nothing is
+  sending fold into one line of the picker. "Keep this horizon" says each step as it is done; the invitation's email
+  is sent behind the page and the horizon says in one line whether it went. A coach's email is named beside Keep,
+  with "Do not send it".
+- **Nothing is drawn until the page knows which set-up is the person's** (`HorizonApp load`, `loadedFor`). The list
+  stood empty while it was being read, and the old set-up showed for some seconds before the cards replaced it.
+
+No file the horizon function copies is changed.

@@ -20,9 +20,11 @@ import { render } from "preact";
 import { useEffect, useMemo, useState } from "preact/hooks";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PersonData } from "../derive/person.ts";
-import { pacesOf, type Target } from "../horizon/derive.ts";
+import { openTargets, pacesOf, toTarget, type Target } from "../horizon/derive.ts";
+import { todayStr } from "../derive/format.ts";
+import { derived, horizons, isTester } from "../state.ts";
 import { guidePlan, isGuideStored, type GuideStored } from "../horizon/guidePlan.ts";
-import { listWeekNotes, loadPanel, type HorizonFull } from "../horizon/api.ts";
+import { guidePlanReady, listWeekNotes, loadPanel, type HorizonFull } from "../horizon/api.ts";
 import { fill, horizonFacts, type Facts } from "../horizon/facts.ts";
 import type { WeekNote } from "../horizon/programme.ts";
 
@@ -123,4 +125,29 @@ export function HorizonPanel({ sb, h, targets, person, today, guideOn }: { sb: S
     return horizonFacts({ h, paces: pacesOf(targets, h, person, today), targets, notes, today, planWeeks, share: typeof body.share === "number" ? body.share : undefined });
   }, [body, notes, targets, person, today, h.id]);
   return body ? <Panel body={body} facts={facts} id="horizon-panel" /> : null;
+}
+
+/**
+ * Settings › For the team: Verve's own notes, for the named test accounts and nobody else. The panel that stood in the
+ * middle of a horizon lives here (the founder, 18 November 2026: it "is an internal document - we should not be
+ * showing the user that after 6 weeks we plan this or that"). Its words are still rows in the database; with an open
+ * horizon on the page it is filled with that horizon's counts, as it was.
+ */
+function TeamPage({ sb }: { sb: SupabaseClient }) {
+  const tester = isTester.value, hs = horizons.value, person = derived.value;
+  const [guideOn, setGuideOn] = useState(false);
+  useEffect(() => { let on = true; void guidePlanReady(sb).then((g) => { if (on) setGuideOn(g); }); return () => { on = false; }; }, []);
+  if (!tester) return <Quiet>This page holds notes for Verve's own test accounts. There is nothing on it for this account.</Quiet>;
+  const h = (hs ?? []).find((x) => !x.closed_at && x.programme) ?? null;
+  return (
+    <div class="flex flex-col gap-4">
+      <Quiet>Our own notes, on test accounts only. Nobody else is shown this page, and nothing on it is offered to anyone. The words are rows in the database, not in the website's code.</Quiet>
+      {h && person ? <HorizonPanel sb={sb} h={h} targets={openTargets(h.targets).map(toTarget)} person={person} today={todayStr()} guideOn={guideOn} /> : <Keyed sb={sb} panel="horizon" />}
+      <Keyed sb={sb} panel="plans" />
+      {!h ? <Quiet>With an open horizon on the page, the first panel is filled with that horizon's own counts. Open Horizon once, then come back.</Quiet> : null}
+    </div>
+  );
+}
+export function mountTeamPage(root: HTMLElement, deps: { supabase: SupabaseClient }): void {
+  render(<TeamPage sb={deps.supabase} />, root);
 }

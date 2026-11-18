@@ -70,15 +70,21 @@ export function GuideLocked({ access }: { access: HorizonAccess }) {
 // ── the plan's four parts ──
 
 type Tab = "last" | "week" | "climb" | "strength" | "rules";
+/**
+ * The plan on a horizon drawn as small pages (board 22, 18 November 2026): "week" is what the week asks and how it
+ * climbs; "science" is the same plan letter by letter, the rules it rests on and why they apply to this person.
+ * Absent, the card is drawn whole, as it was.
+ */
+export type PlanPart = "week" | "science";
 /** The plan's parts. "Last week" is there once a week of the plan is finished; "The climb" reads "The weeks" when nothing in the aerobic week changes. */
 const tabsOf = (v: GuidePlanView): [Tab, string][] => [...(v.review ? [["last", "Last week"] as [Tab, string]] : []), ["week", "This week"], ["climb", v.climbs ? "The climb" : "The weeks"], ["strength", "Strength"], ["rules", "The rules"]];
 /** On a Monday or a Tuesday the plan opens on the week just finished; after that, on the week in hand. */
 const firstTab = (v: GuidePlanView, today: string): Tab => { const d = new Date(today + "T00:00:00").getDay(); return v.review && (d === 1 || d === 2) ? "last" : "week"; };
 
-function Tabs({ v, tab, pick }: { v: GuidePlanView; tab: Tab; pick: (t: Tab) => void }) {
+function Tabs({ v, tab, pick, part }: { v: GuidePlanView; tab: Tab; pick: (t: Tab) => void; part?: PlanPart }) {
   return (
     <div class="flex max-w-full gap-1 self-start overflow-x-auto rounded-[10px] border border-border bg-alt p-1" role="tablist" aria-label="The plan's parts">
-      {tabsOf(v).map(([k, label]) => (
+      {tabsOf(v).filter(([k]) => part !== "week" || k !== "rules").map(([k, label]) => (
         <button type="button" role="tab" aria-selected={tab === k} onClick={() => pick(k)}
           class={`min-h-11 shrink-0 whitespace-nowrap rounded-[8px] px-3 text-[13px] font-semibold ${tab === k ? "bg-card text-text" : "text-text-2 hover:text-text"}`}>{label}</button>
       ))}
@@ -188,10 +194,10 @@ function LastWeek({ v, p }: { v: GuidePlanView; p: GuideCommon }) {
   );
 }
 
-function Week({ v }: { v: GuidePlanView }) {
+function Week({ v, part }: { v: GuidePlanView; part?: PlanPart }) {
   return (
     <>
-      <div class="flex flex-col gap-2">
+      {part === "science" ? null : <div class="flex flex-col gap-2">
         <Kicker>{v.paused ? `Paused this week · your week, from ${weekdayDayMonth(v.paused.resumes)}` : v.started ? "Your week, this week" : `Your week, from ${weekdayDayMonth(v.firstMonday)}`}</Kicker>
         {v.paused ? <Quiet>Nothing is asked this week, and nothing in it is judged. The lines below are the ones the plan picks up with.</Quiet> : null}
         <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -203,9 +209,9 @@ function Week({ v }: { v: GuidePlanView }) {
             </div>
           ))}
         </div>
-      </div>
+      </div>}
 
-      <div class="flex flex-col gap-2">
+      {part ? null : <div class="flex flex-col gap-2">
         <Kicker>The same plan, letter by letter</Kicker>
         <div class="overflow-hidden rounded-[12px] border border-border" role="table" aria-label="The plan as FITT-VP">
           <div class="hidden grid-cols-[44px_120px_minmax(0,1.25fr)_minmax(0,1fr)] bg-alt font-mono text-[10px] font-semibold uppercase tracking-[0.06em] text-text-2 sm:grid" role="row">
@@ -220,9 +226,10 @@ function Week({ v }: { v: GuidePlanView }) {
             </div>
           ))}
         </div>
-      </div>
+      </div>}
+      {part === "science" ? <Letters v={v} /> : null}
 
-      <div class="flex flex-col gap-2">
+      {part === "week" ? null : <div class="flex flex-col gap-2">
         <Kicker>Why this, for you</Kicker>
         <ol class="m-0 flex list-none flex-col gap-2 p-0">
           {v.why.map((w, i) => (
@@ -232,9 +239,9 @@ function Week({ v }: { v: GuidePlanView }) {
             </li>
           ))}
         </ol>
-      </div>
+      </div>}
 
-      {v.soFar.length > 0 && (
+      {part !== "science" && v.soFar.length > 0 && (
         <div class="flex flex-col gap-2 rounded-[12px] border border-border bg-canvas p-4">
           <div class="flex flex-wrap items-baseline justify-between gap-2">
             <span class="text-[15px] font-semibold text-text">This week so far</span>
@@ -251,6 +258,22 @@ function Week({ v }: { v: GuidePlanView }) {
         </div>
       )}
     </>
+  );
+}
+
+/** The plan's six letters as six small cards (board 22): this week, then by the date, in the plan's own words. */
+function Letters({ v }: { v: GuidePlanView }) {
+  return (
+    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3" role="list" aria-label="The plan as FITT-VP">
+      {v.fitt.map((r, i) => (
+        <div class="grid grid-cols-[36px_minmax(0,1fr)] gap-x-3 gap-y-1 rounded-[12px] border border-border bg-canvas p-3" role="listitem" key={i}>
+          <span class="row-span-3 inline-flex h-9 w-9 items-center justify-center rounded-[10px] border border-accent-border bg-accent-fill font-mono text-[15px] font-semibold text-accent-text" aria-hidden="true">{r.letter}</span>
+          <span class="text-[14px] font-semibold text-text">{r.name}</span>
+          <span class="text-[13px] leading-relaxed text-text">{r.now}</span>
+          <span class="text-[12px] leading-relaxed text-text-3">By the date: {r.by.replace(/^./, (c) => c.toLowerCase())}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -403,8 +426,8 @@ function Rules() {
   );
 }
 
-function Body({ v, tab, p }: { v: GuidePlanView; tab: Tab; p: GuideCommon }) {
-  return tab === "last" && v.review ? <LastWeek v={v} p={p} /> : tab === "climb" ? <Climb v={v} /> : tab === "strength" ? <Strength v={v} /> : tab === "rules" ? <Rules /> : <Week v={v} />;
+function Body({ v, tab, p, part }: { v: GuidePlanView; tab: Tab; p: GuideCommon; part?: PlanPart }) {
+  return tab === "last" && v.review ? <LastWeek v={v} p={p} /> : tab === "climb" ? <Climb v={v} /> : tab === "strength" ? <Strength v={v} /> : tab === "rules" ? <Rules /> : <Week v={v} part={part} />;
 }
 
 // ── the zone 2 number: the person's own target, changed from the plan ──
@@ -612,8 +635,10 @@ function Changer({ v, busy, onSave, onCancel, saveLabel, preview }: { v: GuidePl
 
 // ── the plan in use ──
 
-export function GuidePlanCard(p: GuideCommon & { stored: GuideStored; /** The person leaves the Guide's plan for lines of their own. */ onOwnLines: () => void; /** A coach opens the plan's lines to write them. */ onCoachEdit: () => void }) {
+export function GuidePlanCard(p: GuideCommon & { stored: GuideStored; /** The person leaves the Guide's plan for lines of their own. */ onOwnLines: () => void; /** A coach opens the plan's lines to write them. */ onCoachEdit: () => void;
+  /** One of the plan's two small pages (board 22); absent, the whole card. */ part?: PlanPart }) {
   const v = guidePlan({ horizon: p.h, targets: p.targets, person: p.person, today: p.today, stored: p.stored, self: p.owner });
+  const part = p.part;
   const [tab, setTab] = useState<Tab>(() => firstTab(v, p.today));
   const [changing, setChanging] = useState(false);
   const [chat, setChat] = useState(false);
@@ -645,27 +670,49 @@ export function GuidePlanCard(p: GuideCommon & { stored: GuideStored; /** The pe
   }
 
   const canChange = p.owner && !p.closed;
+  // the science page: the plan letter by letter, what it does for each target, why it applies to this person, and the rules with their sources
+  if (part === "science") {
+    return (
+      <>
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div class="flex flex-col gap-1">
+            <H2>The plan, letter by letter</H2>
+            <span class="text-[12px] text-text-3">Written by the Guide from {p.owner ? "your" : "their"} targets · guidance on exercise, not medical advice</span>
+          </div>
+          {canChange && <Btn primary={!chat} onClick={() => setChat((x) => !x)}>{chat ? "Close the chat" : "Ask about it"}</Btn>}
+        </div>
+        {chat && canChange && <Chat {...p} v={v} onApply={(c) => keep(c)} onClose={() => setChat(false)} />}
+        <Week v={v} part="science" />
+        <Answers v={v} />
+        <details class="rounded-[12px] border border-border bg-canvas p-4">
+          <summary class="cursor-pointer text-[14px] font-semibold text-text">The rules behind it · {RULE_LINES.length}, each with its source</summary>
+          <div class="mt-3 flex flex-col gap-3"><Rules /></div>
+        </details>
+        <Quiet>{FOOT}</Quiet>
+      </>
+    );
+  }
   return (
     <>
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="flex flex-col gap-1">
-          <H2>The plan · written by the Guide from {p.owner ? "your" : "their"} targets</H2>
+          <H2>{part === "week" ? "This week's plan" : `The plan · written by the Guide from ${p.owner ? "your" : "their"} targets`}</H2>
           <span class="text-[12px] text-text-3">{v.status} · in use since {dayMonthLong(p.stored.accepted_on)} · guidance on exercise, not medical advice</span>
         </div>
         <div class="flex flex-wrap gap-2">
           {canChange && <Btn onClick={() => setChanging((x) => !x)}>Change it</Btn>}
-          {canChange && <Btn primary={!chat} onClick={() => setChat((x) => !x)}>{chat ? "Close the chat" : "Ask about it"}</Btn>}
+          {canChange && !part && <Btn primary={!chat} onClick={() => setChat((x) => !x)}>{chat ? "Close the chat" : "Ask about it"}</Btn>}
           {!p.owner && !p.closed && <Btn onClick={p.onCoachEdit}>Write the plan yourself</Btn>}
         </div>
       </div>
       {changing && <Changer v={v} busy={busy} onSave={(c, z) => void keep(c, z)} onCancel={() => setChanging(false)} saveLabel="Change the plan"
         preview={(m) => zoneLine(guidePlan({ horizon: p.h, targets: withZone2(p.targets, m), person: p.person, today: p.today, stored: freezeOf(v, p.stored, true), self: p.owner }))} />}
-      {chat && canChange && <Chat {...p} v={v} onApply={(c) => keep(c)} onClose={() => setChat(false)} />}
+      {chat && canChange && !part && <Chat {...p} v={v} onApply={(c) => keep(c)} onClose={() => setChat(false)} />}
       <p class="m-0 max-w-[820px] text-[16px] leading-[1.6] text-text">{v.lead}</p>
       {v.notes.map((n) => <p class="m-0 rounded-[10px] border border-border-strong bg-alt px-4 py-3 text-[13px] leading-relaxed text-text-2" key={n}>{n}</p>)}
-      <Answers v={v} />
-      <Tabs v={v} tab={tab} pick={setTab} />
-      <Body v={v} tab={tab} p={p} />
+      {part ? null : <Answers v={v} />}
+      <Tabs v={v} tab={tab === "rules" && part ? "week" : tab} pick={setTab} part={part} />
+      <Body v={v} tab={tab === "rules" && part ? "week" : tab} p={p} part={part} />
       <Quiet>{FOOT}</Quiet>
       {canChange && <div><button type="button" onClick={p.onOwnLines} class="min-h-11 text-[13px] font-semibold text-text-2 hover:text-text">Write my own lines instead</button></div>}
       {!p.owner && <Quiet>The Guide wrote this from their targets. If you write the plan yourself, yours replaces it and reads "written by your coach".</Quiet>}

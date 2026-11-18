@@ -28,11 +28,12 @@
  * decides; ../horizon/api.ts HorizonAccess).
  */
 import { render } from "preact";
-import { useEffect, useMemo, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { signal } from "@preact/signals";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PersonData } from "../derive/person.ts";
-import { addDays, daysBetween, todayStr } from "../derive/format.ts";
+import { addDays, daysBetween, mondayOf, todayStr } from "../derive/format.ts";
+import { actsByDay } from "../derive/activity.ts";
 import { horizons as horizonsSignal, guideDraft, setGuideDraft, isTester, doc as docSignal } from "../state.ts";
 import { chartSharedWith } from "../horizon/chart.ts";
 import { arrivalsOf, followable, leftOff, pausedWords } from "../derive/arrivals.ts";
@@ -57,12 +58,12 @@ import { openFitnessCard } from "./FitnessEntry.tsx";
 import { guidePlan, freezeOf, isGuideStored, PLAN_MARKERS, type GuideStored } from "../horizon/guidePlan.ts";
 import { GuidePlanCard, GuideOffer, GuideLocked } from "./GuidePlan.tsx";
 import { ProgrammeSetup, ProgrammeLine, WeightCard, CallCard, holdNotes, parseProgramme } from "./Programme.tsx";
-import { HorizonPanel } from "./TesterPanel.tsx";
 import { WatchedCard } from "./Watched.tsx";
 import { WhereLine } from "./Doors.tsx";
 import { doorsFor, storeOf, type Who } from "../horizon/doors.ts";
 import type { WatchedRow } from "../horizon/watch.ts";
 import { cardOfRoute, routeOfCard } from "../horizon/setupCards.ts";
+import { HORIZON_PAGES, horizonRoute, routeOfPage, type HorizonPage } from "../horizon/pages.ts";
 
 export type HorizonDeps = {
   supabase: SupabaseClient;
@@ -274,8 +275,13 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
 
   const userId = async () => deps.userId?.() ?? (await deps.supabase.auth.getSession()).data.session?.user.id ?? null;
 
+  // the person whose horizons the list holds: a page opened for someone else shows the placeholder until theirs are
+  // read. Before this the list stood empty while it was being read, and the old set-up was drawn for some seconds
+  // before the cards replaced it (the founder's recording, 18 November 2026).
+  const loadedFor = useRef<string | null>(null);
   async function load() {
-    if (!personId) { setList([]); horizonsSignal.value = []; return; }
+    if (!personId) { loadedFor.current = null; setList(null); horizonsSignal.value = []; return; }
+    if (loadedFor.current !== personId) setList(null);
     try {
       // the closed ones come too: a horizon read to its date stays reachable, with the next one prefilled under it.
       // The two things that decide which page is drawn (the test list, the Guide's plan) are asked beside the horizons
@@ -283,12 +289,14 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
       // twice: the plain set-up, then the programme's; the horizon, then its cards (the founder, 17 November 2026).
       const [hs, isTest, guide, watch] = await Promise.all([listHorizons(deps.supabase, personId, true), programmeTester(deps.supabase), guidePlanReady(deps.supabase), watchedReady(deps.supabase)]);
       setTester(isTest); isTester.value = isTest; setGuideOn(guide); setWatchOn(watch);
+      loadedFor.current = personId;
       setList(hs); horizonsSignal.value = hs; setLoadError(""); setOff(false); deps.onOff?.(false);
       if (hs.length) setPro("yes");
       deps.onHorizons?.([...hs.filter((h) => !h.closed_at), ...doneOf(hs)].map((h) => ({ id: h.id, title: h.title, ends_on: h.ends_on, done: !!h.closed_at })));
     } catch (e: any) {
       horizonsSignal.value = [];
-      if (e?.name === "HorizonOff") { setOff(true); setList([]); setLoadError(""); deps.onOff?.(true); deps.onHorizons?.([]); return; }
+      if (e?.name === "HorizonOff") { loadedFor.current = personId; setOff(true); setList([]); setLoadError(""); deps.onOff?.(true); deps.onHorizons?.([]); return; }
+      loadedFor.current = personId;
       setLoadError(e?.message ?? "Could not read the horizons."); setList([]);
     }
   }
@@ -349,7 +357,15 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
   // no open horizon: the last one read to its date is the page, with the next one prefilled beneath it
   // the set-up's own routes: "new", and "new-4" for its fourth card
   const setupCard = cardOfRoute(r);
-  const current = r && !setupCard ? list.find((h) => h.id === r) ?? null : open[0] ?? done[0] ?? null;
+  const at = horizonRoute(r);
+  const current = r && !setupCard ? list.find((h) => h.id === at.id) ?? null : open[0] ?? done[0] ?? null;
+  /** Open one of a horizon's pages as a step in the browser's history. */
+  const goPage = (id: string, pg: HorizonPage) => {
+    const to = routeOfPage(id, pg);
+    history.pushState(null, "", `#horizon-${to}`);
+    route.value = to;
+    try { document.getElementById("horizonroot")?.scrollIntoView({ block: "start" }); } catch { /* the page stays where it is */ }
+  };
   const showSetup = owner && (setupCard > 0 || (!current && !open.length));
   // a line the Guide wrote, carried here as a draft for this person
   const gd = guideDraft.value;
@@ -377,8 +393,8 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
       {showSetup && tester && owner && !ownTargets && (open.length > 0 || !done[0] || !!parseProgramme(done[0].programme))
         ? <ProgrammeSetup sb={deps.supabase} person={person} today={today} personId={personId} nav={nav} hasOthers={open.length > 0 || done.length > 0} access={access} guideOn={guideOn} userId={userId}
             after={!open.length && done[0] ? parseProgramme(done[0].programme)?.goal ?? null : null} afterDay={!open.length && !!done[0] && !!dayKindOf(done[0].programme)} key={!open.length && done[0] ? `after-${done[0].id}` : "programme"}
-            card={setupCard || 1} goCard={goCard} watchOn={watchOn}
-            onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); }}
+            card={setupCard || 1} goCard={goCard} watchOn={watchOn} onNote={setNotice}
+            onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); try { window.scrollTo({ top: 0 }); } catch { /* the page stays where it is */ } }}
             onError={onApiError} onCancel={() => { route.value = ""; history.replaceState(null, "", "#horizon"); }} onOwn={() => setOwnTargets(true)} />
         : showSetup
         ? <Setup deps={deps} person={person} today={today} personId={personId} hasOthers={open.length > 0 || done.length > 0} nav={nav} draftMarker={draftMarker} access={access} guideOn={guideOn}
@@ -389,7 +405,8 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
           ? <FinalView deps={deps} h={current} person={person} today={today} owner={owner} nav={nav} personId={personId} hasOpen={open.length > 0} access={access} guideOn={guideOn} setNotice={setNotice} reload={load}
               onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); }} onError={onApiError} />
         : current
-          ? <View deps={deps} h={current} person={person} today={today} owner={owner} nav={nav} busy={busy} setBusy={setBusy} onError={onApiError} setNotice={setNotice} reload={load} userId={userId} access={access} guideOn={guideOn} tester={tester} watchOn={watchOn} />
+          ? <View deps={deps} h={current} person={person} today={today} owner={owner} nav={nav} busy={busy} setBusy={setBusy} onError={onApiError} setNotice={setNotice} reload={load} userId={userId} access={access} guideOn={guideOn} tester={tester} watchOn={watchOn}
+              page={at.id === current.id ? at.page : "glance"} goPage={(pg) => goPage(current.id, pg)} />
           : <Card>{nav}<div class="text-[18px] font-semibold text-text">No horizon set.</div><Quiet>{owner ? "A horizon is a date, the markers you want different by then, and the week that gets you there." : "Nothing to see here yet: this person has not set a horizon."}</Quiet></Card>}
     </div>
   );
@@ -397,14 +414,20 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
 
 // ── board 14: the horizon in view ──
 
-function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setNotice, reload, userId, access, guideOn, tester, watchOn }: {
+function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setNotice, reload, userId, access, guideOn, tester, watchOn, page, goPage }: {
   deps: HorizonDeps; h: HorizonFull; person: PersonData | null; today: string; owner: boolean; nav: any; busy: string; setBusy: (s: string) => void;
   onError: (e: ApiError, retry: () => void) => boolean; setNotice: (s: string) => void; reload: () => Promise<void>; userId: () => Promise<string | null>;
   access: HorizonAccess | null; guideOn: boolean;
   /** A test account for Horizon as a programme (api.ts programmeTester). */ tester: boolean;
   /** Watched markers can be kept for this project (api.ts watchedReady). */ watchOn: boolean;
+  /** The small page in view (board 22), and the way to another. */ page: HorizonPage; goPage: (p: HorizonPage) => void;
 }) {
   const [editingPlan, setEditingPlan] = useState(false);
+  // the horizon in small pages: for its owner on a test account first (board 22). Anyone else is shown the one page, as before.
+  const paged = owner && tester;
+  const on = (k: HorizonPage) => !paged || page === k;
+  /** The target whose detail is open on the Targets page: one line a target, the rest behind it. */
+  const [openRow, setOpenRow] = useState<MarkerKey | null>(null);
   // a horizon set up as a programme keeps its goal, the person's own words and who writes the plan
   const programme = parseProgramme(h.programme);
   // a horizon set for a day (board 14): the kind is on the row; the name the person gave it is theirs alone
@@ -579,9 +602,108 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
     setPauseAsk(null); await reload();
   }
 
+  // ── the horizon in small pages (board 22) ──
+  // the Guide's plan as it stands today, for the glance: the week so far, and whether there are six letters to show
+  const planView = useMemo(() => { try { return paged && stored && person ? guidePlan({ horizon: h, targets, person, today, stored, self: owner }) : null; } catch { return null; } }, [paged, stored, person, today, h, targets.length]);
+  const about = [
+    `A horizon is a date, the markers you want different by then, and the week that gets you there. The Guide checks the pace every Monday and reads the month at its end.${h.plan?.author === "coach" ? " Your coach sees all of it and writes the plan." : stored ? " The Guide wrote the plan from your targets. A coach you share your page with sees all of it." : " A coach you share your page with sees all of it and can write the plan."}`,
+    dayKind && dayName ? `${dayName}. Shown to you only.` : "", movedWords(h) ?? "", weeksWords(h), pausedWeeksWords(h),
+  ].filter(Boolean);
+  const daysLeft = thisSpan ? Math.max(0, daysBetween(today, thisSpan.to)) : 0;
+  const goodPaces = paces.filter((p) => !p.paused && p.tone === "good").length;
+  const judgedPaces = paces.filter((p) => !p.paused && p.tone !== "neutral").length;
+  const weekLines = pausedWeek ? [] : planView?.soFar.length ? planView.soFar.map((x) => ({ label: x.label, text: x.text })) : adherence.filter((a) => a.done != null && a.of != null).map((a) => ({ label: a.label, text: `${a.done} of ${a.of}` }));
+  const pagedHead = (
+    <header class="flex flex-col gap-3">
+      <div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+        <div class="flex min-w-0 flex-col gap-1">
+          <Eyebrow>Horizon{dayKind ? ` · for ${dayKind.forWords}` : ""}{closed ? " · stopped" : ""}</Eyebrow>
+          <h1 class="m-0 text-[26px] font-semibold leading-tight tracking-[-0.01em] text-text">{h.title}, {longDate(h.ends_on)}</h1>
+        </div>
+        <span class="font-mono text-[12px] font-medium text-text-2">{togo} {togo === 1 ? "day" : "days"} to go · {weekWords(h, today)}</span>
+      </div>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        {/* four places that fit a phone's width side by side, so none is hidden behind a sideways scroll */}
+        <div class="grid w-full grid-cols-4 gap-1 rounded-[12px] border border-border bg-alt p-1 sm:flex sm:w-auto" role="tablist" aria-label="The pages of this horizon">
+          {HORIZON_PAGES.map(([k, label]) => (
+            <button type="button" role="tab" aria-selected={page === k} key={k} onClick={() => goPage(k)}
+              class={`min-h-10 whitespace-nowrap rounded-[9px] px-1 text-[12.5px] sm:px-3.5 sm:text-[13px] ${page === k ? "border border-border bg-card font-semibold text-text" : "border border-transparent font-medium text-text-2 hover:text-text"}`}>{label}</button>
+          ))}
+        </div>
+        <button type="button" onClick={() => goPage("notes")} aria-current={page === "notes" ? "page" : undefined} class={`min-h-10 text-[13px] font-semibold ${page === "notes" ? "text-accent-text" : "text-text-2 hover:text-text"}`}>Notes and settings</button>
+      </div>
+      {nav ? <div>{nav}</div> : null}
+    </header>
+  );
+  const tile = (small: string, figure: string, unit: string | undefined, body: any, go: string, to: HorizonPage) => (
+    <div class="flex min-w-0 flex-col gap-2 rounded-[14px] border border-border bg-card p-4">
+      <span class="font-mono text-[10px] font-semibold uppercase tracking-[0.07em] text-text-3">{small}</span>
+      <span class="t-figure leading-none text-text">{figure}{unit ? <span class="ml-1.5 text-[13px] font-medium text-text-3">{unit}</span> : null}</span>
+      <div class="flex flex-col gap-1.5 text-[13px] leading-relaxed text-text-2">{body}</div>
+      <button type="button" onClick={() => goPage(to)} class="mt-auto min-h-9 self-start text-[13px] font-semibold text-accent-text hover:text-text">{go}</button>
+    </div>
+  );
+  const glance = (
+    <>
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+        {tile("Where you are going", judgedPaces ? `${goodPaces} of ${paces.length}` : String(targets.length), judgedPaces ? "on pace" : targets.length === 1 ? "target" : "targets", (
+          <>
+            {paces.slice(0, 3).map((p) => (
+              <div class="grid grid-cols-[minmax(0,1fr)_72px] items-center gap-2" key={p.marker}>
+                <span class="truncate text-text">{p.label}</span>
+                <span class="h-1.5 overflow-hidden rounded-full bg-alt" aria-hidden="true"><span class="block h-full rounded-full bg-accent" style={{ width: `${Math.round(Math.max(0, Math.min(1, p.progress)) * 100)}%` }} /></span>
+              </div>
+            ))}
+            {!judgedPaces ? <span>No pace can be read until a full week has ended.</span> : null}
+          </>
+        ), targets.length === 1 ? "See it" : `See all ${numberWord(targets.length)}`, "targets")}
+        {tile("This week", pausedWeek ? "Paused" : weekLines[0]?.text ?? (planRows.length || planView ? "Planned" : "No plan yet"), pausedWeek || !weekLines[0] || weekLines[0].label.length > 12 ? undefined : weekLines[0].label.toLowerCase(), (
+          <>
+            {/* a line whose name is a sentence ("Five sessions a week") is said under the figure, not beside it */}
+            {!pausedWeek && weekLines[0] && weekLines[0].label.length > 12 ? <span>{weekLines[0].label}.</span> : null}
+            {weekLines.slice(1, 3).map((l) => <span key={l.label}>{l.label}: {l.text}.</span>)}
+            {pausedWeek ? <span>Nothing is asked this week, and nothing in it is judged.</span>
+              : !weekLines.length && planView && !planView.started ? <span>The plan's first week starts on {weekdayDayMonth(planView.firstMonday)}.</span>
+              : !closed ? <span>{daysLeft === 0 ? "Today is the week's last day." : `${numberWord(daysLeft).replace(/^./, (c) => c.toUpperCase())} ${daysLeft === 1 ? "day is" : "days are"} left in the week.`}</span> : null}
+          </>
+        ), "See the week", "week")}
+        {planView
+          ? tile("Why this week", "F I T T V P", undefined, <span>Six lines behind the week: how often, how hard, how long, what kind, how much, and how it changes. Each names its rule.</span>, "See the science", "science")
+          : tile("The plan", h.plan?.author === "coach" ? "A coach" : planRows.length ? "Yours" : "None yet", undefined,
+              <span>{h.plan?.author === "coach" ? "Your coach writes the week. Their lines are on This week." : planRows.length ? "You wrote the week's lines. They are on This week." : "No plan is written yet. The Guide can write one from your targets."}</span>, "See the week", "week")}
+      </div>
+      <section class="flex flex-col gap-3 rounded-[14px] border border-border bg-card p-5" aria-label="The latest check-in">
+        <div class="flex flex-wrap items-baseline justify-between gap-3">
+          <span class="font-mono text-[11px] font-medium uppercase tracking-[0.06em] text-text-3">{latest ? `${latest.kind === "week" ? "Monday's note" : latest.kind === "month" ? "The month's read" : "The whole road"} · ${weekdayDayMonth(latest.for_date)}` : "Monday's note"}</span>
+          <button type="button" onClick={() => goPage("notes")} class="min-h-8 text-[12px] font-semibold text-text-2 hover:text-text">All notes</button>
+        </div>
+        {latest ? <CheckinText text={latest.text} /> : <p class="m-0 text-[15px] leading-relaxed text-text-2">No note yet. The first arrives on Monday {dayMonthLong(next.nextMonday)}, once the app has synced the week.</p>}
+      </section>
+    </>
+  );
+  // the week as its days (board 22): what each day of this week holds so far, from the sessions themselves
+  const weekDays = !person ? null : (() => {
+    const monday = mondayOf(new Date(today + "T00:00:00"));
+    const by = actsByDay(person.acts);
+    return (
+      <div class="grid grid-cols-7 gap-1.5" aria-label="This week, day by day">
+        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((name, i) => {
+          const day = addDays(monday, i), d = by.get(day), ahead = day > today, out = day < h.starts_on || day > h.ends_on;
+          return (
+            <div key={day} class={`flex h-14 flex-col items-center justify-center gap-0.5 rounded-[10px] border font-mono text-[11px] font-semibold ${d && d.n ? "border-accent-border bg-accent-fill text-accent-text" : ahead || out ? "border-dashed border-border-strong text-text-3" : "border-border-strong bg-alt text-text-2"} ${day === today ? "ring-1 ring-accent" : ""}`}>
+              <span>{name}</span><span class="text-[10px] font-medium">{d && d.n ? `${Math.round(d.min)} min` : ahead || out ? "" : "–"}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  })();
+
   return (
     <>
-      <header class="flex flex-wrap items-start justify-between gap-6">
+      {paged ? pagedHead : null}
+      {paged && page === "glance" ? glance : null}
+      {paged ? null : <header class="flex flex-wrap items-start justify-between gap-6">
         <div class="flex max-w-[680px] flex-col gap-2">
           <Eyebrow>Horizon · set {dayMonthYear(h.starts_on)}{dayKind ? ` · for ${dayKind.forWords}` : ""} · {weekLine}{closed ? " · stopped" : ""}</Eyebrow>
           <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-[-0.01em] text-text">{h.title}, {longDate(h.ends_on)}</h1>
@@ -598,12 +720,12 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
           <span class="font-mono text-[11px] font-medium text-text-3">days to go</span>
           <span class="text-[12px] text-text-2">{weeks} weeks · {weeksBehindNow} behind you</span>
         </div>
-      </header>
+      </header>}
 
-      <Card id="horizon-targets">
+      {on("targets") ? <Card id="horizon-targets">
         <div class="flex flex-wrap items-baseline justify-between gap-3">
           <H2>Targets · {targets.length}</H2>
-          <span class="text-[12px] text-text-3">Pace = what has moved against what the date needs · the tick on each track is where you should be today</span>
+          {paged ? <span class="text-[12px] text-text-3">Press a target for how it is read</span> : <span class="text-[12px] text-text-3">Pace = what has moved against what the date needs · the tick on each track is where you should be today</span>}
         </div>
         {!person && <Quiet>Reading your numbers…</Quiet>}
         <div class="flex flex-col">
@@ -612,14 +734,21 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
           </div>
           {paces.map((p) => (
             <div class="grid grid-cols-3 items-center gap-x-3 gap-y-1 border-b border-border py-3 last:border-b-0 md:grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_repeat(2,minmax(0,.8fr))_minmax(0,1.5fr)_minmax(0,1.6fr)]" key={p.marker}>
-              <span class="col-span-3 flex flex-col md:col-span-1"><span class="text-[15px] text-text">{p.label}</span><span class="text-[12px] text-text-3">{MARKER_BY_KEY[p.marker]?.how ?? ""}{p.window ? ` · ${p.window}` : ""}{p.source ? ` · ${p.source}` : ""}</span>{rowNotes(p).map((line) => <span class="text-[12px] text-text-3" key={line}>{line}</span>)}{paused(p.marker) ? <span class="text-[12px] text-text-2">{paused(p.marker)}</span> : null}</span>
+              <span class="col-span-3 flex flex-col md:col-span-1">
+                {paged
+                  ? <button type="button" aria-expanded={openRow === p.marker} onClick={() => setOpenRow(openRow === p.marker ? null : p.marker)} class="min-h-8 text-left text-[15px] text-text hover:text-accent-text">{p.label}</button>
+                  : <span class="text-[15px] text-text">{p.label}</span>}
+                <span class="text-[12px] text-text-3">{MARKER_BY_KEY[p.marker]?.how ?? ""}{!paged || openRow === p.marker ? `${p.window ? ` · ${p.window}` : ""}${p.source ? ` · ${p.source}` : ""}` : ""}</span>
+                {!paged || openRow === p.marker ? rowNotes(p).map((line) => <span class="text-[12px] text-text-3" key={line}>{line}</span>) : null}
+                {paused(p.marker) ? <span class="text-[12px] text-text-2">{paused(p.marker)}</span> : null}
+              </span>
               <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">I want</span><span class="font-mono text-[15px] font-semibold text-accent-text">{p.mode ? <span class="mr-1 font-sans text-[12px] font-normal text-text-2">{p.mode === "floor" ? "at least" : p.mode === "ceiling" ? "at most" : `${p.lowText ?? "—"} to`}</span> : null}{p.targetText}</span></span>
               <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">{p.week ? "This week" : "Now"}</span><span class="font-mono text-[15px] font-semibold text-text">{p.week ? p.week.text : p.nowText}{p.unit && (p.week ? p.week.value != null : p.now != null) ? <span class="ml-1 whitespace-nowrap font-mono text-[11px] font-medium text-text-3">{p.unit === "sessions" && (p.week ? p.week.value : p.now) === 1 ? "session" : p.unit}</span> : null}</span>{p.week ? <span class="hidden font-mono text-[10px] text-text-3 md:block">this week</span> : null}</span>
               <span class="flex flex-col md:block md:text-right"><span class="font-mono text-[10px] text-text-3 md:hidden">On {dayMonth(h.starts_on)}</span><span class="font-mono text-[15px] font-semibold text-text-3">{p.startText}</span></span>
               <span class="col-span-3 md:col-span-1"><Track progress={p.progress} elapsed={p.elapsed} tone={p.paused ? "neutral" : p.tone} /></span>
               <span class={`col-span-3 flex items-center justify-between text-[13px] font-medium md:col-span-1 ${TONE_TEXT[p.paused ? "neutral" : p.tone]}`}>
                 {p.paused ? PAUSED_WORD : p.pace_word}
-                {owner && !closed && <span class="ml-2 flex shrink-0 gap-3 text-[12px] font-normal">
+                {owner && !closed && (!paged || openRow === p.marker) && <span class="ml-2 flex shrink-0 gap-3 text-[12px] font-normal">
                   <button type="button" onClick={() => setChanging(changing?.marker === p.marker ? null : { marker: p.marker, value: String(round(p.target, MARKER_BY_KEY[p.marker]?.decimals ?? 1)) })} class="min-h-8 text-accent-text hover:text-text" aria-label={`Change the number for ${p.label}`}>Change</button>
                   {targets.length > 1 && <button type="button" onClick={async () => { const t = targets.find((x) => x.marker === p.marker); const uid = await userId(); if (!t?.id || !uid) return; const err = await keepPlanBefore(p.marker, uid) ?? await removeTarget(deps.supabase, t.id); if (err) setNotice(err); else await reload(); }} class="min-h-8 text-text-3 hover:text-text" aria-label={`Remove ${p.label}`}>Remove</button>}
                 </span>}
@@ -669,30 +798,36 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
               onCancel={() => setAdding(false)} />
           : <div><button type="button" onClick={() => setAdding(true)} class="rounded-full border border-border px-3 py-1 text-[12px] text-text-2 hover:border-accent-border">Add a target</button></div>)}
         {pausedWeek ? <Quiet>This week is paused. No pace is read and the line to your date stands still. A reading you take still counts as a reading.</Quiet> : null}
-        <Quiet>You set every number under "I want", and can change it. Verve sets none, and promises none: it tells you the pace your number implies and whether the weeks are keeping it. Any of the {TARGET_MARKERS.length} markers on this page can be a target.</Quiet>
+        {paged
+          ? <details class="text-[12px] leading-relaxed text-text-3"><summary class="cursor-pointer">How a pace is read</summary><p class="m-0 mt-2">Pace is what has moved against what the date needs. The tick on each track is where you would be today on a straight line from the start. You set every number under "I want", and can change it. Verve sets none, and promises none. Any of the {TARGET_MARKERS.length} markers on this page can be a target.</p></details>
+          : <Quiet>You set every number under "I want", and can change it. Verve sets none, and promises none: it tells you the pace your number implies and whether the weeks are keeping it. Any of the {TARGET_MARKERS.length} markers on this page can be a target.</Quiet>}
         {/* blood markers are out of Horizon pending the lawyers' review: a target set before that is kept in its row, unread, and the page says so */}
         {h.targets.length > targets.length && <Quiet>Blood markers are not offered as targets for now. The {h.targets.length - targets.length === 1 ? "one you set is" : `${numberWord(h.targets.length - targets.length)} you set are`} kept, and not shown or checked while this stands.</Quiet>}
         {paces.some((p) => MARKER_BY_KEY[p.marker]?.kind === "blood") && <Quiet>A blood target is called reached only when the move from its start is more than that marker's usual swing: two reports can differ by that much with nothing having changed. A medicine you have told the app you take is shown beside its target, and is never read as the cause of a change.</Quiet>}
-      </Card>
+      </Card> : null}
 
       {/* watched markers, under the targets (board 19): shown with their day, and never judged */}
-      {owner && watchOn && person && (watched.length > 0 || (tester && !closed)) ? <WatchedCard sb={deps.supabase} horizonId={h.id} rows={watched} setOn={h.starts_on} person={person} today={today} taken={targets.map((t) => t.marker)} canEdit={tester && !closed} userId={userId} reload={loadWatched} setNotice={setNotice} /> : null}
+      {on("targets") && owner && watchOn && person && (watched.length > 0 || (tester && !closed)) ? <WatchedCard sb={deps.supabase} horizonId={h.id} rows={watched} setOn={h.starts_on} person={person} today={today} taken={targets.map((t) => t.marker)} canEdit={tester && !closed} userId={userId} reload={loadWatched} setNotice={setNotice} /> : null}
 
-      {/* a panel for test accounts: its words are a row only they can read, filled with this horizon's counts */}
-      {programme && person && tester && owner && !closed ? <HorizonPanel sb={deps.supabase} h={h} targets={targets} person={person} today={today} guideOn={guideOn} /> : null}
-      {programme && person ? <WeightCard h={h} targets={targets} person={person} today={today} programme={programme} chartLine={chartLine ? chartLine.replace(/^./, (c) => c.toUpperCase()) : null} /> : null}
-      {fitnessTarget && owner && tester && !closed ? (
+      {on("targets") && programme && person ? <WeightCard h={h} targets={targets} person={person} today={today} programme={programme} chartLine={chartLine ? chartLine.replace(/^./, (c) => c.toUpperCase()) : null} /> : null}
+      {on("targets") && fitnessTarget && owner && tester && !closed ? (
         <div class="flex flex-wrap items-center gap-3">
           <Button onClick={() => openFitnessCard({ kinds: fitnessTarget.method ? KINDS_FOR[fitnessTarget.method] : undefined })}>Add a fitness test result</Button>
           <span class="text-[12px] text-text-3">{fitnessTarget.method ? "Typed here, or taken in the app. The same test as the start." : "Typed here, or taken in the app."} Test account.</span>
         </div>
       ) : null}
-      {midweek ? <MidweekCard note={midweek} chartLine={chartLine ? chartLine.replace(/^./, (c) => c.toUpperCase()) : null} /> : null}
+      {paged && page === "week" && !closed ? weekDays : null}
+      {on("week") && midweek ? <MidweekCard note={midweek} chartLine={chartLine ? chartLine.replace(/^./, (c) => c.toUpperCase()) : null} /> : null}
 
-      <Card id="horizon-plan">
-        {guide && stored && !editingPlan ? (locked
+      {on("week") || (paged && page === "science") ? <Card id="horizon-plan">
+        {paged && page === "science" && !(guide && stored && !editingPlan) ? (
+          <>
+            <H2>The science behind the week</H2>
+            <p class="m-0 max-w-[640px] text-[15px] leading-relaxed text-text-2">This page lays out a plan the Guide writes: its six letters, the rules it rests on and where each comes from. {h.plan?.author === "coach" ? "This horizon's plan is written by your coach, so there is nothing of the Guide's to lay out." : "This horizon has no plan from the Guide yet. It can write one from your targets, on This week."}</p>
+          </>
+        ) : guide && stored && !editingPlan ? (locked
           ? <GuideLocked access={access!} />
-          : <GuidePlanCard {...guide} stored={stored} onCoachEdit={() => setEditingPlan(true)}
+          : <GuidePlanCard {...guide} stored={stored} part={paged ? (page === "science" ? "science" : "week") : undefined} onCoachEdit={() => setEditingPlan(true)}
               onOwnLines={() => { if (confirm("Leave the Guide's plan? This week's lines stay as your own, and the weekly step stops.")) void savePlanRows(planRows, "user"); }} />
         ) : <>
         {guide && owner && !closed && !editingPlan && h.plan?.author !== "coach" && (locked ? <GuideLocked access={access!} /> : <GuideOffer {...guide} />)}
@@ -722,18 +857,19 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
         {pausedWeek && planRows.length ? <Quiet>Paused this week: nothing is asked, and nothing in it is judged.</Quiet> : null}
         <Quiet>{guideOn ? "Without a coach, the Guide writes the plan from your targets and you change it." : "Without a coach, the Guide drafts the plan from your last eight weeks and you edit it."} The plan is intent for a week, not a session for each day; what you did comes from your sessions, never from a tick box.</Quiet>
         </>}
-      </Card>
+      </Card> : null}
 
-      {programme && (programme.writer !== "guide" || !owner || tester)
+      {/* the week with a coach: only where a coach writes or edits the plan, or is the one looking (in the recording it stood on a horizon with no coach) */}
+      {on("week") && programme && (programme.writer !== "guide" || !owner)
         ? <CallCard sb={deps.supabase} h={h} targets={targets} person={person} today={today} owner={owner} closed={closed} tester={tester} programme={programme} planRows={planRows} guideOn={guideOn} userId={userId} setNotice={setNotice}
             chartLine={chartLast ? chartLast.replace(/^./, (c) => c.toUpperCase()) : null}
             pause={pause} pausing={busy === "pause"} onSetAside={(c) => { if (confirm(`Set last week aside, ${c.words}?\n\n${pauseLines(h, c, pause!).join("\n")}`)) void setAside(c); }} />
         : null}
 
-      {owner && tester && chartState && !chartState.off ? <ChartCard sb={deps.supabase} h={h} today={today} state={chartState} closed={closed} userId={userId} reload={loadCharts} sharedWith={chartSharedWith((docSignal.value as { sharing?: { status?: unknown; scopes?: unknown }[] } | null)?.sharing)} /> : null}
+      {owner && tester && chartState && !chartState.off && (!paged || (chartState.charts.length ? page === "week" : page === "notes")) ? <ChartCard sb={deps.supabase} h={h} today={today} state={chartState} closed={closed} userId={userId} reload={loadCharts} sharedWith={chartSharedWith((docSignal.value as { sharing?: { status?: unknown; scopes?: unknown }[] } | null)?.sharing)} /> : null}
       {!owner && chartState && chartState.charts.length ? <ChartCard sb={deps.supabase} h={h} today={today} state={chartState} closed={closed} userId={userId} reload={loadCharts} readOnly /> : null}
 
-      <Card id="horizon-checkin">
+      {on("notes") ? <Card id="horizon-checkin">
         <div class="flex flex-wrap items-baseline justify-between gap-3">
           <H2>The Guide's check-in{latest ? ` · ${weekdayDayMonth(latest.for_date)}` : ""}</H2>
           {!closed && <span class="text-[12px] text-text-3">Next: Monday {dayMonthLong(next.nextMonday)}{next.monthReview ? ` · month review ${dayMonthLong(next.monthReview)}` : ""}</span>}
@@ -774,9 +910,9 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
           ))}
         </div>
         <Quiet>Every Monday morning, once the app has synced the week: a short check-in against the targets{h.send_to_coach ? ", also sent to your coach in Messages" : ""}. Each month's first day: a Guide read of the month on the horizon. On the date: a read of the whole road, and the choice to set the next horizon.</Quiet>
-      </Card>
+      </Card> : null}
 
-      {owner && (
+      {on("notes") && owner && (
         <Card>
           <H2>Check-ins and who sees them</H2>
           <div class="flex flex-col">
@@ -803,10 +939,18 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
         </Card>
       )}
 
-      <div class="flex flex-wrap items-center gap-3 rounded-[16px] border border-accent-border bg-accent-fill px-5 py-4 text-[13px] text-text-2">
+      {paged && page === "notes" ? (
+        <Card>
+          <H2>About this horizon</H2>
+          <Eyebrow>Set {dayMonthYear(h.starts_on)} · {weekLine}</Eyebrow>
+          {about.map((line) => <p class="m-0 max-w-[720px] text-[14px] leading-relaxed text-text-2" key={line}>{line}</p>)}
+          {programme ? <ProgrammeLine programme={programme} /> : null}
+        </Card>
+      ) : null}
+      {on("notes") ? <div class="flex flex-wrap items-center gap-3 rounded-[16px] border border-accent-border bg-accent-fill px-5 py-4 text-[13px] text-text-2">
         <span class="font-mono text-[11px] font-medium text-accent-text">Pro</span>
         <span>Horizon is part of Pro on the website. Free has one week of it, with the plan and one question about the plan, and keeps the Overview, Body, Reports and the Guide's first read. A horizon can be deleted any time; the readings stay.</span>
-      </div>
+      </div> : null}
     </>
   );
 }

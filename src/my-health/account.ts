@@ -239,6 +239,9 @@ export function browserZone(): string | null {
 export const SETTINGS_SECTIONS = [
   ["profile", "Profile"], ["plan", "Plan and billing"], ["email", "Email and notifications"],
   ["sharing", "Sharing"], ["devices", "Devices"], ["data", "Data"], ["appearance", "Appearance"],
+  // Verve's own notes, for the named test accounts only (views/TesterPanel TeamPage). It was a block in the middle of a
+  // horizon until 18 November 2026, when the founder took it off the reader's page: "an internal document".
+  ["team", "For the team"],
 ] as const;
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number][0];
 export const isSettingsSection = (s: string): s is SettingsSection => SETTINGS_SECTIONS.some(([k]) => k === s);

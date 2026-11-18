@@ -143,6 +143,12 @@ export const actions = {
    * is kept). The page owns it, because the page holds who the person is and what the invitation says.
    */
   invite: (_email: string, _scopes: string[]): Promise<{ ok: boolean; words: string }> => Promise.resolve({ ok: false, words: "The page is not ready to send an invitation." }),
+  /**
+   * The page's greeting steps aside, or returns (board 23, 18 November 2026): while a horizon is being set the cards
+   * keep one place on the screen, which they cannot with a greeting above them that some cards have room for and
+   * others do not.
+   */
+  quietHead: (_quiet: boolean) => {},
   /** The email the signed-in account uses, so a card can say "That is you" before anything is sent. */
   myEmail: (): string => "",
   /** The People control: open someone's page, the group, the forms, the access sheet. */

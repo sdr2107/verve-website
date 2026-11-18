@@ -18,6 +18,7 @@ import { latestOf, type MarkerKey } from "../horizon/derive.ts";
 import type { Mode } from "../../data/programme.ts";
 import { WAYS_WORDS, addChoices, isBlood, modeFor, opensOn, watchedLine, watchedStart, wayOf, waysFor, type AddChoice, type AddRules, type WatchedRow, type Way } from "../horizon/watch.ts";
 import { keepWatched, removeWatched } from "../horizon/api.ts";
+import { actions } from "../state.ts";
 
 const H2 = ({ children }: { children: any }) => <h2 class="m-0 text-[18px] font-semibold text-text">{children}</h2>;
 const Quiet = ({ children }: { children: any }) => <p class="m-0 text-[12px] leading-relaxed text-text-3">{children}</p>;
@@ -32,13 +33,19 @@ const HOLDS: { mode: Mode; label: string }[] = [{ mode: "floor", label: "At leas
  * targets): they are not listed. `added` are the ones picked here, shown lit; pressing a lit one takes it off.
  * `only` narrows what a pick can be: the horizon's page offers "watch" alone, since a number there is "Add a target".
  */
-export function AddMarkerPanel({ taken, added, canFollow, rules, only, current, hint, onPick, onDrop, onMode, onClose }: {
+export function AddMarkerPanel({ taken, added, canFollow, rules, only, current, hint, bare, onPick, onDrop, onMode, onClose }: {
   taken: string[]; added: Added[]; canFollow: (marker: MarkerKey) => boolean; rules: AddRules; only?: Way;
   /** A small grey word on a chip before it is picked (board 21): "no reading yet", "from 2 Sep". It can still be picked. */ hint?: (marker: MarkerKey) => string | null;
+  /** Drawn inside a sheet that has its own title and cross (board 23): no frame and no "Done" of its own. */ bare?: boolean;
   /** The marker whose way of being held is shown under the lists. */ current: MarkerKey | null;
   onPick: (marker: MarkerKey, mode: Mode) => void; onDrop: (marker: MarkerKey) => void; onMode: (marker: MarkerKey, mode: Mode) => void; onClose: () => void;
 }) {
-  const lists = addChoices({ taken, canFollow, ...rules });
+  const all = addChoices({ taken, canFollow, ...rules });
+  // markers nothing is sending leave the lists for one folded line (board 23: nine of them, each with its own words, crowded the picker)
+  const sent = (items: AddChoice[]) => items.filter((c) => !c.missing);
+  const lists = { often: sent(all.often), groups: all.groups.map((g) => ({ ...g, items: sent(g.items) })).filter((g) => g.items.length), blood: sent(all.blood) };
+  const unsent = [...all.often, ...all.groups.flatMap((g) => g.items), ...all.blood].filter((c) => c.missing);
+  const [showUnsent, setShowUnsent] = useState(false);
   const by = new Map(added.map((a) => [a.marker, a.mode]));
   const press = (c: AddChoice) => {
     const k = c.def.key;
@@ -67,12 +74,21 @@ export function AddMarkerPanel({ taken, added, canFollow, rules, only, current, 
   const ways = cur ? (only ? [only] : waysFor(cur.marker, rules)) : [];
   const curDef = cur ? [...lists.often, ...lists.groups.flatMap((g) => g.items), ...lists.blood].find((c) => c.def.key === cur.marker)?.def ?? null : null;
   return (
-    <div class="flex flex-col gap-3 rounded-[12px] border border-border-strong bg-alt p-4" id="horizon-add-marker">
-      <div class="flex flex-wrap items-baseline justify-between gap-3"><span class="text-[15px] font-semibold text-text">{only === "watch" ? "Watch a marker" : "Add a marker"}</span><button type="button" onClick={onClose} class="min-h-8 text-[13px] font-semibold text-text-2 hover:text-text">Done</button></div>
+    <div class={bare ? "flex flex-col gap-3" : "flex flex-col gap-3 rounded-[12px] border border-border-strong bg-alt p-4"} id="horizon-add-marker">
+      {bare ? null : <div class="flex flex-wrap items-baseline justify-between gap-3"><span class="text-[15px] font-semibold text-text">{only === "watch" ? "Watch a marker" : "Add a marker"}</span><button type="button" onClick={onClose} class="min-h-8 text-[13px] font-semibold text-text-2 hover:text-text">Done</button></div>}
       {lists.often.length ? <Group label="Often added" first><Chips items={lists.often} /></Group> : null}
       {lists.groups.map((g, i) => <Group label={g.label} key={g.key} first={!lists.often.length && i === 0}><Chips items={g.items} /></Group>)}
       {lists.blood.length ? <Group label="Blood · to watch only"><Chips items={lists.blood} blood /></Group> : null}
-      <Quiet>Every marker this page can follow, in the page's own groups. One that nothing is sending is shown and cannot be picked.{lists.blood.length ? " The blood markers sit apart and take no number: a target on a blood result is not offered." : ""}</Quiet>
+      {unsent.length ? (
+        <div class="flex flex-col gap-2 rounded-[10px] border border-border bg-canvas px-3 py-2.5">
+          <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-[13px] text-text">
+            <button type="button" aria-expanded={showUnsent} onClick={() => setShowUnsent((v) => !v)} class="min-h-8 text-left font-medium hover:text-accent-text">{unsent.length} more that your devices do not send</button>
+            <button type="button" onClick={() => actions.goSettings("devices")} class="min-h-8 text-[12px] font-semibold text-accent-text hover:text-text">Settings › Devices says why</button>
+          </div>
+          {showUnsent ? <span class="text-[12.5px] leading-relaxed text-text-3">{unsent.map((c) => c.def.label).join(" · ")}</span> : null}
+        </div>
+      ) : null}
+      <Quiet>Every marker this page can follow, in the page's own groups.{lists.blood.length ? " The blood markers sit apart and take no number: a target on a blood result is not offered." : ""}</Quiet>
       {cur && curDef && only !== "watch" ? (
         <div class="flex flex-col gap-2 border-t border-border pt-3">
           <span class="font-mono text-[10.5px] font-semibold uppercase tracking-wider text-text-3">{curDef.label} · how it is held</span>
