@@ -63,7 +63,8 @@ export function askedOf(plan: PlanRow[], targets: { marker: string; target_value
   return {
     zone2: hasPlan ? row("zone2_min") : target("zone2_week"),
     strength: hasPlan ? row("strength_week") : target("strength_week"),
-    sessions: hasPlan ? row("sessions_week") : null,
+    // with no plan, a number the person set on sessions a week is what the week asks (18 November 2026)
+    sessions: hasPlan ? row("sessions_week") : target("sessions_week"),
     dose: target("dose"),
   };
 }

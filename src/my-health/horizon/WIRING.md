@@ -253,3 +253,16 @@ accounts only, like the rest of the programme's set-up.
 
 None of this changes a file the horizon function copies (`derive.ts`, `guidePlan.ts`, `pause.ts`, `chart.ts`,
 `data/programme.ts`), so the function needs no new copy and no deploy.
+
+## Four more markers (18 November 2026)
+
+Added on the founder's word: `sessions_week`, `vigorous_week`, `gait_speed`, `balance` (`derive.ts MARKERS`). Each reads
+what the page already shows, by the page's own rule: the Overview's "Workouts" and "Vigorous" by the week
+(`WeekFigures.sessions`, and `vigorous`, counted as `derive/activity.ts actsByDay` counts it), and Body's "Walk speed"
+and "Single-leg balance" under those names. Vigorous minutes are the minutes of the sessions graded vigorous. They
+are not the plan's "harder minutes", which are minutes in the heart-rate zone above zone 2, and the Guide's plan does
+not follow them (`guidePlan.ts PLAN_MARKERS` is unchanged). The two weekly counts join `WEEK_COUNTED`.
+
+`derive.ts` and `data/programme.ts` are copied into the horizon function, and the function refuses a marker it does
+not know. So the function takes its new copy and is deployed BEFORE this reaches the site: until then a horizon
+kept with one of the four is refused with "unknown marker".

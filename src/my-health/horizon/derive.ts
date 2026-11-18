@@ -25,7 +25,9 @@ export type MarkerKey =
   | "weight" | "waist" | "almi" | "body_fat" | "ffmi"
   | "ldl" | "apob" | "remnant" | "non_hdl" | "triglycerides" | "hdl" | "hba1c" | "fasting_glucose" | "hs_crp"
   | "bp" | "rhr" | "hrv" | "hrr" | "sleep" | "sri" | "steps" | "background" | "sitting" | "pal"
-  | "grip" | "chair_stands" | "sppb" | "cadence" | "breathing" | "spo2";
+  | "grip" | "chair_stands" | "sppb" | "cadence" | "breathing" | "spo2"
+  // added 18 November 2026, on the founder's word: two weekly counts the Overview already shows, and two of the app's tests
+  | "sessions_week" | "vigorous_week" | "gait_speed" | "balance";
 export type Cadence = "weekly" | "monthly" | "when-measured";
 export type MarkerKind = "measured" | "daily" | "weekly" | "blood";
 export type MarkerGroup = "fitness" | "movement" | "sleep" | "vitals" | "body" | "blood";
@@ -51,6 +53,11 @@ export const MARKERS: MarkerDef[] = [
   { key: "zone2_week", label: "Zone 2 a week", how: "minutes, logged sessions", unit: "min", decimals: 0, kind: "weekly", cadence: "weekly", group: "movement" },
   { key: "longest_session", label: "Longest session", how: "duration of the week's longest", unit: "min", decimals: 0, kind: "weekly", cadence: "weekly", group: "movement", hm: true },
   { key: "strength_week", label: "Strength a week", how: "sessions", unit: "sessions", decimals: 0, kind: "weekly", cadence: "weekly", group: "movement" },
+  // The Overview's "Workouts" and "Vigorous", read by the week: every session the app read, and the minutes of the
+  // sessions it graded vigorous (derive/activity.ts actsByDay). Vigorous minutes are not the plan's "harder minutes",
+  // which are minutes in the heart-rate zone above zone 2.
+  { key: "sessions_week", label: "Sessions a week", how: "every session the app read", unit: "sessions", decimals: 0, kind: "weekly", cadence: "weekly", group: "movement" },
+  { key: "vigorous_week", label: "Vigorous minutes a week", how: "minutes of the sessions graded vigorous", unit: "min", decimals: 0, kind: "weekly", cadence: "weekly", group: "movement" },
   { key: "steps", label: "Steps a day", how: "seven-day average", unit: "steps", decimals: 0, kind: "daily", cadence: "weekly", group: "movement" },
   { key: "background", label: "Background movement", how: "minutes a day outside sessions, seven-day average", unit: "min", decimals: 0, kind: "daily", cadence: "weekly", group: "movement" },
   { key: "sitting", label: "Sitting", how: "a day, seven-day average", unit: "min", decimals: 0, kind: "daily", cadence: "weekly", group: "movement", hm: true },
@@ -71,6 +78,9 @@ export const MARKERS: MarkerDef[] = [
   { key: "ffmi", label: "Fat-free mass index", how: "whole-body lean mass over height squared", unit: "kg/m²", decimals: 1, kind: "measured", cadence: "monthly", group: "body" },
   { key: "grip", label: "Grip strength", how: "the app's test", unit: "kg", decimals: 1, kind: "measured", cadence: "monthly", group: "body" },
   { key: "chair_stands", label: "Chair stand, five rises", how: "seconds, the app's test", unit: "s", decimals: 1, kind: "measured", cadence: "monthly", group: "body" },
+  // Body's "Walk speed" and "Single-leg balance", under the names that page gives them
+  { key: "gait_speed", label: "Walk speed", how: "usual pace over a short course, the app's test", unit: "m/s", decimals: 2, kind: "measured", cadence: "monthly", group: "body" },
+  { key: "balance", label: "Single-leg balance", how: "seconds one leg holds, the app's test", unit: "s", decimals: 0, kind: "measured", cadence: "monthly", group: "body" },
   { key: "sppb", label: "SPPB", how: "of 12, the three tests on one day", unit: "of 12", decimals: 0, kind: "measured", cadence: "monthly", group: "body" },
   { key: "ldl", label: "LDL", how: "known when you measure", unit: "mg/dL", decimals: 1, kind: "blood", cadence: "when-measured", group: "blood" },
   { key: "apob", label: "ApoB", how: "known when you measure", unit: "mg/dL", decimals: 1, kind: "blood", cadence: "when-measured", group: "blood" },
@@ -130,6 +140,7 @@ export const FIRST_MARKERS: MarkerKey[] = (["mets", "weight", "waist", "almi", "
 const LAB_KEY: Partial<Record<MarkerKey, string>> = {
   ldl: "ldl_mgdl", apob: "apo_b_mgdl", triglycerides: "triglycerides_mgdl", hdl: "hdl_mgdl", hba1c: "hba1c_pct", fasting_glucose: "glucose_mgdl", hs_crp: "hs_crp_mgl",
   waist: "waist_cm", body_fat: "body_fat_pct", grip: "handgrip_kg", chair_stands: "chair_stand_seconds",
+  gait_speed: "gait_speed_ms", balance: "single_leg_balance_seconds",
 };
 const DAILY_COL: Partial<Record<MarkerKey, string>> = {
   steps: "steps", background: "background_min", sitting: "sedentary_minutes", pal: "pal", cadence: "cadence_spm", sleep: "sleep_minutes", sri: "sri_30d",
@@ -212,7 +223,9 @@ export function dedupeSessions(acts: any[]): any[] {
 const inWeek = (a: any, weekStart: string) => { const d = localDay(a.timestamp); return d >= weekStart && d < addDays(weekStart, 7); };
 const isDose = (a: any) => (a.activity_type === "aerobic" || a.activity_type === "mixed") && (a.intensity_category === "moderate" || a.intensity_category === "vigorous");
 
-export type WeekFigures = { week_start: string; dose: number | null; goal: number | null; zone2: number | null; zone3: number | null; zoned: number | null; strength: number; sessions: number; longest: number; from: "app" | "sessions" };
+export type WeekFigures = { week_start: string; dose: number | null; goal: number | null; zone2: number | null; zone3: number | null; zoned: number | null; strength: number; sessions: number; longest: number;
+  /** Minutes of the sessions graded vigorous, as the Overview counts them (derive/activity.ts actsByDay). Null with no session on file. */ vigorous: number | null;
+  from: "app" | "sessions" };
 /**
  * A stretch of days counted without a week row of the app's: the dose, the sessions and the strength sessions from the
  * sessions themselves (the interim rule), the zone minutes from the app's own days (daily_signals zone2_min and
@@ -223,14 +236,15 @@ export function countedFigures(person: Person, from: string, toExclusive: string
   const longest = sessions.reduce((m, a) => Math.max(m, Number(a.duration_minutes) || 0), 0);
   const strength = sessions.filter((a) => a.activity_type === "strength").length;
   const dose = sessions.length ? sessions.filter(isDose).reduce((t, a) => t + (Number(a.met_minutes) || 0), 0) : null;
+  const vigorous = sessions.length ? sessions.filter((a) => a.intensity_category === "vigorous").reduce((t, a) => t + (Number(a.duration_minutes) || 0), 0) : null;
   const days = (person.signals ?? []).filter((r) => { const d = String(r?.day ?? "").slice(0, 10); return d >= from && d < toExclusive; });
   const daySum = (col: string) => { const xs = days.filter((r) => r?.[col] != null).map((r) => Number(r[col])); return xs.length ? xs.reduce((t, x) => t + x, 0) : null; };
   const z2 = daySum("zone2_min"), z3 = daySum("zone3_min");
-  if (z2 != null || z3 != null) return { week_start: from, dose, goal: null, zone2: z2 ?? 0, zone3: z3 ?? 0, zoned: (z2 ?? 0) + (z3 ?? 0), strength, sessions: sessions.length, longest, from: "sessions" };
+  if (z2 != null || z3 != null) return { week_start: from, dose, goal: null, zone2: z2 ?? 0, zone3: z3 ?? 0, zoned: (z2 ?? 0) + (z3 ?? 0), strength, sessions: sessions.length, longest, vigorous, from: "sessions" };
   const zone2 = sessions.length ? sessions.reduce((t, a) => t + (Number(a.zone2_minutes) || 0), 0) : null;
   // without the app's zone split, the training minutes are the moderate and vigorous aerobic sessions' minutes
   const zoned = sessions.length ? sessions.filter(isDose).reduce((t, a) => t + (Number(a.duration_minutes) || 0), 0) : null;
-  return { week_start: from, dose, goal: null, zone2, zone3: null, zoned, strength, sessions: sessions.length, longest, from: "sessions" };
+  return { week_start: from, dose, goal: null, zone2, zone3: null, zoned, strength, sessions: sessions.length, longest, vigorous, from: "sessions" };
 }
 /** One week's figures: the app's row when it wrote one, else counted from the sessions with the interim rule. */
 export function weekFigures(person: Person, weekStart: string): WeekFigures {
@@ -241,7 +255,7 @@ export function weekFigures(person: Person, weekStart: string): WeekFigures {
   return { week_start: weekStart, dose: row.dose_met_min != null ? Number(row.dose_met_min) : null, goal: row.dose_goal_met_min != null ? Number(row.dose_goal_met_min) : null,
     // "most minutes in zone 2" is read against the training zones, 2 and 3; zone 1 is the easy remainder
     zone2: z2, zone3: z3, zoned: z2 != null && z3 != null ? z2 + z3 : null,
-    strength: row.strength_sessions != null ? Number(row.strength_sessions) : counted.strength, sessions: row.workouts != null ? Number(row.workouts) : counted.sessions, longest: counted.longest, from: "app" };
+    strength: row.strength_sessions != null ? Number(row.strength_sessions) : counted.strength, sessions: row.workouts != null ? Number(row.workouts) : counted.sessions, longest: counted.longest, vigorous: counted.vigorous, from: "app" };
 }
 
 // ── a horizon's weeks ──
@@ -334,10 +348,13 @@ export function spanFigures(person: Person, s: Span): WeekFigures {
 }
 export const lastCompleteMonday = (today: string) => addDays(mondayOf(new Date(today + "T00:00:00")), -7);
 const weeklyValue = (f: WeekFigures, key: MarkerKey): number | null =>
-  key === "dose" ? f.dose : key === "zone2_week" ? f.zone2 : key === "strength_week" ? f.strength : key === "longest_session" ? f.longest : null;
+  key === "dose" ? f.dose : key === "zone2_week" ? f.zone2 : key === "strength_week" ? f.strength : key === "longest_session" ? f.longest
+    : key === "sessions_week" ? f.sessions : key === "vigorous_week" ? f.vigorous : null;
 
 /** A typical week of the last eight complete ones. */
-export type TypicalWeek = { zone2: number; harder: number; dose: number | null; aerobic: number; strength: number; longest: number; /** Weeks of the eight with anything on file. */ weeks_read: number };
+export type TypicalWeek = { zone2: number; harder: number; dose: number | null; aerobic: number; strength: number; longest: number;
+  /** Every session, and the minutes of the ones graded vigorous. */ sessions: number; vigorous: number;
+  /** Weeks of the eight with anything on file. */ weeks_read: number };
 /**
  * A typical week: the medians of the last eight complete weeks, a week with nothing on file counted as nothing. THE ONE
  * READER: the set-up's "a typical week", the targets table and the Guide's plan (./guidePlan.ts baseOf) all take it
@@ -357,6 +374,8 @@ export function typicalWeek(person: Person, today: string): TypicalWeek {
     aerobic: Math.round(med(weeks.map((w) => Math.max(0, w.sessions - w.strength)))),
     strength: Math.round(med(weeks.map((w) => w.strength))),
     longest: Math.round(med(weeks.map((w) => w.longest))),
+    sessions: Math.round(med(weeks.map((w) => w.sessions))),
+    vigorous: Math.round(med(weeks.map((w) => w.vigorous ?? 0))),
     weeks_read: weeks.filter((w) => w.sessions > 0 || w.dose != null).length,
   };
 }
@@ -365,7 +384,8 @@ export function typicalOf(key: MarkerKey, person: Person, today: string): number
   if (MARKER_BY_KEY[key]?.kind !== "weekly") return null;
   const t = typicalWeek(person, today);
   if (!t.weeks_read) return null;
-  return key === "dose" ? t.dose : key === "zone2_week" ? t.zone2 : key === "strength_week" ? t.strength : key === "longest_session" ? t.longest : null;
+  return key === "dose" ? t.dose : key === "zone2_week" ? t.zone2 : key === "strength_week" ? t.strength : key === "longest_session" ? t.longest
+    : key === "sessions_week" ? t.sessions : key === "vigorous_week" ? t.vigorous : null;
 }
 
 /** The last n complete weeks' values of a weekly marker, oldest first; a week with no sessions and no row is null. */
@@ -443,7 +463,7 @@ export function latestOf(key: MarkerKey, person: Person, today: string): Reading
       const v = key === "mets" ? mets : t.vo2max != null ? Number(t.vo2max) : mets * ML_PER_MET;
       return { value: v, on: String(t.measured_on).slice(0, 10), unit: def.unit, writer: t.method ? String(t.method) : null };
     }
-    case "dose": case "zone2_week": case "strength_week": case "longest_session": {
+    case "dose": case "zone2_week": case "strength_week": case "longest_session": case "sessions_week": case "vigorous_week": {
       const m = lastCompleteMonday(today);
       const f = weekFigures(person, m);
       const v = weeklyValue(f, key);
@@ -1338,6 +1358,7 @@ const IN_A_SENTENCE: Partial<Record<MarkerKey, string>> = {
   steps: "steps a day", background: "background movement", sitting: "sitting", pal: "activity level", cadence: "cadence", sleep: "sleep", sri: "sleep regularity",
   rhr: "resting heart rate", hrv: "night HRV", hrr: "1-minute recovery", bp: "blood pressure", breathing: "breathing rate", spo2: "blood oxygen",
   weight: "weight", waist: "waist", almi: "ALMI", body_fat: "body fat", ffmi: "fat-free mass index", grip: "grip strength", chair_stands: "chair stand", sppb: "SPPB",
+  sessions_week: "sessions a week", vigorous_week: "vigorous minutes a week", gait_speed: "walk speed", balance: "single-leg balance",
 };
 const nameInSentence = (p: { marker: string; label: string }) => IN_A_SENTENCE[p.marker as MarkerKey] ?? SAID[p.marker as MarkerKey] ?? p.label;
 const MONTH_FIRST = /^(January|February|March|April|May|June|July|August|September|October|November|December)\b/;

@@ -3,6 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { derivePerson } from "../src/my-health/derive/person.ts";
 import { addDays } from "../src/my-health/derive/format.ts";
+import { actsByDay } from "../src/my-health/derive/activity.ts";
 import {
   MARKERS, MARKER_BY_KEY, latestOf, historyOf, paceOf, pacesOf, impliedPace, amountWords, fmtValue,
   adherenceOf, guideDraftPlan, weekOf, daysToGo, roadOf, nextCheckins, checkinInputs, weekFigures, weeklyHistory, dedupeSessions, addMonths, clockOf,
@@ -68,7 +69,52 @@ test("the catalogue names every allowed marker once, with a unit and a way of be
   const keys = MARKERS.map((m) => m.key);
   assert.equal(new Set(keys).size, keys.length);
   for (const m of MARKERS) { assert.ok(m.label && m.how, m.key); assert.ok(MARKER_BY_KEY[m.key] === m); }
-  assert.equal(keys.length, 36);
+  assert.equal(keys.length, 40);
+});
+
+test("four markers added on 18 November 2026 read what the page already shows: sessions, vigorous minutes, walk speed, balance", () => {
+  // each week of this person holds five sessions, one of them a 52-minute run graded vigorous
+  const sessions = latestOf("sessions_week", person, TODAY);
+  assert.deepEqual([sessions.value, sessions.on, sessions.unit], [5, "2026-11-01", "sessions"]);
+  assert.equal(latestOf("vigorous_week", person, TODAY).value, 52);
+  assert.equal(typicalOf("sessions_week", person, TODAY), 5);
+  assert.equal(typicalOf("vigorous_week", person, TODAY), 52);
+  // vigorous minutes are the Overview's own count: the minutes of the sessions graded vigorous, by the day
+  const week = weekFigures(person, "2026-10-26");
+  const days = actsByDay(person.acts);
+  let overview = 0;
+  for (const [d, r] of days) if (d >= "2026-10-26" && d < "2026-11-02") overview += r.vig;
+  assert.equal(week.vigorous, overview);
+  assert.equal(week.vigorous, 52);
+  assert.equal(week.sessions, 5);
+  // a week with no session on file has no vigorous minutes to state, and no sessions
+  const empty = derivePerson({ ...document(), activities: [], weeks: [] });
+  assert.equal(weekFigures(empty, "2026-10-26").vigorous, null);
+  assert.equal(latestOf("vigorous_week", empty, TODAY), null);
+  assert.equal(weekFigures(empty, "2026-10-26").sessions, 0);
+  // the app's two tests, under the names Body gives them; nothing on file is no reading
+  assert.equal(latestOf("gait_speed", person, TODAY), null);
+  assert.equal(latestOf("balance", person, TODAY), null);
+  const d = document();
+  d.app_labs = [...d.app_labs, { measured_at: "2026-09-02T08:00:00", gait_speed_ms: 1.05, single_leg_balance_seconds: 18 }, { measured_at: "2026-10-20T08:00:00", gait_speed_ms: 1.12, single_leg_balance_seconds: 24 }];
+  const tested = derivePerson(d);
+  const gait = latestOf("gait_speed", tested, TODAY), balance = latestOf("balance", tested, TODAY);
+  assert.deepEqual([gait.value, gait.on, gait.unit], [1.12, "2026-10-20", "m/s"]);
+  assert.deepEqual([balance.value, balance.on, balance.unit], [24, "2026-10-20", "s"]);
+  assert.equal(fmtValue(MARKER_BY_KEY.gait_speed, gait.value), "1.12");
+  assert.equal(fmtValue(MARKER_BY_KEY.balance, balance.value), "24");
+  assert.equal(historyOf("gait_speed", tested, TODAY).length, 2);
+  assert.deepEqual([MARKER_BY_KEY.gait_speed.label, MARKER_BY_KEY.balance.label], ["Walk speed", "Single-leg balance"]);
+  for (const k of ["sessions_week", "vigorous_week", "gait_speed", "balance"]) assert.ok(TARGET_MARKERS.some((m) => m.key === k), k);
+  // a pace is read on each of them like any other target
+  const paces = pacesOf([
+    { marker: "sessions_week", label: "Sessions a week", unit: "sessions", start_value: 5, start_on: "2026-09-01", target_value: 6, cadence: "weekly" },
+    { marker: "gait_speed", label: "Walk speed", unit: "m/s", start_value: 1.05, start_on: "2026-09-02", target_value: 1.2, cadence: "monthly" },
+  ], H, tested, TODAY);
+  assert.deepEqual(paces.map((p) => p.marker), ["sessions_week", "gait_speed"]);
+  assert.equal(paces[0].now, 5);
+  assert.equal(paces[1].now, 1.12);
+  assert.ok(paces.every((p) => typeof p.pace_word === "string" && p.pace_word.length > 0));
 });
 
 test("latestOf reads each kind from the document: tests, the app's week row, the scale, the reports, the nights", () => {
@@ -258,10 +304,10 @@ test("history gives the readings a six-month comparison needs", () => {
   assert.equal(historyOf("ldl", person, TODAY)[0].v, 143);
 });
 
-test("the catalogue holds 36 markers; a target can be set on 26 of them while blood is out of Horizon", () => {
-  assert.equal(MARKERS.length, 36);
-  assert.equal(new Set(MARKERS.map((m) => m.key)).size, 36);
-  assert.equal(TARGET_MARKERS.length, 26, "the count the page names: the nine blood markers are out, and VO₂max is Fitness in another unit");
+test("the catalogue holds 40 markers; a target can be set on 30 of them while blood is out of Horizon", () => {
+  assert.equal(MARKERS.length, 40);
+  assert.equal(new Set(MARKERS.map((m) => m.key)).size, 40);
+  assert.equal(TARGET_MARKERS.length, 30, "the count the page names: the nine blood markers are out, and VO₂max is Fitness in another unit");
 });
 
 test("fitness is one marker: VO₂max is not offered, and a target set on it is read as the Fitness target it is", () => {
