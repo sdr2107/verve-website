@@ -42,6 +42,7 @@ import { ChartCheck, readChartFile, type ChartChecked, type ChartDraft } from ".
 import { AddMarkerPanel, type Added } from "./Watched.tsx";
 import { DoorTiles, WhereLine } from "./Doors.tsx";
 import { Sheet } from "./Sheet.tsx";
+import { OfferAtSetup } from "./Offer.tsx";
 import { STATE_WORDS, ageWords, doorsFor, stateOf, storeOf as healthStoreOf, syncNote, type Door, type ReadingState, type Who } from "../horizon/doors.ts";
 import { actions, doc as docSignal, person as personSignal } from "../state.ts";
 import { SCOPE_LABEL, offeredScopes } from "../derive/scopes.ts";
@@ -681,6 +682,7 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
             ) : null}
           </Card>
 
+          {!busy ? <OfferAtSetup sb={sb} startsOn={today} endsOn={endsOn || null} /> : null}
           {problem && <div class="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-caution/40 bg-alt px-4 py-3 text-[13px] text-caution"><span>{problem.why}</span>{problem.card !== card ? <button type="button" class="min-h-8 font-semibold text-text hover:text-accent-text" onClick={() => { const c = problem.card; setProblem(null); goCard(c); }}>Open that card</button> : null}</div>}
           {busy ? (
             // what the press is doing, said where the button was, each line ticked as it is done

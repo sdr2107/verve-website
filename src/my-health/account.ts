@@ -239,6 +239,9 @@ export function browserZone(): string | null {
 export const SETTINGS_SECTIONS = [
   ["profile", "Profile"], ["plan", "Plan and billing"], ["email", "Email and notifications"],
   ["sharing", "Sharing"], ["devices", "Devices"], ["data", "Data"], ["appearance", "Appearance"],
+  // What goes with a horizon, for the named test accounts only (views/Offer.tsx OfferPage): its door is drawn when the
+  // database holds words for it, and its name on the door is the only word of it in this repository.
+  ["offer", "Your offer"],
   // Verve's own notes, for the named test accounts only (views/TesterPanel TeamPage). It was a block in the middle of a
   // horizon until 18 November 2026, when the founder took it off the reader's page: "an internal document".
   ["team", "For the team"],

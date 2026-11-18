@@ -316,3 +316,40 @@ recording of it: the page after "Keep this horizon" was eleven blocks and about 
   stood empty while it was being read, and the old set-up showed for some seconds before the cards replaced it.
 
 No file the horizon function copies is changed.
+
+## What goes with a horizon, shown to its owner (board 25, 18 November 2026)
+
+For **test accounts only**, and **a display only**. The founder's direction: said briefly when a horizon is set, then
+kept under Settings, with one press on the date; and, the same day, build the display with that press switched off
+until there is a till.
+
+| File | What it holds |
+|---|---|
+| `src/my-health/horizon/offer.ts` | THE ARITHMETIC: full weeks behind (`fullWeeksDone`), whether the row's week is due (`weekDue`), whether the date has come (`onTheDate`), which of the date's two blocks the counts call for (`verdictOf`), and the dates a sentence may name (`offerDates`). Pure; `tests/offer.test.mjs`. |
+| `src/my-health/views/Offer.tsx` | The three places: `OfferAtSetup` (above "Keep this horizon"), `OfferPage` (Settings), `OfferOnHorizon` (a sheet shown once, and one line on the date). |
+| `src/my-health/views/TesterPanel.tsx` | `useHorizonFacts`: the horizon's counts, one hook for the team's panel and this page. |
+
+- **No word of it is in this repository.** Every sentence, amount and button name is the row keyed `offer` in
+  `programme_panels` (`offer.ts OfferBody` says what the row may hold), read only by an account in
+  `programme_testers`. With no row the lines at the set-up, the door under Settings, the sheet and the line on the
+  date are all absent. The only words here are the door's name. `tests/offer.test.mjs` fails if an amount or one of
+  the row's words is written into either file.
+- **Nothing can be pressed into effect.** There is no till. A button the row names is drawn switched off with the
+  row's sentence under it. Nothing in these files writes to the database.
+- **The counts are the page's own** (`facts.ts horizonFacts`), read today: every judged target reads reached at a
+  steady weight pace, or the plan's weeks were kept at the row's `share`. A coach's calls count only where a coach
+  writes the plan (`plan.author === "coach"`).
+- **No running count.** Before the date the page says the terms and two dates. It does not say how the horizon
+  stands. The verdict is drawn on the date and not before.
+- **The week's sheet** is due when the row's `week.after` full weeks are behind (a short first week and a paused week
+  are not full weeks) and the date has not come. It is shown once on a browser (`localStorage`, one key a horizon),
+  then stays under Settings.
+
+**Not built, and the page must not be read as if it were:**
+- a lock on the numbers and the date from the day a horizon is kept (the counts read the horizon as it stands today);
+- which readings count: the row says a typed figure does not, and the arithmetic does not yet tell a typed reading
+  from a device's or a report's;
+- the line in the Monday email of the week after the sheet (the `horizon` function);
+- any payment, balance or record that something was taken up. The sheet's "seen" lives in the browser only.
+
+No file the horizon function copies is changed.

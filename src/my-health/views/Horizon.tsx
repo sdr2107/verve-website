@@ -59,6 +59,7 @@ import { guidePlan, freezeOf, isGuideStored, PLAN_MARKERS, type GuideStored } fr
 import { GuidePlanCard, GuideOffer, GuideLocked } from "./GuidePlan.tsx";
 import { ProgrammeSetup, ProgrammeLine, WeightCard, CallCard, holdNotes, parseProgramme } from "./Programme.tsx";
 import { WatchedCard } from "./Watched.tsx";
+import { OfferOnHorizon } from "./Offer.tsx";
 import { WhereLine } from "./Doors.tsx";
 import { doorsFor, storeOf, type Who } from "../horizon/doors.ts";
 import type { WatchedRow } from "../horizon/watch.ts";
@@ -702,6 +703,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   return (
     <>
       {paged ? pagedHead : null}
+      {paged && page === "glance" ? <OfferOnHorizon sb={deps.supabase} h={h} today={today} /> : null}
       {paged && page === "glance" ? glance : null}
       {paged ? null : <header class="flex flex-wrap items-start justify-between gap-6">
         <div class="flex max-w-[680px] flex-col gap-2">
@@ -1004,6 +1006,8 @@ function FinalView({ deps, h, person, today, owner, nav, personId, hasOpen, onSt
 
   return (
     <>
+      {/* a horizon that ran to its date, for its owner on a test account: one line saying where what goes with it is read */}
+      {owner && isTester.value ? <OfferOnHorizon sb={deps.supabase} h={h} today={today} /> : null}
       <header class="flex flex-wrap items-start justify-between gap-6">
         <div class="flex max-w-[680px] flex-col gap-2">
           <Eyebrow>Horizon · set {dayMonthYear(h.starts_on)} · the date</Eyebrow>
