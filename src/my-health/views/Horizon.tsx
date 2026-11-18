@@ -46,7 +46,7 @@ import {
 import { movedWords, pauseState, pauseWhyWords, type PauseChoice, type PauseKey, type PauseState, type PauseWhy } from "../horizon/pause.ts";
 import {
   listHorizons, startHorizon, requestCheckin, grantConsent, savePlan, updateHorizon, deleteHorizon, pauseHorizon, addTarget, removeTarget, updateTarget, saveGuidePlan, ERROR_WORDS,
-  fetchAccess, rememberedAccess, guidePlanReady, programmeTester, loadDayName,
+  fetchAccess, rememberedAccess, guidePlanReady, programmeTester, loadDayName, watchedReady, listWatched,
   type HorizonFull, type PlanAuthor, type StartTarget, type ApiError, type HorizonAccess,
 } from "../horizon/api.ts";
 import { midweekOf, planRowsNow } from "../horizon/midweek.ts";
@@ -58,6 +58,9 @@ import { guidePlan, freezeOf, isGuideStored, PLAN_MARKERS, type GuideStored } fr
 import { GuidePlanCard, GuideOffer, GuideLocked } from "./GuidePlan.tsx";
 import { ProgrammeSetup, ProgrammeLine, WeightCard, CallCard, holdNotes, parseProgramme } from "./Programme.tsx";
 import { HorizonPanel } from "./TesterPanel.tsx";
+import { WatchedCard } from "./Watched.tsx";
+import type { WatchedRow } from "../horizon/watch.ts";
+import { cardOfRoute, routeOfCard } from "../horizon/setupCards.ts";
 
 export type HorizonDeps = {
   supabase: SupabaseClient;
@@ -75,7 +78,7 @@ export type HorizonDeps = {
 };
 export type HorizonHandle = { refresh: () => void; open: (hash: string) => void };
 
-/** The route inside the pane: "" (the first open horizon), an id, or "new". */
+/** The route inside the pane: "" (the first open horizon), an id, or "new"; "new-4" is the fourth card of the programme's set-up (../horizon/setupCards.ts). */
 const route = signal<string>("");
 const tick = signal(0);
 
@@ -264,6 +267,8 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
   // Horizon as a programme is built for test accounts only (api.ts programmeTester); "My own targets" opens the set-up as it was
   const [tester, setTester] = useState(false);
   const [ownTargets, setOwnTargets] = useState(false);
+  // watched markers can be kept for this project (board 19; api.ts watchedReady)
+  const [watchOn, setWatchOn] = useState(false);
 
   const userId = async () => deps.userId?.() ?? (await deps.supabase.auth.getSession()).data.session?.user.id ?? null;
 
@@ -274,8 +279,8 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
       // The two things that decide which page is drawn (the test list, the Guide's plan) are asked beside the horizons
       // and set with them, so the page is drawn once. They used to arrive a moment later, and the page drew itself
       // twice: the plain set-up, then the programme's; the horizon, then its cards (the founder, 17 November 2026).
-      const [hs, isTest, guide] = await Promise.all([listHorizons(deps.supabase, personId, true), programmeTester(deps.supabase), guidePlanReady(deps.supabase)]);
-      setTester(isTest); isTester.value = isTest; setGuideOn(guide);
+      const [hs, isTest, guide, watch] = await Promise.all([listHorizons(deps.supabase, personId, true), programmeTester(deps.supabase), guidePlanReady(deps.supabase), watchedReady(deps.supabase)]);
+      setTester(isTest); isTester.value = isTest; setGuideOn(guide); setWatchOn(watch);
       setList(hs); horizonsSignal.value = hs; setLoadError(""); setOff(false); deps.onOff?.(false);
       if (hs.length) setPro("yes");
       deps.onHorizons?.([...hs.filter((h) => !h.closed_at), ...doneOf(hs)].map((h) => ({ id: h.id, title: h.title, ends_on: h.ends_on, done: !!h.closed_at })));
@@ -286,6 +291,28 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
     }
   }
   useEffect(() => { void load(); }, [personId, _tick]);
+  // Back and Forward: the address is put on the pane here too. The page does it for "#horizon-<something>" and leaves
+  // "#horizon" alone, which would keep a card of the set-up on screen after the browser had stepped back off it.
+  useEffect(() => {
+    const on = () => {
+      const h = location.hash.replace(/^#/, "");
+      if (h !== "horizon" && !h.startsWith("horizon-")) return;
+      route.value = h === "horizon" ? "" : h.slice("horizon-".length);
+    };
+    window.addEventListener("popstate", on);
+    return () => window.removeEventListener("popstate", on);
+  }, []);
+  /**
+   * Open a card of the set-up as a step in the browser's history, so the browser's own Back returns to the card it
+   * came from and never leaves the page (board 18). The card's own Back button opens the card before the same way,
+   * as a new step: it never asks the browser to step back, because the entry behind is not always the card before
+   * (a card opened from the rail, or by its address), and a step back too far would leave the set-up.
+   */
+  const goCard = (n: number) => {
+    const to = routeOfCard(n);
+    history.pushState(null, "", `#horizon-${to}`);
+    route.value = to;
+  };
   useEffect(() => {
     let on = true;
     void fetchAccess(deps.supabase).then((a) => { if (on) setAccess(a); });
@@ -318,8 +345,10 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
   const open = list.filter((h) => !h.closed_at);
   const done = doneOf(list);
   // no open horizon: the last one read to its date is the page, with the next one prefilled beneath it
-  const current = r && r !== "new" ? list.find((h) => h.id === r) ?? null : open[0] ?? done[0] ?? null;
-  const showSetup = owner && (r === "new" || (!current && !open.length));
+  // the set-up's own routes: "new", and "new-4" for its fourth card
+  const setupCard = cardOfRoute(r);
+  const current = r && !setupCard ? list.find((h) => h.id === r) ?? null : open[0] ?? done[0] ?? null;
+  const showSetup = owner && (setupCard > 0 || (!current && !open.length));
   // a line the Guide wrote, carried here as a draft for this person
   const gd = guideDraft.value;
   const draftMarker = gd && gd.personId === personId && MARKER_BY_KEY[targetKeyOf(gd.marker)] && isTargetable(gd.marker) ? (targetKeyOf(gd.marker) as MarkerKey) : null;
@@ -346,6 +375,7 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
       {showSetup && tester && owner && !ownTargets && (open.length > 0 || !done[0] || !!parseProgramme(done[0].programme))
         ? <ProgrammeSetup sb={deps.supabase} person={person} today={today} personId={personId} nav={nav} hasOthers={open.length > 0 || done.length > 0} access={access} guideOn={guideOn} userId={userId}
             after={!open.length && done[0] ? parseProgramme(done[0].programme)?.goal ?? null : null} afterDay={!open.length && !!done[0] && !!dayKindOf(done[0].programme)} key={!open.length && done[0] ? `after-${done[0].id}` : "programme"}
+            card={setupCard || 1} goCard={goCard} watchOn={watchOn}
             onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); }}
             onError={onApiError} onCancel={() => { route.value = ""; history.replaceState(null, "", "#horizon"); }} onOwn={() => setOwnTargets(true)} />
         : showSetup
@@ -357,7 +387,7 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
           ? <FinalView deps={deps} h={current} person={person} today={today} owner={owner} nav={nav} personId={personId} hasOpen={open.length > 0} access={access} guideOn={guideOn} setNotice={setNotice} reload={load}
               onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); }} onError={onApiError} />
         : current
-          ? <View deps={deps} h={current} person={person} today={today} owner={owner} nav={nav} busy={busy} setBusy={setBusy} onError={onApiError} setNotice={setNotice} reload={load} userId={userId} access={access} guideOn={guideOn} tester={tester} />
+          ? <View deps={deps} h={current} person={person} today={today} owner={owner} nav={nav} busy={busy} setBusy={setBusy} onError={onApiError} setNotice={setNotice} reload={load} userId={userId} access={access} guideOn={guideOn} tester={tester} watchOn={watchOn} />
           : <Card>{nav}<div class="text-[18px] font-semibold text-text">No horizon set.</div><Quiet>{owner ? "A horizon is a date, the markers you want different by then, and the week that gets you there." : "Nothing to see here yet: this person has not set a horizon."}</Quiet></Card>}
     </div>
   );
@@ -365,11 +395,12 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
 
 // ── board 14: the horizon in view ──
 
-function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setNotice, reload, userId, access, guideOn, tester }: {
+function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setNotice, reload, userId, access, guideOn, tester, watchOn }: {
   deps: HorizonDeps; h: HorizonFull; person: PersonData | null; today: string; owner: boolean; nav: any; busy: string; setBusy: (s: string) => void;
   onError: (e: ApiError, retry: () => void) => boolean; setNotice: (s: string) => void; reload: () => Promise<void>; userId: () => Promise<string | null>;
   access: HorizonAccess | null; guideOn: boolean;
   /** A test account for Horizon as a programme (api.ts programmeTester). */ tester: boolean;
+  /** Watched markers can be kept for this project (api.ts watchedReady). */ watchOn: boolean;
 }) {
   const [editingPlan, setEditingPlan] = useState(false);
   // a horizon set up as a programme keeps its goal, the person's own words and who writes the plan
@@ -389,6 +420,11 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   const loadCharts = async () => { setChartState(await loadChartState(deps.supabase, h.id)); };
   useEffect(() => { setChartState(null); if (!owner || tester) void loadCharts(); }, [h.id, owner, tester]);
   const who = owner ? "you" : "they";
+  // the markers this horizon watches, with no number on them (board 19): its owner's alone. The database gives anyone
+  // else no rows, so the card is asked for only on the owner's own page.
+  const [watched, setWatched] = useState<WatchedRow[]>([]);
+  const loadWatched = async () => { setWatched(await listWatched(deps.supabase, h.id)); };
+  useEffect(() => { setWatched([]); if (owner && watchOn) void loadWatched(); }, [h.id, owner, watchOn]);
   const [adding, setAdding] = useState(false);
   /** The target whose number is being changed, and what is typed. */
   const [changing, setChanging] = useState<{ marker: MarkerKey; value: string } | null>(null);
@@ -627,6 +663,9 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
         {h.targets.length > targets.length && <Quiet>Blood markers are not offered as targets for now. The {h.targets.length - targets.length === 1 ? "one you set is" : `${numberWord(h.targets.length - targets.length)} you set are`} kept, and not shown or checked while this stands.</Quiet>}
         {paces.some((p) => MARKER_BY_KEY[p.marker]?.kind === "blood") && <Quiet>A blood target is called reached only when the move from its start is more than that marker's usual swing: two reports can differ by that much with nothing having changed. A medicine you have told the app you take is shown beside its target, and is never read as the cause of a change.</Quiet>}
       </Card>
+
+      {/* watched markers, under the targets (board 19): shown with their day, and never judged */}
+      {owner && watchOn && person && (watched.length > 0 || (tester && !closed)) ? <WatchedCard sb={deps.supabase} horizonId={h.id} rows={watched} setOn={h.starts_on} person={person} today={today} taken={targets.map((t) => t.marker)} canEdit={tester && !closed} userId={userId} reload={loadWatched} setNotice={setNotice} /> : null}
 
       {/* a panel for test accounts: its words are a row only they can read, filled with this horizon's counts */}
       {programme && person && tester && owner && !closed ? <HorizonPanel sb={deps.supabase} h={h} targets={targets} person={person} today={today} guideOn={guideOn} /> : null}

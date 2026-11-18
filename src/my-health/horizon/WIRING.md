@@ -208,3 +208,48 @@ the programme. Tables and the one new column: METTracker `supabase/migrations/20
   the same count for last week on the call sheet. The file the chart was read from is not shared by this tick, and
   the day's name is never shared. Monday's check-in goes to a coach with the chart's line only on a share that
   carries the tick (the function's `lines.ts checkinFor`).
+
+## The set-up as cards, added markers, watched markers (18 November 2026)
+
+Canvas "Verve, Horizon as a programme", boards 18 and 19. Built on the founder's word of 18 November 2026, for test
+accounts only, like the rest of the programme's set-up.
+
+- **One card at a time** (`setupCards.ts`, `views/Programme.tsx ProgrammeSetup`). Seven cards: the day, what for, who
+  writes, what the page reads, the three things, beside it, and the numbers, which get the whole page. `cardNeeds`
+  holds the one answer each card needs before Next lights. `reachOf` says how far a person may open, so no card is
+  reached by its address alone and a card already seen opens again from the rail. Each card has an address
+  (`#horizon-new-4`; `cardOfRoute`, `routeOfCard`), so the browser's own Back is one card back. The card's own Back
+  opens the card before as a new step and never asks the browser to step back, so it cannot leave the set-up.
+  Horizon's pane puts a
+  `#horizon…` address on itself on `popstate` (`views/Horizon.tsx`), because the page leaves a bare `#horizon` alone.
+  The answers are kept for the tab (`loadSetup`, `saveSetup`: sessionStorage `verve-horizon-setup`) and cleared when
+  the horizon is kept or the set-up is left. NOTHING IS ON THE ACCOUNT BEFORE "KEEP THIS HORIZON", with one exception
+  the card says aloud: a diet chart's file is filed with the reports when it is read, as every upload is.
+- **Beside it: the sixth card.** A coach's email and ticks, and a diet chart. The ticks are Settings' own for a coach
+  plus "Diet chart", unticked (`../derive/scopes.ts`). The invitation is sent on the last press, after the horizon is
+  kept, by the page's one road for an invitation (`state.ts actions.invite`; `my-health.astro inviteTo`, which the
+  access sheet's form also calls). The chart is read and checked on the card (`views/Beside.tsx readChartFile`,
+  `ChartCheck`, shared with the horizon's page) and joins the horizon on the last press. The card is optional until a
+  coach was chosen to write or edit the week and nobody shares the page far enough to see a horizon: then it asks for
+  the email, or for "invite them later".
+- **Add a marker** (`watch.ts addChoices`, `views/Watched.tsx AddMarkerPanel`). The draft lists the goal's markers,
+  and the person can add any other: eight often added first, then the rest by group. How one is held is the three
+  ways a programme horizon already has: reach, hold (at least, at most, between two), watch. The picker opens on the
+  way that suits the marker (`opensOn`) and fills no field in. On a day under four full weeks away, a marker a week
+  cannot count takes no number and can only be watched (`waysFor`). An added marker with a number is an ordinary
+  target (`horizon_targets`), read by everything that reads targets.
+- **Watched markers** (`watch.ts`, `views/Watched.tsx WatchedCard`, `api.ts listWatched / keepWatched`). A watched row
+  has no number. It is kept in `horizon_watched` (METTracker `20261120_horizon_watched.sql`), which only its owner
+  reads: there is no policy for a coach, and the horizon function's role holds no privilege on it, so a watched marker
+  cannot reach a check-in, the midweek note, the plan, the chat, a call sheet or the offer's count. That is by the
+  table, not by a filter someone could forget. A goal's own watched row (resting heart rate on "Build fitness") is
+  now kept there too; before, it was not kept at all. `watchedLine` says the value, the day and what it was, and
+  nothing else. Until the table is there (`api.ts watchedReady`) nothing is offered to watch.
+- **Blood, to watch only.** A blood marker can be added to watch and in no other way: `waysFor` gives it one way, the
+  draft never makes a target of one, and `derive.ts BLOOD_TARGETS_OPEN` is still false. Its watched row also says
+  where a move sits against the marker's usual swing, in In depth's own words (`derive.ts swingRead`). It names no
+  cause, gives no date for another test and joins the marker to no other number. This is its own question for the
+  lawyers (BodyScale-Tracker `legal/horizon-programme-brief.md`, question 68) before anyone but a test account sees it.
+
+None of this changes a file the horizon function copies (`derive.ts`, `guidePlan.ts`, `pause.ts`, `chart.ts`,
+`data/programme.ts`), so the function needs no new copy and no deploy.

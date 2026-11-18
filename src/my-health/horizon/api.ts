@@ -26,6 +26,7 @@ import type { GuideStored, ScreenAnswers } from "./guidePlan.ts";
 import { parseAccess, type HorizonAccess } from "./access.ts";
 import type { Programme, WeekNote } from "./programme.ts";
 import type { ChartAnswer, ChartDay, ChartRead, ChartRow } from "./chart.ts";
+import type { WatchedRow } from "./watch.ts";
 export { mapError, ERROR_WORDS, isMissingRelation, HorizonOffError, type ApiError } from "./errors.ts";
 
 export type HorizonKind = "date" | "months";
@@ -380,5 +381,44 @@ export async function saveChartDay(sb: SupabaseClient, horizonId: string, userId
   const { error } = answer
     ? await sb.from("horizon_chart_days").upsert({ horizon_id: horizonId, user_id: userId, day, answer, updated_at: new Date().toISOString() }, { onConflict: "horizon_id,day" })
     : await sb.from("horizon_chart_days").delete().eq("horizon_id", horizonId).eq("day", day);
+  return error ? error.message : null;
+}
+
+// ── markers watched on a horizon, with no number on them (board 19, 18 November 2026) ──
+
+/**
+ * Whether watched markers can be kept for this project: the table horizon_watched is there (METTracker
+ * supabase/migrations/20261120_horizon_watched.sql). Asked once; a network failure is not an answer. Until it is
+ * there the set-up offers nothing to watch, and a goal's watched row is left off the horizon as it always was.
+ */
+let watchReady: boolean | null = null;
+export async function watchedReady(sb: SupabaseClient): Promise<boolean> {
+  if (watchReady != null) return watchReady;
+  try {
+    const { error } = await sb.from("horizon_watched").select("id").limit(1);
+    if (!error) return (watchReady = true);
+    if (isMissingRelation(error)) return (watchReady = false);
+    return false;
+  } catch { return false; }
+}
+/**
+ * A horizon's watched markers, oldest first. They are their owner's alone: the database gives a coach none, and the
+ * horizon function cannot read the table, so nothing watched reaches a check-in or the Guide. Empty for anyone else,
+ * and when the table is not there.
+ */
+export async function listWatched(sb: SupabaseClient, horizonId: string): Promise<WatchedRow[]> {
+  try {
+    const { data, error } = await sb.from("horizon_watched").select("id, horizon_id, marker, unit, start_value, start_on, created_at").eq("horizon_id", horizonId).order("created_at", { ascending: true });
+    return error ? [] : ((data ?? []) as any[]).map((r) => ({ ...r, start_value: r.start_value == null ? null : Number(r.start_value), start_on: r.start_on ? String(r.start_on).slice(0, 10) : null })) as WatchedRow[];
+  } catch { return []; }
+}
+export async function keepWatched(sb: SupabaseClient, horizonId: string, userId: string, rows: Pick<WatchedRow, "marker" | "unit" | "start_value" | "start_on">[]): Promise<string | null> {
+  if (!rows.length) return null;
+  const { error } = await sb.from("horizon_watched").upsert(rows.map((r) => ({ horizon_id: horizonId, user_id: userId, marker: r.marker, unit: r.unit, start_value: r.start_value, start_on: r.start_on })), { onConflict: "horizon_id,marker", ignoreDuplicates: true });
+  return error ? error.message : null;
+}
+/** Stop watching a marker. Its readings are the person's and are not touched. */
+export async function removeWatched(sb: SupabaseClient, id: string): Promise<string | null> {
+  const { error } = await sb.from("horizon_watched").delete().eq("id", id);
   return error ? error.message : null;
 }

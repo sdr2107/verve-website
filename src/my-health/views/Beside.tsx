@@ -83,6 +83,65 @@ export function chartLastWeek(state: ChartState | null, h: HorizonLike, today: s
   return last ? chartCountWords(chartCount(state.charts, state.days, last.from, last.to), false, who) : "";
 }
 
+/** A chart that was read and is waiting for its owner's check: what was read, and the file it came from. */
+export type ChartDraft = { read: ChartRead; path: string; name: string };
+/** What the owner settled when they checked a chart: who wrote it, the day it was given, the day it says it is to be reviewed. */
+export type ChartChecked = { written_by: string | null; given_on: string; review_on: string | null };
+/**
+ * Ask for a chart's file, keep it in the person's archive and have it read (state.ts actions.readFile): the draft to
+ * check, the words for why there is none, or null when no file was chosen. One road for the horizon's page and for the
+ * sixth card of its set-up (board 18).
+ */
+export async function readChartFile(): Promise<{ draft: ChartDraft } | { note: string } | null> {
+  const res = await actions.readFile("diet_chart");
+  if (!res) return null;
+  if ("error" in res) return { note: res.error };
+  const read = res.out?.doc_type === "diet_chart" ? parseChart(res.out.diet_chart, res.out.report_date) : null;
+  return read ? { draft: { read, path: res.path, name: res.name } } : { note: "That file was not read as a diet chart. It is kept in Reports, and nothing was added here." };
+}
+const ChartMeals = ({ meals }: { meals: { when: string; items: string; day?: string | null }[] }) => (
+  <div class="flex flex-col">
+    {meals.map((m, i) => (
+      <div class={`grid grid-cols-[104px_minmax(0,1fr)] gap-3 py-2 ${i ? "border-t border-border" : ""}`} key={`${m.day ?? ""}-${m.when}-${i}`}>
+        <span class="font-mono text-[11px] font-medium uppercase tracking-wider text-text-3">{m.day ? `${m.day} · ` : ""}{m.when}</span>
+        <span class="text-[14px] leading-relaxed text-text">{m.items}</span>
+      </div>
+    ))}
+  </div>
+);
+/**
+ * "Check what was read": the chart's lines in its own words, and the three things its owner can correct. It keeps
+ * nothing itself: `onKeep` is told what was settled, and the caller decides where the chart goes.
+ */
+export function ChartCheck({ draft, today, busy, note, keepWords, onKeep, onLeave }: {
+  draft: ChartDraft; today: string; busy?: boolean; note?: string; /** The words on the button that keeps it. */ keepWords: string;
+  onKeep: (c: ChartChecked) => void; onLeave: () => void;
+}) {
+  const [by, setBy] = useState(draft.read.written_by ?? ""), [given, setGiven] = useState(draft.read.given_on ?? today), [review, setReview] = useState(draft.read.review_on ?? "");
+  const [why, setWhy] = useState("");
+  const keep = () => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(given) || given > today) { setWhy("Give the day the chart was given. It cannot be ahead of today."); return; }
+    setWhy("");
+    onKeep({ written_by: by.trim().slice(0, 120) || null, given_on: given, review_on: /^\d{4}-\d{2}-\d{2}$/.test(review) ? review : null });
+  };
+  return (
+    <>
+      <div class="flex flex-col gap-1"><Eyebrow accent>Diet chart · {draft.name} · read in the chart's own words</Eyebrow><H2>Check what was read</H2></div>
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <label class="flex flex-col gap-1"><Eyebrow>Who wrote it</Eyebrow><input type="text" value={by} maxLength={120} onInput={(e) => setBy((e.currentTarget as HTMLInputElement).value)} placeholder="Their name, as you would say it" class={inputClass} /></label>
+        <label class="flex flex-col gap-1"><Eyebrow>Given on</Eyebrow><input type="date" value={given} max={today} onInput={(e) => setGiven((e.currentTarget as HTMLInputElement).value)} class={`${inputClass} font-mono`} /></label>
+        <label class="flex flex-col gap-1"><Eyebrow>To be reviewed · if it says</Eyebrow><input type="date" value={review} onInput={(e) => setReview((e.currentTarget as HTMLInputElement).value)} class={`${inputClass} font-mono`} /></label>
+      </div>
+      {draft.read.meals.length ? <ChartMeals meals={draft.read.meals} /> : <Quiet>No meal lines could be read from this page.</Quiet>}
+      {draft.read.totals.length ? <p class="m-0 text-[13px] leading-relaxed text-text-2">Printed on the chart: {draft.read.totals.map((t) => `${t.name} ${t.value}`).join(" · ")}</p> : null}
+      {draft.read.notes.length ? <div class="flex flex-col gap-1"><span class="text-[13px] text-text-2">The chart's own notes, word for word:</span>{draft.read.notes.map((n) => <p class="m-0 border-l-[3px] border-border-strong pl-3 text-[13px] leading-relaxed text-text" key={n}>"{n}"</p>)}</div> : null}
+      <Quiet>Nothing is added, and nothing is worked out. A total is shown only where the chart prints one. If a line was read wrongly, the chart itself is one press away in Reports, and you can add it again from a clearer page.</Quiet>
+      {why || note ? <p class="m-0 text-[13px] leading-relaxed text-caution">{why || note}</p> : null}
+      <div class="flex flex-wrap gap-3"><Button primary disabled={busy} onClick={keep}>{busy ? "Keeping…" : keepWords}</Button><Button onClick={onLeave}>Not this file</Button></div>
+    </>
+  );
+}
+
 export function ChartCard({ sb, h, today, state, closed, userId, reload, readOnly, sharedWith }: {
   sb: SupabaseClient; h: HorizonLike & { id: string }; today: string; state: ChartState; closed: boolean;
   userId: () => Promise<string | null>; /** Read the charts and the days again. */ reload: () => Promise<void>;
@@ -91,9 +150,8 @@ export function ChartCard({ sb, h, today, state, closed, userId, reload, readOnl
 }) {
   const [reading, setReading] = useState(false);
   const [note, setNote] = useState("");
-  /** A chart that was read and is waiting for the person's check: what was read, the file it came from, and the fields they can correct. */
-  const [draft, setDraft] = useState<{ read: ChartRead; path: string; name: string } | null>(null);
-  const [by, setBy] = useState(""), [given, setGiven] = useState(""), [review, setReview] = useState("");
+  /** A chart that was read and is waiting for the person's check. */
+  const [draft, setDraft] = useState<ChartDraft | null>(null);
   const [busy, setBusy] = useState(false);
   const [showAll, setShowAll] = useState(false);
 
@@ -106,23 +164,18 @@ export function ChartCard({ sb, h, today, state, closed, userId, reload, readOnl
 
   async function add() {
     setNote(""); setReading(true);
-    const res = await actions.readFile("diet_chart");
+    const res = await readChartFile();
     setReading(false);
     if (!res) return;
-    if ("error" in res) { setNote(res.error); return; }
-    const read = res.out?.doc_type === "diet_chart" ? parseChart(res.out.diet_chart, res.out.report_date) : null;
-    if (!read) { setNote("That file was not read as a diet chart. It is kept in Reports, and nothing was added here."); return; }
-    setDraft({ read, path: res.path, name: res.name });
-    setBy(read.written_by ?? ""); setGiven(read.given_on ?? today); setReview(read.review_on ?? "");
+    if ("note" in res) { setNote(res.note); return; }
+    setDraft(res.draft);
   }
-  async function keep() {
+  async function keep(c: ChartChecked) {
     if (!draft) return;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(given) || given > today) { setNote("Give the day the chart was given. It cannot be ahead of today."); return; }
     const uid = await userId();
     if (!uid) { setNote("Sign in again to keep it."); return; }
     setBusy(true); setNote("");
-    const err = await keepChart(sb, { horizon_id: h.id, user_id: uid, report_path: draft.path, written_by: by.trim().slice(0, 120) || null, given_on: given, review_on: /^\d{4}-\d{2}-\d{2}$/.test(review) ? review : null,
-      meals: draft.read.meals, notes: draft.read.notes, totals: draft.read.totals });
+    const err = await keepChart(sb, { horizon_id: h.id, user_id: uid, report_path: draft.path, ...c, meals: draft.read.meals, notes: draft.read.notes, totals: draft.read.totals });
     setBusy(false);
     if (err) { setNote(`Could not keep the chart: ${err}`); return; }
     setDraft(null); await reload();
@@ -141,16 +194,7 @@ export function ChartCard({ sb, h, today, state, closed, userId, reload, readOnl
     if (err) setNote(`Could not take it off: ${err}`); else await reload();
   }
 
-  const Meals = ({ meals }: { meals: { when: string; items: string; day?: string | null }[] }) => (
-    <div class="flex flex-col">
-      {meals.map((m, i) => (
-        <div class={`grid grid-cols-[104px_minmax(0,1fr)] gap-3 py-2 ${i ? "border-t border-border" : ""}`} key={`${m.day ?? ""}-${m.when}-${i}`}>
-          <span class="font-mono text-[11px] font-medium uppercase tracking-wider text-text-3">{m.day ? `${m.day} · ` : ""}{m.when}</span>
-          <span class="text-[14px] leading-relaxed text-text">{m.items}</span>
-        </div>
-      ))}
-    </div>
-  );
+  const Meals = ChartMeals;
 
   // someone the chart is shared with: its lines and the count, and nothing to press
   if (readOnly) {
@@ -190,18 +234,7 @@ export function ChartCard({ sb, h, today, state, closed, userId, reload, readOnl
   if (draft) {
     return (
       <section id="horizon-chart" class="flex flex-col gap-4 rounded-[16px] border border-accent-border bg-card p-5">
-        <div class="flex flex-col gap-1"><Eyebrow accent>Diet chart · {draft.name} · read in the chart's own words</Eyebrow><H2>Check what was read</H2></div>
-        <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <label class="flex flex-col gap-1"><Eyebrow>Who wrote it</Eyebrow><input type="text" value={by} maxLength={120} onInput={(e) => setBy((e.currentTarget as HTMLInputElement).value)} placeholder="Their name, as you would say it" class={inputClass} /></label>
-          <label class="flex flex-col gap-1"><Eyebrow>Given on</Eyebrow><input type="date" value={given} max={today} onInput={(e) => setGiven((e.currentTarget as HTMLInputElement).value)} class={`${inputClass} font-mono`} /></label>
-          <label class="flex flex-col gap-1"><Eyebrow>To be reviewed · if it says</Eyebrow><input type="date" value={review} onInput={(e) => setReview((e.currentTarget as HTMLInputElement).value)} class={`${inputClass} font-mono`} /></label>
-        </div>
-        {draft.read.meals.length ? <Meals meals={draft.read.meals} /> : <Quiet>No meal lines could be read from this page.</Quiet>}
-        {draft.read.totals.length ? <p class="m-0 text-[13px] leading-relaxed text-text-2">Printed on the chart: {draft.read.totals.map((t) => `${t.name} ${t.value}`).join(" · ")}</p> : null}
-        {draft.read.notes.length ? <div class="flex flex-col gap-1"><span class="text-[13px] text-text-2">The chart's own notes, word for word:</span>{draft.read.notes.map((n) => <p class="m-0 border-l-[3px] border-border-strong pl-3 text-[13px] leading-relaxed text-text" key={n}>"{n}"</p>)}</div> : null}
-        <Quiet>Nothing is added, and nothing is worked out. A total is shown only where the chart prints one. If a line was read wrongly, the chart itself is one press away in Reports, and you can add it again from a clearer page.</Quiet>
-        {note ? <p class="m-0 text-[13px] leading-relaxed text-caution">{note}</p> : null}
-        <div class="flex flex-wrap gap-3"><Button primary disabled={busy} onClick={() => void keep()}>{busy ? "Keeping…" : "Keep it with this horizon"}</Button><Button onClick={() => { setDraft(null); setNote(""); }}>Not this file</Button></div>
+        <ChartCheck draft={draft} today={today} busy={busy} note={note} keepWords="Keep it with this horizon" onKeep={(c) => void keep(c)} onLeave={() => { setDraft(null); setNote(""); }} key={draft.path} />
       </section>
     );
   }
