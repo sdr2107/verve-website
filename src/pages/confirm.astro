@@ -1,0 +1,49 @@
+---
+/**
+ * /confirm — the press inside the welcome letter: "Yes, send me the weekly letter" (canvas "Verve, Horizon as a
+ * programme", board 27; decided 19 November 2026).
+ *
+ * The link carries the row's own token (?t=...), the same one its Unsubscribe link carries. The page calls
+ * newsletter_confirm with the anon key, which marks the row confirmed and returns the address, and says done. No
+ * sign-in and no second step. The weekly letter goes to confirmed rows only, so an address somebody else typed
+ * into a box gets the welcome and nothing after it.
+ *
+ * A press on an address that had been taken off the list puts it back: it is a yes from the mailbox itself.
+ * A missing or unknown token says so and changes nothing.
+ *
+ * It does not link to the Horizon page: until that page is opened, no page of the site links to it
+ * (tests/programme.test.mjs). The first letter itself carries that link.
+ */
+import Layout from "../layouts/Layout.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import Footer from "../components/Footer.astro";
+---
+
+<Layout title="The weekly letter · Verve" description="One press, and the weekly letter comes to you." cardType="summary" noindex>
+  <SiteHeader />
+  <main class="mx-auto flex w-full max-w-[720px] flex-col gap-5 px-4 pb-24 pt-16 sm:px-6">
+    <h1 id="title" class="text-[34px] font-extrabold leading-[1.05] tracking-[-0.03em] text-text-primary sm:text-[40px]">One moment.</h1>
+    <p id="body" class="text-[17px] leading-relaxed text-text-secondary">Marking your address for the weekly letter.</p>
+    <div class="mt-2 flex flex-wrap gap-3">
+      <a href="/start" class="inline-flex min-h-11 items-center rounded-xl border border-ink/20 px-5 font-semibold text-text-primary transition-colors hover:border-ink/35">Start here</a>
+      <a href="/get" target="_blank" rel="noopener" class="inline-flex min-h-11 items-center rounded-xl border border-ink/20 px-5 font-semibold text-text-primary transition-colors hover:border-ink/35">Get the app</a>
+    </div>
+  </main>
+  <Footer />
+</Layout>
+
+<script>
+  import { supabase } from "../lib/supabase";
+  const title = document.getElementById("title")!, body = document.getElementById("body")!;
+  const token = new URLSearchParams(location.search).get("t") ?? "";
+  (async () => {
+    if (!token) { title.textContent = "No link to act on."; body.textContent = "Open the button in the first letter. It carries the link that does this."; return; }
+    let data: unknown = null, failed = false;
+    try { const res = await supabase.rpc("newsletter_confirm", { token }); data = res.data; failed = !!res.error; } catch { failed = true; }
+    if (failed) { title.textContent = "Not done yet."; body.textContent = "That could not be saved just now. The same button in the letter works again in a minute."; return; }
+    const email = Array.isArray(data) && (data[0] as { email?: string } | undefined)?.email ? String((data[0] as { email: string }).email) : "";
+    if (!email) { title.textContent = "That link is not one of ours."; body.textContent = "Nothing was changed. The button in the first letter is the one that does this."; return; }
+    title.textContent = "Done. The weekly letter is yours.";
+    body.textContent = `It comes to ${email} on Sunday: one number, its threshold, the study behind it, and what to check. Every letter has an Unsubscribe button.`;
+  })();
+</script>

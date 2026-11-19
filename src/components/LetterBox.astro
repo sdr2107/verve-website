@@ -1,0 +1,96 @@
+---
+/**
+ * The box that takes an address for the letter (canvas "Verve, Horizon as a programme", board 27).
+ *
+ * On submit the address, the sentence beside the button, the page and the word on the link that brought the
+ * reader (../data/letter.ts tagOf) go into newsletter_signups: anyone may add a row, and nobody reads the table
+ * through the page. The page then says what happens next and asks the newsletter-welcome function to send the
+ * first letter from hello@. The letter is never the gate: everything it links to is on this page at once, and a
+ * send that fails is tried again within a day.
+ *
+ * The weekly letter starts only on a press made inside that first letter, so an address typed here by someone
+ * else gets one email and no more.
+ */
+import { LETTER_CONSENT, LETTER_PRESS } from "../data/letter";
+import { SHEET_PDF } from "../data/fitness-tiers";
+import { GET_APP_PATH, PRIVACY_URL } from "../data/site";
+
+interface Props {
+  /** Where the third thing to do while waiting leads: the questions further down the page. */
+  questions?: string;
+}
+const { questions = "#questions" } = Astro.props;
+const step = "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-accent-border bg-accent-fill font-mono text-[11px] font-semibold text-accent-text";
+const go = "min-h-8 self-start text-[13px] font-semibold text-accent-text hover:text-text";
+---
+
+<section class="flex flex-col gap-3 rounded-[16px] border border-accent-border bg-accent-fill p-5" data-letterbox aria-labelledby="letterhead">
+  <form class="flex flex-col gap-3" data-letter-form novalidate>
+    <div class="flex flex-col gap-1">
+      <h2 id="letterhead" class="m-0 text-[17px] font-semibold text-text">Get the first letter</h2>
+      <p class="m-0 text-[14px] leading-relaxed text-text-2">What Verve is, your first fitness number on one sheet of A4, and where to begin.</p>
+    </div>
+    <div class="flex flex-wrap gap-2.5">
+      <label for="letteremail" class="sr-only">Your email</label>
+      <input id="letteremail" name="email" type="email" required autocomplete="email" inputmode="email" placeholder="you@example.com"
+        class="min-h-12 min-w-[200px] flex-1 rounded-[10px] border border-border-strong bg-card px-4 text-[16px] text-text outline-none placeholder:text-text-3 focus:border-accent-border" />
+      <button type="submit" data-letter-submit class="min-h-12 rounded-[10px] bg-accent px-5 text-[15px] font-semibold text-canvas transition-opacity hover:opacity-90 disabled:opacity-60">Send me the first letter</button>
+    </div>
+    <p class="m-0 text-[12.5px] leading-relaxed text-text-3">{LETTER_CONSENT} <a href={PRIVACY_URL} class="font-semibold text-accent-text hover:text-text">Privacy policy</a></p>
+    <p class="m-0 hidden text-[13.5px] leading-relaxed text-text" data-letter-msg role="status" aria-live="polite"></p>
+  </form>
+  <div class="hidden flex-col gap-3" data-letter-done>
+    <div class="flex flex-col gap-1">
+      <h2 class="m-0 text-[17px] font-semibold text-text" tabindex="-1" data-letter-done-head>The first letter is on its way.</h2>
+      <p class="m-0 text-[14px] leading-relaxed text-text-2" data-letter-where>From hello@verve-app.health. {LETTER_PRESS}</p>
+    </div>
+    <p class="m-0 text-[14px] font-semibold text-text">While you wait</p>
+    <div class="flex gap-3"><span class={step}>1</span><div class="flex flex-col gap-1"><p class="m-0 text-[14px] leading-relaxed text-text">Take the six-minute walk and get your first number.</p><a href={SHEET_PDF} target="_blank" rel="noopener" class={go}>Open the sheet (PDF)</a></div></div>
+    <div class="flex gap-3"><span class={step}>2</span><div class="flex flex-col gap-1"><p class="m-0 text-[14px] leading-relaxed text-text">Get the app. It reads your watch or your phone and keeps the week.</p><a href={GET_APP_PATH} target="_blank" rel="noopener" class={go}>Get the app</a></div></div>
+    <div class="flex gap-3"><span class={step}>3</span><div class="flex flex-col gap-1"><p class="m-0 text-[14px] leading-relaxed text-text">Answer five questions, and set a horizon.</p><a href={questions} class={go}>Begin</a></div></div>
+  </div>
+</section>
+
+<script>
+  import { supabase } from "../lib/supabase";
+  import { LETTER_CONSENT, LETTER_PRESS, tagOf } from "../data/letter";
+
+  const box = document.querySelector<HTMLElement>("[data-letterbox]");
+  if (box) {
+    const form = box.querySelector<HTMLFormElement>("[data-letter-form]")!;
+    const input = box.querySelector<HTMLInputElement>("#letteremail")!;
+    const button = box.querySelector<HTMLButtonElement>("[data-letter-submit]")!;
+    const msg = box.querySelector<HTMLElement>("[data-letter-msg]")!;
+    const done = box.querySelector<HTMLElement>("[data-letter-done]")!;
+    const where = box.querySelector<HTMLElement>("[data-letter-where]")!;
+    const say = (text: string) => { msg.textContent = text; msg.classList.toggle("hidden", !text); };
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = input.value.trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 254) { say("That does not look like an email address."); input.focus(); return; }
+      button.disabled = true;
+      say("Saving…");
+      let userId: string | null = null;
+      try { userId = (await supabase.auth.getSession()).data.session?.user.id ?? null; } catch { /* not signed in */ }
+      const { error } = await supabase.from("newsletter_signups").insert({ email, consent_text: LETTER_CONSENT, source: "horizon", user_id: userId, tag: tagOf(location.search) });
+      button.disabled = false;
+      // 23505: the address is on the list already, which is fine
+      if (error && error.code !== "23505") { say("That could not be saved just now. Nothing was sent. Try again in a minute."); return; }
+      say("");
+      form.classList.add("hidden");
+      done.classList.remove("hidden"); done.classList.add("flex");
+      where.textContent = `To ${email}, from hello@verve-app.health. ${LETTER_PRESS}`;
+      box.querySelector<HTMLElement>("[data-letter-done-head]")?.focus();
+      // the letter, after the page has already said what to do; never the gate
+      const later = `The letter to ${email} could not be sent just now. It goes out within a day. ${LETTER_PRESS}`;
+      try {
+        const { data, error: fnErr } = await supabase.functions.invoke("newsletter-welcome", { body: { email } });
+        if (fnErr || !data?.sent) where.textContent =
+          data?.reason === "already sent" ? `${email} has had the first letter already. The press that starts the weekly letter is inside it.`
+          : data?.reason === "unsubscribed" ? `${email} asked for no more letters. The first letter you had carries a press that starts them again.`
+          : later;
+      } catch { where.textContent = later; }
+    });
+  }
+</script>

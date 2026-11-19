@@ -6,9 +6,11 @@
  * On submit: the address and the consent sentence go into
  * newsletter_signups (anon insert; nobody reads the table through the
  * API), the sheet opens on the page at once, and then the page asks the
- * newsletter-welcome function to email the same sheet from hello@. The
- * email is a copy, never the gate: if the save or the send fails, the
- * sheet still opens and the page says so.
+ * newsletter-welcome function to send the first letter from hello@, which
+ * carries the same sheet. The email is a copy, never the gate: if the save
+ * or the send fails, the sheet still opens and the page says so. The weekly
+ * letter starts only on a press made inside that first letter (19 November
+ * 2026; ../data/letter.ts).
  */
 import { NEWSLETTER_CONSENT, SHEET_PDF } from "../data/fitness-tiers";
 import { PRIVACY_URL } from "../data/site";
@@ -42,7 +44,7 @@ const { title = "Get the sheet", lede = "One A4 page: the test, the arithmetic, 
   <div id="sheetdone" class="hidden min-w-[280px] flex-1 flex-col gap-3 rounded-xl border border-ink/[0.12] bg-card p-5">
     <p class="text-[17px] font-bold text-text-primary">Here is your sheet.</p>
     <a id="sheetlink" href={SHEET_PDF} target="_blank" rel="noopener" class="inline-flex min-h-11 items-center self-start rounded-xl bg-accent px-5 font-bold text-canvas transition-opacity hover:opacity-90">Open the A4 sheet (PDF)</a>
-    <p id="sheetmail" class="text-[14px] text-text-secondary">A copy is on its way to your inbox, from hello@verve-app.health. One letter a week follows; every one has an Unsubscribe button.</p>
+    <p id="sheetmail" class="text-[14px] text-text-secondary">A copy is on its way to your inbox, from hello@verve-app.health. One press inside it keeps the weekly letter coming.</p>
   </div>
 </section>
 
@@ -87,7 +89,7 @@ const { title = "Get the sheet", lede = "One A4 page: the test, the arithmetic, 
       try {
         const { data, error: fnErr } = await supabase.functions.invoke("newsletter-welcome", { body: { email } });
         if (fnErr || !data?.sent) mail.textContent = data?.reason === "already sent"
-          ? "You already had the sheet by email; the link above is the same one. One letter a week follows."
+          ? "You already had the first letter by email; the link above is the same sheet. The press that starts the weekly letter is inside that email."
           : "The email copy could not be sent just now; it will go out within a day. The link above is the same sheet.";
       } catch { mail.textContent = "The email copy could not be sent just now; it will go out within a day. The link above is the same sheet."; }
     });
