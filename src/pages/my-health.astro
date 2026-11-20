@@ -242,6 +242,8 @@ import { STORY } from "../data/story";
         </div>
 
         <p id="authmsg" class="mh-status mt-4 hidden text-[13px] leading-relaxed"></p>
+        <!-- Help's own page for this card: which account, two accounts, a code that did not arrive (pages/help.astro) -->
+        <p class="mt-4 text-xs leading-relaxed text-text-tertiary"><a href="/help/#signing-in" class="inline-flex min-h-9 items-center font-medium text-accent-light hover:underline">Trouble signing in?</a></p>
       </div>
       </div>
     </section>
@@ -359,7 +361,7 @@ import { STORY } from "../data/story";
           <div id="acctmenu" role="menu" aria-label="Account" class="absolute left-0 right-0 top-full z-20 mt-2 hidden flex-col rounded-[12px] border border-border bg-card p-1.5 shadow-xl shadow-shade lg:bottom-full lg:top-auto lg:mb-2 lg:mt-0">
             <button type="button" role="menuitem" class="mh-menuitem" data-acct="settings"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Settings</span></button>
             <button type="button" role="menuitem" class="mh-menuitem" data-acct="appearance"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><span>Appearance</span></button>
-            <a role="menuitem" class="mh-menuitem" href="/how-it-works/"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7M12 17h.01"/></svg><span>Help</span></a>
+            <a role="menuitem" class="mh-menuitem" id="helpgo" href="/help/"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7M12 17h.01"/></svg><span>Help</span></a>
             <button type="button" role="menuitem" class="mh-menuitem" data-acct="signout"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg><span>Sign out</span></button>
           </div>
           <div class="flex items-center gap-2.5 rounded-[12px] border border-border-strong bg-card px-2.5 py-2">
@@ -2639,6 +2641,11 @@ import { STORY } from "../data/story";
     el.className = `mh-count ${tone}`;
   }
   $("accessgo").addEventListener("click", openAccess);
+  // Help, from the account menu: the page the person is on is left for this tab, so "Write to us" can offer to add
+  // it. Only the address of the page; the Help page keeps the path and a plain hash and drops everything else.
+  document.getElementById("helpgo")?.addEventListener("click", () => {
+    try { sessionStorage.setItem("verve-help-from", location.pathname + location.hash); } catch { /* private mode: nothing is offered */ }
+  });
   $("tabbar").querySelectorAll("[data-tab]").forEach((b) =>
     b.addEventListener("click", () => {
       const t = (b as HTMLElement).dataset.tab!;

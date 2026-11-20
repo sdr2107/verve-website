@@ -1,0 +1,290 @@
+---
+/**
+ * /help — a small page for the moment someone is stuck (canvas "Verve, Horizon as a programme", board 33;
+ * asked for by the founder on 20 November 2026).
+ *
+ * "How it works" answers what this is. Help answers why something is not working. Until this page, the account
+ * menu's Help was a link to How it works, which opens on the videos.
+ *
+ * One address, eight small pages, one shown at a time: the first page (six doors), a page behind each door
+ * (/help/#numbers, /help/#signing-in, /help/#reports, /help/#sharing, /help/#plan, /help/#data), and the
+ * form (/help/#write). Each is linkable. Without a script every page is on the screen in order, and each
+ * address still lands on its own heading.
+ *
+ * The doors and their answers are data: ../data/help.ts, where each answer names the code it was checked
+ * against. Behind a door one question is open at a time (the details elements share a name).
+ *
+ * "Write to us" calls the help-message function (METTracker supabase/functions/help-message), which keeps the
+ * message and passes it on to hello@ with the person's address as reply-to. Signed in, the reply goes to the
+ * account's address; where Apple hides that address, or nobody is signed in, the form asks for one. The box
+ * "Add the page I was on and my browser" shows exactly what will travel, and nothing travels when it is
+ * unticked. No figure of anyone's is ever added. When the function is not there, refuses, or cannot pass the
+ * message on, the page says so and gives the address to write to: it never says "sent" for a message nobody
+ * will see. ../help/WIRING.md.
+ *
+ * Open to anyone, signed in or not: it is in the footer of every page, in My health's account menu, and under
+ * the sign-in card.
+ */
+import Layout from "../layouts/Layout.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import Footer from "../components/Footer.astro";
+import { HELP_DOORS, HELP_EMAIL, HELP_VIEWS, WRITE_ID } from "../data/help";
+
+const back = "inline-flex min-h-11 items-center self-start text-[14px] font-semibold text-accent-text hover:text-text";
+const go = "inline-flex min-h-9 items-center self-start text-[14px] font-semibold text-accent-text underline-offset-4 hover:underline";
+const quietButton = "inline-flex min-h-11 items-center rounded-[10px] border border-border-strong bg-card px-5 text-[15px] font-semibold text-text transition-colors hover:border-accent-border";
+const field = "w-full rounded-[10px] border border-border-strong bg-card px-4 py-3 text-[16px] leading-relaxed text-text outline-none placeholder:text-text-3 focus:border-accent-border";
+const label = "text-[14px] font-semibold text-text";
+---
+
+<Layout title="Help · Verve" description="For the moment something is not working: a missing number, signing in, reports, sharing, plans and emails, your data. Six doors, short answers, and a way to write to us." cardType="summary">
+  <SiteHeader />
+  <main id="helpmain" class="mx-auto flex w-full max-w-[880px] flex-col gap-12 px-4 pb-24 pt-14 sm:px-6">
+
+    <!-- ── the first page: six doors ── -->
+    <section id="help" data-help-view="help" class="flex scroll-mt-24 flex-col gap-6" aria-labelledby="helptitle">
+      <div class="flex flex-col gap-3">
+        <span class="font-mono text-xs font-semibold uppercase tracking-[0.12em] text-accent-text">Help</span>
+        <h1 id="helptitle" tabindex="-1" class="text-[34px] font-extrabold leading-[1.08] tracking-[-0.03em] text-text outline-none sm:text-[40px]">What are you stuck on?</h1>
+      </div>
+      <ul class="grid list-none gap-3 p-0 sm:grid-cols-2 lg:grid-cols-3" role="list">
+        {HELP_DOORS.map((d) => (
+          <li class="flex">
+            <a href={`#${d.id}`} class="flex min-h-[104px] w-full flex-col gap-1.5 rounded-[16px] border border-border bg-card p-5 transition-colors hover:border-accent-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+              <span class="text-[16px] font-semibold leading-snug text-text">{d.title}</span>
+              <span class="text-[13.5px] leading-relaxed text-text-3">{d.blurb}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+      <div class="flex flex-col gap-4 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <a href={`#${WRITE_ID}`} class={quietButton}>Write to us</a>
+          <a href="/how-it-works" class={go}>New here? See how the app works</a>
+        </div>
+        <p class="max-w-[420px] text-[13px] leading-relaxed text-text-3">Verve reads your numbers. It does not give medical advice. If you feel unwell, contact a doctor or your local emergency number.</p>
+      </div>
+    </section>
+
+    <!-- ── behind each door: its questions, one open at a time ── -->
+    {HELP_DOORS.map((d) => (
+      <section id={d.id} data-help-view={d.id} class="flex scroll-mt-24 flex-col gap-4" aria-labelledby={`help-${d.id}-title`}>
+        <a href="#help" class={back}><span aria-hidden="true">‹&nbsp;</span>Help</a>
+        <h2 id={`help-${d.id}-title`} tabindex="-1" class="text-[26px] font-extrabold leading-[1.15] tracking-[-0.02em] text-text outline-none sm:text-[30px]">{d.title}</h2>
+        <div class="flex flex-col border-b border-border">
+          {d.questions.map((x, i) => (
+            <details {...{ name: `help-${d.id}` }} open={i === 0} class="help-q border-t border-border">
+              <summary class="flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 py-3 text-[16px] font-semibold leading-snug text-text">
+                <span>{x.q}</span>
+                <svg class="help-chev shrink-0 text-text-3" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+              </summary>
+              <div class="flex flex-col gap-1.5 pb-4">
+                <p class="m-0 max-w-[680px] text-[15.5px] leading-[1.6] text-text-2">{x.a}</p>
+                <a href={x.link.href} class={go}>{x.link.label}<span aria-hidden="true">&nbsp;→</span></a>
+              </div>
+            </details>
+          ))}
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <span class="text-[14px] text-text-3">Still stuck?</span>
+          <a href={`#${WRITE_ID}`} class={quietButton}>Write to us</a>
+        </div>
+      </section>
+    ))}
+
+    <!-- ── write to us ── -->
+    <section id={WRITE_ID} data-help-view={WRITE_ID} class="flex scroll-mt-24 flex-col gap-4" aria-labelledby="helpwritetitle">
+      <a href="#help" class={back}><span aria-hidden="true">‹&nbsp;</span>Help</a>
+      <h2 id="helpwritetitle" tabindex="-1" class="text-[26px] font-extrabold leading-[1.15] tracking-[-0.02em] text-text outline-none sm:text-[30px]">Tell us what happened</h2>
+
+      <form id="helpform" class="flex max-w-[640px] flex-col gap-5" novalidate>
+        <div class="flex flex-col gap-1.5">
+          <label for="helpdoing" class={label}>What were you trying to do?</label>
+          <textarea id="helpdoing" name="doing" rows="3" maxlength="1000" required class={field}></textarea>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label for="helpsaw" class={label}>What did you see instead?</label>
+          <textarea id="helpsaw" name="saw" rows="4" maxlength="2000" required class={field}></textarea>
+        </div>
+
+        <!-- where a reply goes: asked for when nobody is signed in, or when Apple hides the account's address -->
+        <div id="helpaddr" class="flex flex-col gap-1.5">
+          <label for="helpemail" id="helpemaillabel" class={label}>Your email, for the reply</label>
+          <input id="helpemail" name="email" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" class={field} />
+        </div>
+
+        <div class="flex flex-col gap-2.5">
+          <label class="flex min-h-11 cursor-pointer items-center gap-3 text-[15px] text-text">
+            <input id="helpadd" type="checkbox" checked class="h-5 w-5 shrink-0 accent-accent" />
+            <span>Add the page I was on and my browser</span>
+          </label>
+          <div class="flex flex-col gap-1 rounded-[12px] border border-border bg-card px-4 py-3">
+            <p id="helpadded" class="m-0 break-words text-[13.5px] leading-relaxed text-text-2">Nothing is added until this page has looked.</p>
+            <p class="m-0 text-[13.5px] leading-relaxed text-text-2">Never added: any of your figures.</p>
+          </div>
+        </div>
+
+        <!-- not for people: a script fills in every field it finds, and the function refuses a form with this one filled -->
+        <div class="hidden" aria-hidden="true">
+          <label for="helpwebsite">Website</label>
+          <input id="helpwebsite" name="website" type="text" tabindex="-1" autocomplete="off" />
+        </div>
+
+        <p id="helpmsg" role="status" aria-live="polite" class="m-0 hidden text-[14px] leading-relaxed text-text"></p>
+        <!-- when it could not be sent: said plainly, with the address that reaches the same inbox -->
+        <p id="helpfail" role="alert" class="m-0 hidden rounded-[12px] border border-border-strong bg-card px-4 py-3 text-[14.5px] leading-relaxed text-text">
+          <span id="helpfailwhy">That could not be sent just now.</span>
+          Write to <a id="helpfailmail" href={`mailto:${HELP_EMAIL}`} class="font-semibold text-accent-text underline-offset-4 hover:underline">{HELP_EMAIL}</a> and it reaches the same inbox. What you typed is still in the boxes above.
+        </p>
+
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <span id="helpreply" class="text-[13.5px] leading-relaxed text-text-3">We reply to the address you give.</span>
+          <button type="submit" id="helpsend" class="min-h-11 rounded-[10px] bg-accent px-6 text-[15px] font-semibold text-canvas transition-opacity hover:opacity-90 disabled:opacity-60">Send</button>
+        </div>
+        <noscript><p class="m-0 text-[14px] leading-relaxed text-text-2">This form needs a script to send. Write to <a href={`mailto:${HELP_EMAIL}`} class="font-semibold text-accent-text">{HELP_EMAIL}</a> and it reaches the same inbox.</p></noscript>
+      </form>
+
+      <div id="helpdone" class="hidden max-w-[640px] flex-col gap-3">
+        <h3 id="helpdonehead" tabindex="-1" class="m-0 text-[20px] font-semibold text-text outline-none">Sent.</h3>
+        <p id="helpdonewhere" class="m-0 text-[15.5px] leading-[1.6] text-text-2"></p>
+        <a href="#help" class={quietButton + " self-start"}>Back to Help</a>
+      </div>
+    </section>
+    <!-- Before the first paint: one small page, the one the address names. The page's own script takes over after. -->
+    <script is:inline define:vars={{ views: HELP_VIEWS }}>
+      (function () {
+        var main = document.getElementById("helpmain");
+        var want = location.hash.replace("#", "");
+        var view = views.indexOf(want) >= 0 ? want : "help";
+        main.setAttribute("data-js", "");
+        main.querySelectorAll("[data-help-view]").forEach(function (s) { if (s.getAttribute("data-help-view") === view) s.setAttribute("data-on", ""); });
+      })();
+    </script>
+  </main>
+  <Footer />
+</Layout>
+
+<style>
+  /* With the script running, one small page at a time. Without it, every page shows in order. */
+  main[data-js] [data-help-view]:not([data-on]) { display: none; }
+  /* One page at a time starts at the top: an address that names a page must not scroll the header away. */
+  main[data-js] [data-help-view] { scroll-margin-top: 100vh; }
+  .help-q > summary::-webkit-details-marker { display: none; }
+  .help-q[open] .help-chev { transform: rotate(180deg); }
+  @media (prefers-reduced-motion: no-preference) { .help-chev { transition: transform 0.15s ease; } }
+</style>
+
+<script>
+  import { HELP_VIEWS, HELP_EMAIL, WRITE_ID } from "../data/help";
+  import { addedWords, browserWords, checkHelp, helpBody, isRelay, needsAddress, safePage } from "../help/form";
+
+  const main = document.getElementById("helpmain")!;
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+
+  // ── one small page at a time ────────────────────────────────────────────
+  const viewOf = () => { const want = location.hash.replace("#", ""); return HELP_VIEWS.includes(want) ? want : "help"; };
+  function show(focus: boolean) {
+    const view = viewOf();
+    main.querySelectorAll<HTMLElement>("[data-help-view]").forEach((s) => s.toggleAttribute("data-on", s.dataset.helpView === view));
+    if (view === WRITE_ID) void prepareForm();
+    if (!focus) return;
+    window.scrollTo({ top: 0 });
+    main.querySelector<HTMLElement>(`[data-help-view="${view}"] :is(h1, h2)`)?.focus({ preventScroll: true });
+  }
+  main.setAttribute("data-js", "");
+  window.addEventListener("hashchange", () => show(true));
+  // the first show() is the script's last line: an address that opens on the form needs everything below it
+
+  // one question open at a time, where the browser does not yet do it by the shared name
+  main.querySelectorAll<HTMLDetailsElement>("details.help-q").forEach((d) => d.addEventListener("toggle", () => {
+    if (!d.open) return;
+    const name = d.getAttribute("name");
+    d.parentElement?.querySelectorAll<HTMLDetailsElement>("details.help-q").forEach((o) => { if (o !== d && o.getAttribute("name") === name) o.open = false; });
+  }));
+
+  // ── the form ────────────────────────────────────────────────────────────
+  // The page the person came from: My health's Help item leaves it for this tab; from any other page it is the
+  // page that linked here. Only this site's own path travels (../help/form.ts safePage).
+  let cameFrom = "";
+  try { cameFrom = sessionStorage.getItem("verve-help-from") ?? ""; } catch { /* private mode */ }
+  const page = safePage(cameFrom || document.referrer || "", location.origin);
+  const browser = browserWords(navigator.userAgent, { brave: !!(navigator as unknown as { brave?: unknown }).brave });
+
+  const form = $<HTMLFormElement>("helpform"), send = $<HTMLButtonElement>("helpsend");
+  const doing = $<HTMLTextAreaElement>("helpdoing"), saw = $<HTMLTextAreaElement>("helpsaw"), email = $<HTMLInputElement>("helpemail");
+  const add = $<HTMLInputElement>("helpadd"), website = $<HTMLInputElement>("helpwebsite");
+  const msg = $("helpmsg"), fail = $("helpfail");
+  const say = (text: string) => { msg.textContent = text; msg.classList.toggle("hidden", !text); };
+  const paintAdded = () => { $("helpadded").textContent = add.checked ? addedWords({ page, browser }) : "Nothing will be added."; };
+  add.addEventListener("change", paintAdded);
+  paintAdded();
+
+  // who is writing: known once, when the form is first opened. The client is loaded only then.
+  let who = { signedIn: false, ownEmail: "" };
+  let client: Promise<typeof import("../lib/supabase")> | null = null;
+  const sb = () => (client ??= import("../lib/supabase"));
+  let prepared = false;
+  async function prepareForm() {
+    if (prepared) return;
+    prepared = true;
+    try {
+      const { supabase } = await sb();
+      const user = (await supabase.auth.getSession()).data.session?.user;
+      if (user) who = { signedIn: true, ownEmail: user.email ?? "" };
+    } catch { /* not signed in, or the client could not load: the form asks for an address */ }
+    const ask = needsAddress(who);
+    $("helpaddr").classList.toggle("hidden", !ask);
+    if (ask && who.signedIn && isRelay(who.ownEmail)) $("helpemaillabel").textContent = "Apple hides your address from Verve, so a reply needs one it can reach. Where should it go?";
+    $("helpreply").textContent = ask ? "We reply to the address you give." : `We reply to ${who.ownEmail}, the address on your account.`;
+  }
+
+  function failed(why: string) {
+    say("");
+    $("helpfailwhy").textContent = why;
+    // the same words, ready in the person's own mail, so nothing is typed twice
+    const text = `What were you trying to do?\n${doing.value.trim()}\n\nWhat did you see instead?\n${saw.value.trim()}`;
+    $<HTMLAnchorElement>("helpfailmail").href = `mailto:${HELP_EMAIL}?subject=${encodeURIComponent("Help")}&body=${encodeURIComponent(text)}`;
+    fail.classList.remove("hidden");
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    fail.classList.add("hidden");
+    await prepareForm();
+    const check = checkHelp({ doing: doing.value, saw: saw.value, email: email.value, ...who });
+    if (!check.ok) { say(check.error); (check.field === "doing" ? doing : check.field === "saw" ? saw : email).focus(); return; }
+    send.disabled = true;
+    say("Sending…");
+    try {
+      const { supabase } = await sb();
+      const { data, error } = await supabase.functions.invoke("help-message", {
+        body: helpBody({ doing: doing.value, saw: saw.value, email: check.email, add: add.checked, page, browser, website: website.value }),
+      });
+      if (!error && data?.sent === true) {
+        say("");
+        form.classList.add("hidden");
+        $("helpdonewhere").textContent = `A reply will come to ${check.email}.`;
+        const done = $("helpdone"); done.classList.remove("hidden"); done.classList.add("flex");
+        $("helpdonehead").focus();
+        try { sessionStorage.removeItem("verve-help-from"); } catch { /* fine */ }
+        return;
+      }
+      // the function's own answer: a reason the person can fix is said as it is; anything else is a failure to send
+      let status = 0, words = "";
+      try {
+        const res = (error as { context?: Response } | null)?.context;
+        status = res?.status ?? 0;
+        const j = await res?.clone().json();
+        words = typeof j?.error === "string" ? j.error : "";
+      } catch { /* no readable answer */ }
+      if (status === 400 && words) { say(`${words}.`); return; }
+      failed(status === 429 ? "Too many messages have come in just now." : "That could not be sent just now.");
+    } catch {
+      failed("That could not be sent just now.");
+    } finally {
+      send.disabled = false;
+    }
+  });
+
+  show(false);
+</script>
