@@ -488,6 +488,27 @@ ruler gained two marks, `plan` and `tester`. Measured on the production
 build while the server took 4 seconds to answer: the right plan and the
 right page at the first frame.
 
-Still open: one load asks the horizon function for the plan four times,
-and for the horizons and their plans two and three times. On a server
-that is short of breath, that is load it does not need.
+**One question, one request** (2026-11-20, the same day): one load asked
+the horizon function for the plan four times, for the horizons twice, and
+"can the Guide's plan be kept" three times. The page draws itself more
+than once as it starts (several views mount, the person becomes known,
+the fresh document arrives), and each draw asked again. On a server that
+is short of breath, that is load it did not need.
+
+`once.ts` lets callers that ask while an answer is on its way share it.
+Nothing is kept once it has arrived, so a write is never followed by an
+old answer. The plan has one door now, `planAnswer` in `horizon/api.ts`:
+the line under the name and Horizon's "what may this account do" read the
+same answer, and the first ask of a load is the head start's. Only that
+answer is kept on purpose, for ten seconds, for the Horizon view, which
+asks each time the page redraws; a horizon being set and `forgetAccess()`
+drop it at once. An ask that follows a write (a trial started, a number
+kept from the landing page) never joins one that left before the write.
+
+Counted on the production build with a signed-in session, requests to
+the server in one load:
+
+| Opened on | Before | After | The plan | The Guide's-plan check | The horizons |
+|---|---|---|---|---|---|
+| Overview | 12 | 8 | 3 to 1 | 3 to 1 | 1 |
+| Settings | 15 | 9 | 4 to 1 | 3 to 1 | 2 to 1 |

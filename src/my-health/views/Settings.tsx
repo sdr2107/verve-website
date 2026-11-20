@@ -49,8 +49,8 @@ export type SettingsDeps = {
 export type SettingsHandle = {
   /** Ask the server again: the plan, the weekly switch, the open horizons. */
   refresh: () => Promise<void>;
-  /** Only the plan (cheap; the sidebar's line needs it on every sign-in). */
-  refreshPlan: () => Promise<PlanInfo | null>;
+  /** Only the plan (cheap; the sidebar's line needs it on every sign-in). `again`: after something that changes it, never an answer already on its way. */
+  refreshPlan: (again?: boolean) => Promise<PlanInfo | null>;
 };
 
 export function mountSettings(roots: { plan: HTMLElement; email: HTMLElement; appearance: HTMLElement; devices?: HTMLElement | null }, deps: SettingsDeps): SettingsHandle {
@@ -59,9 +59,9 @@ export function mountSettings(roots: { plan: HTMLElement; email: HTMLElement; ap
   document.addEventListener(THEME_EVENT, () => { themeSignal.value = getTheme(); });
   // An answer replaces what was known and is kept for the next visit. No answer leaves the last one standing:
   // a failed call used to turn a Pro account's line to "Free" until the next one.
-  const refreshPlan = async () => {
+  const refreshPlan = async (again = false) => {
     const uid = deps.userId();
-    const info = await fetchPlan(deps.supabase, deps.url, deps.anonKey, uid);
+    const info = await fetchPlan(deps.supabase, again);
     if (deps.userId() !== uid) return info;                 // another account signed in meanwhile
     if (info) { planInfoSignal.value = info; if (uid) remember(uid, { plan: info }); }
     planAnswered.value = true;
@@ -100,7 +100,7 @@ const Switch = ({ on, disabled, label, onChange }: { on: boolean; disabled?: boo
 
 // ── Plan and billing ────────────────────────────────────────────────────────
 
-function PlanBlock({ deps, refreshPlan }: { deps: SettingsDeps; refreshPlan: () => Promise<PlanInfo | null> }) {
+function PlanBlock({ deps, refreshPlan }: { deps: SettingsDeps; refreshPlan: (again?: boolean) => Promise<PlanInfo | null> }) {
   const info = planInfoSignal.value;
   const rows = planRows(info);
   const [busy, setBusy] = useState(false);
@@ -108,12 +108,12 @@ function PlanBlock({ deps, refreshPlan }: { deps: SettingsDeps; refreshPlan: () 
   async function start() {
     setBusy(true); setSaid("");
     // ask the plan again first: a person who is Pro already must never spend their one trial for nothing
-    const fresh = await refreshPlan();
+    const fresh = await refreshPlan(true);
     if (!trialOffered(fresh)) { setBusy(false); setSaid(fresh ? "" : "Could not reach the server. Try again in a moment."); return; }
     const res = await startWebTrial(deps.supabase);
     if (!res) { setBusy(false); setSaid("Could not start it. Try again in a moment."); return; }
     // started: the rows above now say it ("Pro on the website until …"), so nothing is said twice
-    await refreshPlan();
+    await refreshPlan(true);
     setSaid(res.started ? "" : "This account has already had its 14 days.");
     setBusy(false);
   }

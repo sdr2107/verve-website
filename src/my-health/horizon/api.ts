@@ -24,6 +24,7 @@ import type { Cadence, CheckinInputs, Landed, MarkerKey, PlanRow } from "./deriv
 import { mapError, isMissingRelation, HorizonOffError, type ApiError } from "./errors.ts";
 import type { GuideStored, ScreenAnswers } from "./guidePlan.ts";
 import { parseAccess, type HorizonAccess } from "./access.ts";
+import { anew, fresh, shared, type Kept } from "../once.ts";
 import type { Programme, WeekNote } from "./programme.ts";
 import type { ChartAnswer, ChartDay, ChartRead, ChartRow } from "./chart.ts";
 import type { WatchedRow } from "./watch.ts";
@@ -84,10 +85,60 @@ async function callHorizon(sb: SupabaseClient, body: Record<string, unknown>): P
 }
 const fail = <T,>(status: number, out: any): Result<T> => ({ ok: false, error: mapError(status, out), status, detail: String(out?.detail ?? out?.error ?? "") });
 
+// ── one question, one request (../once.ts) ──
+/** The asks on their way, by question. Callers that arrive while one is out share its answer. */
+const going = new Map<string, Promise<unknown>>();
+
+/** The account the browser's stored session belongs to: the one the head start asked for. */
+function storedUserId(): string {
+  try {
+    const ref = SUPABASE_URL.replace("https://", "").split(".")[0];
+    const s = JSON.parse(localStorage.getItem(`sb-${ref}-auth-token`) ?? "null");
+    return typeof s?.user?.id === "string" ? s.user.id : "";
+  } catch { return ""; }
+}
+/** The function's last `plan` answer, kept a few seconds: see fetchAccess. */
+let lastPlan: Kept<unknown> = null;
+const PLAN_FRESH_MS = 10_000;
+/**
+ * The horizon function's `plan` answer: what the account holds (the line under the name, ../accountApi.ts fetchPlan)
+ * and what it may do on Horizon (fetchAccess). One answer serves both, and one request serves every caller that asks
+ * while it is out. The first ask of a load is the head start's, sent as the page was parsed (my-health.astro), when it
+ * was for the account the browser is signed in as. `again` is for a caller that has just written something the
+ * answer depends on: it never joins an ask that left before the write.
+ */
+export function planAnswer(sb: SupabaseClient, again = false): Promise<{ ok: boolean; out: any }> {
+  const ask = async (): Promise<{ ok: boolean; out: any }> => {
+    if (!again) {
+      try {
+        const head = (globalThis as any).__mh as { user?: string; plan?: Promise<unknown>; planTaken?: boolean } | undefined;
+        if (head?.plan && !head.planTaken && head.user && head.user === storedUserId()) {
+          head.planTaken = true;
+          const early = await head.plan;
+          if (early) { lastPlan = { at: Date.now(), value: early }; return { ok: true, out: early }; }
+        }
+      } catch { /* no head start: ask as before */ }
+    }
+    const { ok, out } = await callHorizon(sb, { action: "plan" });
+    if (ok) lastPlan = { at: Date.now(), value: out };
+    return { ok, out };
+  };
+  return again ? anew(going, "plan", ask) : shared(going, "plan", ask);
+}
+
 // ── reads ──
 
 /** A person's horizons, open ones unless asked, with their targets, plan and check-ins (newest first). */
-export async function listHorizons(sb: SupabaseClient, personId: string, includeClosed = false): Promise<HorizonFull[]> {
+export function listHorizons(sb: SupabaseClient, personId: string, includeClosed = false): Promise<HorizonFull[]> {
+  // the Horizon view (all of them) and Settings (the open ones) both ask as the page starts: while the fuller read is
+  // out, the open ones are taken from it; two asks for the same thing share one read. Nothing is kept once it lands.
+  if (!includeClosed) {
+    const all = going.get(`horizons:${personId}:all`) as Promise<HorizonFull[]> | undefined;
+    if (all) return all.then((hs) => hs.filter((h) => !h.closed_at));
+  }
+  return shared(going, `horizons:${personId}:${includeClosed ? "all" : "open"}`, () => readHorizons(sb, personId, includeClosed));
+}
+async function readHorizons(sb: SupabaseClient, personId: string, includeClosed: boolean): Promise<HorizonFull[]> {
   let q = sb.from("horizons").select("*").eq("person_id", personId).order("ends_on", { ascending: true });
   if (!includeClosed) q = q.is("closed_at", null);
   const { data: hs, error } = await q;
@@ -125,6 +176,7 @@ export type StartPayload = {
 export async function startHorizon(sb: SupabaseClient, payload: StartPayload): Promise<Result<{ id: string }>> {
   const body = { action: "start", ...payload, months: payload.kind === "date" ? null : payload.months };
   const { ok, status, out } = await callHorizon(sb, body);
+  if (ok) lastPlan = null;                                // the free week may have begun: the next ask is a new one
   return ok && out?.id ? { ok: true, data: { id: String(out.id) } } : fail(status, out);
 }
 
@@ -194,12 +246,15 @@ export async function removeTarget(sb: SupabaseClient, id: string): Promise<stri
 let guideReady: boolean | null = null;
 export async function guidePlanReady(sb: SupabaseClient): Promise<boolean> {
   if (guideReady != null) return guideReady;
-  try {
-    const { error } = await sb.from("horizon_plans").select("guide").limit(1);
-    if (!error) return (guideReady = true);
-    if (String(error.code ?? "") === "42703" || /guide/i.test(String(error.message ?? "")) || isMissingRelation(error)) return (guideReady = false);
-    return false;
-  } catch { return false; }
+  // three views ask as the page starts: they share one read
+  return shared(going, "guide-ready", async () => {
+    try {
+      const { error } = await sb.from("horizon_plans").select("guide").limit(1);
+      if (!error) return (guideReady = true);
+      if (String(error.code ?? "") === "42703" || /guide/i.test(String(error.message ?? "")) || isMissingRelation(error)) return (guideReady = false);
+      return false;
+    } catch { return false; }
+  });
 }
 
 /** The plan's lines for the week and the Guide's plan they come from; `guide` null leaves the Guide's plan (the lines stay, the author becomes the person). */
@@ -247,7 +302,10 @@ export async function askGuide(sb: SupabaseClient, payload: { horizon_id: string
 
 export { parseAccess, type HorizonAccess } from "./access.ts";
 export async function fetchAccess(sb: SupabaseClient): Promise<HorizonAccess | null> {
-  const { ok, out } = await callHorizon(sb, { action: "plan" });
+  // The Horizon view asks each time the page redraws, which is several times as it starts. An answer that arrived
+  // in the last few seconds is the answer; forgetAccess() and a horizon being set drop it at once.
+  const kept = fresh(lastPlan, PLAN_FRESH_MS);
+  const { ok, out } = kept !== undefined ? { ok: true, out: kept } : await planAnswer(sb);
   const access = ok ? parseAccess(out) : null;
   if (access) rememberAccess(out);
   return access;
@@ -270,7 +328,7 @@ export function rememberedAccess(): HorizonAccess | null {
   } catch { return null; }
 }
 /** Forget the kept answer: on signing out, and after anything that changes it (a horizon set, a plan bought). */
-export function forgetAccess() { try { sessionStorage.removeItem(ACCESS_KEY); } catch { /* nothing was kept */ } }
+export function forgetAccess() { lastPlan = null; try { sessionStorage.removeItem(ACCESS_KEY); } catch { /* nothing was kept */ } }
 
 // ── Horizon as a programme (canvas "Verve, Horizon as a programme"; built for test accounts, 16 November 2026) ──
 
@@ -417,12 +475,14 @@ export async function saveChartDay(sb: SupabaseClient, horizonId: string, userId
 let watchReady: boolean | null = null;
 export async function watchedReady(sb: SupabaseClient): Promise<boolean> {
   if (watchReady != null) return watchReady;
-  try {
-    const { error } = await sb.from("horizon_watched").select("id").limit(1);
-    if (!error) return (watchReady = true);
-    if (isMissingRelation(error)) return (watchReady = false);
-    return false;
-  } catch { return false; }
+  return shared(going, "watched-ready", async () => {
+    try {
+      const { error } = await sb.from("horizon_watched").select("id").limit(1);
+      if (!error) return (watchReady = true);
+      if (isMissingRelation(error)) return (watchReady = false);
+      return false;
+    } catch { return false; }
+  });
 }
 /**
  * A horizon's watched markers, oldest first. They are their owner's alone: the database gives a coach none, and the

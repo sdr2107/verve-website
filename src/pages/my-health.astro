@@ -4429,9 +4429,9 @@ import { STORY } from "../data/story";
       const kept = alreadyKept(k, filed) || await insertFirstNumber(supabase as any, keepRow(k, { userId, personId: own.id }));
       if (!kept) return;
       // the plan first: only an account the server calls Free, with its trial unspent, starts one
-      const info = await settingsView.refreshPlan();
+      const info = await settingsView.refreshPlan(true);   // never an answer that left before this moment: a trial is spent on it
       const trial = trialOffered(info) ? await startWebTrial(supabase as any) : null;
-      if (trial?.started) void settingsView.refreshPlan();
+      if (trial?.started) void settingsView.refreshPlan(true);
       const weekly = k.weekly ? (await saveWeekly(supabase as any, userId, true, browserZone())).state === "on" : false;
       try { localStorage.removeItem(KEEP_KEY); } catch { /* it will be seen as already kept next time */ }
       const outcome: KeepOutcome = { kept: true, mets: k.mets, trial, weekly };
