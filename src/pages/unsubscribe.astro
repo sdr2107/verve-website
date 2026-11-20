@@ -5,6 +5,8 @@
  * newsletter_unsubscribe with the anon key, which marks the row and
  * returns the address, and says done. No sign-in, no email, no second
  * step. A missing or unknown token says so and points at the Start page.
+ * Once an address is off, one button on the same page puts it back (the
+ * same token, newsletter_confirm), for the person who pressed by mistake.
  *
  * The same page turns off a horizon's check-in email: that link carries the
  * horizon's own token (?h=...), the page calls horizon_email_off with the
@@ -27,7 +29,11 @@ import Footer from "../components/Footer.astro";
   <main class="mx-auto flex w-full max-w-[720px] flex-col gap-5 px-4 pb-24 pt-16 sm:px-6">
     <h1 id="title" class="text-[34px] font-extrabold leading-[1.05] tracking-[-0.03em] text-text-primary sm:text-[40px]">One moment.</h1>
     <p id="body" class="text-[17px] leading-relaxed text-text-secondary">Taking your address off the list.</p>
-    <a id="back" href="/start" class="mt-2 inline-flex min-h-11 items-center self-start rounded-xl border border-ink/20 px-5 font-semibold text-text-primary transition-colors hover:border-ink/35">Back to Start here</a>
+    <div class="mt-2 flex flex-wrap gap-3">
+      <a id="back" href="/start" class="inline-flex min-h-11 items-center rounded-xl border border-ink/20 px-5 font-semibold text-text-primary transition-colors hover:border-ink/35">Back to Start here</a>
+      <!-- shown only after a letter's address has been taken off: the same token puts it back -->
+      <button id="undo" type="button" class="hidden min-h-11 items-center rounded-xl border border-ink/20 px-5 font-semibold text-text-primary transition-colors hover:border-ink/35 disabled:opacity-60">Put me back on the list</button>
+    </div>
   </main>
   <Footer />
 </Layout>
@@ -87,6 +93,18 @@ import Footer from "../components/Footer.astro";
       return;
     }
     title.textContent = "Done. No more letters.";
-    body.textContent = `${email} is off the list, as of now. The sheet you have is yours to keep. If this was a mistake, the box on the Start page puts you back on.`;
+    body.textContent = `${email} is off the list, as of now. The sheet you have is yours to keep. If this was a mistake, one press puts you back.`;
+    // the way back: the same token, the same press the first letter carries (newsletter_confirm)
+    const undo = document.getElementById("undo") as HTMLButtonElement;
+    undo.classList.remove("hidden"); undo.classList.add("inline-flex");
+    undo.addEventListener("click", async () => {
+      undo.disabled = true;
+      let back: unknown = null, failed = false;
+      try { const res = await supabase.rpc("newsletter_confirm", { token }); back = res.data; failed = !!res.error; } catch { failed = true; }
+      if (failed || !(Array.isArray(back) && back[0]?.email)) { undo.disabled = false; body.textContent = `${email} is still off the list: putting it back did not work just now. Try the button again in a minute.`; return; }
+      title.textContent = "Back on the list.";
+      body.textContent = `${email} gets the weekly letter again. Every letter has an Unsubscribe button.`;
+      undo.classList.add("hidden"); undo.classList.remove("inline-flex");
+    });
   })();
 </script>

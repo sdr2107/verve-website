@@ -11,14 +11,19 @@
  * each answer changes one thing on the page that follows (../data/programme.ts BARRIERS). The fourth says what
  * Horizon is, with nothing promised. The fifth is one action.
  *
- * Nothing is sent anywhere. The answers are kept in this browser (localStorage "verve-way-in") and read by the
+ * The answers are sent nowhere. They are kept in this browser (localStorage "verve-way-in") and read by the
  * horizon's set-up after sign-in, which keeps them above the numbers and then clears them here.
+ *
+ * The one thing that leaves the page is an address, if the reader gives one: the box near the top
+ * (../components/LetterBox.astro; board 27, 19 November 2026) writes it to the letter's list and sends the first
+ * letter. A post's link may carry a word (?from=clip-12), kept with the address to say which post brought it.
  */
 import Layout from "../layouts/Layout.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import Footer from "../components/Footer.astro";
 import { AIMS, BARRIERS } from "../data/programme.ts";
-import { ACCOUNT_PATH } from "../data/site.ts";
+import { ACCOUNT_PATH, GET_APP_PATH } from "../data/site.ts";
+import LetterBox from "../components/LetterBox.astro";
 
 const chip = "inline-flex min-h-10 items-center rounded-full border border-border-strong bg-alt px-4 text-[14px] font-medium text-text transition-colors hover:border-accent-border aria-pressed:border-accent-border aria-pressed:bg-accent-fill aria-pressed:text-accent-text";
 const section = "flex flex-col gap-3 border-t border-border pt-7";
@@ -30,9 +35,17 @@ const num = "inline-flex h-7 w-7 items-center justify-center rounded-full border
   <main class="mx-auto flex w-full max-w-[760px] flex-col gap-7 px-4 pb-24 pt-12 sm:px-6" data-way-in>
     <header class="flex flex-col gap-3">
       <p class="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-text-3">Horizon</p>
-      <h1 class="m-0 text-[32px] font-semibold leading-[1.12] tracking-[-0.02em] text-text sm:text-[38px]">Where do you want to be in three months?</h1>
-      <p class="m-0 text-[16px] leading-relaxed text-text-2">Five questions. They end in a horizon: a date, the numbers you want by then, and the week that gets you there. You set every number.</p>
+      <h1 class="m-0 text-[32px] font-semibold leading-[1.12] tracking-[-0.02em] text-text sm:text-[38px]">Your week says where you are. A horizon says where you want to be.</h1>
+      <p class="m-0 text-[16px] leading-relaxed text-text-2">A date, the numbers you want different by then, and the week that gets you there. You set every number. Verve promises no result.</p>
     </header>
+
+    <LetterBox questions="#questions" />
+    <p class="m-0 -mt-3 text-[13px] leading-relaxed text-text-3">Or start without leaving an address: <a href="/#find-your-number" class="font-semibold text-accent-text hover:text-text">take the walk test</a> · <a href={GET_APP_PATH} target="_blank" rel="noopener" class="font-semibold text-accent-text hover:text-text">get the app</a></p>
+
+    <div id="questions" class="flex scroll-mt-6 flex-col gap-2 border-t border-border pt-7">
+      <h2 class="m-0 text-[24px] font-semibold leading-tight tracking-[-0.01em] text-text">Where do you want to be in three months?</h2>
+      <p class="m-0 text-[15px] leading-relaxed text-text-2">Five questions. They end in a horizon: a date, the numbers you want by then, and the week that gets you there.</p>
+    </div>
 
     <section class={section} aria-labelledby="q1">
       <span class={num}>1</span>
