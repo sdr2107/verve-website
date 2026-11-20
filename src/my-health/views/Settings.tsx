@@ -27,10 +27,13 @@ import {
 } from "../account.ts";
 import { fetchPlan, loadWeekly, saveWeekly, startWebTrial } from "../accountApi.ts";
 import { derived, person } from "../state.ts";
+import { remember } from "../known.ts";
 import { arrivalsOf } from "../derive/arrivals.ts";
 
-/** The plan as the server knows it; null until it answers, and when it cannot. */
+/** The plan as the server knows it, or as it last said on this browser (../known.ts); null when neither is in hand. */
 export const planInfoSignal = signal<PlanInfo | null>(null);
+/** The server has been asked on this load and has answered or failed. Until then the line under the name stays empty, never "Free". */
+export const planAnswered = signal(false);
 const weeklySignal = signal<WeeklyState | null>(null);
 const horizonsSignal = signal<HorizonFull[] | "off" | null>(null);
 const themeSignal = signal<ThemeChoice>("light");
@@ -54,7 +57,16 @@ export function mountSettings(roots: { plan: HTMLElement; email: HTMLElement; ap
   themeSignal.value = getTheme();
   // the footer's control and another tab write the same choice: this one follows
   document.addEventListener(THEME_EVENT, () => { themeSignal.value = getTheme(); });
-  const refreshPlan = async () => { const info = await fetchPlan(deps.supabase, deps.url, deps.anonKey); planInfoSignal.value = info; return info; };
+  // An answer replaces what was known and is kept for the next visit. No answer leaves the last one standing:
+  // a failed call used to turn a Pro account's line to "Free" until the next one.
+  const refreshPlan = async () => {
+    const uid = deps.userId();
+    const info = await fetchPlan(deps.supabase, deps.url, deps.anonKey, uid);
+    if (deps.userId() !== uid) return info;                 // another account signed in meanwhile
+    if (info) { planInfoSignal.value = info; if (uid) remember(uid, { plan: info }); }
+    planAnswered.value = true;
+    return info;
+  };
   const refreshEmail = async () => {
     const uid = deps.userId();
     if (uid) weeklySignal.value = await loadWeekly(deps.supabase, uid);

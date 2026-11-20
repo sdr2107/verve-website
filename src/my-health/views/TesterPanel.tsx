@@ -22,7 +22,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PersonData } from "../derive/person.ts";
 import { openTargets, pacesOf, toTarget, type Target } from "../horizon/derive.ts";
 import { todayStr } from "../derive/format.ts";
-import { derived, horizons, isTester } from "../state.ts";
+import { derived, horizons, isTester, testerState } from "../state.ts";
+import { waitingWords } from "../known.ts";
 import { guidePlan, isGuideStored, type GuideStored } from "../horizon/guidePlan.ts";
 import { guidePlanReady, listWeekNotes, loadPanel, type HorizonFull } from "../horizon/api.ts";
 import { fill, horizonFacts, type Facts } from "../horizon/facts.ts";
@@ -154,7 +155,7 @@ function TeamPage({ sb }: { sb: SupabaseClient }) {
   const [reader, setReader] = useState(false);
   const [view, setView] = useState<"list" | "notes">("notes");
   useEffect(() => { let on = true; if (!tester) { setReader(false); return; } void listReader(sb).then((r) => { if (on) { setReader(r); if (r) setView("list"); } }); return () => { on = false; }; }, [tester]);
-  if (!tester) return <Quiet>This page holds notes for Verve's own test accounts. There is nothing on it for this account.</Quiet>;
+  if (!tester) return <Quiet>{waitingWords(testerState.value, "This page holds notes for Verve's own test accounts. There is nothing on it for this account.")}</Quiet>;
   const h = (hs ?? []).find((x) => !x.closed_at && x.programme) ?? null;
   const tab = (key: "list" | "notes", label: string) => (
     <button type="button" role="tab" aria-selected={view === key} onClick={() => setView(key)}

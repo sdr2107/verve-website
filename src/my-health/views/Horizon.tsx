@@ -34,7 +34,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PersonData } from "../derive/person.ts";
 import { addDays, daysBetween, mondayOf, todayStr } from "../derive/format.ts";
 import { actsByDay } from "../derive/activity.ts";
-import { horizons as horizonsSignal, guideDraft, setGuideDraft, isTester, doc as docSignal } from "../state.ts";
+import { horizons as horizonsSignal, guideDraft, setGuideDraft, isTester, testerState, doc as docSignal } from "../state.ts";
 import { chartSharedWith } from "../horizon/chart.ts";
 import { arrivalsOf, followable, leftOff, pausedWords } from "../derive/arrivals.ts";
 import {
@@ -47,7 +47,7 @@ import {
 import { movedWords, pauseState, pauseWhyWords, type PauseChoice, type PauseKey, type PauseState, type PauseWhy } from "../horizon/pause.ts";
 import {
   listHorizons, startHorizon, requestCheckin, grantConsent, savePlan, updateHorizon, deleteHorizon, pauseHorizon, addTarget, removeTarget, updateTarget, saveGuidePlan, ERROR_WORDS,
-  fetchAccess, rememberedAccess, guidePlanReady, programmeTester, loadDayName, watchedReady, listWatched,
+  fetchAccess, rememberedAccess, guidePlanReady, testerAnswer, loadDayName, watchedReady, listWatched,
   type HorizonFull, type PlanAuthor, type StartTarget, type ApiError, type HorizonAccess,
 } from "../horizon/api.ts";
 import { midweekOf, planRowsNow } from "../horizon/midweek.ts";
@@ -269,7 +269,7 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
   const [access, setAccess] = useState<HorizonAccess | null>(() => rememberedAccess());
   const [guideOn, setGuideOn] = useState(false);
   // Horizon as a programme is built for test accounts only (api.ts programmeTester); "My own targets" opens the set-up as it was
-  const [tester, setTester] = useState(false);
+  const [tester, setTester] = useState(() => isTester.value);
   const [ownTargets, setOwnTargets] = useState(false);
   // watched markers can be kept for this project (board 19; api.ts watchedReady)
   const [watchOn, setWatchOn] = useState(false);
@@ -288,8 +288,10 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
       // The two things that decide which page is drawn (the test list, the Guide's plan) are asked beside the horizons
       // and set with them, so the page is drawn once. They used to arrive a moment later, and the page drew itself
       // twice: the plain set-up, then the programme's; the horizon, then its cards (the founder, 17 November 2026).
-      const [hs, isTest, guide, watch] = await Promise.all([listHorizons(deps.supabase, personId, true), programmeTester(deps.supabase), guidePlanReady(deps.supabase), watchedReady(deps.supabase)]);
-      setTester(isTest); isTester.value = isTest; setGuideOn(guide); setWatchOn(watch);
+      const [hs, asked, guide, watch] = await Promise.all([listHorizons(deps.supabase, personId, true), testerAnswer(deps.supabase, (await userId()) ?? undefined), guidePlanReady(deps.supabase), watchedReady(deps.supabase)]);
+      // an answer sets the flag; "could not be asked" leaves what the page already knows (the last visit's answer)
+      const isTest = asked ?? isTester.value;
+      setTester(isTest); if (asked != null) { isTester.value = asked; testerState.value = "known"; } setGuideOn(guide); setWatchOn(watch);
       loadedFor.current = personId;
       setList(hs); horizonsSignal.value = hs; setLoadError(""); setOff(false); deps.onOff?.(false);
       if (hs.length) setPro("yes");

@@ -42,7 +42,14 @@ import { STORY } from "../data/story";
        costs nothing: the client does its work as before. The address and
        the key come from src/lib/supabase.ts through define:vars, one
        source; the person is the one the page remembered in session
-       storage, as boot reads it. -->
+       storage, as boot reads it.
+
+       Two small questions go out beside the document (20 November 2026):
+       whether the account is on the list of test accounts, and its plan.
+       Both used to be asked by the bundle some seconds into the page, and
+       until they answered the page read "Free" and told a test account
+       that its own pages held nothing. Each answers null when it cannot
+       be asked, and the bundle then asks as it did before. -->
   <script is:inline data-astro-rerun define:vars={{ url: SUPABASE_URL, key: SUPABASE_ANON_KEY }}>
     (function () {
       try {
@@ -56,11 +63,20 @@ import { STORY } from "../data/story";
         var person = "";
         try { person = sessionStorage.getItem("mh-person") || ""; } catch (e) { /* fine */ }
         var started = performance.now();
-        window.__mh = { person: person, started: started, document: fetch(url + "/rest/v1/rpc/my_health_document", {
+        var uid = (session.user && session.user.id) || "";
+        var headers = { apikey: key, Authorization: "Bearer " + token, "Content-Type": "application/json", Accept: "application/json" };
+        var nothing = function () { return null; };
+        window.__mh = { person: person, user: uid, started: started, document: fetch(url + "/rest/v1/rpc/my_health_document", {
           method: "POST",
-          headers: { apikey: key, Authorization: "Bearer " + token, "Content-Type": "application/json", Accept: "application/json" },
+          headers: headers,
           body: JSON.stringify(person ? { person: person } : {}),
-        }).then(function (r) { if (!r.ok) throw new Error("rpc " + r.status); return r.json(); }) };
+        }).then(function (r) { if (!r.ok) throw new Error("rpc " + r.status); return r.json(); }),
+          // the same request the client makes: the account's own row on the list, or no row
+          tester: uid ? fetch(url + "/rest/v1/programme_testers?select=user_id&user_id=eq." + encodeURIComponent(uid), { headers: headers })
+            .then(function (r) { if (!r.ok) throw new Error("testers " + r.status); return r.json(); })
+            .then(function (rows) { return Array.isArray(rows) ? rows.length > 0 : null; }).catch(nothing) : null,
+          plan: uid ? fetch(url + "/functions/v1/horizon", { method: "POST", headers: headers, body: JSON.stringify({ action: "plan" }) })
+            .then(function (r) { if (!r.ok) throw new Error("plan " + r.status); return r.json(); }).catch(nothing) : null };
       } catch (e) { /* no head start; the bundle fetches as before */ }
     })();
   </script>
@@ -1019,18 +1035,19 @@ import { STORY } from "../data/story";
   import { effect } from "@preact/signals";
   import { mountTeamPage } from "../my-health/views/TesterPanel.tsx";
   import { mountOfferPage, loadOffer, forgetOffer } from "../my-health/views/Offer.tsx";
-  import { isTester as isTesterSignal } from "../my-health/state";
+  import { isTester as isTesterSignal, testerState } from "../my-health/state";
+  import { recall, remember, forget as forgetKnown } from "../my-health/known";
   import { derived as derivedSignal, doc as docSignal, person as personSignal, people as peopleSignal, firstName as firstNameSignal, myRole as myRoleSignal, section as sectionSignal, setSection as setSectionState, sectionFor, latestRead as latestReadSignal, readOf, activeTab as activeTabSignal, searchQuery as searchQuerySignal, depthLocked as depthLockedSignal, depthWorking as depthWorkingSignal, actions, openLabs, space as spaceSignal, isClient } from "../my-health/state";
   import { mountOverview } from "../my-health/views/Overview";
   import { mountBody } from "../my-health/views/Body";
   import { mountDepth } from "../my-health/views/Depth";
   import { mountHorizon } from "../my-health/views/Horizon.tsx";
   import { mountFitnessCard, openFitnessRead } from "../my-health/views/FitnessEntry.tsx";
-  import { programmeTester, forgetAccess } from "../my-health/horizon/api.ts";
+  import { programmeTester, testerAnswer, forgetTester, forgetAccess } from "../my-health/horizon/api.ts";
   import { clearSetup } from "../my-health/horizon/setupCards.ts";
   import { mountMondayList } from "../my-health/views/Programme.tsx";
   import { mountPlanSheet } from "../my-health/views/PlanSheet.tsx";
-  import { mountSettings, planInfoSignal } from "../my-health/views/Settings.tsx";
+  import { mountSettings, planInfoSignal, planAnswered } from "../my-health/views/Settings.tsx";
   import { KEEP_KEY, SETTINGS_SECTIONS, alreadyKept, browserZone, isSettingsSection, keepCard, keepLine, keepRow, parseKeep, planLine, trialOffered, type Keep, type KeepOutcome, type SettingsSection } from "../my-health/account";
   import { insertFirstNumber, saveWeekly, startWebTrial, websiteNumbers } from "../my-health/accountApi";
   import { mountReports } from "../my-health/views/Reports";
@@ -1051,11 +1068,11 @@ import { STORY } from "../data/story";
   // load path is judged by these, never by feel. docs/my-health-architecture.md.
   const TIMING = (() => { try { return new URLSearchParams(location.search).has("timing") || localStorage.getItem("mh-timing") === "1"; } catch { return false; } })();
   const marked = new Set<string>();
-  const mark = (name: string) => { if (marked.has(name)) return; marked.add(name); performance.mark(`mh:${name}`); if (name === "painted" || name === "fresh" || name === "interaction") report(); };
+  const mark = (name: string) => { if (marked.has(name)) return; marked.add(name); performance.mark(`mh:${name}`); if (name === "painted" || name === "fresh" || name === "interaction" || name === "plan" || name === "tester") report(); };
   function report() {
     if (!TIMING) return;
     const t0 = performance.getEntriesByName("mh:script")[0]?.startTime ?? 0;
-    const rows = ["session", "cached", "headstart", "people", "document", "painted", "fresh", "interaction"].map((n) => {
+    const rows = ["session", "cached", "headstart", "people", "document", "painted", "fresh", "plan", "tester", "interaction"].map((n) => {
       const e = performance.getEntriesByName(`mh:${n}`)[0];
       return { mark: n, ms: e ? Math.round(e.startTime - t0) : null };
     }).filter((r) => r.ms != null);
@@ -2696,6 +2713,24 @@ import { STORY } from "../data/story";
       try { const d = localStorage.getItem(COACH_DOOR); coachDoor = d === "1" || d === "coach" || d === "clinician"; localStorage.removeItem(COACH_DOOR); } catch { /* private mode */ }
       userId = session.user.id;
       userEmail = session.user.email ?? "";
+      // What the last visit learned about this account, at once: the plan's line, and whether this is a test
+      // account (../my-health/known.ts). Both are asked again behind it, first through the head start. Until
+      // 20 November 2026 the test-account answer was asked only by the Horizon view, some seconds into the
+      // page, and a reload began the wait again (the founder's recordings).
+      const known = recall(userId);
+      planInfoSignal.value = known.plan ?? null; planAnswered.value = false;
+      isTesterSignal.value = known.tester === true; testerState.value = known.tester != null ? "known" : "asking";
+      const askedFor = userId;
+      const askTester = (again: boolean) => void testerAnswer(supabase as any, askedFor).then((t) => {
+        if (userId !== askedFor) return;                                 // another account signed in meanwhile
+        if (t == null) {                                                 // it could not be asked: once more, then say so
+          if (again) window.setTimeout(() => askTester(false), 3000);
+          else if (testerState.value === "asking") testerState.value = "failed";
+          return;
+        }
+        isTesterSignal.value = t; testerState.value = "known"; remember(askedFor, { tester: t }); mark("tester");
+      });
+      askTester(true);
       showWhoAmI(session.user);
       askForNewsletter(session.user);
       appLink?.classList.add("hidden"); signinLink?.classList.add("hidden");
@@ -2753,6 +2788,8 @@ import { STORY } from "../data/story";
     } else {
       firstName = "";
       people = []; person = null;
+      // nobody is signed in: nothing is known, and the last account's answers do not carry over
+      planInfoSignal.value = null; planAnswered.value = false; isTesterSignal.value = false; testerState.value = "asking"; forgetTester();
       dim("peoplewrap", true);
       appLink?.classList.remove("hidden"); signinLink?.classList.add("hidden");
       show("auth", true); show("home", false); showIf("signout", false); dim("whoami", true);
@@ -3286,7 +3323,7 @@ import { STORY } from "../data/story";
   async function signOut() {
     if (userId) await clearDocuments(userId);
     // what Horizon kept for this tab goes with the session: a set-up's answers, and the last answer about access
-    clearSetup(); forgetAccess(); forgetOffer();
+    clearSetup(); forgetAccess(); forgetOffer(); forgetTester(); if (userId) forgetKnown(userId);
     await supabase.auth.signOut();
     boot();
   }
@@ -3306,7 +3343,7 @@ import { STORY } from "../data/story";
       return;
     }
     if (userId) await clearDocuments(userId);
-    clearSetup(); forgetAccess(); forgetOffer();
+    clearSetup(); forgetAccess(); forgetOffer(); forgetTester(); if (userId) forgetKnown(userId);
     await supabase.auth.signOut();
     boot();
   });
@@ -4308,8 +4345,14 @@ import { STORY } from "../data/story";
     openPlanSheet: () => planSheet.open(),
     goHorizon: () => openHorizon("#horizon-new"),
   });
-  // the line under the name is the plan as the server knows it; "Free" until it answers, and when it cannot
-  effect(() => { $("acctplan").textContent = planLine(planInfoSignal.value); });
+  // The line under the name is the plan as the server knows it, on this load or from the last visit. Until one
+  // of those is in hand it is empty: it used to read "Free" for those seconds, which is a statement about an
+  // account and was wrong for a Pro one. Once the server has been asked and could not say, it reads "Free" as before.
+  effect(() => {
+    const info = planInfoSignal.value, answered = planAnswered.value;
+    $("acctplan").textContent = info || answered ? planLine(info) : "\u00a0";
+    if (answered) mark("plan");
+  });
   /** The account block and Settings › Profile: the name on the account, or the address's first part when there is none. */
   function paintAccount() {
     const name = fullName || userEmail.split("@")[0] || "Your account";

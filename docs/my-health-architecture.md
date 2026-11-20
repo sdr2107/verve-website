@@ -456,3 +456,38 @@ from it. Measured on the production build with the token expired by
 hand: painted from the store at 37 ms while the refresh took until 487
 ms and the fresh document arrived at 1.9 s on a slow minute; before the
 change the page would have shown nothing until both had answered.
+
+**What the account is, known at once** (2026-11-20, from the founder's
+recordings): a test account opened Settings › For the team and read
+"There is nothing on it for this account", and the line under the name
+read "Free" on a Pro account, for 12 to 16 seconds after every load. A
+reload began the wait again, so the page could not be reached by
+reloading. Three things were wrong, and one was not ours:
+
+- The question "is this a test account" was asked by nobody but the
+  Horizon view, inside its own load, after the figures were drawn.
+- While it had no answer the page said "nothing here" and "Free", which
+  are statements about an account, not a wait.
+- A first ask that failed was kept as "no" for as long as the page
+  stayed open.
+- Not ours: measured in the built-in browser with a signed-in session,
+  every request left within 100 ms and, on a slow minute, came back 7 to
+  12 seconds later, the head start's included. On a quick minute the same
+  requests took 0.3 to 0.7 seconds. The database's own statistics show
+  small housekeeping statements taking half a second and more. The wait
+  is the server's, and it comes and goes.
+
+Now the head start asks two more things beside the document: the
+account's own row on the list of test accounts, and its plan. The page
+keeps both answers in local storage per account (`known.ts`), opens on
+them, and asks again behind them. A page only a test account is shown
+says "Checking this account…" until it has an answer, and "Could not
+check this account just now" when two asks fail. The line under the name
+is empty until a plan is in hand. Signing out forgets what was kept. The
+ruler gained two marks, `plan` and `tester`. Measured on the production
+build while the server took 4 seconds to answer: the right plan and the
+right page at the first frame.
+
+Still open: one load asks the horizon function for the plan four times,
+and for the horizons and their plans two and three times. On a server
+that is short of breath, that is load it does not need.

@@ -19,7 +19,8 @@ import { useEffect, useState } from "preact/hooks";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { openTargets, toTarget } from "../horizon/derive.ts";
 import { todayStr } from "../derive/format.ts";
-import { actions, derived, horizons, isTester } from "../state.ts";
+import { actions, derived, horizons, isTester, testerState } from "../state.ts";
+import { waitingWords } from "../known.ts";
 import { guidePlanReady, loadPanel, type HorizonFull } from "../horizon/api.ts";
 import { fill, type Facts } from "../horizon/facts.ts";
 import { isOfferBody, markWeekSheetSeen, offerDates, onTheDate, verdictOf, weekDue, weekSheetSeen, type OfferBody, type OfferLine } from "../horizon/offer.ts";
@@ -38,11 +39,13 @@ export function loadOffer(sb: SupabaseClient): Promise<OfferBody | null> {
 }
 /** On sign-out: the next account reads for itself. */
 export const forgetOffer = (): void => { row = null; };
-function useOffer(sb: SupabaseClient, on: boolean): OfferBody | null {
-  const [body, setBody] = useState<OfferBody | null>(null);
+/** The row's body; null when there is none for this account; undefined while it is being read. */
+function useOffer(sb: SupabaseClient, on: boolean): OfferBody | null | undefined {
+  const [body, setBody] = useState<OfferBody | null | undefined>(on ? undefined : null);
   useEffect(() => {
     let live = true;
     if (!on) { setBody(null); return; }
+    setBody(undefined);
     void loadOffer(sb).then((b) => { if (live) setBody(b); });
     return () => { live = false; };
   }, [on]);
@@ -129,7 +132,10 @@ function OfferPage({ sb }: { sb: SupabaseClient }) {
   const h = horizonFor(hs, today);
   const targets = h ? openTargets(h.targets).map(toTarget) : [];
   const counts = useHorizonFacts(sb, { h, targets, person, today, guideOn, share: typeof body?.share === "number" ? body.share : undefined, on: !!body && !!h });
-  if (!tester || !body) return <Quiet>There is nothing on this page for this account.</Quiet>;
+  // "Checking" while the account or the row is still being read: the page used to say "nothing" for those seconds
+  if (!tester) return <Quiet>{waitingWords(testerState.value, "There is nothing on this page for this account.")}</Quiet>;
+  if (body === undefined) return <Quiet>{waitingWords("asking", "")}</Quiet>;
+  if (!body) return <Quiet>There is nothing on this page for this account.</Quiet>;
   if (!h) return body.page?.none ? <p class="m-0 text-[14px] leading-relaxed text-text-2">{body.page.none}</p> : <Quiet>With a horizon set, this page says what goes with it.</Quiet>;
   const facts: Facts = { ...counts, ...offerDates(h, today, body.months) };
   const say = (t?: string) => fill(t ?? "", facts);

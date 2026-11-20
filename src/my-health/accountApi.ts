@@ -9,7 +9,17 @@ import { isMissingRelation } from "./horizon/errors.ts";
 import { type FirstNumberRow, type PlanInfo, type TrialAnswer, type WeeklyState, parsePlan, parseTrial } from "./account.ts";
 
 /** The plan as the server knows it; null on anything but a 200 in the contract's shape. */
-export async function fetchPlan(sb: SupabaseClient, url: string, anonKey: string): Promise<PlanInfo | null> {
+export async function fetchPlan(sb: SupabaseClient, url: string, anonKey: string, uid?: string): Promise<PlanInfo | null> {
+  // The head start's answer, once, when it was asked for this account: my-health.astro asks as the page is
+  // parsed, beside the document, so the line under the name does not wait for the client to be ready.
+  try {
+    const head = (globalThis as any).__mh as { user?: string; plan?: Promise<unknown>; planTaken?: boolean } | undefined;
+    if (uid && head && head.user === uid && head.plan && !head.planTaken) {
+      head.planTaken = true;
+      const early = parsePlan(await head.plan);
+      if (early) return early;
+    }
+  } catch { /* no head start: ask as before */ }
   try {
     const { data } = await sb.auth.getSession();
     const token = data.session?.access_token;
