@@ -29,6 +29,7 @@ import { guidePlanReady, listWeekNotes, loadPanel, type HorizonFull } from "../h
 import { fill, horizonFacts, type Facts } from "../horizon/facts.ts";
 import type { WeekNote } from "../horizon/programme.ts";
 import { listReader } from "../list/api.ts";
+import { TheLetter } from "./TheLetter.tsx";
 import { TheList } from "./TheList.tsx";
 
 type Step = { small?: string; head?: string; text?: string; week?: number };
@@ -153,23 +154,21 @@ function TeamPage({ sb }: { sb: SupabaseClient }) {
   useEffect(() => { let on = true; void guidePlanReady(sb).then((g) => { if (on) setGuideOn(g); }); return () => { on = false; }; }, []);
   // the letter's list, for an account the database names as its reader (../list/api.ts); it opens first
   const [reader, setReader] = useState(false);
-  const [view, setView] = useState<"list" | "notes">("notes");
+  const [view, setView] = useState<"list" | "letter" | "notes">("notes");
   useEffect(() => { let on = true; if (!tester) { setReader(false); return; } void listReader(sb).then((r) => { if (on) { setReader(r); if (r) setView("list"); } }); return () => { on = false; }; }, [tester]);
   if (!tester) return <Quiet>{waitingWords(testerState.value, "This page holds notes for Verve's own test accounts. There is nothing on it for this account.")}</Quiet>;
   const h = (hs ?? []).find((x) => !x.closed_at && x.programme) ?? null;
-  const tab = (key: "list" | "notes", label: string) => (
+  const tab = (key: "list" | "letter" | "notes", label: string) => (
     <button type="button" role="tab" aria-selected={view === key} onClick={() => setView(key)}
       class={`min-h-9 rounded-full px-3.5 text-[13px] font-semibold transition-colors ${view === key ? "bg-card text-text shadow-[0_1px_0_rgba(20,20,28,0.06)]" : "text-text-2 hover:text-text"}`}>{label}</button>
   );
-  if (reader && view === "list") return (
-    <div class="flex flex-col gap-4">
-      <div class="flex gap-1 self-start rounded-full border border-border bg-alt p-1" role="tablist" aria-label="For the team">{tab("list", "The list")}{tab("notes", "Our notes")}</div>
-      <TheList sb={sb} />
-    </div>
-  );
+  // the list and the letter are the reader's alone (board 32: the letter is the third tab, beside the list)
+  const tabs = <div class="flex flex-wrap gap-1 self-start rounded-full border border-border bg-alt p-1" role="tablist" aria-label="For the team">{tab("list", "The list")}{tab("letter", "The letter")}{tab("notes", "Our notes")}</div>;
+  if (reader && view === "list") return <div class="flex flex-col gap-4">{tabs}<TheList sb={sb} /></div>;
+  if (reader && view === "letter") return <div class="flex flex-col gap-4">{tabs}<TheLetter sb={sb} /></div>;
   return (
     <div class="flex flex-col gap-4">
-      {reader ? <div class="flex gap-1 self-start rounded-full border border-border bg-alt p-1" role="tablist" aria-label="For the team">{tab("list", "The list")}{tab("notes", "Our notes")}</div> : null}
+      {reader ? tabs : null}
       <Quiet>Our own notes, on test accounts only. Nobody else is shown this page, and nothing on it is offered to anyone. The words are rows in the database, not in the website's code.</Quiet>
       {h && person ? <HorizonPanel sb={sb} h={h} targets={openTargets(h.targets).map(toTarget)} person={person} today={todayStr()} guideOn={guideOn} /> : <Keyed sb={sb} panel="horizon" />}
       <Keyed sb={sb} panel="plans" />
