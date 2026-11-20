@@ -280,17 +280,40 @@ export function forgetAccess() { try { sessionStorage.removeItem(ACCESS_KEY); } 
  * coach's words on food and the lines about weight wait for the lawyers. A table that is not there, a row that is
  * not there and a network failure all read as "no". Asked once for the page.
  */
-let tester: Promise<boolean> | null = null;
-export function programmeTester(sb: SupabaseClient): Promise<boolean> {
-  return (tester ??= (async () => {
-    try {
-      const { data: { session } } = await sb.auth.getSession();
-      if (!session?.user?.id) return false;
-      const { data, error } = await sb.from("programme_testers").select("user_id").eq("user_id", session.user.id).maybeSingle();
-      return !error && !!data;
-    } catch { return false; }
-  })());
+let testerAsk: { uid: string; answer: Promise<boolean | null> } | null = null;
+/** The head start's answer (my-health.astro asks as the page is parsed, beside the document), when it was for this account. */
+function headTester(uid: string): Promise<boolean | null> | null {
+  try { const h = (globalThis as any).__mh; return h && h.user === uid && h.tester ? (h.tester as Promise<boolean | null>) : null; }
+  catch { return null; }
 }
+/**
+ * The same question with three answers: true, false, or null when it could not be asked (offline, a refused call,
+ * no session yet). null is not an answer. It is not kept, and the next caller asks again. Until 20 November 2026
+ * a failed first ask was kept as "no" for as long as the page stayed open.
+ */
+export function testerAnswer(sb: SupabaseClient, uid?: string): Promise<boolean | null> {
+  if (testerAsk && (!uid || testerAsk.uid === uid)) return testerAsk.answer;
+  const answer = (async (): Promise<boolean | null> => {
+    try {
+      let id = uid ?? "";
+      if (id) { const early = await (headTester(id) ?? Promise.resolve(null)); if (early != null) return early; }
+      if (!id) { const { data: { session } } = await sb.auth.getSession(); id = session?.user?.id ?? ""; }
+      if (!id) return null;
+      const { data, error } = await sb.from("programme_testers").select("user_id").eq("user_id", id).maybeSingle();
+      return error ? null : !!data;
+    } catch { return null; }
+  })();
+  const mine = { uid: uid ?? "", answer };
+  testerAsk = mine;
+  void answer.then((a) => { if (a == null && testerAsk === mine) testerAsk = null; });
+  return answer;
+}
+/** Yes or no, for a caller with nothing to fall back on: "could not be asked" reads as no. */
+export function programmeTester(sb: SupabaseClient): Promise<boolean> {
+  return testerAnswer(sb).then((a) => a === true);
+}
+/** Signing out: the answer was the last account's. */
+export function forgetTester(): void { testerAsk = null; }
 /**
  * A panel for test accounts (views/TesterPanel.tsx): the row's body, or null when it cannot be read. Its words live in
  * the database, not here: only an account in programme_testers can read programme_panels.

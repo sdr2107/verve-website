@@ -104,8 +104,13 @@ export const guideAsk = signal<{ window: WindowKey; working: Record<string, unkn
 // ── Horizon, for the pages beside it ──
 /** The person's horizons, open and closed, as the Horizon view last read them; null before it has. The Overview's cards and the Guide's doors read it. */
 export const horizons = signal<HorizonFull[] | null>(null);
-/** The signed-in account is on the list of test accounts for Horizon as a programme (horizon/api.ts programmeTester); set by the Horizon view once it knows. */
+/**
+ * The signed-in account is on the list of test accounts for Horizon as a programme (horizon/api.ts testerAnswer).
+ * Set as the page starts: at once from the last visit's answer (known.ts), then from the database's.
+ */
 export const isTester = signal(false);
+/** Whether that question has an answer yet. A page that only a test account is shown says "Checking" while it has none, never "nothing here". */
+export const testerState = signal<"asking" | "known" | "failed">("asking");
 /**
  * A line the Guide wrote, carried to Horizon as a draft: "Make it a target".
  * It is not a target until the person sets a number; "Leave it" clears it. Kept
