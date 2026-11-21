@@ -92,12 +92,15 @@ export const ACCOUNT_PATH = "/my-health";
 
 /** Help: for the moment something is not working (pages/help.astro, data/help.ts). In the footer, My health's account menu and under the sign-in card. */
 export const HELP_PATH = "/help";
+/** The letter's own page: one job, an address for the weekly letter (pages/newsletter.astro; board 34, 21 November 2026). In the footer of every page. */
+export const NEWSLETTER_PATH = "/newsletter";
 
-/** The footer's row: the bar's three, then the pages that are reached from inside others, then Help. */
+/** The footer's row: the bar's links, then the pages that are reached from inside others, then the newsletter and Help. */
 export const FOOTER_LINKS: { label: string; href: string }[] = [
   ...NAV.map((l) => ({ label: l.label, href: l.href })),
   { label: "Videos", href: "/videos" },
   { label: "The free sheet", href: "/sheet" },
+  { label: "Newsletter", href: NEWSLETTER_PATH },
   { label: "Help", href: HELP_PATH },
 ];
 

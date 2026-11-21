@@ -1,0 +1,59 @@
+---
+/**
+ * /newsletter — the letter's own page: one job, an address for the weekly letter (canvas "Verve, Horizon as a
+ * programme", board 34; asked for by the founder on 21 November 2026).
+ *
+ * Until this page, the letter's box was only on the Horizon page, which nothing on the site links to, so a visitor
+ * to the front page was never offered the letter by name. The footer of every page now carries "Newsletter"
+ * (../data/site.ts FOOTER_LINKS), and it leads here.
+ *
+ * The page says what the letter is in the sentence the welcome and /confirm already use, takes an address
+ * (../components/LetterBox.astro, door "newsletter", so the list counts this page on its own), and says what
+ * happens next. After an address is left the box offers two things to do, the sheet and the app.
+ *
+ * It says nothing about Horizon and carries no price and no offer: the Horizon page stays unlinked until Horizon
+ * has a price (the founder, same day). It can be found by search; the Horizon page cannot.
+ *
+ * Past letters: one link to the founder's Substack, where they are kept for now. When letters have a home on this
+ * site, they are listed here instead.
+ */
+import Layout from "../layouts/Layout.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import Footer from "../components/Footer.astro";
+import LetterBox from "../components/LetterBox.astro";
+import { SUBSTACK_URL } from "../data/site";
+
+const NEXT = [
+  "The first letter comes at once, from hello@verve-app.health. It says what Verve is and where to start.",
+  "One press inside it starts the weekly letter. Without the press, it is the only email you get.",
+  "Every letter has an Unsubscribe button. One click, and nothing else is sent.",
+];
+const num = "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-accent-border bg-accent-fill font-mono text-[11px] font-semibold text-accent-text";
+---
+
+<Layout title="Newsletter · Verve" description="The Verve letter: one email a week. One number, its threshold, the study behind it, and what to check." cardType="summary">
+  <SiteHeader />
+  <main class="mx-auto flex w-full max-w-[640px] flex-col gap-8 px-4 pb-24 pt-14 sm:px-6">
+    <div class="flex flex-col gap-3">
+      <span class="font-mono text-xs font-semibold uppercase tracking-[0.12em] text-accent-text">Newsletter</span>
+      <h1 class="text-[34px] font-extrabold leading-[1.08] tracking-[-0.03em] text-text sm:text-[40px]">The Verve letter</h1>
+      <p class="text-[17px] leading-relaxed text-text-2">One email a week. One number, its threshold, the study behind it, and what to check.</p>
+    </div>
+
+    <LetterBox door="newsletter" />
+
+    <section class="flex flex-col gap-3.5" aria-labelledby="newsnext">
+      <h2 id="newsnext" class="text-[17px] font-semibold text-text">What happens next</h2>
+      <ol class="m-0 flex list-none flex-col gap-3 p-0" role="list">
+        {NEXT.map((line, i) => (
+          <li class="flex gap-3"><span class={num} aria-hidden="true">{i + 1}</span><p class="m-0 text-[15px] leading-relaxed text-text">{line}</p></li>
+        ))}
+      </ol>
+    </section>
+
+    <p class="m-0 border-t border-border pt-5">
+      <a href={SUBSTACK_URL} target="_blank" rel="noopener" class="inline-flex min-h-11 items-center text-[15px] font-semibold text-accent-text underline-offset-4 hover:underline">Read past letters on Substack</a>
+    </p>
+  </main>
+  <Footer />
+</Layout>

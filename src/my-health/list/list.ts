@@ -26,7 +26,7 @@ export const stateOf = (r: ListRow): RowState => (r.unsubscribed_at ? "stopped" 
 
 /** The doors, in the order the page lists them; a door the page does not know is shown by its own name. */
 export const DOORS: Record<string, string> = {
-  horizon: "The Horizon page", start: "/start and /sheet", app: "The app's question", "my-health": "My health's question", substack: "Substack, copied in",
+  horizon: "The Horizon page", start: "/start and /sheet", newsletter: "The newsletter page", app: "The app's question", "my-health": "My health's question", substack: "Substack, copied in",
 };
 export const doorWords = (source: string): string => DOORS[source] ?? source;
 
