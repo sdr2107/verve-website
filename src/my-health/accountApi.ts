@@ -6,31 +6,19 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isMissingRelation } from "./horizon/errors.ts";
+import { planAnswer } from "./horizon/api.ts";
 import { type FirstNumberRow, type PlanInfo, type TrialAnswer, type WeeklyState, parsePlan, parseTrial } from "./account.ts";
 
 /** The plan as the server knows it; null on anything but a 200 in the contract's shape. */
-export async function fetchPlan(sb: SupabaseClient, url: string, anonKey: string, uid?: string): Promise<PlanInfo | null> {
-  // The head start's answer, once, when it was asked for this account: my-health.astro asks as the page is
-  // parsed, beside the document, so the line under the name does not wait for the client to be ready.
+/**
+ * It is the horizon function's `plan` answer, which also says what the account may do on Horizon: one request
+ * serves both (./horizon/api.ts planAnswer), and the first of a load is the head start's. `again` is for a caller
+ * that has just changed the plan (the trial was started): its answer must be younger than that.
+ */
+export async function fetchPlan(sb: SupabaseClient, again = false): Promise<PlanInfo | null> {
   try {
-    const head = (globalThis as any).__mh as { user?: string; plan?: Promise<unknown>; planTaken?: boolean } | undefined;
-    if (uid && head && head.user === uid && head.plan && !head.planTaken) {
-      head.planTaken = true;
-      const early = parsePlan(await head.plan);
-      if (early) return early;
-    }
-  } catch { /* no head start: ask as before */ }
-  try {
-    const { data } = await sb.auth.getSession();
-    const token = data.session?.access_token;
-    if (!token) return null;
-    const res = await fetch(`${url}/functions/v1/horizon`, {
-      method: "POST",
-      headers: { apikey: anonKey, Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "plan" }),
-    });
-    if (!res.ok) return null;
-    return parsePlan(await res.json());
+    const { ok, out } = await planAnswer(sb, again);
+    return ok ? parsePlan(out) : null;
   } catch { return null; }
 }
 
