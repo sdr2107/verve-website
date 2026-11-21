@@ -44,6 +44,7 @@ import Footer from "../components/Footer.astro";
     const email = Array.isArray(data) && (data[0] as { email?: string } | undefined)?.email ? String((data[0] as { email: string }).email) : "";
     if (!email) { title.textContent = "That link is not one of ours."; body.textContent = "Nothing was changed. The button in the first letter is the one that does this."; return; }
     title.textContent = "Done. The weekly letter is yours.";
-    body.textContent = `It comes to ${email} on Sunday: one number, its threshold, the study behind it, and what to check. Every letter has an Unsubscribe button.`;
+    // "once a week", and no day named: the letter goes when it is sent (the founder, 21 November 2026)
+    body.textContent = `It comes to ${email} once a week: one number, its threshold, the study behind it, and what to check. Every letter has an Unsubscribe button.`;
   })();
 </script>
