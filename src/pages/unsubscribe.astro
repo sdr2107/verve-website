@@ -85,7 +85,12 @@ import Footer from "../components/Footer.astro";
   })();
   else (async () => {
     if (!token) { title.textContent = "No link to act on."; body.textContent = "Open the Unsubscribe button in one of the letters; it carries the link that does this."; return; }
-    const { data, error } = await supabase.rpc("newsletter_unsubscribe", { token });
+    // a link in a weekly letter also says which letter it was pressed from (&l=<id>), so that letter's record can
+    // count who left after it; any other link, and a database that has no such function yet, take the plain way out
+    const from = new URLSearchParams(location.search).get("l") ?? "";
+    const fromLetter = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(from);
+    let { data, error } = fromLetter ? await supabase.rpc("letter_unsubscribe", { token, letter: from }) : await supabase.rpc("newsletter_unsubscribe", { token });
+    if (fromLetter && error) ({ data, error } = await supabase.rpc("newsletter_unsubscribe", { token }));
     const email = Array.isArray(data) && data[0]?.email ? String(data[0].email) : "";
     if (error || !email) {
       title.textContent = "That link is not one of ours.";

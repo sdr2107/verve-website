@@ -43,9 +43,12 @@ press in the welcome, our own sender, and a page to follow the list on.
 - **The Horizon page is still linked from no page of the site** (`tests/programme.test.mjs`). The first letter links
   to it, and posts will. Its door in the bar waits (board 30).
 
+## The weekly letter
+
+Sent from our own address since 20 November 2026: `../letter/WIRING.md`.
+
 ## Not built
 
-- Sending the weekly letter from our own sender. Until then it still goes from Substack.
-- The app's question.
+- The app's question: its own pull request in METTracker (`feat/letter-question`).
 - The block in the Monday email for an account with no horizon (board 26).
 - The clip on the Horizon page. No clip exists yet.
