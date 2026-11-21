@@ -90,11 +90,15 @@ export const NAV: NavLink[] = [
 /** The account entry at the top right: one address for both of its names. */
 export const ACCOUNT_PATH = "/my-health";
 
-/** The footer's row: the bar's three, then the pages that are reached from inside others. */
+/** Help: for the moment something is not working (pages/help.astro, data/help.ts). In the footer, My health's account menu and under the sign-in card. */
+export const HELP_PATH = "/help";
+
+/** The footer's row: the bar's three, then the pages that are reached from inside others, then Help. */
 export const FOOTER_LINKS: { label: string; href: string }[] = [
   ...NAV.map((l) => ({ label: l.label, href: l.href })),
   { label: "Videos", href: "/videos" },
   { label: "The free sheet", href: "/sheet" },
+  { label: "Help", href: HELP_PATH },
 ];
 
 export type SocialKey = "x" | "substack" | "tiktok" | "instagram" | "youtube";
