@@ -68,7 +68,7 @@ export const THEMES: { key: BeyondTheme; label: string; sub: string }[] = [
   { key: "heart-scans", label: "Heart scans", sub: "What a heart CT shows, and what a normal one can miss" },
   { key: "risk-family", label: "Risk and family history", sub: "How much each risk factor weighs, and what a family history leaves in your hands" },
   { key: "athletes-heart", label: "The athlete’s heart", sub: "What endurance training does to the heart, and the risk on race day" },
-  { key: "everyday-habits", label: "Everyday habits", sub: "Water, meal timing and smoking: what the studies support" },
+  { key: "everyday-habits", label: "Everyday habits", sub: "Water, coffee, meal timing and smoking: what the studies support" },
 ];
 
 export const VIDEOS: Video[] = [
@@ -142,7 +142,8 @@ export const VIDEOS: Video[] = [
   { slug: "arc-marathon-cpr", title: "Marathon running: low cardiac risk. Know two things.", seconds: 85, group: "wider-picture", theme: "athletes-heart", youtube: "ppSDuSG0IyQ", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-355056034", x: "https://x.com/RoplekarSudeep/status/2107821805897748540" } },
   { slug: "smoking-quit-any-age", title: "Smoking: quitting at any age gives years back", seconds: 69, group: "wider-picture", theme: "everyday-habits", youtube: "0Oo4km38ULM", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-366355403", x: "https://x.com/RoplekarSudeep/status/2112796544349143210" } },
   { slug: "arc-calories-timing", title: "Weight loss: total calories or meal timing?", seconds: 176, group: "wider-picture", theme: "everyday-habits", youtube: "BENUmKZdaGc", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-384451854", x: "https://x.com/RoplekarSudeep/status/2120451918233530513" } },
-  { slug: "arc-hydration-urine", title: "Your urine color: the simplest hydration test you have", seconds: 179, group: "wider-picture", theme: "everyday-habits", youtube: "hUf1tPZ4Tcs", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-391355233" } },
+  { slug: "arc-hydration-urine", title: "Your urine color: the simplest hydration test you have", seconds: 179, group: "wider-picture", theme: "everyday-habits", youtube: "hUf1tPZ4Tcs", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-391355233", x: "https://x.com/RoplekarSudeep/status/2123319688876953857" } },
+  { slug: "arc-coffee-last-cup", title: "Your last coffee: regular or decaf?", seconds: 179, group: "wider-picture", theme: "everyday-habits", youtube: "mYuxcdeObZU", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-393419714", x: "https://x.com/RoplekarSudeep/status/2124199740711813531" } },
 ];
 
 export const videoSrc = (v: Video) => `/video/${v.slug}/${v.slug}.mp4`;
