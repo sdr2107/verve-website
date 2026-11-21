@@ -24,8 +24,10 @@ test("an account whose address Apple hides says yes with the address it has", ()
 });
 
 test("an address Apple made is never printed: the page says whose it is", () => {
-  assert.match(page, /const addressWords = \(to: string\) => \(isRelay\(to\) \? "the address Apple keeps for you" : to\);/);
-  assert.match(code, /on its way to \$\{where\}, from hello@verve-app\.health/);
+  // the words are in ../src/data/letter.ts since 21 November 2026 (tests/letter-after.test.mjs reads them)
+  assert.match(page, /import \{ accountAfter, addressWords, afterKind \} from "\.\.\/data\/letter";/);
+  assert.match(code, /const to = userEmail\.trim\(\)\.toLowerCase\(\), where = addressWords\(to\);/);
+  assert.match(code, /said = accountAfter\(to, /);
   assert.doesNotMatch(code, /on its way to \$\{to\}|first letter to \$\{to\}|could not take \$\{to\}/);
 });
 

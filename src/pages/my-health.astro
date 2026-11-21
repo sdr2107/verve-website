@@ -1020,6 +1020,7 @@ import { STORY } from "../data/story";
   import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
   import { canonName, unitKey } from "../lib/canon.js";
   import { AUTO_SEND_TO_APP } from "../data/site";
+  import { accountAfter, addressWords, afterKind } from "../data/letter";
   import { PLANS_ENFORCED, PLANS_OPEN, AI_SUMMARY_OPEN, entitlements, planOf, type PlanKey } from "../data/plans";
   import type { MyHealthDocument } from "../my-health/document";
   import { esc, fmtDay, dayOf, dayWord, monthOf, monthYearOf, addDays, daysBack, daysBetween, localDay, mondayOf, todayStr, fmt1, round0, signed, fmtHM, fmtSleepMin, ordinal, medianOf, quartilesOf, byDate, kicker, plural } from "../my-health/derive/format";
@@ -2988,8 +2989,6 @@ import { STORY } from "../data/story";
   // hide their own is kept, and nothing is typed. The page never prints the
   // made address: it says "the address Apple keeps for you".
   // user_metadata.newsletter_email keeps which address said yes. ────────
-  const isRelay = (email: string) => /@privaterelay\.appleid\.com$/i.test(email);
-  const addressWords = (to: string) => (isRelay(to) ? "the address Apple keeps for you" : to);
   const newsSay = (text: string, bad = false) => {
     const el = $("newsmsg");
     el.textContent = text; el.classList.toggle("hidden", !text);
@@ -3020,14 +3019,16 @@ import { STORY } from "../data/story";
       return;
     }
     $("newsask").classList.add("hidden"); $("newsask").classList.remove("flex");
-    // the first letter, after the answer is saved; never the gate
-    let said = `Done. The first letter is on its way to ${where}, from hello@verve-app.health.`;
+    // the first letter, after the answer is saved; never the gate. An address on the list already (23505) is
+    // switched on by the function for the account that owns it: ../data/letter.ts, 21 November 2026.
+    const returning = rowErr?.code === "23505";
+    let said = accountAfter(to, returning ? "failed" : "later");
     try {
       const { data, error: fnErr } = await supabase.functions.invoke("newsletter-welcome", { body: { email: to } });
-      if (fnErr || !data?.sent) said = data?.reason === "already sent"
-        ? (isRelay(to) ? "You already had the first letter; the next ones follow." : `${to} already had the first letter; the next ones follow.`)
-        : `Saved. The first letter to ${where} could not go out just now; it goes within a day.`;
-    } catch { said = `Saved. The first letter to ${where} could not go out just now; it goes within a day.`; }
+      const kind = afterKind(data, !!fnErr);
+      // only a first letter is tried again within a day
+      said = accountAfter(to, returning && kind === "later" ? "failed" : kind);
+    } catch { /* said already */ }
     msg("upmsg", said);
   }
   $("newsyes").addEventListener("click", () => answerNewsletter(true));

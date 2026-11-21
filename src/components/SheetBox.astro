@@ -51,6 +51,7 @@ const { title = "Get the sheet", lede = "One A4 page: the test, the arithmetic, 
 <script>
   import { supabase } from "../lib/supabase";
   import { NEWSLETTER_CONSENT } from "../data/fitness-tiers";
+  import { afterKind, sheetAfter } from "../data/letter";
 
   const box = document.querySelector<HTMLElement>("[data-sheetbox]");
   if (box) {
@@ -79,19 +80,23 @@ const { title = "Get the sheet", lede = "One A4 page: the test, the arithmetic, 
       try { userId = (await supabase.auth.getSession()).data.session?.user.id ?? null; } catch { /* not signed in */ }
       const { error } = await supabase.from("newsletter_signups").insert({ email, consent_text: NEWSLETTER_CONSENT, source, user_id: userId });
       button.disabled = false;
-      if (error && error.code !== "23505") {        // 23505: already on the list, which is fine
+      // 23505: the address is on the list already. Its row is not written again; the function says what it needs.
+      const returning = error?.code === "23505";
+      if (error && !returning) {
         say("Could not save that just now. The sheet is still yours: open it below, and try the email again later.");
         done.classList.remove("hidden"); done.classList.add("flex");
         return;
       }
       say(""); finish();
+      // one on the list already is promised no copy until the function has answered (../data/letter.ts, 21 November 2026)
+      if (returning) mail.textContent = "The link above is the sheet.";
       // the copy by email, after the sheet is already on screen; never the gate
       try {
         const { data, error: fnErr } = await supabase.functions.invoke("newsletter-welcome", { body: { email } });
-        if (fnErr || !data?.sent) mail.textContent = data?.reason === "already sent"
-          ? "You already had the first letter by email; the link above is the same sheet. The press that starts the weekly letter is inside that email."
-          : "The email copy could not be sent just now; it will go out within a day. The link above is the same sheet.";
-      } catch { mail.textContent = "The email copy could not be sent just now; it will go out within a day. The link above is the same sheet."; }
+        const kind = afterKind(data, !!fnErr);
+        // only a first letter is tried again within a day
+        mail.textContent = sheetAfter(returning && kind === "later" ? "failed" : kind);
+      } catch { mail.textContent = sheetAfter(returning ? "failed" : "later"); }
     });
   }
 </script>
