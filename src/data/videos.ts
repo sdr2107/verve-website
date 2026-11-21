@@ -41,7 +41,7 @@ export const GROUPS: { key: VideoGroup; label: string; blurb: string }[] = [
   { key: "movement", label: "Movement", blurb: "How much, how hard, how often, and the rest of the day." },
   { key: "sleep-heart", label: "Sleep and heart", blurb: "What the watch reads while you sleep and in the minute after you stop." },
   { key: "body", label: "Body", blurb: "The markers, their bands, and what to repeat when." },
-  { key: "wider-picture", label: "The wider picture", blurb: "The studies behind the field, read one at a time." },
+  { key: "wider-picture", label: "The wider picture", blurb: "The studies behind everyday health, read one at a time." },
 ];
 
 export const VIDEOS: Video[] = [
@@ -115,6 +115,7 @@ export const VIDEOS: Video[] = [
   { slug: "smoking-quit-any-age", title: "Smoking: quitting at any age gives years back", seconds: 69, group: "wider-picture", youtube: "0Oo4km38ULM", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-366355403", x: "https://x.com/RoplekarSudeep/status/2112796544349143210" } },
   { slug: "arc-marathon-cpr", title: "Marathon running: low cardiac risk. Know two things.", seconds: 85, group: "wider-picture", youtube: "ppSDuSG0IyQ", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-355056034", x: "https://x.com/RoplekarSudeep/status/2107821805897748540" } },
   { slug: "arc-calories-timing", title: "Weight loss: total calories or meal timing?", seconds: 176, group: "wider-picture", youtube: "BENUmKZdaGc", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-384451854", x: "https://x.com/RoplekarSudeep/status/2120451918233530513" } },
+  { slug: "arc-hydration-urine", title: "Your urine color: the simplest hydration test you have", seconds: 179, group: "wider-picture", youtube: "hUf1tPZ4Tcs", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-391355233" } },
 ];
 
 export const videoSrc = (v: Video) => `/video/${v.slug}/${v.slug}.mp4`;
