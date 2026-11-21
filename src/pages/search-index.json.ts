@@ -19,7 +19,7 @@
 import type { APIRoute } from "astro";
 import { SUBJECTS, TOPICS, subjectFor, topicHref } from "../data/scienceTopics";
 import { BODY_MARKERS } from "../data/bodyMarkers";
-import { VIDEOS, GROUPS, fmtSeconds } from "../data/videos";
+import { VIDEOS, GROUPS, THEMES, BEYOND, BEYOND_HREF, fmtSeconds } from "../data/videos";
 import VIDEO_WORDS from "../data/videoWords.json";
 import { TIERS_MEN, TIERS_WOMEN, TIER_LABELS, tierRanges, TIER_SOURCES } from "../data/fitness-tiers";
 
@@ -75,9 +75,9 @@ export interface SearchEntry {
   m?: string;
 }
 
-/** Where a video is played: on the topic page it explains, on How it works for the product's own, else in the full list. */
-export const videoHref = (v: { slug: string; topic?: string; group: string }): string =>
-  v.topic ? `${topicHref(v.topic)}#video-${v.slug}` : v.group === "how-verve-works" ? `/how-it-works#video-${v.slug}` : `/videos#video-${v.slug}`;
+/** Where a video is played: on the topic page it explains, on How it works for the product's own, under its theme in Beyond the numbers, else in the full list. */
+export const videoHref = (v: { slug: string; topic?: string; theme?: string; group: string }): string =>
+  v.topic ? `${topicHref(v.topic)}#video-${v.slug}` : v.group === "how-verve-works" ? `/how-it-works#video-${v.slug}` : v.theme ? `${BEYOND_HREF}#video-${v.slug}` : `/videos#video-${v.slug}`;
 
 export const GET: APIRoute = () => {
   const entries: SearchEntry[] = [];
@@ -117,10 +117,11 @@ export const GET: APIRoute = () => {
   for (const v of VIDEOS) {
     const topic = TOPICS.find((t) => t.slug === v.topic);
     const group = GROUPS.find((g) => g.key === v.group)!;
+    const theme = THEMES.find((th) => th.key === v.theme);
     entries.push({
-      k: "video", t: v.title, s: topic ? `On the ${topic.label} page.` : v.group === "how-verve-works" ? "On How it works." : `In the videos, under ${group.label}.`,
+      k: "video", t: v.title, s: topic ? `On the ${topic.label} page.` : v.group === "how-verve-works" ? "On How it works." : theme ? `In ${BEYOND.label}, under ${theme.label}.` : `In the videos, under ${group.label}.`,
       // what the video says on its screens (16 Nov 2026: "home blood pressure" found nothing, as the title says BP)
-      u: videoHref(v), d: "", h: [], x: [(VIDEO_WORDS as Record<string, string>)[v.slug] ?? "", topic?.label ?? "", topic?.sub ?? "", group.label, group.blurb].join(" "),
+      u: videoHref(v), d: "", h: [], x: [(VIDEO_WORDS as Record<string, string>)[v.slug] ?? "", topic?.label ?? "", topic?.sub ?? "", theme?.label ?? "", theme?.sub ?? "", group.label, group.blurb].join(" "),
       m: `${fmtSeconds(v.seconds)} · captions`,
     });
   }
