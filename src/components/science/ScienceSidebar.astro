@@ -11,6 +11,12 @@
  * its name with the open topic lit. Everything in it is read from
  * scienceTopics.ts, so a topic added there appears here at once.
  *
+ * Under the four subjects, past a rule, is Beyond the numbers (21 Nov 2026,
+ * the founder's): what the app does not measure. It is not a fifth subject,
+ * so it is not counted with them, but it is part of the section and a reader
+ * should reach it from any page of it. On its own page the row is unfolded
+ * and lists its themes, read from data/videos.ts.
+ *
  * On a phone the sidebar is gone; the header's back link and the bar at the
  * foot of a topic carry the way on.
  *
@@ -24,15 +30,18 @@ import {
   topicHref,
   type SubjectSlug,
 } from "../../data/scienceTopics";
+import { THEMES, BEYOND, BEYOND_HREF } from "../../data/videos";
 
 interface Props {
-  /** The subject whose page this is: unfolded in the sidebar. */
-  subject: SubjectSlug;
+  /** The subject whose page this is: unfolded in the sidebar. None on Beyond the numbers. */
+  subject?: SubjectSlug;
   /** The open topic, when a topic page; lit in the list. */
   topic?: string;
+  /** Beyond the numbers' own page: its row unfolded, its themes listed. */
+  beyond?: boolean;
 }
 
-const { subject, topic } = Astro.props;
+const { subject, topic, beyond = false } = Astro.props;
 
 const ROW =
   "flex min-h-10 items-center gap-2.5 rounded-[10px] px-3 py-2 text-[14px] font-semibold transition-colors";
@@ -53,7 +62,7 @@ const DIM = "border-transparent text-text-secondary";
     </a>
     <div class="mx-3 my-3 h-px bg-ink/[0.07]"></div>
 
-    <nav aria-label="Subjects and topics">
+    <nav aria-label="Subjects, topics and Beyond the numbers">
       <ol class="space-y-0.5">
         {SUBJECTS.map((s) => {
           const open = s.slug === subject;
@@ -107,6 +116,36 @@ const DIM = "border-transparent text-text-secondary";
           );
         })}
       </ol>
+
+      <div class="mx-3 my-3 h-px bg-ink/[0.07]"></div>
+      <a
+        href={BEYOND_HREF}
+        aria-current={beyond ? "page" : undefined}
+        class:list={[ROW, beyond ? "text-text-primary" : "text-text-secondary hover:text-text-primary"]}
+      >
+        <span class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg bg-accent/[0.12]">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-accent-light" aria-hidden="true">
+            <path d={BEYOND.icon} />
+          </svg>
+        </span>
+        {/* no count beside it: the name is longer than a subject's and would be cut short */}
+        <span class="min-w-0 flex-1">{BEYOND.label}</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          {beyond ? <path d="M6 9l6 6 6-6" /> : <path d="M9 18l6-6-6-6" />}
+        </svg>
+      </a>
+      {beyond && (
+        <ol class="mb-2 mt-0.5 space-y-0.5 pl-3">
+          {THEMES.map((th, i) => (
+            <li>
+              <a href={`#${th.key}`} class:list={[TOPIC, DIM]}>
+                <span class="w-3 shrink-0 font-mono text-[10.5px] text-text-tertiary">{i + 1}</span>
+                <span class="min-w-0">{th.label}</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      )}
     </nav>
 
     {SUBJECTS.find((s) => s.slug === subject)?.aside && (

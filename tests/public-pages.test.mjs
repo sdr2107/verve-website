@@ -75,6 +75,13 @@ test("the Science hub: the section's headline, the threshold line over the four 
   assert.ok(fitness.includes("<CrfMapCard />") && fitness.includes("<FirstNumberCard />"));
 });
 
+test("the science sidebar reaches Beyond the numbers from every subject and topic, and its own page carries the sidebar", () => {
+  const side = readFileSync(join(SRC, "components/science/ScienceSidebar.astro"), "utf8");
+  assert.ok(side.includes("href={BEYOND_HREF}") && side.includes("THEMES.map"), "the row, and its themes when open");
+  assert.ok(side.indexOf("SUBJECTS.map") < side.indexOf("href={BEYOND_HREF}"), "under the four subjects, not among them");
+  assert.ok(readFileSync(join(SRC, "pages/science/beyond-the-numbers.astro"), "utf8").includes("<ScienceSidebar beyond />"));
+});
+
 test("the story is four questions, in the order My health's sidebar holds its pages", () => {
   assert.deepEqual(STORY.map((s) => s.key), ["overview", "depth", "guide", "horizon"]);
   assert.deepEqual(STORY.map((s) => s.question), ["Where am I today?", "How did I get here?", "What stands out?", "Where am I going?"]);
