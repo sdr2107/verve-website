@@ -401,11 +401,6 @@ import { STORY } from "../data/story";
                written to the account, so the question is asked exactly once. -->
           <div id="newsask" class="mt-3 hidden max-w-3xl flex-wrap items-center gap-2">
             <span id="newstext" class="text-[13px] text-text-secondary">The Verve letter: one email a week on the science, and what changed in the app. Send it to you?</span>
-            <!-- signed in with Apple and "Hide my email": the account's address is a relay that
-                 forwards only senders Apple has on file, so the letter needs one it can reach -->
-            <span id="newsrelay" class="hidden basis-full text-[13px] text-text-secondary">Apple hides your address from Verve, so the letter needs one it can reach: where should it go?</span>
-            <input id="newsemail" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" aria-label="The address to send the newsletter to"
-              class="hidden w-60 max-w-full rounded-xl border border-ink/12 bg-ink/[0.04] px-3.5 py-2 text-[15px] text-text-primary placeholder:text-text-3 focus:border-accent focus:outline-none sm:text-sm" />
             <button type="button" id="newsyes" class="min-h-10 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-canvas transition-opacity hover:opacity-90 disabled:opacity-60">Yes, send it</button>
             <button type="button" id="newsno" class="text-xs font-medium text-text-tertiary hover:text-text-primary">No thanks</button>
             <span id="newsmsg" class="hidden basis-full text-[12.5px] leading-snug text-text-primary" role="status" aria-live="polite"></span>
@@ -2977,12 +2972,17 @@ import { STORY } from "../data/story";
   // welcome is sent from and the letters are exported from, and asks
   // newsletter-welcome to send the first letter, as the box on /start does.
   //
-  // An account made with Apple's "Hide my email" signs in by a relay address
-  // (…@privaterelay.appleid.com). Apple forwards mail to it only from senders
-  // registered under the developer account, and drops the rest without a
-  // word, so the question asks for an address Apple does not hide and the
-  // letter goes there. user_metadata.newsletter_email keeps which one. ────
+  // One tap for everyone (the founder, 21 November 2026). An account made
+  // with Apple's "Hide my email" signs in by an address Apple made
+  // (…@privaterelay.appleid.com). Until today the question asked such an
+  // account to type another address, because Apple was thought to drop our
+  // mail. A test that day showed Apple passes our letters on to it. So the
+  // letter goes to the address the account has, the person's choice to
+  // hide their own is kept, and nothing is typed. The page never prints the
+  // made address: it says "the address Apple keeps for you".
+  // user_metadata.newsletter_email keeps which address said yes. ────────
   const isRelay = (email: string) => /@privaterelay\.appleid\.com$/i.test(email);
+  const addressWords = (to: string) => (isRelay(to) ? "the address Apple keeps for you" : to);
   const newsSay = (text: string, bad = false) => {
     const el = $("newsmsg");
     el.textContent = text; el.classList.toggle("hidden", !text);
@@ -2991,18 +2991,12 @@ import { STORY } from "../data/story";
   function askForNewsletter(user: { user_metadata?: Record<string, unknown> }) {
     const answered = user.user_metadata?.newsletter_opt_in;
     if (answered !== undefined && answered !== null) return;
-    const relay = isRelay(userEmail);
-    show("newsrelay", relay); show("newsemail", relay);
     $("newsask").classList.remove("hidden"); $("newsask").classList.add("flex");
   }
   async function answerNewsletter(optIn: boolean) {
     const now = new Date().toISOString();
-    let to = userEmail.trim().toLowerCase();
-    if (optIn && isRelay(userEmail)) {
-      to = ($("newsemail") as HTMLInputElement).value.trim().toLowerCase();
-      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to) || to.length > 254) { newsSay("That does not look like an email address.", true); $("newsemail").focus(); return; }
-      if (isRelay(to)) { newsSay("That is a relay address too; Apple would not pass the letter on. One Apple does not hide, please.", true); $("newsemail").focus(); return; }
-    }
+    const to = userEmail.trim().toLowerCase(), where = addressWords(to);
+    if (optIn && !to) { newsSay("This account has no email address to send the letter to.", true); return; }
     const yes = $("newsyes") as HTMLButtonElement;
     yes.disabled = true; newsSay(optIn ? "Saving…" : "");
     const { error } = await supabase.auth.updateUser({
@@ -3012,24 +3006,23 @@ import { STORY } from "../data/story";
     if (error) { newsSay(`Could not save that: ${error.message}`, true); return; }
     if (!optIn) { $("newsask").classList.add("hidden"); $("newsask").classList.remove("flex"); return; }
     // the row: the address, the sentence that was on screen when they said yes, and the account
-    const consent = `${$("newstext").textContent?.trim() ?? ""}${isRelay(userEmail) ? ` ${$("newsrelay").textContent?.trim() ?? ""}` : ""} — Yes, send it.`;
+    const consent = `${$("newstext").textContent?.trim() ?? ""} — Yes, send it.`;
     const { error: rowErr } = await supabase.from("newsletter_signups").insert({ email: to, consent_text: consent.slice(0, 600), source: "my-health", user_id: userId });
     if (rowErr && rowErr.code !== "23505") {     // 23505: already on the list, which is fine
-      newsSay(`Saved with your account, but the list could not take ${to} just now: ${rowErr.message}. It is added by hand on the next export.`, true);
+      newsSay(`Saved with your account, but the list could not take ${where} just now: ${rowErr.message}. Write to hello@verve-app.health if no letter comes.`, true);
       return;
     }
     $("newsask").classList.add("hidden"); $("newsask").classList.remove("flex");
     // the first letter, after the answer is saved; never the gate
-    let said = `Done. The first letter is on its way to ${to}, from hello@verve-app.health.`;
+    let said = `Done. The first letter is on its way to ${where}, from hello@verve-app.health.`;
     try {
       const { data, error: fnErr } = await supabase.functions.invoke("newsletter-welcome", { body: { email: to } });
       if (fnErr || !data?.sent) said = data?.reason === "already sent"
-        ? `${to} already had the first letter; the next ones follow.`
-        : `Saved. The first letter to ${to} could not go out just now; it goes within a day.`;
-    } catch { said = `Saved. The first letter to ${to} could not go out just now; it goes within a day.`; }
+        ? (isRelay(to) ? "You already had the first letter; the next ones follow." : `${to} already had the first letter; the next ones follow.`)
+        : `Saved. The first letter to ${where} could not go out just now; it goes within a day.`;
+    } catch { said = `Saved. The first letter to ${where} could not go out just now; it goes within a day.`; }
     msg("upmsg", said);
   }
-  $("newsemail").addEventListener("keydown", (e) => { if ((e as KeyboardEvent).key === "Enter") { e.preventDefault(); answerNewsletter(true); } });
   $("newsyes").addEventListener("click", () => answerNewsletter(true));
   $("newsno").addEventListener("click", () => answerNewsletter(false));
   $("emptyadd").addEventListener("click", pickReport);
