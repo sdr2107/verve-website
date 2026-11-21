@@ -59,6 +59,8 @@ export const BEYOND_HREF = "/science/beyond-the-numbers";
 export const BEYOND = {
   label: "Beyond the numbers",
   line: "Health questions the app does not measure, one study at a time.",
+  /** An open book, 24x24, stroked: what is read and watched, not measured. */
+  icon: "M12 7C10.4 5.7 8 5 4.5 5v13c3.5 0 5.9.7 7.5 2 1.6-1.3 4-2 7.5-2V5C16 5 13.6 5.7 12 7zM12 7v13",
 };
 /** Its themes, in page order: the label, and what the theme answers in one line. */
 export const THEMES: { key: BeyondTheme; label: string; sub: string }[] = [
