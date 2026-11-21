@@ -39,7 +39,7 @@ import { COUNTS } from "../data/scienceTopics";
 import { BODY_MARKERS } from "../data/bodyMarkers";
 import { GET_APP_PATH, PRO_PAGES } from "../data/site";
 import { STORY, STORY_TITLE, STORY_LINE } from "../data/story";
-import { planOf, isPriced, priceText } from "../data/plans";
+import { planOf, isPriced, priceText, PLANS_PAGE_PUBLIC, FREE_AND_PRO_PATH } from "../data/plans";
 
 /** The name line and the one sentence, as board 11 sets them. The title and the cards for X and iMessage read the same. */
 const NAME_LINE = "Verve · Evidence-based fitness tracking";
@@ -212,7 +212,7 @@ const quiet = "inline-flex min-h-11 items-center text-[15px] font-semibold text-
       </ol>
       <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
         <a href="#find-your-number" class="inline-flex min-h-12 items-center justify-center rounded-full bg-accent px-6 text-[15px] font-semibold text-canvas transition-colors hover:bg-accent-text">Find your number</a>
-        <a href="/plans" class={quiet}>See what is free and what is Pro</a>
+        <a href={PLANS_PAGE_PUBLIC ? "/plans" : FREE_AND_PRO_PATH} class={quiet}>See what is free and what is Pro</a>
       </div>
     </div>
   </section>
@@ -227,7 +227,7 @@ const quiet = "inline-flex min-h-11 items-center text-[15px] font-semibold text-
         </div>
         <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
           <a href="#find-your-number" class="inline-flex min-h-12 items-center justify-center rounded-full bg-accent px-6 text-[15px] font-semibold text-canvas transition-colors hover:bg-accent-text">Find your number</a>
-          <a href="/plans" class={quiet}>See the plans</a>
+          {PLANS_PAGE_PUBLIC && <a href="/plans" class={quiet}>See the plans</a>}
         </div>
       </div>
     </div>

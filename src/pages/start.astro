@@ -11,6 +11,7 @@
  * where each thing lives, and still carries the call. Nothing a visitor
  * could do here was removed.
  */
+import { PLANS_PAGE_PUBLIC } from "../data/plans";
 import Layout from "../layouts/Layout.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import Footer from "../components/Footer.astro";
@@ -29,7 +30,8 @@ const places = [
 const doors = [
   { label: "For a coach", href: "/coach" },
   { label: "For a clinician", href: "/clinician" },
-  { label: "The plans", href: "/plans" },
+  // back when the plans page is public again (../data/plans.ts PLANS_PAGE_PUBLIC)
+  ...(PLANS_PAGE_PUBLIC ? [{ label: "The plans", href: "/plans" }] : []),
   { label: "Get the app", href: GET_APP_PATH },
 ];
 ---

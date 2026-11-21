@@ -19,6 +19,19 @@
 
 /** On from 2026-10-31: the page is in the nav with its prices still to be set; a plan without a price cannot be chosen. */
 export const PLANS_OPEN = true;
+/**
+ * Off from 21 November 2026 (the founder: "make the plans page on the website only visible for me and hide it from
+ * the live website. We will make it live after we add payments. Dont delete the code for it."). While it is off:
+ * the page is out of the top bar and the footer, asks search engines to leave it out, and shows its chart only to
+ * a test account (programme_testers). Anyone else who opens /plans reads that plans are not open yet. No public
+ * page links to it. Nothing was deleted: turn this on the day payments open.
+ *
+ * It hides the page from the website's visitors. It is not a secret: the chart is still in the page's source and in
+ * this public repository.
+ */
+export const PLANS_PAGE_PUBLIC = false;
+/** Where a public page sends someone who asks what is free and what is Pro while the plans page is hidden: the manual's own section. */
+export const FREE_AND_PRO_PATH = "/how-it-works#free-and-pro";
 export const PLANS_ENFORCED = false;
 /** "The Guide's read" (was "In Verve's words") on the In depth tab: on from 26 Oct 2026 (the policy names it; the function secret DEPTH_SUMMARY_OPEN=true). */
 export const AI_SUMMARY_OPEN = true;

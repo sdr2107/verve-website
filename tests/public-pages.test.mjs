@@ -4,6 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { PLANS_PAGE_PUBLIC } from "../src/data/plans.ts";
 import { NAV, FOOTER_LINKS, APP_SOCIAL, FOUNDER_SOCIAL, APP_HANDLE, ACCOUNT_PATH } from "../src/data/site.ts";
 import { VIDEOS, videosInGroup } from "../src/data/videos.ts";
 import { STORY, STORY_TITLE, STORY_LINE } from "../src/data/story.ts";
@@ -17,8 +18,9 @@ function* files(dir) {
   }
 }
 
-test("the bar holds three places; what left it is still reachable from the footer", () => {
-  assert.deepEqual(NAV.map((l) => l.href), ["/how-it-works", "/science", "/plans"]);
+test("the bar holds its places; what left it is still reachable from the footer", () => {
+  // Plans is in the bar only while its page is public (data/plans.ts PLANS_PAGE_PUBLIC; tests/plans-hidden.test.mjs)
+  assert.deepEqual(NAV.map((l) => l.href), ["/how-it-works", "/science", ...(PLANS_PAGE_PUBLIC ? ["/plans"] : [])]);
   assert.equal(ACCOUNT_PATH, "/my-health");
   for (const href of ["/videos", "/sheet"]) assert.ok(FOOTER_LINKS.some((l) => l.href === href), `${href} is in the footer`);
   assert.ok(!NAV.some((l) => ["/start", "/videos", "/my-health"].includes(l.href)));
