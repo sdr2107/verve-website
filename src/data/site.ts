@@ -7,7 +7,7 @@
  * carried a different subset of the links.
  */
 
-import { PLANS_OPEN } from "./plans.ts";
+import { PLANS_OPEN, PLANS_PAGE_PUBLIC } from "./plans.ts";
 
 export const APP_STORE_URL = "https://apps.apple.com/app/id6760022278";
 /**
@@ -83,8 +83,8 @@ export const NAV: NavLink[] = [
   // how the app works, section by section: the manual, and the six product videos
   { key: "how", label: "How it works", href: "/how-it-works" },
   { key: "science", label: "Science", href: "/science" },
-  // the plans page joins the nav when plans open; until then it is a preview at /plans
-  ...(PLANS_OPEN ? [{ key: "plans" as const, label: "Plans", href: "/plans" }] : []),
+  // the plans page joins the nav when plans open and the page is public; until then it is at /plans for test accounts only
+  ...(PLANS_OPEN && PLANS_PAGE_PUBLIC ? [{ key: "plans" as const, label: "Plans", href: "/plans" }] : []),
 ];
 
 /** The account entry at the top right: one address for both of its names. */

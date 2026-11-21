@@ -16,6 +16,8 @@
  * address this site serves.
  */
 
+import { PLANS_PAGE_PUBLIC, FREE_AND_PRO_PATH } from "./plans.ts";
+
 /** Where the form's message is read. One address for the whole site (data/site.ts COMPANY.email). */
 export const HELP_EMAIL = "hello@verve-app.health";
 
@@ -161,7 +163,7 @@ export const HELP_DOORS: HelpDoor[] = [
       // trial ends", the table of gates); views/Settings.tsx PlanBlock ("the Guide's reads and Horizon")
       { q: "What does Pro add?",
         a: "Free shows your numbers, and Pro reads them: the Guide's written reads, every retest, the longer history and Horizon. Nothing free is taken away when a trial ends.",
-        link: { label: "See every plan", href: "/plans" } },
+        link: PLANS_PAGE_PUBLIC ? { label: "See every plan", href: "/plans" } : { label: "See what is free and what is Pro", href: FREE_AND_PRO_PATH } },
       // views/Settings.tsx PlanBlock, word for word
       { q: "Where do I manage or cancel it?",
         a: "Where you bought decides where you manage it: the App Store, Google Play, or here. It is the same Pro in all three.",

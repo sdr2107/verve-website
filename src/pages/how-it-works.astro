@@ -10,6 +10,7 @@
  * an id so a later addition slots in; the wearables table is the same data
  * the science topic draws (src/data/wearables.ts).
  */
+import { PLANS_PAGE_PUBLIC } from "../data/plans";
 import Layout from "../layouts/Layout.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import Footer from "../components/Footer.astro";
@@ -170,7 +171,7 @@ const gates: [string, string, string][] = [
     <!-- ── 3 · free and Pro ── -->
     <section id="free-and-pro" class="scroll-mt-24 flex flex-col gap-6">
       <h2 class="text-[28px] font-extrabold tracking-[-0.02em] text-text-primary sm:text-[32px]">Free and Pro</h2>
-      <p class="max-w-[820px] text-[15.5px] leading-[1.6] text-text-secondary">One rule on every page: free shows your numbers, Pro reads them. Nothing free is taken away when a trial ends. Where a free account meets a Pro door, the app says in one line what Pro adds there, offers the 14-day trial when the App Store says your Apple ID may take it, and shows the store's prices. See <a href="/plans" class="font-semibold text-accent-light hover:text-text-primary">Plans</a> for the prices.</p>
+      <p class="max-w-[820px] text-[15.5px] leading-[1.6] text-text-secondary">One rule on every page: free shows your numbers, Pro reads them. Nothing free is taken away when a trial ends. Where a free account meets a Pro door, the app says in one line what Pro adds there, offers the 14-day trial when the App Store says your Apple ID may take it, and shows the store's prices.{PLANS_PAGE_PUBLIC && <> See <a href="/plans" class="font-semibold text-accent-light hover:text-text-primary">Plans</a> for the prices.</>}</p>
       <div class="overflow-x-auto rounded-xl border border-ink/10 bg-well">
         <table class="w-full min-w-[640px] text-[13px]">
           <thead>

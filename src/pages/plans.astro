@@ -8,11 +8,18 @@
  * When it is on, Choose asks the checkout function for a payment link and
  * sends the person there: Razorpay in India, Stripe elsewhere. Nothing
  * about a card ever touches this site.
+ *
+ * Hidden from 21 November 2026 until payments open (../data/plans.ts PLANS_PAGE_PUBLIC). While it is hidden the
+ * chart is drawn but not shown, search engines are asked to leave the page out, and a visitor reads three lines:
+ * plans are not open yet, and Pro bought in the app works here. A test account sees the chart: the page asks the
+ * one question My health asks (../my-health/horizon/api.ts testerAnswer) and shows it on a yes. What the last
+ * visit learned is used at once, so the founder does not watch the closed page first.
  */
 import Layout from "../layouts/Layout.astro";
 import Footer from "../components/Footer.astro";
 import SiteHeader from "../components/SiteHeader.astro";
-import { PLANS, FEATURE_ROWS, PLANS_OPEN, YEARLY_MONTHS_FREE, priceText, extraText } from "../data/plans";
+import { PLANS, FEATURE_ROWS, PLANS_OPEN, PLANS_PAGE_PUBLIC, YEARLY_MONTHS_FREE, priceText, extraText } from "../data/plans";
+import { ACCOUNT_PATH, GET_APP_PATH } from "../data/site";
 
 const CURRENCIES = ["inr", "usd"] as const;
 ---
@@ -21,10 +28,23 @@ const CURRENCIES = ["inr", "usd"] as const;
   title="Plans · Verve"
   description="One login, three plans. A plan on whoever pays decides how many people they can see, and how deep. Consent is free on every plan."
   cardType="summary"
+  noindex={!PLANS_PAGE_PUBLIC}
 >
   <SiteHeader current="plans" />
 
   <main class="mx-auto max-w-6xl px-4 pb-20 pt-8 sm:px-6" data-period="yearly" data-currency="inr" data-open={PLANS_OPEN ? "" : undefined}>
+    {!PLANS_PAGE_PUBLIC && (
+      <section data-plans-closed class="mx-auto flex max-w-[640px] flex-col gap-4 py-12" aria-labelledby="plansclosed">
+        <div class="font-mono text-[10px] font-semibold tracking-[0.14em] text-accent-light">PLANS</div>
+        <h1 id="plansclosed" class="text-[30px] font-extrabold leading-[1.05] tracking-[-0.02em] text-text-primary sm:text-4xl">Plans are not open yet.</h1>
+        <p class="text-[16px] leading-relaxed text-text-secondary">Paying for Pro on the website opens later. Pro bought in the app works here too, on the same sign-in.</p>
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <a href={GET_APP_PATH} class="inline-flex min-h-12 items-center justify-center rounded-full bg-accent px-6 text-[15px] font-semibold text-canvas transition-colors hover:bg-accent-text">Get the app</a>
+          <a href={ACCOUNT_PATH} class="inline-flex min-h-11 items-center text-[15px] font-semibold text-accent-text underline-offset-4 hover:underline">Open My health</a>
+        </div>
+      </section>
+    )}
+    <div data-plans-chart hidden={!PLANS_PAGE_PUBLIC}>
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div class="max-w-2xl">
         <div class="font-mono text-[10px] font-semibold tracking-[0.14em] text-accent-light">PLANS</div>
@@ -119,9 +139,32 @@ const CURRENCIES = ["inr", "usd"] as const;
         <p class="mt-1 text-[13px] leading-relaxed text-text-secondary">Your own page, your first two reports read, values sent to the app, sharing with anyone. Nothing you have is taken away by a plan you do not buy.</p>
       </div>
     </div>
+    </div>
   </main>
 
   <Footer />
+
+  <script>
+    // While the page is hidden (../data/plans.ts PLANS_PAGE_PUBLIC), the chart is shown to a test account only.
+    import { supabase } from "../lib/supabase";
+    import { testerAnswer } from "../my-health/horizon/api.ts";
+    import { recall, remember } from "../my-health/known.ts";
+    const closed = document.querySelector<HTMLElement>("[data-plans-closed]");
+    const chart = document.querySelector<HTMLElement>("[data-plans-chart]");
+    if (closed && chart) {
+      const show = (yes: boolean) => { chart.hidden = !yes; closed.hidden = yes; };
+      (async () => {
+        let uid = "";
+        try { uid = (await supabase.auth.getSession()).data.session?.user.id ?? ""; } catch { /* signed out */ }
+        if (!uid) return;                                 // signed out: the page stays closed
+        if (recall(uid).tester === true) show(true);      // what the last visit learned, at once
+        const answer = await testerAnswer(supabase, uid);
+        if (answer == null) return;                       // could not be asked: what is on the screen stays
+        remember(uid, { tester: answer });
+        show(answer);
+      })();
+    }
+  </script>
 
   <script>
     import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
