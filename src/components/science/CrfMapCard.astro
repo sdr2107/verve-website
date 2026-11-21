@@ -1,0 +1,49 @@
+---
+/**
+ * The door to /crf-map: what the map is, beside a drawing of its shape.
+ *
+ * It stood first on the Science hub until 21 Nov 2026. The hub now covers
+ * more than cardiorespiratory fitness, so the map lives where its subject
+ * does: on the Fitness page and on the Cardiorespiratory fitness topic.
+ * Two columns when there is room, because the shape of the thing is the
+ * argument for opening it: 226 ideas is an abstraction until you see five
+ * branches off one node.
+ */
+import CrfMapPreview from "./CrfMapPreview.astro";
+---
+
+<a
+  href="/crf-map"
+  class="group flex flex-col overflow-hidden rounded-2xl border border-accent/30 bg-accent/[0.06] transition-colors hover:border-accent/50 xl:flex-row"
+>
+  <span class="flex flex-1 flex-col justify-center p-6 sm:p-7">
+    <span class="font-mono text-xs font-semibold uppercase tracking-widest text-accent-light">
+      The map
+    </span>
+    <span class="mt-3 block text-xl font-bold tracking-tight text-text-primary">
+      The whole of cardiorespiratory fitness, on one map
+    </span>
+    <span class="mt-3 block text-sm leading-relaxed text-text-secondary">
+      The American Heart Association&rsquo;s 2016 statement is 30 pages of
+      prose. Here it is as 226 connected ideas: what fitness measures, what
+      it predicts, how it is tested, how it improves. Open a branch to read
+      the claim; every branch Verve acts on is marked.
+    </span>
+    <span class="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
+      <span class="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-canvas transition-colors group-hover:bg-accent-light">
+        Open the map
+      </span>
+      <span class="text-[13px] text-text-tertiary">
+        Pan, zoom, expand &middot; Ross et al. 2016
+      </span>
+    </span>
+  </span>
+
+  <span class="theme-dark shrink-0 border-t border-ink/8 bg-canvas p-5 sm:p-6 xl:w-[340px] xl:border-l xl:border-t-0">
+    <CrfMapPreview />
+    <span class="mt-3.5 flex items-center gap-2">
+      <span class="h-[9px] w-[9px] rounded-sm border border-success/60 bg-success/35" aria-hidden="true"></span>
+      <span class="text-xs text-text-tertiary">green = a branch Verve measures</span>
+    </span>
+  </span>
+</a>

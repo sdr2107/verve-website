@@ -6,7 +6,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { PLANS_PAGE_PUBLIC } from "../src/data/plans.ts";
 import { NAV, FOOTER_LINKS, APP_SOCIAL, FOUNDER_SOCIAL, APP_HANDLE, ACCOUNT_PATH } from "../src/data/site.ts";
-import { VIDEOS, videosInGroup } from "../src/data/videos.ts";
+import { VIDEOS, GROUPS, THEMES, BEYOND, BEYOND_HREF, videosInGroup, videosInTheme } from "../src/data/videos.ts";
 import { STORY, STORY_TITLE, STORY_LINE } from "../src/data/story.ts";
 
 const SRC = new URL("../src/", import.meta.url).pathname;
@@ -45,6 +45,34 @@ test("a store's link shows the official badge only when its file is in the repo;
 test("every video has a home: a topic page, How it works, or the full list", () => {
   assert.equal(videosInGroup("how-verve-works").length, 6, "the six product videos sit on How it works");
   assert.ok(VIDEOS.every((v) => v.topic || v.group === "how-verve-works" || v.group === "wider-picture"));
+});
+
+// 21 Nov 2026 (the founder's): what the app does not measure is "Beyond the numbers", by theme, with its own card on
+// the Science hub; the hub's headline is the whole section's, and the threshold line stands over the four subjects.
+test("Beyond the numbers: every video of the group sits under one theme, and every theme holds a video", () => {
+  const beyond = videosInGroup("wider-picture");
+  assert.equal(GROUPS.find((g) => g.key === "wider-picture").label, BEYOND.label);
+  assert.equal(BEYOND.label, "Beyond the numbers");
+  assert.ok(beyond.every((v) => THEMES.some((th) => th.key === v.theme)), "a video of the group without a theme would be on no theme's list");
+  assert.ok(VIDEOS.every((v) => !v.theme || v.group === "wider-picture"), "a theme belongs to this group alone");
+  assert.ok(THEMES.every((th) => videosInTheme(th.key).length > 0), "no empty theme on the page");
+  assert.equal(THEMES.reduce((n, th) => n + videosInTheme(th.key).length, 0), beyond.length);
+  // the group reads in theme order on /videos, so the two pages show one order
+  assert.deepEqual(beyond.map((v) => v.slug), THEMES.flatMap((th) => videosInTheme(th.key).map((v) => v.slug)));
+});
+
+test("the Science hub: the section's headline, the threshold line over the four subjects, and the way into Beyond the numbers", () => {
+  const hub = readFileSync(join(SRC, "pages/science.astro"), "utf8");
+  assert.match(hub, /<h1[^>]*>\s*Health science, traced to its source\.\s*<\/h1>/);
+  assert.match(hub, /<h2[^>]*>Every threshold, traced to its source\.<\/h2>/);
+  assert.ok(hub.includes("href={BEYOND_HREF}") && hub.includes("THEMES.map"), "the fifth card lists the themes");
+  assert.equal(BEYOND_HREF, "/science/beyond-the-numbers");
+  assert.ok(readFileSync(join(SRC, "pages/science/beyond-the-numbers.astro"), "utf8").includes("videosInTheme(th.key)"));
+  // the CRF map and the first-number door left the hub for the Fitness page; the hub still names both
+  assert.ok(!hub.includes("CrfMapPreview") && !hub.includes("No number yet"));
+  assert.ok(hub.includes('href="/crf-map"') && hub.includes('href="/#find-your-number"'));
+  const fitness = readFileSync(join(SRC, "pages/science/[subject]/index.astro"), "utf8");
+  assert.ok(fitness.includes("<CrfMapCard />") && fitness.includes("<FirstNumberCard />"));
 });
 
 test("the story is four questions, in the order My health's sidebar holds its pages", () => {

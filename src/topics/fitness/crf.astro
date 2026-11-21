@@ -2,6 +2,7 @@
 /** The five tiers, and why they are read against your own age and sex. Rendered by /science/fitness/crf; see scienceTopics.ts. */
 import CitationCard from "../../components/CitationCard.astro";
 import VideoSlot from "../../components/VideoSlot.astro";
+import CrfMapCard from "../../components/science/CrfMapCard.astro";
 import {
   CRF_SECTION,
 } from "../../data/science";
@@ -54,3 +55,5 @@ const tiers = [
 <div class="mt-4 grid gap-4 sm:grid-cols-2">
   {CRF_SECTION.map((c) => <CitationCard {...c} />)}
 </div>
+{/* the whole of this topic's subject, as the AHA statement lays it out (on the hub until 21 Nov 2026) */}
+<div class="mt-6"><CrfMapCard /></div>

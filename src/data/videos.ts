@@ -17,9 +17,17 @@
  * `topic` is the science topic page the video explains (its slug, as in
  * scienceTopics.ts); a video without one lives on /videos alone, under its
  * group. The order here is the order on the page.
+ *
+ * Beyond the numbers (21 Nov 2026) is the group for what the app does not
+ * measure: plaque, heart scans, risk, the athlete's heart, everyday habits.
+ * It has no topic pages, so each of its videos names a `theme` instead and
+ * plays on /science/beyond-the-numbers under that theme. The group's key is
+ * still "wider-picture", its first name, so /videos#wider-picture holds.
  */
 
 export type VideoGroup = "how-verve-works" | "fitness" | "movement" | "sleep-heart" | "body" | "wider-picture";
+
+export type BeyondTheme = "arteries-plaque" | "heart-scans" | "risk-family" | "athletes-heart" | "everyday-habits";
 
 export interface Video {
   slug: string;
@@ -29,6 +37,8 @@ export interface Video {
   group: VideoGroup;
   /** The science topic page it sits on, when it has one. */
   topic?: string;
+  /** For a Beyond the numbers video: its theme there. */
+  theme?: BeyondTheme;
   /** Its id on the YouTube channel: youtube.com/watch?v=<id>. */
   youtube?: string;
   /** The founder's posts on the same question: read rather than watch, or both. */
@@ -41,7 +51,22 @@ export const GROUPS: { key: VideoGroup; label: string; blurb: string }[] = [
   { key: "movement", label: "Movement", blurb: "How much, how hard, how often, and the rest of the day." },
   { key: "sleep-heart", label: "Sleep and heart", blurb: "What the watch reads while you sleep and in the minute after you stop." },
   { key: "body", label: "Body", blurb: "The markers, their bands, and what to repeat when." },
-  { key: "wider-picture", label: "The wider picture", blurb: "The studies behind everyday health, read one at a time." },
+  { key: "wider-picture", label: "Beyond the numbers", blurb: "What the app does not measure, one study at a time." },
+];
+
+/** Where Beyond the numbers is read and watched. */
+export const BEYOND_HREF = "/science/beyond-the-numbers";
+export const BEYOND = {
+  label: "Beyond the numbers",
+  line: "Health questions the app does not measure, one study at a time.",
+};
+/** Its themes, in page order: the label, and what the theme answers in one line. */
+export const THEMES: { key: BeyondTheme; label: string; sub: string }[] = [
+  { key: "arteries-plaque", label: "Arteries and plaque", sub: "What builds plaque, what slows it, and what hard training does to it" },
+  { key: "heart-scans", label: "Heart scans", sub: "What a heart CT shows, and what a normal one can miss" },
+  { key: "risk-family", label: "Risk and family history", sub: "How much each risk factor weighs, and what a family history leaves in your hands" },
+  { key: "athletes-heart", label: "The athlete’s heart", sub: "What endurance training does to the heart, and the risk on race day" },
+  { key: "everyday-habits", label: "Everyday habits", sub: "Water, meal timing and smoking: what the studies support" },
 ];
 
 export const VIDEOS: Video[] = [
@@ -103,19 +128,19 @@ export const VIDEOS: Video[] = [
   { slug: "the-guide", title: "The Guide: win, next, body", seconds: 14, group: "how-verve-works" },
   { slug: "the-guide-explained", title: "The Guide, explained (Pro)", seconds: 54, group: "how-verve-works", posts: { x: "https://x.com/RoplekarSudeep/status/2105185512122368133" } },
   { slug: "feature-guide", title: "Verve feature of the day: The Guide", seconds: 129, group: "how-verve-works", posts: { x: "https://x.com/RoplekarSudeep/status/2105185512122368133" } },
-  { slug: "ascvd-prevention", title: "Built slowly, prevented daily: lifestyle and ASCVD", seconds: 56, group: "wider-picture", posts: { x: "https://x.com/RoplekarSudeep/status/2107828903486345602" } },
-  { slug: "arc-plaque-lifestyle", title: "What builds plaque in your arteries, and what can you do about it?", seconds: 194, group: "wider-picture", youtube: "tmhVjTs0KUk", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-389783821" } },
-  { slug: "scot-heart-ct", title: "Heart CT scans: can a scan prevent heart attacks?", seconds: 45, group: "wider-picture", youtube: "LzB3Xs5qPaM", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-360750788", x: "https://x.com/RoplekarSudeep/status/2110353846811992539" } },
-  { slug: "arc-coronary-inflammation", title: "Coronary inflammation: what a normal CT can miss", seconds: 174, group: "wider-picture", posts: { substack: "https://roplekarsudeep.substack.com/p/coronary-inflammation-the-biomarker" } },
-  { slug: "interheart-risk-factors", title: "Heart attacks: how much does each risk factor matter?", seconds: 158, group: "wider-picture", youtube: "fNY0GHN8iv0", posts: { substack: "https://roplekarsudeep.substack.com/p/what-are-the-risk-factors-that-lead", x: "https://x.com/RoplekarSudeep/status/2114074361783357658" } },
-  { slug: "le8-heart-score", title: "Do you know your cardiovascular health score?", seconds: 130, group: "wider-picture", youtube: "2yB8PyA6-Zc", posts: { substack: "https://roplekarsudeep.substack.com/p/life-essential-8-cardiovascular-health-score" } },
-  { slug: "arc-family-history-genes", title: "Family history of heart disease: can I do something about it?", seconds: 178, group: "wider-picture", youtube: "L5m4hZoQ5Ic", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-377297709", x: "https://x.com/RoplekarSudeep/status/2115077391274131580" } },
-  { slug: "exercise-heart-plaque", title: "Heart plaque: can you exercise too much?", seconds: 139, group: "wider-picture", youtube: "2B15FJrGeGo", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-367478844", x: "https://x.com/RoplekarSudeep/status/2113280969402892377" } },
-  { slug: "heart-65mm-imax", title: "65 mm vs IMAX screen: what endurance training does to your heart", seconds: 222, group: "wider-picture", youtube: "Ah30qEa_lRs", posts: { substack: "https://roplekarsudeep.substack.com/p/65-mm-vs-imax-screen", x: "https://x.com/RoplekarSudeep/status/2078035499110035737" } },
-  { slug: "smoking-quit-any-age", title: "Smoking: quitting at any age gives years back", seconds: 69, group: "wider-picture", youtube: "0Oo4km38ULM", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-366355403", x: "https://x.com/RoplekarSudeep/status/2112796544349143210" } },
-  { slug: "arc-marathon-cpr", title: "Marathon running: low cardiac risk. Know two things.", seconds: 85, group: "wider-picture", youtube: "ppSDuSG0IyQ", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-355056034", x: "https://x.com/RoplekarSudeep/status/2107821805897748540" } },
-  { slug: "arc-calories-timing", title: "Weight loss: total calories or meal timing?", seconds: 176, group: "wider-picture", youtube: "BENUmKZdaGc", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-384451854", x: "https://x.com/RoplekarSudeep/status/2120451918233530513" } },
-  { slug: "arc-hydration-urine", title: "Your urine color: the simplest hydration test you have", seconds: 179, group: "wider-picture", youtube: "hUf1tPZ4Tcs", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-391355233" } },
+  { slug: "ascvd-prevention", title: "Built slowly, prevented daily: lifestyle and ASCVD", seconds: 56, group: "wider-picture", theme: "arteries-plaque", posts: { x: "https://x.com/RoplekarSudeep/status/2107828903486345602" } },
+  { slug: "arc-plaque-lifestyle", title: "What builds plaque in your arteries, and what can you do about it?", seconds: 194, group: "wider-picture", theme: "arteries-plaque", youtube: "tmhVjTs0KUk", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-389783821" } },
+  { slug: "exercise-heart-plaque", title: "Heart plaque: can you exercise too much?", seconds: 139, group: "wider-picture", theme: "arteries-plaque", youtube: "2B15FJrGeGo", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-367478844", x: "https://x.com/RoplekarSudeep/status/2113280969402892377" } },
+  { slug: "scot-heart-ct", title: "Heart CT scans: can a scan prevent heart attacks?", seconds: 45, group: "wider-picture", theme: "heart-scans", youtube: "LzB3Xs5qPaM", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-360750788", x: "https://x.com/RoplekarSudeep/status/2110353846811992539" } },
+  { slug: "arc-coronary-inflammation", title: "Coronary inflammation: what a normal CT can miss", seconds: 174, group: "wider-picture", theme: "heart-scans", posts: { substack: "https://roplekarsudeep.substack.com/p/coronary-inflammation-the-biomarker" } },
+  { slug: "interheart-risk-factors", title: "Heart attacks: how much does each risk factor matter?", seconds: 158, group: "wider-picture", theme: "risk-family", youtube: "fNY0GHN8iv0", posts: { substack: "https://roplekarsudeep.substack.com/p/what-are-the-risk-factors-that-lead", x: "https://x.com/RoplekarSudeep/status/2114074361783357658" } },
+  { slug: "le8-heart-score", title: "Do you know your cardiovascular health score?", seconds: 130, group: "wider-picture", theme: "risk-family", youtube: "2yB8PyA6-Zc", posts: { substack: "https://roplekarsudeep.substack.com/p/life-essential-8-cardiovascular-health-score" } },
+  { slug: "arc-family-history-genes", title: "Family history of heart disease: can I do something about it?", seconds: 178, group: "wider-picture", theme: "risk-family", youtube: "L5m4hZoQ5Ic", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-377297709", x: "https://x.com/RoplekarSudeep/status/2115077391274131580" } },
+  { slug: "heart-65mm-imax", title: "65 mm vs IMAX screen: what endurance training does to your heart", seconds: 222, group: "wider-picture", theme: "athletes-heart", youtube: "Ah30qEa_lRs", posts: { substack: "https://roplekarsudeep.substack.com/p/65-mm-vs-imax-screen", x: "https://x.com/RoplekarSudeep/status/2078035499110035737" } },
+  { slug: "arc-marathon-cpr", title: "Marathon running: low cardiac risk. Know two things.", seconds: 85, group: "wider-picture", theme: "athletes-heart", youtube: "ppSDuSG0IyQ", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-355056034", x: "https://x.com/RoplekarSudeep/status/2107821805897748540" } },
+  { slug: "smoking-quit-any-age", title: "Smoking: quitting at any age gives years back", seconds: 69, group: "wider-picture", theme: "everyday-habits", youtube: "0Oo4km38ULM", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-366355403", x: "https://x.com/RoplekarSudeep/status/2112796544349143210" } },
+  { slug: "arc-calories-timing", title: "Weight loss: total calories or meal timing?", seconds: 176, group: "wider-picture", theme: "everyday-habits", youtube: "BENUmKZdaGc", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-384451854", x: "https://x.com/RoplekarSudeep/status/2120451918233530513" } },
+  { slug: "arc-hydration-urine", title: "Your urine color: the simplest hydration test you have", seconds: 179, group: "wider-picture", theme: "everyday-habits", youtube: "hUf1tPZ4Tcs", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-391355233" } },
 ];
 
 export const videoSrc = (v: Video) => `/video/${v.slug}/${v.slug}.mp4`;
@@ -128,6 +153,10 @@ export const videosForTopic = (topic: string): Video[] => VIDEOS.filter((v) => v
 /** Named videos, in the order named. */
 export const videosBySlugs = (slugs: string[]): Video[] => slugs.map((s) => VIDEOS.find((v) => v.slug === s)).filter((v): v is Video => !!v);
 export const videosInGroup = (g: VideoGroup): Video[] => VIDEOS.filter((v) => v.group === g);
+/** A Beyond the numbers theme's videos, in order. */
+export const videosInTheme = (theme: BeyondTheme): Video[] => VIDEOS.filter((v) => v.theme === theme);
+/** How many of a set can also be read: made from one of the founder's posts. */
+export const readable = (vs: Video[]): number => vs.filter((v) => v.posts && (v.posts.substack || v.posts.x)).length;
 
 /** "14 s", "1 min 25 s", "2 min". */
 export function fmtSeconds(s: number): string {
