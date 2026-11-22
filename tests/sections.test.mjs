@@ -17,9 +17,10 @@ test("In depth and Body have no page of their own: In depth opens on one year, B
   assert.equal(sectionFor("depth", "sleep"), "1y", "an address from before In depth went by time lands on one year");
   assert.equal(sectionFor("depth", "body"), "1y", "Body is a card on the Overview, not a window of In depth");
   assert.equal(sectionFor("body", "all"), "metabolic");
-  assert.equal(sectionFor("body", "reports"), "reports");
+  assert.equal(sectionFor("body", "reports"), "metabolic", "the list of files left Body on 22 November 2026: the Reports tab is that list");
+  assert.equal(sectionFor("body", "thyroid"), "thyroid", "a section a report fills has its own address");
   assert.equal(sectionFor("body", "fitness"), "metabolic");
-  assert.deepEqual([...DEPTH_KEYS], ["1m", "3m", "6m", "1y", "3y"]); assert.equal(BODY_KEYS.length, 4);
+  assert.deepEqual([...DEPTH_KEYS], ["1m", "3m", "6m", "1y", "3y"]); assert.equal(BODY_KEYS.length, 16, "the app's three and the thirteen a report can fill");
 });
 
 test("a tab with no sections holds none", () => {

@@ -9,6 +9,7 @@ import type { MyHealthDocument } from "./document.ts";
 import { derivePerson } from "./derive/person.ts";
 import type { Rng } from "./derive/lenses.ts";
 import { WINDOW_KEYS, DEFAULT_WINDOW, isWindowKey, type WindowKey } from "./derive/timeline.ts";
+import { REPORT_SECTION_KEYS } from "./derive/reportSections.ts";
 import type { HorizonFull } from "./horizon/api.ts";
 
 export type PersonLite = { id: string; owner_id: string; account_id: string | null; name: string; born_year: number | null; mine: boolean; self: boolean; scopes: string[];
@@ -38,8 +39,15 @@ export const CARD_KEYS = ["fitness", "vitals", "sleep", "exertion", "movement", 
 export type CardKey = (typeof CARD_KEYS)[number];
 /** In depth: five windows of time, not chapters by topic (canvas "Verve, one story in four parts", board 04). One year opens first. */
 export const DEPTH_KEYS = WINDOW_KEYS;
-/** Body: the app's three shelves and the reports on file. */
-export const BODY_KEYS = ["metabolic", "heart", "muscle", "reports"] as const;
+/** Body: the app's three shelves. */
+export const APP_BODY_KEYS = ["metabolic", "heart", "muscle"] as const;
+/**
+ * Body: the app's three shelves, then the sections only a report fills (derive/reportSections.ts; board 35,
+ * 22 November 2026). Every section a report can fill is named here so its address is known; the page and the
+ * sidebar list one only when it holds a marker. The list of files that sat here as "Lab reports" is gone: the
+ * Reports tab, just below it in the sidebar, is that list.
+ */
+export const BODY_KEYS = [...APP_BODY_KEYS, ...REPORT_SECTION_KEYS] as const;
 /**
  * The open section of the active tab (canvas "Verve on the web, refined",
  * boards 04 and 07): one section is on the page at a time. On the Overview

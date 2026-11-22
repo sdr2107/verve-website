@@ -326,10 +326,25 @@ import { STORY } from "../data/story";
           <h3 class="t-eyebrow mb-2 mt-5 hidden px-3 lg:block">Records</h3>
           <button type="button" class="mh-tab" data-tab="body"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6l-5.5 9a2 2 0 0 0 1.7 3h11.6a2 2 0 0 0 1.7-3L14 9V3"/></svg><span>Body</span><span data-count class="mh-count"></span></button>
           <div data-sub="body" role="group" aria-label="body sections">
+            <!-- Two groups (board 35, 22 Nov 2026). A report section is listed only when it holds a marker: the page's script shows it and prints the count. -->
+            <span class="mh-grp" data-body-group hidden>The app's list</span>
             <button type="button" class="mh-sub" data-tab-for="body" data-section="metabolic">Metabolic</button>
             <button type="button" class="mh-sub" data-tab-for="body" data-section="heart">Heart</button>
             <button type="button" class="mh-sub" data-tab-for="body" data-section="muscle">Muscle</button>
-            <button type="button" class="mh-sub" data-tab-for="body" data-section="reports">Lab reports</button>
+            <span class="mh-grp" data-body-group hidden>From your reports</span>
+            <button type="button" class="mh-sub" data-tab-for="body" data-section="blood" data-report-section hidden><span>Blood count</span><span class="mh-count" data-count></span></button>
+            <button type="button" class="mh-sub" data-tab-for="body" data-section="liver" data-report-section hidden><span>Liver</span><span class="mh-count" data-count></span></button>
+            <button type="button" class="mh-sub" data-tab-for="body" data-section="kidney" data-report-section hidden><span>Kidney</span><span class="mh-count" data-count></span></button>
+            <button type="button" class="mh-sub" data-tab-for="body" data-section="thyroid" data-report-section hidden><span>Thyroid</span><span class="mh-count" data-count></span></button>
+            <button type="button" class="mh-sub" data-tab-for="body" data-section="vitamins" data-report-section hidden><span>Vitamins and iron</span><span class="mh-count" data-count></span></button>
+            <button type="button" class="mh-sub" data-tab-for="body" data-section="hormones" data-report-section hidden><span>Hormones</span><span class="mh-count" data-count></span></button>
+            <button type="button" class="mh-sub" data-tab-for="body" data-section="lipids" data-report-section hidden><span>Other lipids</span><span class="mh-count" data-count></span></button>
+            <button type="button" class="mh-sub" data-tab-for="body" data-section="inflammation" data-report-section hidden><span>Inflammation</span><span class="mh-count" data-count></span></button>
+            <button type="button" class="mh-sub" data-tab-for="body" data-section="urine" data-report-section hidden><span>Urine</span><span class="mh-count" data-count></span></button>
+            <button type="button" class="mh-sub" data-tab-for="body" data-section="metabolic-more" data-report-section hidden><span>Other metabolic</span><span class="mh-count" data-count></span></button>
+            <button type="button" class="mh-sub" data-tab-for="body" data-section="heart-more" data-report-section hidden><span>Other heart</span><span class="mh-count" data-count></span></button>
+            <button type="button" class="mh-sub" data-tab-for="body" data-section="muscle-more" data-report-section hidden><span>Other muscle</span><span class="mh-count" data-count></span></button>
+            <button type="button" class="mh-sub" data-tab-for="body" data-section="other" data-report-section hidden><span>Other</span><span class="mh-count" data-count></span></button>
           </div>
           <button type="button" class="mh-tab" data-tab="reports"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg><span>Reports</span><span data-count class="mh-count"></span></button>
           <h3 class="t-eyebrow mb-2 mt-5 hidden px-3 lg:block">People</h3>
@@ -956,6 +971,9 @@ import { STORY } from "../data/story";
   #tabbar .mh-sub { display: flex; align-items: center; min-height: 28px; padding: 3px 8px; border-radius: 7px; font-size: 13px; font-weight: 500; color: var(--color-text-2); border: 1px solid transparent; text-align: left; white-space: nowrap; }
   #tabbar .mh-sub:hover { color: var(--color-text); }
   #tabbar .mh-sub[aria-current="page"] { color: var(--color-text); font-weight: 600; background: var(--color-card); border-color: var(--color-border); }
+  #tabbar .mh-sub[hidden], #tabbar .mh-grp[hidden] { display: none; }
+  #tabbar .mh-sub .mh-count { margin-left: auto; padding-left: 10px; font-family: var(--font-mono); font-size: 10.5px; font-weight: 500; color: var(--color-text-3); }
+  #tabbar .mh-grp { padding: 7px 8px 2px; font-family: var(--font-mono); font-size: 9.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-3); }
   @media (max-width: 1023.98px) {
     :is(#tabbar, #settingsnav) h3 { display: none; }
     :is(#tabbar, #settingsnav) .mh-tab { border: 0; border-bottom: 2px solid transparent; border-radius: 10px 10px 0 0; min-height: 34px; padding: 5px 10px; }
@@ -966,6 +984,8 @@ import { STORY } from "../data/story";
     #tabbar [data-sub] { order: 50; flex-direction: row; flex-wrap: nowrap; flex-basis: 100%; min-width: 0; padding-left: 0; gap: 6px; margin: 6px 0 2px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
     #tabbar [data-sub]::-webkit-scrollbar, #settingsnav::-webkit-scrollbar { display: none; }
     #tabbar .mh-sub { flex-shrink: 0; border: 1px solid var(--color-border); border-radius: 999px; padding: 4px 11px; min-height: 32px; }
+    #tabbar .mh-grp { display: none; }
+    #tabbar .mh-sub .mh-count { padding-left: 6px; }
     #tabbar .mh-sub[aria-current="page"] { border-color: var(--color-accent-border); background: var(--color-accent-fill); color: var(--color-accent-text); }
     #settingsnav { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
     #settingsnav .mh-tab { flex-shrink: 0; }
@@ -1021,6 +1041,7 @@ import { STORY } from "../data/story";
   import { canonName, unitKey } from "../lib/canon.js";
   import { AUTO_SEND_TO_APP } from "../data/site";
   import { accountAfter, addressWords, afterKind } from "../data/letter";
+  import { reportSectionCounts } from "../my-health/derive/reportSections";
   import { PLANS_ENFORCED, PLANS_OPEN, AI_SUMMARY_OPEN, entitlements, planOf, type PlanKey } from "../data/plans";
   import type { MyHealthDocument } from "../my-health/document";
   import { esc, fmtDay, dayOf, dayWord, monthOf, monthYearOf, addDays, daysBack, daysBetween, localDay, mondayOf, todayStr, fmt1, round0, signed, fmtHM, fmtSleepMin, ordinal, medianOf, quartilesOf, byDate, kicker, plural } from "../my-health/derive/format";
@@ -2618,7 +2639,10 @@ import { STORY } from "../data/story";
       const wantSec = rest.join("-");
       const tab = TAB_ALIAS[wantTab] ?? wantTab;
       if (tab === "settings") { openSettings(wantSec); return; }
-      setSectionState(["overview", "depth", "body"].includes(tab) && wantSec ? (SECTION_ALIAS[wantSec] ?? wantSec) : "all");
+      // "Lab reports" under Body was the Reports tab's list twice; its old address lands on Reports (22 Nov 2026)
+      if (tab === "body" && wantSec === "reports") { setSectionState("all"); setTab("reports"); return; }
+      // the old names are the Overview's: #overview-heart is Vitals, and #body-heart is Body's own Heart
+      setSectionState(["overview", "depth", "body"].includes(tab) && wantSec ? (tab === "overview" ? SECTION_ALIAS[wantSec] ?? wantSec : wantSec) : "all");
       setTab(TABS.includes(tab) ? tab : "overview");
       if (tab === "horizon" && wantSec) openHorizon("#" + wanted);   // #horizon-<id> or #horizon-new lands on that page
     });
@@ -3464,6 +3488,20 @@ import { STORY } from "../data/story";
       if (pageNow !== lastSectionPage && tab !== "settings" && !windowSwitched) window.scrollTo({ top: 0 });
     }
     lastSectionPage = pageNow;
+  });
+  effect(() => {
+    const d = derivedSignal.value;
+    const counts: Record<string, number> = d ? reportSectionCounts(d.labs) : {};
+    let any = false;
+    document.querySelectorAll<HTMLElement>("#tabbar [data-report-section]").forEach((b) => {
+      const n = counts[b.dataset.section!] ?? 0;
+      b.hidden = !n; any = any || !!n;
+      const c = b.querySelector<HTMLElement>("[data-count]");
+      if (c) c.textContent = n ? String(n) : "";
+      if (n) b.setAttribute("aria-label", `${b.firstElementChild?.textContent ?? ""}, ${n} marker${n === 1 ? "" : "s"}`); else b.removeAttribute("aria-label");
+    });
+    // the two labels only make sense when there is a second group
+    document.querySelectorAll<HTMLElement>("#tabbar [data-body-group]").forEach((g) => { g.hidden = !any; });
   });
   function setSection(tab: string, k: string) {
     if (marked.has("painted")) mark("interaction");
