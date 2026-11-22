@@ -3,25 +3,33 @@
  * app's list, row for row and in its order. Three groups, Metabolic · Heart ·
  * Muscle; each row the name, when and by whom it was read, a track with the
  * value on its range, the band in words, the value. Tapping a name opens its
- * history. Then the lab reports on file. No row says when a test is due; no
- * row draws a trend. The rows and the bands are ../derive/body, from the
- * app's registry copied into src/data/body-list.ts.
+ * history. No row says when a test is due; no row draws a trend. The rows
+ * and the bands are ../derive/body, from the app's registry copied into
+ * src/data/body-list.ts.
+ *
+ * Then the sections only a report fills (canvas "Verve, Horizon as a
+ * programme", board 35; 22 November 2026): blood count, liver, kidney,
+ * thyroid and the rest, each marker read only against the range its lab
+ * printed (../derive/reportSections). The list of files that sat here as
+ * "Lab reports" is gone: the Reports tab is that list.
  *
  * One section at a time (canvas "Verve on the web, refined", board 07): the
- * sidebar lists Metabolic, Heart, Muscle and Lab reports; a press shows that
- * one. Body opens on Metabolic. A search reads every group, so while words
- * are typed every group with a match is on the page.
+ * sidebar lists the app's three, then every report section that holds a
+ * marker; a press shows that one. Body opens on Metabolic. A search reads
+ * every group, so while words are typed every group with a match is on the
+ * page.
  */
 import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
-import { derived, person, section, setSection, sectionFor, activeTab, searchQuery, actions, BODY_KEYS } from "../state.ts";
+import { derived, person, section, setSection, sectionFor, activeTab, searchQuery, actions, APP_BODY_KEYS } from "../state.ts";
 import { fmtDay } from "../derive/format.ts";
 import { bodyHeadline, bodyListOf, type BodyRow, type Tone, type Track } from "../derive/body.ts";
 import { searchTermsOf, landsAll } from "../derive/labs.ts";
+import { reportSectionsOf, reportHeadline, REPORT_SECTION_LEAD, type ReportRow } from "../derive/reportSections.ts";
 import { Pager } from "./Pager.tsx";
 
-/** The four sections, by the names the sidebar gives them. */
-const BODY_TITLE: Record<(typeof BODY_KEYS)[number], string> = { metabolic: "Metabolic", heart: "Heart", muscle: "Muscle", reports: "Lab reports" };
+/** The app's three sections, by the names the sidebar gives them; a report section carries its own. */
+const BODY_TITLE: Record<(typeof APP_BODY_KEYS)[number], string> = { metabolic: "Metabolic", heart: "Heart", muscle: "Muscle" };
 
 const DASH = "—";
 const TONE_TEXT: Record<Tone, string> = { good: "text-good", caution: "text-caution", concern: "text-concern", neutral: "text-text-2" };
@@ -38,20 +46,23 @@ function RangeTrack({ t, tone }: { t: Track; tone: Tone }) {
   );
 }
 
-function Row({ r, open, onOpen }: { r: BodyRow; open: boolean; onOpen: () => void }) {
+function Row({ r, open, onOpen }: { r: BodyRow | ReportRow; open: boolean; onOpen: () => void }) {
   const sub = r.value == null
     ? (r.subline ?? "not read yet")
     : r.subline ?? `${r.on ? shortDate(r.on) : ""}${r.writer ? ` · ${r.writer}` : ""}`;
-  const band = r.value == null ? "" : r.bandLabel ? `${r.bandLabel}${r.once ? " · measured once" : ""}` : r.bands.length ? "no band for this value" : "";
+  const band = r.value == null ? "" : r.bandLabel ? `${r.bandLabel}${r.once ? " · measured once" : ""}` : r.bandNote ?? (r.bands.length ? "no band for this value" : "");
+  const fromReport = "outside" in r;
+  // not read yet, as against read with no figure to show (remnant, when its newest report's three do not subtract)
+  const unread = r.value == null && !r.noFigure;
   return (
     <div class="border-t border-border first:border-t-0">
       <button type="button" onClick={onOpen} aria-expanded={open ? "true" : "false"} class="grid w-full grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 py-3 text-left sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,0.8fr)_auto]">
-        <span class="min-w-0">
-          <span class={`t-small block truncate font-semibold ${r.value == null ? "text-text-3" : "text-text"}`}>{r.label}</span>
-          <span class="t-caption block truncate text-text-3">{sub}</span>
+        <span class={`min-w-0 ${r.noFigure ? "col-span-2 sm:col-span-3" : ""}`}>
+          <span class={`t-small block truncate font-semibold ${unread ? "text-text-3" : "text-text"}`}>{r.label}</span>
+          <span class={`t-caption block text-text-3 ${r.noFigure ? "" : "truncate"}`}>{sub}</span>
         </span>
-        <span class="hidden min-w-0 sm:block">{r.track ? <RangeTrack t={r.track} tone={r.tone} /> : <span class="block h-[6px] w-full rounded-full bg-alt/60"></span>}</span>
-        <span class={`t-caption min-w-0 truncate ${r.value == null ? "text-text-3" : TONE_TEXT[r.tone]}`}>{band}</span>
+        {r.noFigure ? null : <span class="hidden min-w-0 sm:block">{r.track ? <RangeTrack t={r.track} tone={r.tone} /> : <span class="block h-[6px] w-full rounded-full bg-alt/60"></span>}</span>}
+        {r.noFigure ? null : <span class={`t-caption min-w-0 truncate ${r.value == null ? "text-text-3" : TONE_TEXT[r.tone]}`}>{band}</span>}
         <span class="shrink-0 whitespace-nowrap text-right">
           <span class={`t-figure-row ${r.value == null ? "text-text-3" : "text-text"}`}>{r.value ?? DASH}</span>
           {r.value != null && r.unit ? <span class="t-unit ml-1">{r.unit}</span> : null}
@@ -61,7 +72,7 @@ function Row({ r, open, onOpen }: { r: BodyRow; open: boolean; onOpen: () => voi
         <div class="mb-3 rounded-[10px] border border-border bg-alt p-3">
           <div class="flex flex-wrap items-baseline justify-between gap-2">
             <span class="t-eyebrow">History · {r.history.length ? `${r.history.length} reading${r.history.length === 1 ? "" : "s"}` : "nothing read yet"}</span>
-            {r.bands.length ? <span class="t-caption text-text-3">The app's bands: {r.bands.map((b) => `${b.label} ${b.range}`).join(" · ")}</span> : null}
+            {r.bands.length ? <span class="t-caption text-text-3">The app's bands: {r.bands.map((b) => `${b.label} ${b.range}`).join(" · ")}</span> : fromReport ? <span class="t-caption text-text-3">Each reading against the range its own report printed</span> : null}
           </div>
           {r.history.length ? (
             <div class="mt-2 flex flex-col">
@@ -85,31 +96,34 @@ export function Body() {
   const [openKey, setOpenKey] = useState("");
   const query = searchQuery.value, terms = searchTermsOf(query);
   const tab = activeTab.value;
-  const cur = sectionFor("body", section.value) as (typeof BODY_KEYS)[number];
-  const at = BODY_KEYS.indexOf(cur);
   const list = d ? bodyListOf(d) : null;
-  const matches = list && terms.length ? list.sections.flatMap((s) => s.rows).filter((r) => landsAll(r.label.toLowerCase(), terms)).length : 0;
+  // the sections only a report fills, after the app's three; one is on the page only when it holds a marker
+  const reportSecs = d ? reportSectionsOf(d.labs) : [];
+  const present: string[] = [...APP_BODY_KEYS, ...reportSecs.map((s) => s.key)];
+  const wanted = sectionFor("body", section.value);
+  const cur = present.includes(wanted) ? wanted : APP_BODY_KEYS[0];
+  const at = present.indexOf(cur);
+  const titleOf = (k: string) => (BODY_TITLE as Record<string, string>)[k] ?? reportSecs.find((s) => s.key === k)?.title ?? "";
+  const curReport = terms.length ? null : reportSecs.find((s) => s.key === cur) ?? null;
+  const lands = (r: { label: string }) => landsAll(r.label.toLowerCase(), terms);
+  const matches = list && terms.length ? list.sections.flatMap((s) => s.rows).filter(lands).length + reportSecs.flatMap((s) => s.rows).filter(lands).length : 0;
   useEffect(() => { if (tab === "body") actions.searchNote(terms.length ? `${matches} row${matches === 1 ? " matches" : "s match"}` : ""); }, [query, matches, tab]);
   if (!d || !list) return <Frame />;
   const self = !!p?.self;
-  const reports = (d.doc.reports ?? []).filter((r: any) => r?.path).sort((a: any, b: any) => String(b.report_date ?? b.created_at).localeCompare(String(a.report_date ?? a.created_at)));
-  const labsByPath = new Map<string, number>();
-  for (const l of d.labs) if (l.report_path) labsByPath.set(l.report_path, (labsByPath.get(l.report_path) ?? 0) + 1);
-  const kindWords = (r: any) => r.kind === "echo" || r.doc_type === "imaging" ? "An imaging report" : r.doc_type === "export" ? "The app's export" : "A lab report";
   return (
     <div>
       <div class="flex flex-wrap items-end justify-between gap-4">
         <div class="min-w-0">
-          <div class="t-eyebrow">Body <span aria-hidden="true">&rsaquo;</span> {terms.length ? "every group" : BODY_TITLE[cur]}{list.latestLab ? ` · latest labs ${fmtDay(list.latestLab)}` : ""}</div>
-          <h1 class="t-display mt-2 text-text">{bodyHeadline(list)}</h1>
-          <p class="t-body mt-3 max-w-3xl text-text-2">The app's Body list, row for row and in its order: the name, where you sit in the range, the band in words, the value. Labs and body measures live together here. Blood pressure sits with the vitals.</p>
+          <div class="t-eyebrow">Body <span aria-hidden="true">&rsaquo;</span> {terms.length ? "every group" : titleOf(cur)}{list.latestLab ? ` · latest labs ${fmtDay(list.latestLab)}` : ""}</div>
+          <h1 class="t-display mt-2 text-text">{curReport ? reportHeadline(curReport) : bodyHeadline(list)}</h1>
+          <p class="t-body mt-3 max-w-3xl text-text-2">{curReport ? REPORT_SECTION_LEAD : "The app's Body list, row for row and in its order: the name, where you sit in the range, the band in words, the value. Labs and body measures live together here. Blood pressure sits with the vitals."}</p>
         </div>
         <div class="flex flex-wrap gap-2">
           {self || p?.mine ? <button type="button" onClick={() => actions.report("pick", "")} class="r-btn min-h-10 bg-accent px-4 text-[13px] font-semibold text-canvas transition-opacity hover:opacity-90">Add a lab report</button> : null}
           <button type="button" onClick={() => actions.goTab("reports")} class="r-btn min-h-10 border border-border px-4 text-[13px] font-semibold text-text-2 transition-colors hover:border-border-strong hover:text-text">Reports</button>
         </div>
       </div>
-      {terms.length && !matches ? <p class="t-small mt-6 text-text-3">No row matches "{query}". Try part of a name: LDL, waist, grip.</p> : null}
+      {terms.length && !matches ? <p class="t-small mt-6 text-text-3">No row matches "{query}". Try part of a name: LDL, waist, grip, TSH.</p> : null}
       <div class="mt-6 flex flex-col gap-5">
         {list.sections.map((s) => {
           const rows = terms.length ? s.rows.filter((r) => landsAll(r.label.toLowerCase(), terms)) : s.rows;
@@ -124,30 +138,24 @@ export function Body() {
             </section>
           );
         })}
-        {cur === "reports" && !terms.length ? <section id="body-reports" class="r-card border border-border bg-card p-5 sm:px-6">
-          <div class="flex flex-wrap items-baseline justify-between gap-2">
-            <h3 class="t-title text-text">Lab reports on file</h3>
-            <span class="t-caption text-text-3">{reports.length ? `${reports.length} on file` : "none yet"}</span>
-          </div>
-          {reports.length ? (
-            <div class="mt-2">
-              {reports.slice(0, 12).map((r: any) => {
-                const n = labsByPath.get(r.path) ?? 0, when = String(r.report_date ?? r.created_at ?? "").slice(0, 10);
-                return (
-                  <div key={r.path} class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-border py-2.5 first:border-t-0">
-                    <span class="min-w-0"><span class="t-small block font-semibold text-text">{when ? fmtDay(when) : "Undated"}{r.patient_name && !r.name_match ? <span class="t-caption ml-2 font-normal text-caution">names {r.patient_name}</span> : null}</span><span class="t-caption block text-text-3">{kindWords(r)} · {n ? `${n} marker${n === 1 ? "" : "s"} read` : "nothing read from it"}</span></span>
-                    <button type="button" onClick={() => actions.report("view", r.path)} class="t-caption font-semibold text-accent-text hover:text-text">Open</button>
-                  </div>
-                );
-              })}
-            </div>
-          ) : <p class="t-small mt-2 text-text-3">Drop a lab report on Reports and every value in it lands here, judged by the app's bands.</p>}
-        </section> : null}
+        {reportSecs.map((s) => {
+          const rows = terms.length ? s.rows.filter(lands) : s.rows;
+          if (!rows.length || (!terms.length && s.key !== cur)) return null;
+          return (
+            <section key={s.key} id={`body-${s.key}`} class="r-card border border-border bg-card p-5 sm:px-6">
+              <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <h3 class="t-title text-text">{s.title}</h3>
+                <span class="t-caption text-text-3">{s.total} marker{s.total === 1 ? "" : "s"}{s.outside ? ` · ${s.outside} outside ${s.outside === 1 ? "its" : "their"} lab's range` : ""}</span>
+              </div>
+              <div class="mt-2">{rows.map((r) => <Row key={r.key} r={r} open={openKey === r.key} onOpen={() => setOpenKey(openKey === r.key ? "" : r.key)} />)}</div>
+            </section>
+          );
+        })}
       </div>
-      {terms.length ? null : <Pager at={at + 1} of={BODY_KEYS.length}
-        prev={at > 0 ? { label: BODY_TITLE[BODY_KEYS[at - 1]], go: () => setSection(BODY_KEYS[at - 1]) } : null}
-        next={at < BODY_KEYS.length - 1 ? { label: BODY_TITLE[BODY_KEYS[at + 1]], go: () => setSection(BODY_KEYS[at + 1]) } : null} />}
-      <p class="t-caption mt-4 max-w-3xl text-text-3">Ranges are the app's, read from the same thresholds file. No row says when a test is due. No row draws a trend; a tap on the name opens the history.</p>
+      {terms.length ? null : <Pager at={at + 1} of={present.length}
+        prev={at > 0 ? { label: titleOf(present[at - 1]), go: () => setSection(present[at - 1]) } : null}
+        next={at < present.length - 1 ? { label: titleOf(present[at + 1]), go: () => setSection(present[at + 1]) } : null} />}
+      <p class="t-caption mt-4 max-w-3xl text-text-3">{curReport ? "Ranges here are the ones each lab printed." : "Ranges are the app's, read from the same thresholds file."} No row says when a test is due. No row draws a trend; a tap on the name opens the history.</p>
     </div>
   );
 }

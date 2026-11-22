@@ -268,6 +268,31 @@ export function lipidRatioRows(labs: LabRow[], profile?: { sex?: string | null; 
   return [...remnants, ...out];
 }
 
+/**
+ * The date of the newest report that holds total, HDL and LDL together, when their arithmetic gives no figure:
+ * the total is lower than the HDL and the LDL together, so the three cannot be one draw as printed. Null when
+ * the newest such report does give a figure, or when no report holds all three, each above zero. The Body row
+ * says so in words with this date, instead of showing an older report's figure as if it were the latest
+ * (22 November 2026). The app's lib/lipids.ts has the helper of the same name and the same rule.
+ */
+export function remnantNoFigure(labs: LabRow[]): string | null {
+  const byDay = new Map<string, Record<string, LabRow>>();
+  for (const r of labs ?? []) {
+    if (!r || r.computed) continue;
+    const name = canonName(String(r.analyte));
+    if (!["Total Cholesterol", "HDL Cholesterol", "LDL Cholesterol"].includes(name)) continue;
+    if (!Number.isFinite(Number(r.value))) continue;
+    const d = String(r.measured_on).slice(0, 10);
+    const slot = byDay.get(d) ?? byDay.set(d, {}).get(d)!;
+    if (!slot[name]) slot[name] = r;   // the first printed value on that date stands, as the remnant itself reads it
+  }
+  const above = (r?: LabRow) => !!r && Number(r.value) > 0;
+  const whole = [...byDay.entries()].filter(([, slot]) => above(slot["Total Cholesterol"]) && above(slot["HDL Cholesterol"]) && above(slot["LDL Cholesterol"])).sort((a, b) => a[0].localeCompare(b[0]));
+  const newest = whole[whole.length - 1];
+  if (!newest) return null;
+  return remnantCholesterol(panelOf(newest[1])) ? null : newest[0];
+}
+
 /** One report date's slot of lipid rows, as the panel the remnant and the method read. */
 function panelOf(slot: Record<string, LabRow>): LipidPanel {
   const n = (r?: LabRow) => (r ? Number(r.value) : null);

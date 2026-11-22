@@ -14,7 +14,7 @@
 import type { PersonData } from "./person.ts";
 import { BODY_DEFS, BODY_SECTIONS, lpaBands, remnantBands, type Band, type BodyCtx, type BodyDef, type BodySection } from "../../data/body-list.ts";
 import { chartKeyFor, type Pt } from "./markers.ts";
-import { REMNANT_LABEL } from "./lipids.ts";
+import { REMNANT_LABEL, remnantNoFigure } from "./lipids.ts";
 import { sppbSeries } from "./lenses.ts";
 import { unitKey } from "../../lib/canon.js";
 
@@ -40,6 +40,10 @@ export interface BodyRow {
   track: Track | null;
   /** The line under the name where the usual words would be wrong. */
   subline: string | null;
+  /** For a marker with no band of its own: the words that stand where the band goes ("not judged alone"). */
+  bandNote: string | null;
+  /** Remnant only: the newest report holds all three cholesterols and gives no figure. The row is read, shows a dash and its reason, and is never "to watch". */
+  noFigure: boolean;
   history: Reading[];
 }
 export interface BodySectionRows { key: BodySection; title: string; rows: BodyRow[]; total: number; recorded: number; watch: number }
@@ -120,10 +124,18 @@ function readingsOf(d: PersonData, def: BodyDef, who: ReturnType<typeof writerIn
   return pts.map((p) => ({ d: p.d, v: p.v, unit: p.unit ?? null, writer: who(def.key, p.d, p.v) }));
 }
 
+const dayMonth = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+/** Why the remnant row has no figure although three cholesterols are on file: said with the report's date. */
+export const remnantNoFigureWords = (day: string) => `${dayMonth(day)}: no figure. That report's total is lower than its HDL and LDL together.`;
+
 /** One marker as a row of the list. */
 export function bodyRowOf(d: PersonData, def: BodyDef, ctx: BodyCtx, who = writerIndex(d)): BodyRow {
   const history = readingsOf(d, def, who);
-  const latest = history[history.length - 1] ?? null;
+  // Remnant: when the newest report that holds all three gives no figure, an older report's figure is history,
+  // not the row's value. The row shows a dash and the reason, and is not counted as outside (board 35).
+  const gap = def.key === "remnant" ? remnantNoFigure(d.labs) : null;
+  const stale = !!gap && (!history.length || history[history.length - 1].d < gap);
+  const latest = stale ? null : history[history.length - 1] ?? null;
   // Lp(a) and remnant are judged in the unit the reading carries; every other marker in the app's unit
   let bands: Band[];
   if (def.key === "lpa_value") bands = lpaBands(latest && u(latest.unit) === "mg/dl" ? "mg/dL" : "nmol/L");
@@ -141,10 +153,15 @@ export function bodyRowOf(d: PersonData, def: BodyDef, ctx: BodyCtx, who = write
     watch: !!latest && !def.once && band != null && band > 0 && !bands[band].unjudged,
     once: !!def.once,
     track: judged != null && band != null ? rangeTrack(bands, judged) : null,
-    subline: latest ? (bands.length ? null : def.subline ?? null) : (def.computed ? def.needs ?? null : null),
+    subline: stale ? remnantNoFigureWords(gap!) : latest ? (bands.length ? null : def.subline ?? null) : (def.computed ? def.needs ?? null : null),
+    bandNote: latest && !bands.length ? def.bandNote ?? null : null,
+    noFigure: stale,
     history,
   };
 }
+
+/** A row counts as read when it holds a value, or when it is the remnant with no figure: the three it is made of were read. */
+const isRead = (r: BodyRow) => r.value != null || r.noFigure;
 
 /** The list: three sections in the app's order, the counts, the rows outside their range, the latest report date. */
 export function bodyListOf(d: PersonData): BodyList {
@@ -152,11 +169,11 @@ export function bodyListOf(d: PersonData): BodyList {
   const who = writerIndex(d);
   const sections = BODY_SECTIONS.map(({ key, title }) => {
     const rows = BODY_DEFS.filter((x) => x.section === key).map((x) => bodyRowOf(d, x, ctx, who));
-    return { key, title, rows, total: rows.length, recorded: rows.filter((r) => r.value != null).length, watch: rows.filter((r) => r.watch).length };
+    return { key, title, rows, total: rows.length, recorded: rows.filter(isRead).length, watch: rows.filter((r) => r.watch).length };
   });
   const all = sections.flatMap((s) => s.rows);
   const latestLab = d.labs.map((l) => String(l.measured_on ?? "").slice(0, 10)).filter(Boolean).sort().pop() ?? null;
-  return { sections, total: all.length, recorded: all.filter((r) => r.value != null).length, watch: all.filter((r) => r.watch).length, outside: all.filter((r) => r.watch), latestLab };
+  return { sections, total: all.length, recorded: all.filter(isRead).length, watch: all.filter((r) => r.watch).length, outside: all.filter((r) => r.watch), latestLab };
 }
 
 /** The band a value of one marker falls in, in the app's words: for the snapshot's "reads as" column. */

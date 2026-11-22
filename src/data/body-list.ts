@@ -83,6 +83,8 @@ export interface BodyDef {
   computed?: boolean;
   /** What is missing when a computed value cannot be made. */
   needs?: string;
+  /** For a marker with no band of its own: the words that stand where the band goes. */
+  bandNote?: string;
 }
 
 const two = (goodLabel: string, badLabel: string, cut: number, unit: string, goodBelow: boolean): Band[] => goodBelow
@@ -128,7 +130,7 @@ export const BODY_DEFS: BodyDef[] = [
       { label: "Borderline", range: `${CV.ldlC.optimalMax + 1}–${CV.ldlC.borderlineMax}`, min: CV.ldlC.optimalMax, max: CV.ldlC.borderlineMax, match: (v) => v > CV.ldlC.optimalMax && v <= CV.ldlC.borderlineMax },
       { label: "Elevated", range: `> ${CV.ldlC.borderlineMax}`, min: CV.ldlC.borderlineMax, max: null, match: (v) => v > CV.ldlC.borderlineMax },
     ] },
-  { key: "total_cholesterol_mgdl", appKey: "ldl/Total cholesterol", section: "heart", label: "Total cholesterol", unit: CV.ldlC.unit, bands: () => [], subline: "not judged alone; one half of remnant cholesterol" },
+  { key: "total_cholesterol_mgdl", appKey: "ldl/Total cholesterol", section: "heart", label: "Total cholesterol", unit: CV.ldlC.unit, bands: () => [], bandNote: "not judged alone" },
   { key: "remnant", appKey: "ldl/Remnant cholesterol", section: "heart", label: "Remnant cholesterol", unit: RC.unit, computed: true,
     needs: "Total, HDL and LDL from one report make this appear.",
     bands: () => two("In range", "Elevated", RC.elevatedFrom, ` ${RC.unit}`, true) },
