@@ -11,7 +11,7 @@ export const LETTER_CONSENT =
 export const LETTER_PRESS = "One press inside it keeps the weekly letter coming.";
 
 /**
- * The word on a post's link, /horizon?from=clip-12: which post brought the reader. Lower-case letters, digits and
+ * The word on a post's link, /newsletter?from=clip-12 (or /horizon?from=clip-12): which post brought the reader. Lower-case letters, digits and
  * dashes, at most forty, starting with a letter or a digit (the database checks the same shape). Anything else is
  * no tag: the address is still kept, and nothing is said about where it came from.
  */

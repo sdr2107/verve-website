@@ -41,10 +41,11 @@ test("past letters: one link to Substack, the same address the footer uses", () 
   assert.match(SUBSTACK_URL, /^https:\/\/substack\.com\//);
 });
 
-test("the box on this page writes its own door, keeps no word from a link, and offers two things to do", () => {
+test("the box on this page writes its own door, keeps the word on a post's link, and offers two things to do", () => {
   assert.match(box, /data-door=\{door\} data-places=\{own \? "Three" : "Two"\}/);
   assert.match(box, /const door = box\.dataset\.door === "newsletter" \? "newsletter" : "horizon";/);
-  assert.match(box, /source: door, user_id: userId, tag: door === "horizon" \? tagOf\(location\.search\) : null/);
+  // 22 Nov 2026: posts link /newsletter?from=<word>, so this door keeps the word as the Horizon page does
+  assert.match(box, /source: door, user_id: userId, tag: tagOf\(location\.search\) \}\);/);
   // the heading and the third thing to do belong to the Horizon page only
   assert.match(box, /\{own && <div class="flex flex-col gap-1">\s*<h2 id="letterhead"/);
   assert.match(box, /\{own && <div class="flex gap-3"><span class=\{step\}>3<\/span>/);

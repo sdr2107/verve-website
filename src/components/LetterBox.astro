@@ -15,10 +15,11 @@
  * The weekly letter starts only on a press made inside that first letter, so an address typed here by someone
  * else gets one email and no more.
  *
- * Two doors use it (board 34, 21 November 2026). On the Horizon page it carries its own heading, keeps the word
- * on a post's link, and offers a third thing to do: the five questions below it. On the newsletter page
- * (../pages/newsletter.astro) the page is the heading, no word is kept, and the third is left out: that page
- * says nothing about Horizon while the Horizon page is unlinked.
+ * Two doors use it (board 34, 21 November 2026). On the Horizon page it carries its own heading and offers a third
+ * thing to do: the five questions below it. On the newsletter page (../pages/newsletter.astro) the page is the
+ * heading and the third is left out: that page says nothing about Horizon while the Horizon page is unlinked.
+ * Both keep the word on a post's link: since 22 November 2026 the videos' closing card and captions send readers
+ * to /newsletter?from=<word> (the founder: the weekly newsletter link should open the newsletter, not Horizon).
  */
 import { LETTER_CONSENT, LETTER_PRESS } from "../data/letter";
 import { SHEET_PDF } from "../data/fitness-tiers";
@@ -90,7 +91,7 @@ const go = "min-h-8 self-start text-[13px] font-semibold text-accent-text hover:
       say("Saving…");
       let userId: string | null = null;
       try { userId = (await supabase.auth.getSession()).data.session?.user.id ?? null; } catch { /* not signed in */ }
-      const { error } = await supabase.from("newsletter_signups").insert({ email, consent_text: LETTER_CONSENT, source: door, user_id: userId, tag: door === "horizon" ? tagOf(location.search) : null });
+      const { error } = await supabase.from("newsletter_signups").insert({ email, consent_text: LETTER_CONSENT, source: door, user_id: userId, tag: tagOf(location.search) });
       button.disabled = false;
       // 23505: the address is on the list already. Its row is not written again; the function says what it needs.
       const returning = error?.code === "23505";
