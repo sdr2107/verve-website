@@ -144,6 +144,7 @@ export const VIDEOS: Video[] = [
   { slug: "arc-calories-timing", title: "Weight loss: total calories or meal timing?", seconds: 176, group: "wider-picture", theme: "everyday-habits", youtube: "BENUmKZdaGc", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-384451854", x: "https://x.com/RoplekarSudeep/status/2120451918233530513" } },
   { slug: "arc-hydration-urine", title: "Your urine color: the simplest hydration test you have", seconds: 179, group: "wider-picture", theme: "everyday-habits", youtube: "hUf1tPZ4Tcs", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-391355233", x: "https://x.com/RoplekarSudeep/status/2123319688876953857" } },
   { slug: "arc-coffee-last-cup", title: "Your last coffee: regular or decaf?", seconds: 179, group: "wider-picture", theme: "everyday-habits", youtube: "mYuxcdeObZU", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-393419714", x: "https://x.com/RoplekarSudeep/status/2124199740711813531" } },
+  { slug: "arc-dinner-early", title: "Does eating dinner early make a difference?", seconds: 177, group: "wider-picture", theme: "everyday-habits", youtube: "ZEFiIPYkhIg", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-394895680", x: "https://x.com/RoplekarSudeep/status/2124882471137493239" } },
 ];
 
 export const videoSrc = (v: Video) => `/video/${v.slug}/${v.slug}.mp4`;
