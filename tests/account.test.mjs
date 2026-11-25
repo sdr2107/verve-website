@@ -110,3 +110,17 @@ test("Settings has six sections and knows its own links", () => {
   assert.equal(isSettingsSection("plan"), true);
   assert.equal(isSettingsSection("billing"), false);
 });
+
+test("a founding member: the line names the last day, the rows say it was given and does not renew", () => {
+  const today = new Date("2026-11-25T08:00:00Z");
+  const info = parsePlan({ plan: "pro", through: "founding", until: "2027-02-23T12:00:00Z", trial: { available: true, ends_at: null } });
+  assert.equal(info.through, "founding");
+  assert.equal(planLine(info, today), "Pro · founding member, until 23 February 2027");
+  assert.equal(planLine({ ...info, until: null }, today), "Pro · founding member");
+  // a last day in this year carries no year
+  assert.equal(planLine({ ...info, until: "2026-12-20T12:00:00Z" }, today), "Pro · founding member, until 20 December");
+  const rows = planRows(info, today);
+  assert.equal(rows.renews.value, "Does not renew");
+  assert.match(rows.renews.note, /founding members, until 23 February 2027/);
+  assert.match(rows.payment.note, /No card/);
+});

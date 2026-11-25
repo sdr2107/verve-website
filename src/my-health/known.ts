@@ -14,7 +14,18 @@
  */
 import { type PlanInfo, parsePlan } from "./account.ts";
 
-export type Known = { tester?: boolean; plan?: PlanInfo };
+export type Known = { tester?: boolean; team?: boolean; plan?: PlanInfo };
+
+/**
+ * What an account holds of Horizon as a programme (the database's programme_access(), METTracker
+ * supabase/migrations/20261125_founding_members.sql): "team" for one of Verve's own test accounts, "founding" for
+ * a founding member not past their day, "none" for everyone else.
+ */
+export type ProgrammeAccess = "team" | "founding" | "none";
+/** The database's answer as one of the three; anything else, null among them, is "none". */
+export const accessOf = (x: unknown): ProgrammeAccess => (x === "team" || x === "founding" ? x : "none");
+/** The two flags the page keeps: the programme is on (`tester`), and this is one of the team's own accounts (`team`). */
+export const accessFlags = (a: ProgrammeAccess): { tester: boolean; team: boolean } => ({ tester: a !== "none", team: a === "team" });
 export type KnownStore = { getItem(key: string): string | null; setItem(key: string, value: string): void; removeItem(key: string): void };
 
 /** Where the page stands on the question "is this a test account": not answered yet, answered, or could not be asked. */
@@ -33,6 +44,7 @@ export function recall(uid: string, store: KnownStore | null = browserStore()): 
     if (!o || typeof o !== "object") return {};
     const out: Known = {};
     if (typeof o.tester === "boolean") out.tester = o.tester;
+    if (typeof o.team === "boolean") out.team = o.team;
     const plan = parsePlan(o.plan);
     if (plan) out.plan = plan;
     return out;

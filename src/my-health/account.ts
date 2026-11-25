@@ -11,7 +11,7 @@
 
 // ── the plan ────────────────────────────────────────────────────────────────
 
-export type PlanThrough = "vip" | "trial" | "web" | "app";
+export type PlanThrough = "vip" | "founding" | "trial" | "web" | "app";
 export type PlanInfo = {
   plan: "pro" | "free";
   /** Where Pro comes from, in the server's order of precedence; null on Free. */
@@ -26,7 +26,7 @@ export function parsePlan(x: unknown): PlanInfo | null {
   if (!x || typeof x !== "object") return null;
   const o = x as Record<string, unknown>;
   if (o.plan !== "pro" && o.plan !== "free") return null;
-  const through = o.through === "vip" || o.through === "trial" || o.through === "web" || o.through === "app" ? o.through : null;
+  const through = o.through === "vip" || o.through === "founding" || o.through === "trial" || o.through === "web" || o.through === "app" ? o.through : null;
   const t = (o.trial && typeof o.trial === "object" ? o.trial : {}) as Record<string, unknown>;
   return {
     plan: o.plan,
@@ -54,6 +54,10 @@ export function planLine(info: PlanInfo | null, today = new Date()): string {
   if (!info || info.plan !== "pro") return "Free";
   if (info.through === "app") return "Pro · through the app";
   if (info.through === "vip") return "Pro · on the VIP list";
+  if (info.through === "founding") {
+    const end = longDay(info.until, today);
+    return end ? `Pro · founding member, until ${end}` : "Pro · founding member";
+  }
   if (info.through === "trial") {
     const end = longDay(info.until ?? info.trial.ends_at, today);
     return end ? `Pro · 14-day trial on the website, until ${end}` : "Pro · 14-day trial on the website";
@@ -76,6 +80,14 @@ export function planRows(info: PlanInfo | null, today = new Date()): PlanRows {
     payment: { value: "—", note: "No card is held here." },
     receipts: none,
   };
+  if (info?.plan === "pro" && info.through === "founding") {
+    const end = longDay(info.until, today);
+    return {
+      renews: { value: "Does not renew", note: end ? `Given by Verve to its founding members, until ${end}. Nothing free is taken away when it ends.` : "Given by Verve to its founding members. Nothing free is taken away when it ends." },
+      payment: { value: "—", note: "No card is held here." },
+      receipts: none,
+    };
+  }
   if (info?.plan === "pro" && info.through === "trial") {
     const end = longDay(info.until ?? info.trial.ends_at, today);
     return {

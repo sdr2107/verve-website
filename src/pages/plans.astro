@@ -147,7 +147,7 @@ const CURRENCIES = ["inr", "usd"] as const;
   <script>
     // While the page is hidden (../data/plans.ts PLANS_PAGE_PUBLIC), the chart is shown to a test account only.
     import { supabase } from "../lib/supabase";
-    import { testerAnswer } from "../my-health/horizon/api.ts";
+    import { teamAnswer } from "../my-health/horizon/api.ts";
     import { recall, remember } from "../my-health/known.ts";
     const closed = document.querySelector<HTMLElement>("[data-plans-closed]");
     const chart = document.querySelector<HTMLElement>("[data-plans-chart]");
@@ -157,10 +157,10 @@ const CURRENCIES = ["inr", "usd"] as const;
         let uid = "";
         try { uid = (await supabase.auth.getSession()).data.session?.user.id ?? ""; } catch { /* signed out */ }
         if (!uid) return;                                 // signed out: the page stays closed
-        if (recall(uid).tester === true) show(true);      // what the last visit learned, at once
-        const answer = await testerAnswer(supabase, uid);
+        if (recall(uid).team === true) show(true);      // what the last visit learned, at once
+        const answer = await teamAnswer(supabase, uid);
         if (answer == null) return;                       // could not be asked: what is on the screen stays
-        remember(uid, { tester: answer });
+        remember(uid, { team: answer });
         show(answer);
       })();
     }

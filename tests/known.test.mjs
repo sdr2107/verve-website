@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { forget, recall, remember, waitingWords } from "../src/my-health/known.ts";
+import { accessFlags, accessOf, forget, recall, remember, waitingWords } from "../src/my-health/known.ts";
 import { planLine } from "../src/my-health/account.ts";
 
 const store = (seed = {}) => {
@@ -77,15 +77,20 @@ test("the head start asks the two small questions beside the document", () => {
 test("boot opens on what is known and asks again; the Horizon view is no longer the only one who asks", () => {
   const boot = page.slice(page.indexOf("async function boot()"), page.indexOf("// Apple's and Google's doors"));
   assert.match(boot, /recall\(userId\)/);
-  assert.match(boot, /testerAnswer\(supabase as any, askedFor\)/);
-  assert.match(boot, /remember\(askedFor, \{ tester: t \}\)/);
+  // one question with three answers since 25 November 2026 (a test account, a founding member, neither), kept as two flags
+  assert.match(boot, /accessAnswer\(supabase as any, askedFor\)/);
+  assert.match(boot, /const flags = accessFlags\(t\);/);
+  assert.match(boot, /remember\(askedFor, flags\)/);
   assert.match(boot, /testerState\.value = "failed"/, "a question that cannot be asked ends in words, not in a page that waits for ever");
 });
 
 test("a failed ask is not kept as a no", () => {
-  const fn = api.slice(api.indexOf("export function testerAnswer"), api.indexOf("export function forgetTester"));
-  assert.match(fn, /return error \? null : !!data;/);
-  assert.match(fn, /if \(a == null && testerAsk === mine\) testerAsk = null;/);
+  const fn = api.slice(api.indexOf("export function accessAnswer"), api.indexOf("export function forgetTester"));
+  assert.match(fn, /return error \? null : data \? "team" : "none";/);
+  assert.match(fn, /if \(a == null && accessAsk === mine\) accessAsk = null;/);
+  // and the two questions asked of that answer pass a null on as a null
+  assert.match(fn, /a == null \? null : accessFlags\(a\)\.tester/);
+  assert.match(fn, /a == null \? null : accessFlags\(a\)\.team/);
 });
 
 test("the two pages a test account is shown wait for the answer before saying there is nothing", () => {
@@ -96,4 +101,28 @@ test("the two pages a test account is shown wait for the answer before saying th
 
 test("signing out forgets what was kept", () => {
   assert.equal(page.split("forgetTester(); if (userId) forgetKnown(userId);").length - 1, 2, "the sign-out, and the deleted account");
+});
+
+test("the database's answer is one of three, and anything else is none", () => {
+  assert.equal(accessOf("team"), "team");
+  assert.equal(accessOf("founding"), "founding");
+  for (const x of [null, undefined, "", "none", "Team", true, { access: "team" }, ["team"]]) assert.equal(accessOf(x), "none");
+});
+
+test("one answer, two flags: a founding member has the programme and nothing of the team's", () => {
+  assert.deepEqual(accessFlags("team"), { tester: true, team: true });
+  assert.deepEqual(accessFlags("founding"), { tester: true, team: false });
+  assert.deepEqual(accessFlags("none"), { tester: false, team: false });
+});
+
+test("both flags are kept for the next visit, and a visit before there was a second flag reads as not the team's", () => {
+  const s = store();
+  remember("u1", accessFlags("founding"), s);
+  assert.deepEqual(recall("u1", s), { tester: true, team: false });
+  remember("u1", accessFlags("team"), s);
+  assert.deepEqual(recall("u1", s), { tester: true, team: true });
+  const old = store({ "mh-known-u2": JSON.stringify({ tester: true }) });
+  assert.equal(recall("u2", old).team, undefined);          // the page then draws nothing of the team's until the database answers
+  const bad = store({ "mh-known-u3": JSON.stringify({ tester: true, team: "yes" }) });
+  assert.equal(recall("u3", bad).team, undefined);
 });

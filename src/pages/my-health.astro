@@ -1054,15 +1054,15 @@ import { STORY } from "../data/story";
   import { effect } from "@preact/signals";
   import { mountTeamPage } from "../my-health/views/TesterPanel.tsx";
   import { mountOfferPage, loadOffer, forgetOffer } from "../my-health/views/Offer.tsx";
-  import { isTester as isTesterSignal, testerState } from "../my-health/state";
-  import { recall, remember, forget as forgetKnown } from "../my-health/known";
+  import { isTester as isTesterSignal, isTeam as isTeamSignal, testerState } from "../my-health/state";
+  import { recall, remember, forget as forgetKnown, accessFlags } from "../my-health/known";
   import { derived as derivedSignal, doc as docSignal, person as personSignal, people as peopleSignal, firstName as firstNameSignal, myRole as myRoleSignal, section as sectionSignal, setSection as setSectionState, sectionFor, latestRead as latestReadSignal, readOf, activeTab as activeTabSignal, searchQuery as searchQuerySignal, depthLocked as depthLockedSignal, depthWorking as depthWorkingSignal, actions, openLabs, space as spaceSignal, isClient } from "../my-health/state";
   import { mountOverview } from "../my-health/views/Overview";
   import { mountBody } from "../my-health/views/Body";
   import { mountDepth } from "../my-health/views/Depth";
   import { mountHorizon } from "../my-health/views/Horizon.tsx";
   import { mountFitnessCard, openFitnessRead } from "../my-health/views/FitnessEntry.tsx";
-  import { programmeTester, testerAnswer, forgetTester, forgetAccess } from "../my-health/horizon/api.ts";
+  import { programmeTester, accessAnswer, teamAnswer, forgetTester, forgetAccess } from "../my-health/horizon/api.ts";
   import { clearSetup } from "../my-health/horizon/setupCards.ts";
   import { mountMondayList } from "../my-health/views/Programme.tsx";
   import { mountPlanSheet } from "../my-health/views/PlanSheet.tsx";
@@ -1762,7 +1762,8 @@ import { STORY } from "../data/story";
     const p = person;
     if (!p?.id || !p.mine) return;
     // a diet chart's tick is offered to test accounts only (board 17); it is in no preset, so it starts unticked
-    const tester = await programmeTester(supabase as any);
+    // the diet chart's tick is the team's alone (derive/scopes TEST_SCOPES): a founding member is not offered it
+    const tester = (await teamAnswer(supabase as any)) === true;
     // activity and body come from the app, which only a person with an account has
     $("shareform").querySelectorAll<HTMLInputElement>("[data-scope]").forEach((c) => {
       const appOnly = c.dataset.scope === "activity" || c.dataset.scope === "body" || c.dataset.scope === "heart";
@@ -2746,16 +2747,18 @@ import { STORY } from "../data/story";
       // page, and a reload began the wait again (the founder's recordings).
       const known = recall(userId);
       planInfoSignal.value = known.plan ?? null; planAnswered.value = false;
-      isTesterSignal.value = known.tester === true; testerState.value = known.tester != null ? "known" : "asking";
+      isTesterSignal.value = known.tester === true; isTeamSignal.value = known.team === true; testerState.value = known.tester != null ? "known" : "asking";
       const askedFor = userId;
-      const askTester = (again: boolean) => void testerAnswer(supabase as any, askedFor).then((t) => {
+      const askTester = (again: boolean) => void accessAnswer(supabase as any, askedFor).then((t) => {
         if (userId !== askedFor) return;                                 // another account signed in meanwhile
         if (t == null) {                                                 // it could not be asked: once more, then say so
           if (again) window.setTimeout(() => askTester(false), 3000);
           else if (testerState.value === "asking") testerState.value = "failed";
           return;
         }
-        isTesterSignal.value = t; testerState.value = "known"; remember(askedFor, { tester: t }); mark("tester");
+        // one answer, two flags: the programme is on (a test account or a founding member); this is one of the team's own
+        const flags = accessFlags(t);
+        isTesterSignal.value = flags.tester; isTeamSignal.value = flags.team; testerState.value = "known"; remember(askedFor, flags); mark("tester");
       });
       askTester(true);
       showWhoAmI(session.user);
@@ -2816,7 +2819,7 @@ import { STORY } from "../data/story";
       firstName = "";
       people = []; person = null;
       // nobody is signed in: nothing is known, and the last account's answers do not carry over
-      planInfoSignal.value = null; planAnswered.value = false; isTesterSignal.value = false; testerState.value = "asking"; forgetTester();
+      planInfoSignal.value = null; planAnswered.value = false; isTesterSignal.value = false; isTeamSignal.value = false; testerState.value = "asking"; forgetTester();
       dim("peoplewrap", true);
       appLink?.classList.remove("hidden"); signinLink?.classList.add("hidden");
       show("auth", true); show("home", false); showIf("signout", false); dim("whoami", true);
@@ -3852,7 +3855,9 @@ import { STORY } from "../data/story";
    */
   async function afterOtherRead(out: any, path: string, name: string, who: Person): Promise<string> {
     const tester = await programmeTester(supabase as any);
-    if (out.doc_type === "diet_chart") return tester ? "Read as a diet chart. It is kept here. Add it to a horizon from that horizon's page." : "Read as a diet chart. It is kept as a file.";
+    // a diet chart joins a horizon on the team's accounts only; the fitness card below is the programme's, founding members too
+    const team = (await teamAnswer(supabase as any)) === true;
+    if (out.doc_type === "diet_chart") return team ? "Read as a diet chart. It is kept here. Add it to a horizon from that horizon's page." : "Read as a diet chart. It is kept as a file.";
     if (!tester || !who.self) return "Read as a treadmill or exercise test. It is kept as a file.";
     return openFitnessRead(out, path, pretty(name)) ? "Read as a treadmill or exercise test. Check what was read in the card that has opened." : "Read as a treadmill or exercise test. Nothing in it could be read as a result, so it is kept as a file.";
   }
@@ -4369,13 +4374,13 @@ import { STORY } from "../data/story";
   // ── Settings, and the account at the bottom-left (boards 07 and 08) ──────
   // Settings › For the team: our own notes, for the named test accounts; its door is drawn only for them
   mountTeamPage($("setteamroot"), { supabase: supabase as any });
-  effect(() => { $("settingsteamnav").classList.toggle("hidden", !isTesterSignal.value); });
+  effect(() => { $("settingsteamnav").classList.toggle("hidden", !isTeamSignal.value); });
   // Settings › Your offer: what goes with a horizon, for a test account, and only once the database has words for it
   mountOfferPage($("setofferroot"), { supabase: supabase as any });
   effect(() => {
-    const on = isTesterSignal.value;
+    const on = isTeamSignal.value;
     $("settingsoffernav").classList.add("hidden");
-    if (on) void loadOffer(supabase as any).then((b) => { $("settingsoffernav").classList.toggle("hidden", !b || !isTesterSignal.value); });
+    if (on) void loadOffer(supabase as any).then((b) => { $("settingsoffernav").classList.toggle("hidden", !b || !isTeamSignal.value); });
   });
   const settingsView = mountSettings({ plan: $("setplanroot"), email: $("setemailroot"), appearance: $("setappearanceroot"), devices: $("setdevicesroot") }, {
     supabase: supabase as any, url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY,

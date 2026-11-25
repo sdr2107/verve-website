@@ -22,7 +22,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PersonData } from "../derive/person.ts";
 import { openTargets, pacesOf, toTarget, type Target } from "../horizon/derive.ts";
 import { todayStr } from "../derive/format.ts";
-import { derived, horizons, isTester, testerState } from "../state.ts";
+import { derived, horizons, isTeam, testerState } from "../state.ts";
 import { waitingWords } from "../known.ts";
 import { guidePlan, isGuideStored, type GuideStored } from "../horizon/guidePlan.ts";
 import { guidePlanReady, listWeekNotes, loadPanel, type HorizonFull } from "../horizon/api.ts";
@@ -149,7 +149,7 @@ export function HorizonPanel({ sb, h, targets, person, today, guideOn }: { sb: S
  * horizon on the page it is filled with that horizon's counts, as it was.
  */
 function TeamPage({ sb }: { sb: SupabaseClient }) {
-  const tester = isTester.value, hs = horizons.value, person = derived.value;
+  const tester = isTeam.value, hs = horizons.value, person = derived.value;
   const [guideOn, setGuideOn] = useState(false);
   useEffect(() => { let on = true; void guidePlanReady(sb).then((g) => { if (on) setGuideOn(g); }); return () => { on = false; }; }, []);
   // the letter's list, for an account the database names as its reader (../list/api.ts); it opens first

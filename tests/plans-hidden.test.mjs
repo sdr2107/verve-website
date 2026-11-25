@@ -38,11 +38,12 @@ test("a visitor reads three lines and is given something to do; the chart is dra
 
 test("the chart is shown to a test account only, through the one question My health asks", () => {
   const gate = plans.slice(plans.indexOf("// While the page is hidden"));
-  assert.match(gate, /import \{ testerAnswer \} from "\.\.\/my-health\/horizon\/api\.ts";/);
+  // the team's own accounts since 25 November 2026: a founding member has the programme, and still reads that plans are not open
+  assert.match(gate, /import \{ teamAnswer \} from "\.\.\/my-health\/horizon\/api\.ts";/);
   assert.match(gate, /if \(!uid\) return;/, "signed out: the page stays closed");
-  assert.match(gate, /if \(recall\(uid\)\.tester === true\) show\(true\);/, "what the last visit learned, at once");
-  assert.match(gate, /const answer = await testerAnswer\(supabase, uid\);\s*if \(answer == null\) return;/, "an ask that failed changes nothing");
-  assert.match(gate, /remember\(uid, \{ tester: answer \}\);\s*show\(answer\);/, "a no closes it again");
+  assert.match(gate, /if \(recall\(uid\)\.team === true\) show\(true\);/, "what the last visit learned, at once");
+  assert.match(gate, /const answer = await teamAnswer\(supabase, uid\);\s*if \(answer == null\) return;/, "an ask that failed changes nothing");
+  assert.match(gate, /remember\(uid, \{ team: answer \}\);\s*show\(answer\);/, "a no closes it again");
   assert.match(gate, /const show = \(yes: boolean\) => \{ chart\.hidden = !yes; closed\.hidden = yes; \};/);
 });
 

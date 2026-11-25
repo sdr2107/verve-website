@@ -19,7 +19,7 @@ import { useEffect, useState } from "preact/hooks";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { openTargets, toTarget } from "../horizon/derive.ts";
 import { todayStr } from "../derive/format.ts";
-import { actions, derived, horizons, isTester, testerState } from "../state.ts";
+import { actions, derived, horizons, isTeam, testerState } from "../state.ts";
 import { waitingWords } from "../known.ts";
 import { guidePlanReady, loadPanel, type HorizonFull } from "../horizon/api.ts";
 import { fill, type Facts } from "../horizon/facts.ts";
@@ -124,7 +124,7 @@ function horizonFor(hs: HorizonFull[] | null, today: string): HorizonFull | null
     ?? null;
 }
 function OfferPage({ sb }: { sb: SupabaseClient }) {
-  const tester = isTester.value, hs = horizons.value, person = derived.value;
+  const tester = isTeam.value, hs = horizons.value, person = derived.value;
   const body = useOffer(sb, tester);
   const [guideOn, setGuideOn] = useState(false);
   useEffect(() => { let on = true; void guidePlanReady(sb).then((g) => { if (on) setGuideOn(g); }); return () => { on = false; }; }, []);
