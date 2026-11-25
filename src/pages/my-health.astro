@@ -1050,6 +1050,7 @@ import { STORY } from "../data/story";
   import { HRV_MIN_NIGHTS, sleepHeartSummary, sleepHeartSummaryRaw } from "../my-health/derive/heart";
   import { type SecKey, type Rng, type Pt2, type Marker, type Drawn, SEC_META, SEC_ORDER, RANGE_LABEL, SHELVES, ownBand, weightSeries, sppbSeries, drawnFor, chartSvg, alongsideHtml, workoutsListHtml } from "../my-health/derive/lenses";
   import { derivePerson, type PersonData } from "../my-health/derive/person";
+  import { rereadDue } from "../my-health/derive/asOf";
   import { labsJudged, SECTIONS, SECTION_ORDER, searchTermsOf, landsAll, dateHay } from "../my-health/derive/labs";
   import { effect } from "@preact/signals";
   import { mountTeamPage } from "../my-health/views/TesterPanel.tsx";
@@ -1112,6 +1113,7 @@ import { STORY } from "../data/story";
   let doc: MyHealthDocument | null = null;
   let docPromise: Promise<MyHealthDocument> | null = null;
   let docFor = "";   // the person id the document in hand (or in flight) is for; "" = the account's own
+  let docReadAt = 0; // when a document was last read from the server (ms): a return to the tab reads again once this is old enough
   function invalidateDocument() { doc = null; docPromise = null; }
   async function fetchDocument(personId: string | null): Promise<MyHealthDocument> {
     // the head start's request, when it was for this person and is unused
@@ -1135,6 +1137,7 @@ import { STORY } from "../data/story";
     // kept for the next visit: under the person asked for, and under the
     // person the function answered with (the account's own, when none was)
     if (userId) { void writeDocument(userId, personId ?? "", d); if (d.person?.id && d.person.id !== personId) void writeDocument(userId, d.person.id, d); }
+    docReadAt = Date.now();
     return d;
   }
   /**
@@ -1163,6 +1166,20 @@ import { STORY } from "../data/story";
     await loadPeople(); renderPeople();
     await Promise.all([refresh(false), loadPersonNote(), loadSharing(), loadInvites(), loadAsked(), loadRequests(), loadGlance(), loadAiSummary()]);
   }
+  /**
+   * A return to this tab reads the person's figures again (25 November 2026).
+   * The page read them when it opened and kept them until a reload, so a
+   * session the app sent a minute later was not here. revalidate redraws only
+   * when the document says something new; rereadDue (derive/asOf) keeps it
+   * to once a minute and never while a field has the caret.
+   */
+  document.addEventListener("visibilitychange", () => {
+    const el = document.activeElement as HTMLElement | null;
+    const typing = !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
+    if (!rereadDue({ visible: document.visibilityState === "visible", signedIn: !!userId, hasDocument: !!doc, typing, nowMs: Date.now(), lastMs: docReadAt })) return;
+    docReadAt = Date.now();   // one read for this return, even if the request is slow
+    void revalidate(person?.id ?? "");
+  });
   /** The person's document: in hand, in flight, or fetched now. */
   function ensureDocument(): Promise<MyHealthDocument> {
     const want = person?.id ?? "";
