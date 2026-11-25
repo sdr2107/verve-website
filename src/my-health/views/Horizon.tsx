@@ -34,10 +34,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PersonData } from "../derive/person.ts";
 import { addDays, daysBetween, mondayOf, todayStr } from "../derive/format.ts";
 import { actsByDay } from "../derive/activity.ts";
-import { asOfLine, lastAppSync } from "../derive/asOf.ts";
 import { horizons as horizonsSignal, guideDraft, setGuideDraft, isTester, testerState, doc as docSignal } from "../state.ts";
 import { chartSharedWith } from "../horizon/chart.ts";
 import { arrivalsOf, followable, leftOff, pausedWords } from "../derive/arrivals.ts";
+import { asOfLine, lastAppSync } from "../derive/asOf.ts";
 import {
   TARGET_MARKERS, isTargetable, openTargets, MARKER_BY_KEY, GROUP_LABEL, FIRST_MARKERS, type MarkerKey, type PlanRow, type PlanKind, type Tone,
   latestOf, historyOf, weeklyHistory, pacesOf, impliedPace, adherenceOf, guideDraftPlan, roadOf, weekOf, daysToGo, nextCheckins, checkinInputs, checkinLinesOf, landedLine,
