@@ -409,7 +409,7 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
   return (
     <form id="horizon-setup" class="flex max-w-[980px] scroll-mt-4 flex-col gap-5" onSubmit={(e) => { e.preventDefault(); if (card === NUMBERS_CARD) void keep(); else next(); }}>
       <header class="flex flex-col gap-2">
-        <Eyebrow>Horizon · new · test account</Eyebrow>
+        <Eyebrow>Horizon · new{isTeam.value ? " · test account" : ""}</Eyebrow>
         {card === 1 ? (
           <>
             <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-[-0.01em] text-text">Set a horizon</h1>
@@ -723,7 +723,7 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
                 <p class="m-0 text-[14px] leading-relaxed text-text">{g.plan}</p>
               </div>
               <Quiet>{TEMPLATE_KEEPS}</Quiet>
-              <Quiet>These figures were read from the papers' abstracts on 15 November 2026 and are shown to test accounts only.</Quiet>
+              <Quiet>These figures were read from the papers' abstracts on 15 November 2026{isTeam.value ? " and are shown to test accounts only" : ""}.</Quiet>
             </Sheet>
           ) : null}
         </>
@@ -792,7 +792,7 @@ export function WeightCard({ h, targets, person, today, programme, chartLine }: 
       {chartLine ? <p class="m-0 text-[14px] leading-relaxed text-text-2"><span class="font-mono text-[11px] font-medium uppercase tracking-wider text-text-3">The chart</span> · {chartLine} It is shown beside the three signs, and is not read as the cause of any of them.</p> : null}
       <Quiet>{signs.stops} The page writes no diet.</Quiet>
       {programme?.goal === "lose_weight" ? <Evidence line={{ text: `On the date, the next horizon offered is "Hold what I have". ${WEIGHT.after.text}`, cites: WEIGHT.after.cites }} /> : null}
-      <Quiet>Read from the papers' abstracts on 15 November 2026. Shown to test accounts only.</Quiet>
+      <Quiet>Read from the papers' abstracts on 15 November 2026.{isTeam.value ? " Shown to test accounts only." : ""}</Quiet>
     </Card>
   );
 }
@@ -804,7 +804,11 @@ const localInput = (iso: string | null) => { if (!iso) return ""; const d = new 
 
 export function CallCard({ sb, h, targets, person, today, owner, closed, tester, programme, planRows, guideOn, userId, setNotice, pause, pausing, onSetAside, chartLine }: {
   sb: SupabaseClient; h: HorizonFull; targets: Target[]; person: PersonData | null; today: string; owner: boolean; closed: boolean;
-  /** A test account may write the coach's side of its own horizon, so the sheet can be tried by one person. */
+  /**
+   * One of Verve's own accounts may write the coach's side of its own horizon, so the sheet can be tried by one
+   * person. The team's alone (views/Horizon.tsx passes tester && isTeam): for a founding member the coach's side is
+   * the coach's, as for anyone, and the note below is never drawn.
+   */
   tester: boolean; programme: Programme; planRows: PlanRow[]; guideOn: boolean;
   userId: () => Promise<string | null>; setNotice: (s: string) => void;
   /** The diet chart's count for last week, in its own sentence, when a chart is kept and this viewer may read it (board 17). */

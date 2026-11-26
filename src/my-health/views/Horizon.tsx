@@ -855,7 +855,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
       {on("targets") && fitnessTarget && owner && tester && !closed ? (
         <div class="flex flex-wrap items-center gap-3">
           <Button onClick={() => openFitnessCard({ kinds: fitnessTarget.method ? KINDS_FOR[fitnessTarget.method] : undefined })}>Add a fitness test result</Button>
-          <span class="text-[12px] text-text-3">{fitnessTarget.method ? "Typed here, or taken in the app. The same test as the start." : "Typed here, or taken in the app."} Test account.</span>
+          <span class="text-[12px] text-text-3">{fitnessTarget.method ? "Typed here, or taken in the app. The same test as the start." : "Typed here, or taken in the app."}{isTeam.value ? " Test account." : ""}</span>
         </div>
       ) : null}
       {paged && page === "week" && !closed ? weekDays : null}
@@ -903,7 +903,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
 
       {/* the week with a coach: only where a coach writes or edits the plan, or is the one looking (in the recording it stood on a horizon with no coach) */}
       {on("week") && programme && (programme.writer !== "guide" || !owner)
-        ? <CallCard sb={deps.supabase} h={h} targets={targets} person={person} today={today} owner={owner} closed={closed} tester={tester} programme={programme} planRows={planRows} guideOn={guideOn} userId={userId} setNotice={setNotice}
+        ? <CallCard sb={deps.supabase} h={h} targets={targets} person={person} today={today} owner={owner} closed={closed} tester={tester && isTeam.value} programme={programme} planRows={planRows} guideOn={guideOn} userId={userId} setNotice={setNotice}
             chartLine={chartLast ? chartLast.replace(/^./, (c) => c.toUpperCase()) : null}
             pause={pause} pausing={busy === "pause"} onSetAside={(c) => { if (confirm(`Set last week aside, ${c.words}?\n\n${pauseLines(h, c, pause!).join("\n")}`)) void setAside(c); }} />
         : null}

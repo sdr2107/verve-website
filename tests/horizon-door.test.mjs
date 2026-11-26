@@ -144,3 +144,18 @@ test("the Pro sheet and the trial say nothing of Horizon while it is not offered
   assert.match(sheet, /\{PRO_SHEET_LINE\}/);
   assert.doesNotMatch(sheet.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, ""), /Horizon/);
 });
+
+test("'test account' is our own note: where a founding member also reads the page, only one of Verve's accounts is shown it", () => {
+  const dir = "../src/my-health/views/";
+  // the programme's set-up, the fitness card and its button are a founding member's too
+  assert.match(read(`${dir}Programme.tsx`), /<Eyebrow>Horizon · new\{isTeam\.value \? " · test account" : ""\}<\/Eyebrow>/);
+  assert.match(read(`${dir}FitnessEntry.tsx`), /const ours = isTeam\.value \? " · test account" : "";/);
+  assert.match(read(`${dir}Horizon.tsx`), /\{isTeam\.value \? " Test account\." : ""\}<\/span>/);
+  for (const f of ["Programme.tsx", "FitnessEntry.tsx", "Horizon.tsx"]) {
+    const drawn = read(`${dir}${f}`).split("\n").filter((l) => /test account/i.test(l) && !/^\s*(\/\/|\*|\/\*|\{\/\*)/.test(l) && !/\/\*\*.*test account.*\*\//i.test(l) && !/\/\/.*test account/i.test(l));
+    // the call sheet's note is drawn from a flag its caller hands it as "the team's alone" (below)
+    for (const l of drawn.filter((x) => !/owner && tester \? <Quiet>Test account: you can write the coach's side/.test(x))) assert.match(l, /isTeam\.value/, `${f}: "${l.trim().slice(0, 80)}" is shown to a founding member`);
+  }
+  // writing the coach's side of one's own horizon is a way to try the sheet alone: the team's, not a member's
+  assert.match(read(`${dir}Horizon.tsx`), /<CallCard [^>]*tester=\{tester && isTeam\.value\}/);
+});
