@@ -1,0 +1,38 @@
+# Runs the tests, the type check and the build on every pull request, so a fault shows as a red cross on the
+# pull request before it is merged. Nothing is published from here: deploy.yml publishes, after the same three
+# steps, on a push to main.
+#
+# Why: on 25 November 2026 a change passed the tests and the build, was merged, and stopped a page drawing on
+# the live site (#87). Only `astro check` reported it, and nothing ran it.
+name: Check
+
+on:
+  pull_request:
+
+# A newer push to the same pull request replaces the run in flight.
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The same Node as deploy.yml, so what passes here passes there.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test
+
+      - run: npm run check
+
+      - run: npm run build

@@ -1,4 +1,5 @@
-# Builds the Astro site and publishes it to GitHub Pages on every push to main.
+# Tests, type-checks and builds the Astro site, then publishes it to GitHub Pages, on every push to main.
+# check.yml runs the same three steps on every pull request, so a fault shows before the merge.
 #
 # One-time setup in the repo (cannot be done from a config file):
 #   Settings → Pages → Build and deployment → Source: "GitHub Actions"
@@ -40,6 +41,13 @@ jobs:
       # right default for CI — it fails loudly on drift instead of silently
       # resolving different versions than the ones tested locally.
       - run: npm ci
+
+      # Nothing is published unless the tests and the type check pass. The build alone does not check
+      # types: on 25 November 2026 a page that threw on load built cleanly and went live (#87); `astro check`
+      # reported it as three errors. A failure here leaves the site on its last good version.
+      - run: npm test
+
+      - run: npm run check
 
       - run: npm run build
 
