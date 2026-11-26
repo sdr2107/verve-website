@@ -56,10 +56,13 @@ import {
 import { movedWords, pauseState, pauseWhyWords, type PauseChoice, type PauseKey, type PauseState, type PauseWhy } from "../horizon/pause.ts";
 import {
   listHorizons, startHorizon, requestCheckin, grantConsent, savePlan, updateHorizon, deleteHorizon, pauseHorizon, addTarget, removeTarget, updateTarget, saveGuidePlan, ERROR_WORDS,
-  fetchAccess, rememberedAccess, guidePlanReady, testerAnswer, teamAnswer, loadDayName, watchedReady, listWatched,
+  fetchAccess, rememberedAccess, guidePlanReady, testerAnswer, teamAnswer, loadDayName, watchedReady, listWatched, saveProgramme,
   type HorizonFull, type PlanAuthor, type StartTarget, type ApiError, type HorizonAccess,
 } from "../horizon/api.ts";
 import { midweekOf, planRowsNow } from "../horizon/midweek.ts";
+import { chosenOf, ideasFor, lightWeekOf, loggedLines } from "../horizon/lightWeek.ts";
+import { LightWeekCard, LoggedCard, MyActivities } from "./LightWeek.tsx";
+import type { ActivityKey } from "../../data/activities.ts";
 import { dayKindOf } from "../horizon/programme.ts";
 import type { EntryKey } from "../../data/programme.ts";
 import { MidweekCard, ChartCard, chartSoFar, chartLastWeek, loadChartState, type ChartState } from "./Beside.tsx";
@@ -567,6 +570,22 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   // their last day). The page says so once (HORIZON_KEPT), so the lines above it do not say the Guide still checks.
   const keptOnly = locked && !HORIZON_PUBLIC;
   const guide = guideOn && person ? { sb: deps.supabase, h, person, today, targets, owner, closed, access, userId, reload, setNotice } : null;
+  // the week, kept light (board 08 of "Verve, the plan you follow", 26 November 2026): three amounts first, a few ideas
+  // and what each session filled, for the owner of a programme account. Null in a week that is not judged, on a
+  // horizon that has stopped, and when the week asks for none of the three: the page is then as it was.
+  const rowsNow = useMemo(() => (paged && person && !closed ? planRowsNow(h, targets, person, today) : []), [paged, person, h, today, closed]);
+  const light = useMemo(() => (paged && person && !closed ? lightWeekOf({ horizon: h, person, today, rows: rowsNow, targets }) : null), [paged, person, h, today, closed, rowsNow]);
+  // the activities the ideas draw from: the person's ticks once they have ticked, their sessions until then
+  const myActs = useMemo(() => (light && person ? chosenOf(programme, person, today) : null), [light, person, today, h.programme]);
+  const ideas = light && myActs ? ideasFor(light.amounts, myActs) : null;
+  /** A tick is kept at once, with the horizon's other answers (horizons.programme). It changes no number the week asks. */
+  async function saveActivities(next: { activities: ActivityKey[]; own: string[] }) {
+    if (!programme) return;
+    setBusy("activities"); setNotice("");
+    const err = await saveProgramme(deps.supabase, h.id, { ...programme, activities: next.activities, own: next.own });
+    setBusy("");
+    if (err) setNotice(`Could not keep your activities: ${err}`); else await reload();
+  }
   // a line the Guide wrote, carried here: a draft until the person sets its number, and gone when they leave it
   const gd = guideDraft.value;
   const draftDef = gd && owner && !closed && gd.personId === h.person_id && isTargetable(gd.marker) && !targets.some((t) => t.marker === targetKeyOf(gd.marker)) ? MARKER_BY_KEY[targetKeyOf(gd.marker)] ?? null : null;
@@ -648,6 +667,9 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   // ── the horizon in small pages (board 22) ──
   // the Guide's plan as it stands today, for the glance: the week so far, and whether there are six letters to show
   const planView = useMemo(() => { try { return paged && stored && person ? guidePlan({ horizon: h, targets, person, today, stored, self: owner }) : null; } catch { return null; } }, [paged, stored, person, today, h, targets.length]);
+  // the light week is shown once the week is one the plan asks for: a Guide's plan kept midweek begins on the next
+  // Monday, and until then the page says when it starts and shows no amounts
+  const lightNow = planView && !planView.started ? null : light;
   const about = [
     `A horizon is a date, the markers you want different by then, and the week that gets you there.${keptOnly ? "" : ` The Guide checks the pace every Monday and reads the month at its end.${h.plan?.author === "coach" ? " Your coach sees all of it and writes the plan." : stored ? " The Guide wrote the plan from your targets. A coach you share your page with sees all of it." : " A coach you share your page with sees all of it and can write the plan."}`}`,
     dayKind && dayName ? `${dayName}. Shown to you only.` : "", movedWords(h) ?? "", weeksWords(h), pausedWeeksWords(h),
@@ -686,9 +708,17 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
       <button type="button" onClick={() => goPage(to)} class="mt-auto min-h-9 self-start text-[13px] font-semibold text-accent-text hover:text-text">{go}</button>
     </div>
   );
+  // the week's three amounts with the ideas under them: the first thing on the glance, and the head of This week.
+  // "See it as seven days" and "See the plan behind it" lead to pages that exist today (This week, The science).
+  const lightCard = (onGlance: boolean) => (lightNow && ideas && myActs ? (
+    <LightWeekCard light={lightNow} ideas={ideas} eyebrow={`${new Date(today + "T00:00:00").toLocaleDateString("en-GB", { weekday: "long" })} · ${weekWords(h, today)}`}
+      onSeven={onGlance ? () => goPage("week") : undefined} onPlan={planView ? () => goPage("science") : undefined}>
+      {programme ? <MyActivities chosen={myActs} busy={busy === "activities"} onSave={(n) => void saveActivities(n)} /> : null}
+    </LightWeekCard>
+  ) : null);
   const glance = (
     <>
-      <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div class={`grid grid-cols-1 gap-3 ${lightNow ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
         {tile("Where you are going", judgedPaces ? `${goodPaces} of ${paces.length}` : String(targets.length), judgedPaces ? "on pace" : targets.length === 1 ? "target" : "targets", (
           <>
             {paces.slice(0, 3).map((p) => (
@@ -700,7 +730,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
             {!judgedPaces ? <span>No pace can be read until a full week has ended.</span> : null}
           </>
         ), targets.length === 1 ? "See it" : `See all ${numberWord(targets.length)}`, "targets")}
-        {tile("This week", pausedWeek ? "Paused" : weekLines[0]?.text ?? (planRows.length || planView ? "Planned" : "No plan yet"), pausedWeek || !weekLines[0] || weekLines[0].label.length > 12 ? undefined : weekLines[0].label.toLowerCase(), (
+        {lightNow ? null : tile("This week", pausedWeek ? "Paused" : weekLines[0]?.text ?? (planRows.length || planView ? "Planned" : "No plan yet"), pausedWeek || !weekLines[0] || weekLines[0].label.length > 12 ? undefined : weekLines[0].label.toLowerCase(), (
           <>
             {/* a line whose name is a sentence ("Five sessions a week") is said under the figure, not beside it */}
             {!pausedWeek && weekLines[0] && weekLines[0].label.length > 12 ? <span>{weekLines[0].label}.</span> : null}
@@ -745,6 +775,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   return (
     <>
       {paged ? pagedHead : null}
+      {paged && page === "glance" ? lightCard(true) : null}
       {paged && page === "glance" && isTeam.value ? <OfferOnHorizon sb={deps.supabase} h={h} today={today} /> : null}
       {paged && page === "glance" ? glance : null}
       {paged ? null : <header class="flex flex-wrap items-start justify-between gap-6">
@@ -861,7 +892,9 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
           <span class="text-[12px] text-text-3">{fitnessTarget.method ? "Typed here, or taken in the app. The same test as the start." : "Typed here, or taken in the app."}{isTeam.value ? " Test account." : ""}</span>
         </div>
       ) : null}
+      {paged && page === "week" ? lightCard(false) : null}
       {paged && page === "week" && !closed ? weekDays : null}
+      {paged && page === "week" && lightNow && person ? <LoggedCard lines={loggedLines(person, lightNow.from, addDays(today, 1))} /> : null}
       {on("week") && midweek ? <MidweekCard note={midweek} chartLine={chartLine ? chartLine.replace(/^./, (c) => c.toUpperCase()) : null} /> : null}
 
       {on("week") || (paged && page === "science") ? <Card id="horizon-plan">

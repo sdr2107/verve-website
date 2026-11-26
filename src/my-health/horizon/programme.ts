@@ -11,6 +11,7 @@
  */
 import { addDays, daysBetween } from "../derive/format.ts";
 import { weightSeries } from "../derive/lenses.ts";
+import { ACTIVITIES, OWN_AT_MOST, OWN_LENGTH, type ActivityKey } from "../../data/activities.ts";
 import { DAY_BY_KEY, DOORS, DOOR_BY_KEY, GOAL_BY_KEY, GRIP, WEIGHT, type DayKey, type DayKind, type Door, type GoalKey, type GoalMarker, type Mode } from "../../data/programme.ts";
 import {
   MARKER_BY_KEY, dayMonthLong, daysWords, fitnessReadings, fmtValue, fullWeeksSoFar, horizonSpans, isTargetable, latestOf, round, typicalWeek, weekWords, windowWords,
@@ -35,6 +36,14 @@ export type Programme = {
    * here, because a coach reads this row. It is kept where only its owner reads it (horizon_days).
    */
   day?: { kind: DayKey } | null;
+  /**
+   * The activities the person ticked, for the week's ideas (board 08 of "Verve, the plan you follow", 26 November 2026;
+   * ../../data/activities.ts). Null until they tick anything: the ideas then start from what their sessions say
+   * (./lightWeek.ts chosenOf). Nothing here changes what a week asks.
+   */
+  activities?: ActivityKey[] | null;
+  /** Activities in the person's own words: a few, and short. */
+  own?: string[];
 };
 const GOAL_KEYS = new Set<string>(["lose_weight", "build_fitness", "hold", "marathon", "own"]);
 const strings = (x: unknown, max: number): string[] => (Array.isArray(x) ? x.filter((s): s is string => typeof s === "string" && s.trim() !== "").map((s) => s.trim().slice(0, 80)).slice(0, max) : []);
@@ -47,7 +56,10 @@ export function parseProgramme(x: unknown): Programme | null {
   return { v: 1, goal: r.goal as GoalKey, aims: strings(r.aims, 6), barriers: strings(r.barriers, 6), days,
     place: r.place === "home" || r.place === "gym" || r.place === "both" ? r.place : null,
     writer: r.writer === "coach" || r.writer === "both" ? r.writer : "guide",
-    day: dayOf(r) };
+    day: dayOf(r),
+    // absent on a horizon set before 26 November 2026, and until the person ticks anything
+    activities: Array.isArray(r.activities) ? ACTIVITIES.filter((a) => (r.activities as unknown[]).includes(a.key)).map((a) => a.key) : null,
+    own: strings(r.own, OWN_AT_MOST).map((s) => s.slice(0, OWN_LENGTH)) };
 }
 /** The day a stored programme was set for; null when it was set for a length of time. */
 function dayOf(r: Record<string, unknown>): { kind: DayKey } | null {
