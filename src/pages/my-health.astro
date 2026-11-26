@@ -4,6 +4,9 @@ import Footer from "../components/Footer.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/supabase";
 import { STORY } from "../data/story";
+import { planDoor } from "../data/plan-door";
+// "See the plans" under the explainer of what each plan keeps: drawn only while the Plans page is public
+const plansLink = planDoor("See the plans", false);
 ---
 
 <!--
@@ -321,7 +324,7 @@ import { STORY } from "../data/story";
           </div>
           <button type="button" class="mh-tab" data-tab="depth"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>In depth</span></button>
           <button type="button" class="mh-tab" data-tab="guide" id="readtab" data-dim="1"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5V5.5M8 7h8M8 10.5h6"/></svg><span>The Guide</span></button>
-          <button type="button" class="mh-tab" data-tab="horizon" id="horizontab"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17h18"/><path d="M6 17a6 6 0 0 1 12 0"/><path d="M12 3v2M4.9 7.9l1.4 1.4M19.1 7.9l-1.4 1.4"/></svg><span>Horizon</span><span class="mh-badge">Pro</span></button>
+          <button type="button" class="mh-tab" data-tab="horizon" id="horizontab" style="display:none"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17h18"/><path d="M6 17a6 6 0 0 1 12 0"/><path d="M12 3v2M4.9 7.9l1.4 1.4M19.1 7.9l-1.4 1.4"/></svg><span>Horizon</span><span class="mh-badge">Pro</span></button>
           <div data-sub="horizon" role="group" aria-label="horizon sections"></div>
           <h3 class="t-eyebrow mb-2 mt-5 hidden px-3 lg:block">Records</h3>
           <button type="button" class="mh-tab" data-tab="body"><svg class="mh-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6l-5.5 9a2 2 0 0 0 1.7 3h11.6a2 2 0 0 0 1.7-3L14 9V3"/></svg><span>Body</span><span data-count class="mh-count"></span></button>
@@ -392,6 +395,11 @@ import { STORY } from "../data/story";
 
       <!-- ═══ THE PAGE: one person ═══════════════════════════════════════ -->
       <div class="min-w-0 flex-1">
+
+      <!-- "See the site as" (Settings › For the team; my-health/horizon/preview.ts): while one of Verve's own accounts
+           is shown the page as a founding member would see it, the team's own page is hidden as it is for a member,
+           so the way back stays here, on every tab. Never drawn for any other account. -->
+      <p id="previewline" class="mt-5 hidden flex-wrap items-center gap-x-2 gap-y-1 rounded-[10px] border border-border-strong bg-alt px-3 py-1.5 text-[13px] text-text-2" role="status"><span id="previewtext"></span><span aria-hidden="true">·</span><button type="button" id="previewback" class="min-h-8 font-semibold text-accent-text hover:text-text"></button></p>
 
       <!-- the greeting: the page's heading, first name from the same
            profile the app greets you with, and the one way to add a report -->
@@ -710,7 +718,7 @@ import { STORY } from "../data/story";
             <dt class="font-bold text-text-primary">Max</dt><dd>Your family, up to five in all. Each person on the plan has Pro, here and in the app.</dd>
             <dt class="font-bold text-text-primary">Enterprise</dt><dd>Client seats, counted at Coach. In depth on each client, the group table. A paid seat is a paid seat: each client has Pro through it, here and in the app, and their history stays theirs.</dd>
           </dl>
-          <p class="mt-3 text-[12px] leading-relaxed text-text-3">Everything already on file stays visible if a plan lapses: the trends, the years, View PDF, sending to the app. The gate is on new drops only. <a href="/plans" class="font-semibold text-accent-light hover:text-text-primary">See the plans</a></p>
+          <p class="mt-3 text-[12px] leading-relaxed text-text-3">Everything already on file stays visible if a plan lapses: the trends, the years, View PDF, sending to the app. The gate is on new drops only.{plansLink && <> <a href={plansLink.href} class="font-semibold text-accent-light hover:text-text-primary">{plansLink.label}</a></>}</p>
         </section>
 
         <!-- the report names someone else: held here, nothing filed, until you say whose it is -->
@@ -1055,7 +1063,9 @@ import { STORY } from "../data/story";
   import { effect } from "@preact/signals";
   import { mountTeamPage } from "../my-health/views/TesterPanel.tsx";
   import { mountOfferPage, loadOffer, forgetOffer } from "../my-health/views/Offer.tsx";
-  import { isTester as isTesterSignal, isTeam as isTeamSignal, testerState } from "../my-health/state";
+  import { isTeam as isTeamSignal, testerState, accountTester, accountTeam, horizonDoor, horizonSettable, horizonRemembered, seenAs, setViewAs } from "../my-health/state";
+  import { PREVIEW_BACK, previewLine, readViewAs, seenFlags, viewAsFor } from "../my-health/horizon/preview.ts";
+  import { planDoor } from "../data/plan-door.ts";
   import { recall, remember, forget as forgetKnown, accessFlags } from "../my-health/known";
   import { derived as derivedSignal, doc as docSignal, person as personSignal, people as peopleSignal, firstName as firstNameSignal, myRole as myRoleSignal, section as sectionSignal, setSection as setSectionState, sectionFor, latestRead as latestReadSignal, readOf, activeTab as activeTabSignal, searchQuery as searchQuerySignal, depthLocked as depthLockedSignal, depthWorking as depthWorkingSignal, actions, openLabs, space as spaceSignal, isClient } from "../my-health/state";
   import { mountOverview } from "../my-health/views/Overview";
@@ -1063,11 +1073,11 @@ import { STORY } from "../data/story";
   import { mountDepth } from "../my-health/views/Depth";
   import { mountHorizon } from "../my-health/views/Horizon.tsx";
   import { mountFitnessCard, openFitnessRead } from "../my-health/views/FitnessEntry.tsx";
-  import { programmeTester, accessAnswer, teamAnswer, forgetTester, forgetAccess } from "../my-health/horizon/api.ts";
+  import { accessAnswer, forgetTester, forgetAccess } from "../my-health/horizon/api.ts";
   import { clearSetup } from "../my-health/horizon/setupCards.ts";
   import { mountMondayList } from "../my-health/views/Programme.tsx";
   import { mountPlanSheet } from "../my-health/views/PlanSheet.tsx";
-  import { mountSettings, planInfoSignal, planAnswered } from "../my-health/views/Settings.tsx";
+  import { mountSettings, planInfoSignal, planInfoReal, planAnswered } from "../my-health/views/Settings.tsx";
   import { KEEP_KEY, SETTINGS_SECTIONS, alreadyKept, browserZone, isSettingsSection, keepCard, keepLine, keepRow, parseKeep, planLine, trialOffered, type Keep, type KeepOutcome, type SettingsSection } from "../my-health/account";
   import { insertFirstNumber, saveWeekly, startWebTrial, websiteNumbers } from "../my-health/accountApi";
   import { mountReports } from "../my-health/views/Reports";
@@ -1249,10 +1259,22 @@ import { STORY } from "../data/story";
     show("whopays", PLANS_OPEN);
     void settingsView.refreshPlan();
   }
+  // the gate's door: the Plans page when it is public; while it is hidden these gates (family and coach plans, not
+  // sold in the app) carry no link, only the way back (data/plan-door.ts)
+  /**
+   * The account's access as the page is drawn for it: the database's answer (horizon/api.ts accessAnswer), or the
+   * previewed person's while one of the team's accounts is shown the site as a founding member (horizon/preview.ts).
+   * "Could not be asked" reads as neither.
+   */
+  const seenAccount = async (): Promise<{ tester: boolean; team: boolean }> => {
+    const flags = accessFlags((await accessAnswer(supabase as any)) ?? "none");
+    return seenFlags(flags, viewAsFor(readViewAs(), flags.team));
+  };
+  const lockDoor = (cta: string) => { const d = planDoor(cta, false); return d ? `<a href="${d.href}" class="inline-flex min-h-10 items-center rounded-xl bg-accent px-4 text-sm font-bold text-canvas">${d.label}</a>` : ""; };
   const lockCard = (title: string, body: string, cta = "See the plans") => `
     <div class="text-[17px] font-extrabold text-text-primary">${title}</div>
     <p class="text-[13.5px] leading-relaxed text-text-secondary">${body}</p>
-    <div class="flex flex-wrap gap-2"><a href="/plans" class="inline-flex min-h-10 items-center rounded-xl bg-accent px-4 text-sm font-bold text-canvas">${cta}</a><button type="button" data-goto="overview" class="min-h-10 px-3 text-sm font-semibold text-text-secondary hover:text-text-primary">Not now</button></div>`;
+    <div class="flex flex-wrap gap-2">${lockDoor(cta)}<button type="button" data-goto="overview" class="min-h-10 px-3 text-sm font-semibold text-text-secondary hover:text-text-primary">Not now</button></div>`;
   /** People besides you that count against the plan: looked after, or sharing with you. */
   const peopleCount = () => people.filter((p) => p.id && !p.self).length;
   /** Whether one more person may be added, and if not, why. */
@@ -1780,7 +1802,7 @@ import { STORY } from "../data/story";
     if (!p?.id || !p.mine) return;
     // a diet chart's tick is offered to test accounts only (board 17); it is in no preset, so it starts unticked
     // the diet chart's tick is the team's alone (derive/scopes TEST_SCOPES): a founding member is not offered it
-    const tester = (await teamAnswer(supabase as any)) === true;
+    const tester = (await seenAccount()).team;
     // activity and body come from the app, which only a person with an account has
     $("shareform").querySelectorAll<HTMLInputElement>("[data-scope]").forEach((c) => {
       const appOnly = c.dataset.scope === "activity" || c.dataset.scope === "body" || c.dataset.scope === "heart";
@@ -2451,7 +2473,7 @@ import { STORY } from "../data/story";
     show("glance", on && !locked);
     show("glanceempty", !on);
     // the trainer's list: the clients in view who share a programme horizon (it draws nothing when none does)
-    mondayView ??= mountMondayList($("mondayroot"), { supabase: supabase as any, open: (id) => { void switchPerson(id).then(() => setTab("horizon")); } });
+    mondayView ??= mountMondayList($("mondayroot"), { supabase: supabase as any, open: (id) => { void switchPerson(id).then(() => { if (horizonDoor.value) setTab("horizon"); else wantHorizon("horizon"); }); } });
     mondayView.refresh(inClients ? others.filter((p) => !p.mine).map((p) => ({ id: p.id, name: p.name })) : []);
     if (!on || locked) return;
     const managed = others.filter((p) => p.mine).length, shared = others.length - managed;
@@ -2621,6 +2643,8 @@ import { STORY } from "../data/story";
     if (marked.has("painted")) mark("interaction");
     t = TAB_ALIAS[t] ?? t;
     if (!TABS.includes(t)) t = "overview";
+    // Horizon is drawn only for an account that has it (state.ts horizonDoor): any other way in lands on the Overview
+    if (t === "horizon" && !horizonDoor.value) t = "overview";
     // Everyone is a view of the account, not of a person: the greeting and
     // the person's own rows step aside, and no person is lit in the sidebar
     const switching = activeTab !== t;
@@ -2661,6 +2685,9 @@ import { STORY } from "../data/story";
       if (tab === "body" && wantSec === "reports") { setSectionState("all"); setTab("reports"); return; }
       // the old names are the Overview's: #overview-heart is Vitals, and #body-heart is Body's own Heart
       setSectionState(["overview", "depth", "body"].includes(tab) && wantSec ? (tab === "overview" ? SECTION_ALIAS[wantSec] ?? wantSec : wantSec) : "all");
+      // an address on Horizon, before the page knows this account has it: the Overview now, and Horizon once it is known
+      // (a link in a check-in's email, opened in a browser that has not seen this account before)
+      if (tab === "horizon" && !horizonDoor.value) { setTab("overview"); wantHorizon(wanted); return; }
       setTab(TABS.includes(tab) ? tab : "overview");
       if (tab === "horizon" && wantSec) openHorizon("#" + wanted);   // #horizon-<id> or #horizon-new lands on that page
     });
@@ -2763,8 +2790,10 @@ import { STORY } from "../data/story";
       // 20 November 2026 the test-account answer was asked only by the Horizon view, some seconds into the
       // page, and a reload began the wait again (the founder's recordings).
       const known = recall(userId);
-      planInfoSignal.value = known.plan ?? null; planAnswered.value = false;
-      isTesterSignal.value = known.tester === true; isTeamSignal.value = known.team === true; testerState.value = known.tester != null ? "known" : "asking";
+      planInfoReal.value = known.plan ?? null; planAnswered.value = false;
+      accountTester.value = known.tester === true; accountTeam.value = known.team === true; testerState.value = known.tester != null ? "known" : "asking";
+      // whether the account's own person had a horizon to show: the Horizon tab is drawn on that until this visit's read lands
+      horizonRemembered.value = known.horizon === true;
       const askedFor = userId;
       const askTester = (again: boolean) => void accessAnswer(supabase as any, askedFor).then((t) => {
         if (userId !== askedFor) return;                                 // another account signed in meanwhile
@@ -2775,7 +2804,7 @@ import { STORY } from "../data/story";
         }
         // one answer, two flags: the programme is on (a test account or a founding member); this is one of the team's own
         const flags = accessFlags(t);
-        isTesterSignal.value = flags.tester; isTeamSignal.value = flags.team; testerState.value = "known"; remember(askedFor, flags); mark("tester");
+        accountTester.value = flags.tester; accountTeam.value = flags.team; testerState.value = "known"; remember(askedFor, flags); mark("tester");
       });
       askTester(true);
       showWhoAmI(session.user);
@@ -2836,7 +2865,7 @@ import { STORY } from "../data/story";
       firstName = "";
       people = []; person = null;
       // nobody is signed in: nothing is known, and the last account's answers do not carry over
-      planInfoSignal.value = null; planAnswered.value = false; isTesterSignal.value = false; isTeamSignal.value = false; testerState.value = "asking"; forgetTester();
+      planInfoReal.value = null; planAnswered.value = false; accountTester.value = false; accountTeam.value = false; horizonRemembered.value = false; testerState.value = "asking"; forgetTester();
       dim("peoplewrap", true);
       appLink?.classList.remove("hidden"); signinLink?.classList.add("hidden");
       show("auth", true); show("home", false); showIf("signout", false); dim("whoami", true);
@@ -3871,9 +3900,8 @@ import { STORY } from "../data/story";
    * what was read, on the person's own page; a diet chart is added from its horizon's page. Returns the line to show.
    */
   async function afterOtherRead(out: any, path: string, name: string, who: Person): Promise<string> {
-    const tester = await programmeTester(supabase as any);
     // a diet chart joins a horizon on the team's accounts only; the fitness card below is the programme's, founding members too
-    const team = (await teamAnswer(supabase as any)) === true;
+    const { tester, team } = await seenAccount();
     if (out.doc_type === "diet_chart") return team ? "Read as a diet chart. It is kept here. Add it to a horizon from that horizon's page." : "Read as a diet chart. It is kept as a file.";
     if (!tester || !who.self) return "Read as a treadmill or exercise test. It is kept as a file.";
     return openFitnessRead(out, path, pretty(name)) ? "Read as a treadmill or exercise test. Check what was read in the card that has opened." : "Read as a treadmill or exercise test. Nothing in it could be read as a result, so it is kept as a file.";
@@ -4356,13 +4384,33 @@ import { STORY } from "../data/story";
     isOwner: horizonOwner,
     goTab: (t) => setTab(t),
     onHorizons: (list) => {
+      // on the account's own page, whether there is a horizon to show is kept for the next visit's first paint (known.ts)
+      if (userId && person?.self) { horizonRemembered.value = list.length > 0; remember(userId, { horizon: list.length > 0 }); }
       drawHorizonSubLinks(list);
       // a coach starts from the goal: the client's open horizon, if the coach has not moved off the Overview meanwhile
       if (proLanding && proLanding === person?.id) { proLanding = ""; if (activeTab === "overview" && list.some((h) => !h.done)) setTab("horizon"); }
     },
     onOff: (off) => { horizonOff = off; dim("horizontab", off); if (off) drawHorizonSubLinks([]); },
   });
+  /**
+   * Horizon was asked for before the page knew this account has it: kept, with the tab the page was on, and opened
+   * when the door does, unless the person has moved on meanwhile.
+   */
+  let horizonWanted: { hash: string; from: string } | null = null;
+  function wantHorizon(hash: string) { horizonWanted = { hash, from: activeTab }; }
+  // The Horizon tab, its sub-links and every address on it are for an account that has Horizon (state.ts horizonDoor;
+  // data/story.ts HORIZON_PUBLIC). For anyone else nothing is drawn: no tab, no teaser.
+  effect(() => {
+    const on = horizonDoor.value;
+    $("horizontab").style.display = on ? "" : "none";
+    if (!on && activeTab === "horizon") { quietly(() => setTab("overview")); return; }
+    if (on && horizonWanted && userId) {
+      const want = horizonWanted; horizonWanted = null;
+      if (activeTab === want.from) quietly(() => { if (want.hash === "horizon") setTab("horizon"); else openHorizon("#" + want.hash); });
+    }
+  });
   function openHorizon(hash: string) {
+    if (!horizonDoor.value) return;
     if (location.hash !== hash) step();
     setTab("horizon");
     horizonView.open(hash);
@@ -4377,7 +4425,8 @@ import { STORY } from "../data/story";
     const when = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
     // a horizon read to its date stays in the list, marked done; the next one is set from its page
     const rows = list.map((h) => `<button type="button" class="mh-sub" data-tab-for="horizon" data-horizon="${escH(h.id)}">${escH(short(h.title))} · ${escH(when(h.ends_on))}${h.done ? " · done" : ""}</button>`);
-    if (horizonOwner()) rows.push(`<button type="button" class="mh-sub" data-tab-for="horizon" data-horizon="new">${list.some((h) => !h.done) ? "Set another" : list.length ? "Set the next" : "Set a horizon"}</button>`);
+    // a new horizon is offered only where one would be started (state.ts horizonSettable): never as a button that is refused
+    if (horizonSettable.value) rows.push(`<button type="button" class="mh-sub" data-tab-for="horizon" data-horizon="new">${list.some((h) => !h.done) ? "Set another" : list.length ? "Set the next" : "Set a horizon"}</button>`);
     slot.innerHTML = rows.join("");
     slot.querySelectorAll<HTMLElement>("[data-horizon]").forEach((b) => b.addEventListener("click", () => openHorizon(`#horizon-${b.dataset.horizon}`)));
   }
@@ -4405,6 +4454,17 @@ import { STORY } from "../data/story";
     ownPersonId: () => people.find((p) => p.self)?.id || null,
     openPlanSheet: () => planSheet.open(),
     goHorizon: () => openHorizon("#horizon-new"),
+  });
+  // "See the site as" (Settings › For the team): the line that stays on every tab while a preview is on, and its way back.
+  // A change of view is a change of who the page is drawn for: the two panes that read the account once read it again.
+  $("previewback").textContent = PREVIEW_BACK;
+  $("previewback").addEventListener("click", () => setViewAs("team"));
+  let viewDrawn = seenAs.value;
+  effect(() => {
+    const view = seenAs.value, line = previewLine(view), el = $("previewline");
+    el.classList.toggle("hidden", !line); el.classList.toggle("flex", !!line);
+    $("previewtext").textContent = line ?? "";
+    if (view !== viewDrawn) { viewDrawn = view; horizonView.refresh(); if (userId) void settingsView.refresh(); }
   });
   // The line under the name is the plan as the server knows it, on this load or from the last visit. Until one
   // of those is in hand it is empty: it used to read "Free" for those seconds, which is a statement about an

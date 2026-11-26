@@ -17,6 +17,8 @@
  * people to their plan. Both off, nothing changes for anyone.
  */
 
+import { HORIZON_PUBLIC } from "./story.ts";
+
 /** On from 2026-10-31: the page is in the nav with its prices still to be set; a plan without a price cannot be chosen. */
 export const PLANS_OPEN = true;
 /**
@@ -162,10 +164,24 @@ export function tillsOf(p: Plan, period: Period): Till[] {
     { key: "upi", label: "UPI or an Indian card", currency: "inr", price: price("inr") },
   ];
 }
-/** What Pro adds on the website, as the sheet lists it. Each line is something the page already holds behind Pro. */
-export const PRO_ON_THE_WEB: { lead: string; rest: string }[] = [
+/**
+ * What Pro adds on the website, as the sheet lists it. Each line is something the page already holds behind Pro.
+ * While Horizon is not offered to everyone (./story.ts HORIZON_PUBLIC) the sheet does not list it, nor the month's
+ * read of a horizon: Pro bought today does not open either for a new person.
+ */
+const PRO_WITH_HORIZON: { lead: string; rest: string }[] = [
   { lead: "Horizon.", rest: "A date, the targets, the Guide's plan for the week, its check-in each Monday, and questions about the plan." },
   { lead: "The Guide, every period.", rest: "Weeks, months and years read in prose; the free plan keeps the first read." },
   { lead: "The month read.", rest: "On the first of each month, the month on your horizon, read once." },
 ];
+const PRO_WITHOUT_HORIZON: { lead: string; rest: string }[] = [
+  { lead: "The Guide, every period.", rest: "Weeks, months and years read in prose; the free plan keeps the first read." },
+  { lead: "In depth.", rest: "How you got here: one month to three years, a card for each marker, blood work beside fitness." },
+];
+export const proOnTheWeb = (horizonPublic: boolean) => (horizonPublic ? PRO_WITH_HORIZON : PRO_WITHOUT_HORIZON);
+export const PRO_ON_THE_WEB = proOnTheWeb(HORIZON_PUBLIC);
+/** The sheet's one sentence above that list. */
+export const PRO_SHEET_LINE = HORIZON_PUBLIC
+  ? "The Guide every week, the month and the year too; Horizon with its Monday check-ins and the month read. Nothing free is taken away."
+  : "The Guide every week, the month and the year too, and In depth. Nothing free is taken away.";
 

@@ -14,7 +14,9 @@
  */
 import { type PlanInfo, parsePlan } from "./account.ts";
 
-export type Known = { tester?: boolean; team?: boolean; plan?: PlanInfo };
+export type Known = { tester?: boolean; team?: boolean; plan?: PlanInfo;
+  /** The account's own person had a horizon to show (state.ts horizonRemembered): the tab is drawn at once on the next visit. */
+  horizon?: boolean };
 
 /**
  * What an account holds of Horizon as a programme (the database's programme_access(), METTracker
@@ -45,6 +47,7 @@ export function recall(uid: string, store: KnownStore | null = browserStore()): 
     const out: Known = {};
     if (typeof o.tester === "boolean") out.tester = o.tester;
     if (typeof o.team === "boolean") out.team = o.team;
+    if (typeof o.horizon === "boolean") out.horizon = o.horizon;
     const plan = parsePlan(o.plan);
     if (plan) out.plan = plan;
     return out;

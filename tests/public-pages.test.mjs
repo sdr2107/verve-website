@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { PLANS_PAGE_PUBLIC } from "../src/data/plans.ts";
 import { NAV, FOOTER_LINKS, APP_SOCIAL, FOUNDER_SOCIAL, APP_HANDLE, ACCOUNT_PATH } from "../src/data/site.ts";
 import { VIDEOS, GROUPS, THEMES, BEYOND, BEYOND_HREF, videosInGroup, videosInTheme } from "../src/data/videos.ts";
-import { STORY, STORY_TITLE, STORY_LINE } from "../src/data/story.ts";
+import { STORY, STORY_ALL, STORY_TITLE, STORY_LINE, STORY_COUNT, HORIZON_PUBLIC } from "../src/data/story.ts";
 
 const SRC = new URL("../src/", import.meta.url).pathname;
 function* files(dir) {
@@ -83,13 +83,16 @@ test("the science sidebar reaches Beyond the numbers from every subject and topi
 });
 
 test("the story is four questions, in the order My health's sidebar holds its pages", () => {
-  assert.deepEqual(STORY.map((s) => s.key), ["overview", "depth", "guide", "horizon"]);
-  assert.deepEqual(STORY.map((s) => s.question), ["Where am I today?", "How did I get here?", "What stands out?", "Where am I going?"]);
-  assert.ok(STORY.every((s) => s.line.split(/\s+/).length <= 14), "one short line each");
-  assert.equal(STORY_TITLE, "Your health, in four questions");
+  assert.deepEqual(STORY_ALL.map((s) => s.key), ["overview", "depth", "guide", "horizon"]);
+  assert.deepEqual(STORY_ALL.map((s) => s.question), ["Where am I today?", "How did I get here?", "What stands out?", "Where am I going?"]);
+  assert.ok(STORY_ALL.every((s) => s.line.split(/\s+/).length <= 14), "one short line each");
+  // the public pages tell all four once Horizon is offered to everyone, and the first three until then (26 November 2026)
+  assert.deepEqual(STORY.map((s) => s.key), HORIZON_PUBLIC ? ["overview", "depth", "guide", "horizon"] : ["overview", "depth", "guide"]);
+  assert.equal(STORY_COUNT, HORIZON_PUBLIC ? "four" : "three");
+  assert.equal(STORY_TITLE, `Your health, in ${STORY_COUNT} questions`);
   // the sidebar's four pages come in the same order
   const page = readFileSync(join(SRC, "pages/my-health.astro"), "utf8");
-  const at = STORY.map((s) => page.indexOf(`class="mh-tab" data-tab="${s.key}"`));
+  const at = STORY_ALL.map((s) => page.indexOf(`class="mh-tab" data-tab="${s.key}"`));
   assert.ok(at.every((i) => i > 0) && at.every((i, n) => n === 0 || i > at[n - 1]), "Overview, In depth, the Guide, Horizon");
   // the landing page tells it where "What you come back for" stood
   const landing = readFileSync(join(SRC, "pages/index.astro"), "utf8");

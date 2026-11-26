@@ -32,6 +32,7 @@ import { depthEmpty, depthEmptyText, depthOf } from "../derive/depth.ts";
 import { addDays, fmtDay, todayStr } from "../derive/format.ts";
 import { WINDOWS, timelineOf, windowWorking, dayMonthYear, type Card, type Fig, type Spot, type Timeline, type WindowKey, type XY } from "../derive/timeline.ts";
 import SWING from "../../data/usual-swing.ts";
+import { planDoor } from "../../data/plan-door.ts";
 
 const dayShort = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 const pct = (v: number) => `${(v * 100).toFixed(2)}%`;
@@ -51,11 +52,13 @@ function exportHeartRows(rows: any[], today: string, name: string) {
 }
 
 function Lock({ self, name }: { self: boolean; name: string }) {
+  // your own In depth opens with Pro, which the app sells today; In depth on other people is the family plan, which it does not
+  const door = planDoor("See the plans", self);
   return (
     <div class="r-card flex max-w-2xl flex-col gap-3 border border-dashed border-accent-border bg-card p-5">
       <div class="t-title text-text">{self ? "In depth is on Pro." : "In depth on other people is on Max."}</div>
       <p class="t-small text-text-2">{self ? "How you got here: one month to three years, a card for each marker with its baseline and its average, blood work beside fitness, and whether a change is more than its usual swing. Each marker's own chart, at every range, stays on your Overview." : `${name || "This person"}'s Overview, Body and Reports are here as before. In depth on everyone you see comes with Max.`}</p>
-      <div class="flex flex-wrap gap-2"><a href="/plans" class="r-btn inline-flex min-h-10 items-center bg-accent px-4 text-[13px] font-semibold text-canvas">See the plans</a><button type="button" onClick={() => actions.goTab("overview")} class="min-h-10 px-3 text-[13px] font-semibold text-text-2 hover:text-text">Not now</button></div>
+      <div class="flex flex-wrap gap-2">{door ? <a href={door.href} class="r-btn inline-flex min-h-10 items-center bg-accent px-4 text-[13px] font-semibold text-canvas">{door.label}</a> : null}<button type="button" onClick={() => actions.goTab("overview")} class="min-h-10 px-3 text-[13px] font-semibold text-text-2 hover:text-text">Not now</button></div>
     </div>
   );
 }

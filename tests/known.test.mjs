@@ -12,6 +12,16 @@ const store = (seed = {}) => {
 };
 const PRO = { plan: "pro", through: "vip", until: null, trial: { available: false, ends_at: null } };
 
+test("whether the account's own person has a horizon to show is kept too, so the tab is drawn at once on the next visit", () => {
+  const s = store();
+  remember("u1", { tester: false, team: false }, s);
+  remember("u1", { horizon: true }, s);
+  assert.deepEqual(recall("u1", s), { tester: false, team: false, horizon: true });
+  remember("u1", { horizon: false }, s);
+  assert.equal(recall("u1", s).horizon, false, "the horizon was deleted: the tab is not drawn on a memory");
+  assert.equal(recall("u1", store({ "mh-known-u1": JSON.stringify({ horizon: "yes" }) })).horizon, undefined, "anything but a yes or a no is nothing");
+});
+
 test("nothing kept reads as nothing known", () => {
   assert.deepEqual(recall("u1", store()), {});
   assert.deepEqual(recall("", store()), {}, "no account, nothing to recall");

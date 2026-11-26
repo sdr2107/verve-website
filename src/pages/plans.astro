@@ -149,10 +149,12 @@ const CURRENCIES = ["inr", "usd"] as const;
     import { supabase } from "../lib/supabase";
     import { teamAnswer } from "../my-health/horizon/api.ts";
     import { recall, remember } from "../my-health/known.ts";
+    import { readViewAs, viewAsFor } from "../my-health/horizon/preview.ts";
     const closed = document.querySelector<HTMLElement>("[data-plans-closed]");
     const chart = document.querySelector<HTMLElement>("[data-plans-chart]");
     if (closed && chart) {
-      const show = (yes: boolean) => { chart.hidden = !yes; closed.hidden = yes; };
+      // one of the team's accounts shown the site as a founding member (Settings › For the team) reads what a member reads here
+      const show = (team: boolean) => { const yes = team && viewAsFor(readViewAs(), team) === "team"; chart.hidden = !yes; closed.hidden = yes; };
       (async () => {
         let uid = "";
         try { uid = (await supabase.auth.getSession()).data.session?.user.id ?? ""; } catch { /* signed out */ }

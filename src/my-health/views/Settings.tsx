@@ -18,20 +18,30 @@
  */
 import { render } from "preact";
 import { useState } from "preact/hooks";
-import { signal } from "@preact/signals";
+import { computed, signal } from "@preact/signals";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getTheme, setTheme, THEME_EVENT, type ThemeChoice } from "../../lib/theme.ts";
 import { listHorizons, updateHorizon, type HorizonFull } from "../horizon/api.ts";
 import {
-  type PlanInfo, type WeeklyState, MONDAY_EMAILS, WEEKLY_CARRIES, browserZone, planLine, planRows, trialOffered, weeklyNote,
+  type PlanInfo, type WeeklyState, MONDAY_EMAILS, WEEKLY_CARRIES, WEEKLY_CARRIES_PLAIN, browserZone, planLine, planRows, trialOffered, weeklyNote,
 } from "../account.ts";
+import { HORIZON_PUBLIC } from "../../data/story.ts";
+import { planDoor } from "../../data/plan-door.ts";
+import { todayStr } from "../derive/format.ts";
+import { continuityLine } from "../horizon/founding.ts";
+import { seenPlan } from "../horizon/preview.ts";
 import { fetchPlan, loadWeekly, saveWeekly, startWebTrial } from "../accountApi.ts";
-import { derived, person } from "../state.ts";
+import { derived, person, isTester, seenAs, horizonSettable } from "../state.ts";
 import { remember } from "../known.ts";
 import { arrivalsOf } from "../derive/arrivals.ts";
 
-/** The plan as the server knows it, or as it last said on this browser (../known.ts); null when neither is in hand. */
-export const planInfoSignal = signal<PlanInfo | null>(null);
+/** The plan as the server knows it, or as it last said on this browser (../known.ts); null when neither is in hand. This one is written. */
+export const planInfoReal = signal<PlanInfo | null>(null);
+/**
+ * The plan the page is drawn from: the server's, or the previewed person's while one of the team's accounts is
+ * shown the site as a founding member (../horizon/preview.ts). Every reader reads this one.
+ */
+export const planInfoSignal = computed<PlanInfo | null>(() => seenPlan(planInfoReal.value, seenAs.value, todayStr()));
 /** The server has been asked on this load and has answered or failed. Until then the line under the name stays empty, never "Free". */
 export const planAnswered = signal(false);
 const weeklySignal = signal<WeeklyState | null>(null);
@@ -63,7 +73,7 @@ export function mountSettings(roots: { plan: HTMLElement; email: HTMLElement; ap
     const uid = deps.userId();
     const info = await fetchPlan(deps.supabase, again);
     if (deps.userId() !== uid) return info;                 // another account signed in meanwhile
-    if (info) { planInfoSignal.value = info; if (uid) remember(uid, { plan: info }); }
+    if (info) { planInfoReal.value = info; if (uid) remember(uid, { plan: info }); }
     planAnswered.value = true;
     return info;
   };
@@ -103,6 +113,9 @@ const Switch = ({ on, disabled, label, onChange }: { on: boolean; disabled?: boo
 function PlanBlock({ deps, refreshPlan }: { deps: SettingsDeps; refreshPlan: (again?: boolean) => Promise<PlanInfo | null> }) {
   const info = planInfoSignal.value;
   const rows = planRows(info);
+  // a founding member's last week: the one sentence, beside the plan line (../horizon/founding.ts)
+  const lastWeek = continuityLine({ through: info?.through, until: info?.until, today: todayStr() });
+  const everyPlan = planDoor("See every plan", false);
   const [busy, setBusy] = useState(false);
   const [said, setSaid] = useState("");
   async function start() {
@@ -119,13 +132,13 @@ function PlanBlock({ deps, refreshPlan }: { deps: SettingsDeps; refreshPlan: (ag
   }
   return (
     <div class="flex flex-col">
-      <Row first label="Plan" value={planLine(info)} />
+      <Row first label="Plan" value={planLine(info)} note={lastWeek ?? undefined} />
       <Row label="Renews" value={rows.renews.value} note={rows.renews.note} />
       <Row label="Payment method" value={rows.payment.value} note={rows.payment.note} />
       {trialOffered(info) && (
         <div class="flex flex-col gap-2 border-t border-border py-4">
           <div><button type="button" disabled={busy} onClick={() => void start()} class="inline-flex min-h-11 items-center rounded-full bg-accent px-5 text-[14px] font-semibold text-canvas disabled:opacity-50">{busy ? "Starting…" : "Start 14 days of Pro, no card"}</button></div>
-          <Quiet>Pro on the website: the Guide's reads and Horizon, here. No card is asked for, and an account has one trial. Nothing free is taken away when it ends.</Quiet>
+          <Quiet>{HORIZON_PUBLIC ? "Pro on the website: the Guide's reads and Horizon, here." : "Pro on the website: the Guide's reads and In depth, here."} No card is asked for, and an account has one trial. Nothing free is taken away when it ends.</Quiet>
         </div>
       )}
       {said && <p class="m-0 border-t border-border py-3 text-[14px] text-text-2" role="status">{said}</p>}
@@ -135,7 +148,7 @@ function PlanBlock({ deps, refreshPlan }: { deps: SettingsDeps; refreshPlan: (ag
       </div>
       <div class="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border pt-3">
         <button type="button" onClick={deps.openPlanSheet} class="text-[13px] font-semibold text-accent-text">What Pro adds</button>
-        <a href="/plans" class="text-[13px] font-semibold text-accent-text">See every plan</a>
+        {everyPlan ? <a href={everyPlan.href} class="text-[13px] font-semibold text-accent-text">{everyPlan.label}</a> : null}
       </div>
       <Quiet>Where you bought decides where you manage it: the App Store, Google Play, or here. It is the same Pro in all three.</Quiet>
     </div>
@@ -162,21 +175,23 @@ function EmailBlock({ deps, refreshEmail }: { deps: SettingsDeps; refreshEmail: 
     setBusy("");
   }
   const open = Array.isArray(hs) ? hs : [];
+  // Horizon's own switches are for an account that has Horizon: the programme is on for it, or it keeps an open horizon
+  const withHorizon = HORIZON_PUBLIC || isTester.value || open.length > 0;
   return (
     <div class="flex flex-col">
       <div class="flex items-start justify-between gap-4 py-3">
         <div class="min-w-0">
           <div class="text-[15px] font-medium text-text">Your week</div>
           <div class="mt-0.5 text-[12.5px] leading-relaxed text-text-3">{weekly ? weeklyNote(weekly) : "Reading…"}</div>
-          <div class="mt-1 text-[12.5px] leading-relaxed text-text-3">{WEEKLY_CARRIES}</div>
+          <div class="mt-1 text-[12.5px] leading-relaxed text-text-3">{withHorizon ? WEEKLY_CARRIES : WEEKLY_CARRIES_PLAIN}</div>
         </div>
         <Switch label="Email me my week on Mondays" on={weekly?.state === "on"} disabled={!weekly || weekly.state === "unavailable" || busy === "weekly"} onChange={(v) => void setWeekly(v)} />
       </div>
-      <div class="border-t border-border py-3">
+      {withHorizon ? <div class="border-t border-border py-3">
         <div class="text-[15px] font-medium text-text">Horizon check-ins</div>
         {hs === null ? <div class="mt-0.5 text-[12.5px] text-text-3">Reading…</div>
           : hs === "off" ? <div class="mt-0.5 text-[12.5px] text-text-3">Not switched on for this account yet.</div>
-          : !open.length ? <div class="mt-0.5 text-[12.5px] text-text-3">No open horizon. <button type="button" onClick={deps.goHorizon} class="font-semibold text-accent-text">Set one on Horizon</button></div>
+          : !open.length ? <div class="mt-0.5 text-[12.5px] text-text-3">No open horizon.{horizonSettable.value ? <> <button type="button" onClick={deps.goHorizon} class="font-semibold text-accent-text">Set one on Horizon</button></> : null}</div>
           : (
             <div class="mt-1 flex flex-col">
               {open.map((h) => (
@@ -190,8 +205,8 @@ function EmailBlock({ deps, refreshEmail }: { deps: SettingsDeps; refreshEmail: 
               ))}
             </div>
           )}
-      </div>
-      <div class="border-t border-border py-3"><Quiet>{MONDAY_EMAILS}</Quiet></div>
+      </div> : null}
+      {withHorizon ? <div class="border-t border-border py-3"><Quiet>{MONDAY_EMAILS}</Quiet></div> : null}
       <div class="border-t border-border py-3">
         <div class="text-[15px] font-medium text-text">The newsletter</div>
         <div class="mt-0.5 text-[12.5px] leading-relaxed text-text-3">One letter a week. It is managed from any letter: each carries its own unsubscribe link.</div>

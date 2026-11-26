@@ -22,7 +22,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PersonData } from "../derive/person.ts";
 import { openTargets, pacesOf, toTarget, type Target } from "../horizon/derive.ts";
 import { todayStr } from "../derive/format.ts";
-import { derived, horizons, isTeam, testerState } from "../state.ts";
+import { derived, horizons, isTeam, testerState, seenAs, setViewAs } from "../state.ts";
+import { VIEW_AS, VIEW_AS_HEAD, VIEW_AS_NOTE } from "../horizon/preview.ts";
 import { waitingWords } from "../known.ts";
 import { guidePlan, isGuideStored, type GuideStored } from "../horizon/guidePlan.ts";
 import { guidePlanReady, listWeekNotes, loadPanel, type HorizonFull } from "../horizon/api.ts";
@@ -148,6 +149,28 @@ export function HorizonPanel({ sb, h, targets, person, today, guideOn }: { sb: S
  * showing the user that after 6 weeks we plan this or that"). Its words are still rows in the database; with an open
  * horizon on the page it is filled with that horizon's counts, as it was.
  */
+/**
+ * "See the site as" (../horizon/preview.ts, 26 November 2026): the team's account shown the page as a founding member
+ * would see it, at three points of their twelve weeks. It is drawn here, on the team's own page, so only a team
+ * account can turn a preview on; the way back from one is the line at the top of every tab (pages/my-health.astro),
+ * because this page is hidden in a preview as it is for a member.
+ */
+function SeeAs() {
+  const now = seenAs.value;
+  return (
+    <div class="flex flex-col gap-2 rounded-[12px] border border-border bg-card p-4" data-see-as>
+      <div class="text-[13px] font-semibold text-text" id="seeashead">{VIEW_AS_HEAD}</div>
+      <div class="flex flex-wrap gap-1 self-start rounded-[14px] border border-border bg-alt p-1" role="radiogroup" aria-labelledby="seeashead">
+        {VIEW_AS.map((v) => (
+          <button type="button" role="radio" aria-checked={now === v.key} onClick={() => setViewAs(v.key)} key={v.key}
+            class={`min-h-9 rounded-[10px] px-3.5 text-[13px] font-semibold transition-colors ${now === v.key ? "bg-card text-text shadow-[0_1px_0_rgba(20,20,28,0.06)]" : "text-text-2 hover:text-text"}`}>{v.label}</button>
+        ))}
+      </div>
+      <Quiet>{VIEW_AS_NOTE}</Quiet>
+    </div>
+  );
+}
+
 function TeamPage({ sb }: { sb: SupabaseClient }) {
   const tester = isTeam.value, hs = horizons.value, person = derived.value;
   const [guideOn, setGuideOn] = useState(false);
@@ -164,10 +187,11 @@ function TeamPage({ sb }: { sb: SupabaseClient }) {
   );
   // the list and the letter are the reader's alone (board 32: the letter is the third tab, beside the list)
   const tabs = <div class="flex flex-wrap gap-1 self-start rounded-full border border-border bg-alt p-1" role="tablist" aria-label="For the team">{tab("list", "The list")}{tab("letter", "The letter")}{tab("notes", "Our notes")}</div>;
-  if (reader && view === "list") return <div class="flex flex-col gap-4">{tabs}<TheList sb={sb} /></div>;
-  if (reader && view === "letter") return <div class="flex flex-col gap-4">{tabs}<TheLetter sb={sb} /></div>;
+  if (reader && view === "list") return <div class="flex flex-col gap-4"><SeeAs />{tabs}<TheList sb={sb} /></div>;
+  if (reader && view === "letter") return <div class="flex flex-col gap-4"><SeeAs />{tabs}<TheLetter sb={sb} /></div>;
   return (
     <div class="flex flex-col gap-4">
+      <SeeAs />
       {reader ? tabs : null}
       <Quiet>Our own notes, on test accounts only. Nobody else is shown this page, and nothing on it is offered to anyone. The words are rows in the database, not in the website's code.</Quiet>
       {h && person ? <HorizonPanel sb={sb} h={h} targets={openTargets(h.targets).map(toTarget)} person={person} today={todayStr()} guideOn={guideOn} /> : <Keyed sb={sb} panel="horizon" />}

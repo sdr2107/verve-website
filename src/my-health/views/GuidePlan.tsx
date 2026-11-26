@@ -31,6 +31,9 @@ import {
   addTarget, askGuide, clearAsks, grantConsent, listAsks, loadScreen, removeScreen, saveGuidePlan, saveScreen, updateTarget, ERROR_WORDS,
   type AskRow, type HorizonAccess, type HorizonFull, type ScreenRow,
 } from "../horizon/api.ts";
+import { HORIZON_PUBLIC } from "../../data/story.ts";
+import { HORIZON_KEPT } from "../horizon/access.ts";
+import { planDoor } from "../../data/plan-door.ts";
 
 export type GuideCommon = {
   sb: SupabaseClient; h: HorizonFull; person: PersonData; today: string; targets: Target[];
@@ -57,12 +60,16 @@ const recentlyEnded = (until: string | null, nowMs = Date.now()) => { const t = 
 
 /** Free, and the free week is over: the plan, the check-ins and the chat are Pro. The horizon and its readings stay. */
 export function GuideLocked({ access }: { access: HorizonAccess }) {
+  // while Horizon is not offered to everyone (data/story.ts HORIZON_PUBLIC) there is nothing to buy: one line, no button.
+  // This is what a founding member reads once their last day has passed, and anyone whose Pro ended with a horizon set.
+  if (!HORIZON_PUBLIC) return <p class="m-0 max-w-[640px] rounded-[12px] border border-border bg-alt p-4 text-[14px] leading-relaxed text-text-2" data-horizon-kept>{HORIZON_KEPT}</p>;
+  const plans = planDoor("See the plans", false);
   return (
     <div class="flex flex-col gap-2 rounded-[12px] border border-accent-border bg-accent-fill p-4">
       <div class="font-mono text-[11px] font-medium text-accent-text">Pro</div>
       <div class="text-[15px] font-semibold text-text">The Guide's plan is part of Pro.</div>
       <p class="m-0 text-[13px] leading-relaxed text-text-2">{recentlyEnded(access.free.until) ? `Your free week of Horizon ended on ${dayMonthLong(access.free.until!.slice(0, 10))}. ` : ""}The plan, the Monday check-in and the questions about the plan are part of Pro. Your horizon, its targets and your readings stay here.</p>
-      <div><a href="/plans" class="inline-flex min-h-11 items-center rounded-[10px] bg-accent px-4 text-[13px] font-semibold text-canvas">See the plans</a></div>
+      {plans ? <div><a href={plans.href} class="inline-flex min-h-11 items-center rounded-[10px] bg-accent px-4 text-[13px] font-semibold text-canvas">{plans.label}</a></div> : null}
     </div>
   );
 }
@@ -738,6 +745,8 @@ function Chat(p: GuideCommon & { v: GuidePlanView; onApply: (c: GuideChoices) =>
   useEffect(() => { end.current?.scrollIntoView({ block: "nearest" }); }, [asks?.length, busy]);
 
   const free = !!p.access && !p.access.pro;
+  // more questions come with Pro, which is bought on the Plans page once it is public; until then there is no link
+  const morePlans = HORIZON_PUBLIC ? planDoor("See the plans", false) : null;
   const none = left != null && left <= 0;
   async function send(text: string) {
     const question = text.trim().slice(0, 500);
@@ -817,8 +826,8 @@ function Chat(p: GuideCommon & { v: GuidePlanView; onApply: (c: GuideChoices) =>
           </div>
         ) : none ? (
           <div class="flex flex-wrap items-center gap-3 text-[13px] text-text-2">
-            <span>{free ? "That was the free question. More are part of Pro." : ERROR_WORDS.week_limit}</span>
-            {free && <a href="/plans" class="inline-flex min-h-11 items-center rounded-[10px] bg-accent px-4 text-[13px] font-semibold text-canvas">See the plans</a>}
+            <span>{free ? (HORIZON_PUBLIC ? "That was the free question. More are part of Pro." : "That was the free question.") : ERROR_WORDS.week_limit}</span>
+            {free && morePlans ? <a href={morePlans.href} class="inline-flex min-h-11 items-center rounded-[10px] bg-accent px-4 text-[13px] font-semibold text-canvas">{morePlans.label}</a> : null}
           </div>
         ) : (
           <>

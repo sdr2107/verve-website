@@ -37,7 +37,13 @@ import { actsByDay } from "../derive/activity.ts";
 // figuresAsOf, not asOfLine: View has a helper of that name for a check-in's own line, and a second one in the
 // same function is read before it exists (the page stopped drawing, 25 to 26 November 2026)
 import { asOfLine as figuresAsOf, lastAppSync } from "../derive/asOf.ts";
-import { horizons as horizonsSignal, guideDraft, setGuideDraft, isTester, isTeam, testerState, doc as docSignal } from "../state.ts";
+import { horizons as horizonsSignal, guideDraft, setGuideDraft, isTester, isTeam, testerState, doc as docSignal, accountTester, accountTeam, horizonDoor, seenAs } from "../state.ts";
+import { HORIZON_PUBLIC } from "../../data/story.ts";
+import { HORIZON_KEPT, maySetHorizon } from "../horizon/access.ts";
+import { continuityLine } from "../horizon/founding.ts";
+import { seenAccess } from "../horizon/preview.ts";
+import { planDoor } from "../../data/plan-door.ts";
+import { planInfoSignal } from "./Settings.tsx";
 import { chartSharedWith } from "../horizon/chart.ts";
 import { arrivalsOf, followable, leftOff, pausedWords } from "../derive/arrivals.ts";
 import {
@@ -132,13 +138,17 @@ function CheckinText({ text, small }: { text: string; small?: boolean }) {
 const inputClass = "min-h-10 rounded-[10px] border border-border bg-alt px-3 text-[15px] text-text outline-none focus:border-accent-border";
 
 function ProCard({ goTab }: { goTab: (t: string) => void }) {
+  // Horizon is not sold while it is not offered to everyone (data/story.ts HORIZON_PUBLIC): no price, no button. A person
+  // who meets this card keeps a horizon they set before, and reads that it stays.
+  if (!HORIZON_PUBLIC) return <Card><p class="m-0 max-w-[640px] text-[15px] leading-relaxed text-text-2" data-horizon-kept>{HORIZON_KEPT}</p></Card>;
+  const plans = planDoor("See the plans", false);
   return (
     <Card>
       <Eyebrow>Pro</Eyebrow>
       <div class="text-[18px] font-semibold text-text">Horizon is part of Pro on the website.</div>
       <p class="m-0 text-[15px] leading-relaxed text-text-2">A horizon is a date, the markers you want different by then, and the week that gets you there. Free has one week of it, on the first horizon you set, and keeps the Overview, Body, Reports and the Guide's first read. A horizon can be deleted any time; the readings stay.</p>
       <div class="flex flex-wrap gap-2">
-        <a href="/plans" class="inline-flex min-h-10 items-center rounded-[10px] bg-accent px-4 text-[13px] font-semibold text-canvas">See the plans</a>
+        {plans ? <a href={plans.href} class="inline-flex min-h-10 items-center rounded-[10px] bg-accent px-4 text-[13px] font-semibold text-canvas">{plans.label}</a> : null}
         <button type="button" onClick={() => goTab("overview")} class="min-h-10 px-3 text-[13px] font-semibold text-text-2 hover:text-text">Not now</button>
       </div>
     </Card>
@@ -269,7 +279,9 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
   const [busy, setBusy] = useState("");
   // what the account may do (Pro, or the one free week), and whether the Guide's plan can be kept for this project
   // the page opens on the function's last answer for this tab, and asks again behind it (api.ts rememberedAccess)
-  const [access, setAccess] = useState<HorizonAccess | null>(() => rememberedAccess());
+  const [accessReal, setAccess] = useState<HorizonAccess | null>(() => rememberedAccess());
+  // one of the team's accounts shown the site as a founding member reads what that person would (../horizon/preview.ts)
+  const access = seenAccess(accessReal, seenAs.value);
   const [guideOn, setGuideOn] = useState(false);
   // Horizon as a programme is built for test accounts only (api.ts programmeTester); "My own targets" opens the set-up as it was
   const [tester, setTester] = useState(() => isTester.value);
@@ -285,7 +297,9 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
   const loadedFor = useRef<string | null>(null);
   async function load() {
     if (!personId) { loadedFor.current = null; setList(null); horizonsSignal.value = []; return; }
-    if (loadedFor.current !== personId) setList(null);
+    // another person's page: nothing of the last person's is left on the signal while theirs is read, so no door, card or
+    // line of this page is drawn from someone else's horizons for those seconds
+    if (loadedFor.current !== personId) { setList(null); if (loadedFor.current != null) horizonsSignal.value = null; }
     try {
       // the closed ones come too: a horizon read to its date stays reachable, with the next one prefilled under it.
       // The two things that decide which page is drawn (the test list, the Guide's plan) are asked beside the horizons
@@ -293,18 +307,22 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
       // twice: the plain set-up, then the programme's; the horizon, then its cards (the founder, 17 November 2026).
       const uid = (await userId()) ?? undefined;
       const [hs, asked, guide, watch, askedTeam] = await Promise.all([listHorizons(deps.supabase, personId, true), testerAnswer(deps.supabase, uid), guidePlanReady(deps.supabase), watchedReady(deps.supabase), teamAnswer(deps.supabase, uid)]);
-      // an answer sets the flag; "could not be asked" leaves what the page already knows (the last visit's answer)
-      const isTest = asked ?? isTester.value;
+      // an answer sets the account's own flags; "could not be asked" leaves what the page already knows (the last visit's
+      // answer). The page is drawn from isTester and isTeam, which are those flags, or the previewed person's while one of
+      // the team's accounts is shown the site as a founding member (state.ts).
+      if (askedTeam != null) accountTeam.value = askedTeam;
+      if (asked != null) { accountTester.value = asked; testerState.value = "known"; }
       // a marker watched with no number is the team's alone (the database refuses anyone else): a founding member is not offered it
-      if (askedTeam != null) isTeam.value = askedTeam;
-      setTester(isTest); if (asked != null) { isTester.value = asked; testerState.value = "known"; } setGuideOn(guide); setWatchOn(watch && (askedTeam ?? isTeam.value));
+      setTester(isTester.value); setGuideOn(guide); setWatchOn(watch && isTeam.value);
       loadedFor.current = personId;
       setList(hs); horizonsSignal.value = hs; setLoadError(""); setOff(false); deps.onOff?.(false);
       if (hs.length) setPro("yes");
       deps.onHorizons?.([...hs.filter((h) => !h.closed_at), ...doneOf(hs)].map((h) => ({ id: h.id, title: h.title, ends_on: h.ends_on, done: !!h.closed_at })));
     } catch (e: any) {
-      horizonsSignal.value = [];
-      if (e?.name === "HorizonOff") { loadedFor.current = personId; setOff(true); setList([]); setLoadError(""); deps.onOff?.(true); deps.onHorizons?.([]); return; }
+      if (e?.name === "HorizonOff") { horizonsSignal.value = []; loadedFor.current = personId; setOff(true); setList([]); setLoadError(""); deps.onOff?.(true); deps.onHorizons?.([]); return; }
+      // a read that failed says nothing new: what the page already knew of this person's horizons stands, and with it
+      // the door to them (state.ts horizonDoor). Only a person nothing is known of yet reads as having none.
+      if (horizonsSignal.value == null) horizonsSignal.value = [];
       loadedFor.current = personId;
       setLoadError(e?.message ?? "Could not read the horizons."); setList([]);
     }
@@ -359,7 +377,15 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
   if (!personId) return <Quiet>Choose a person first.</Quiet>;
   if (list == null) return <div class="h-40 rounded-[16px] border border-border bg-card" aria-busy="true" />;
   if (off) return <OffCard />;
+  // Horizon is drawn for an account that has it (state.ts horizonDoor): the page shows no tab to anyone else, and this
+  // pane holds nothing for them either
+  if (!horizonDoor.value) return null;
   if (pro === "no") return <ProCard goTab={deps.goTab} />;
+  // a new horizon is offered only where the function would start one (../horizon/access.ts maySetHorizon)
+  const canSet = maySetHorizon({ open: HORIZON_PUBLIC, programme: tester, owner });
+  // a founding member's last week: the one sentence, above whatever the pane shows (../horizon/founding.ts)
+  const planNow = planInfoSignal.value;
+  const lastWeek = owner ? continuityLine({ through: planNow?.through, until: planNow?.until, today }) : null;
 
   const open = list.filter((h) => !h.closed_at);
   const done = doneOf(list);
@@ -375,12 +401,12 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
     route.value = to;
     try { document.getElementById("horizonroot")?.scrollIntoView({ block: "start" }); } catch { /* the page stays where it is */ }
   };
-  const showSetup = owner && (setupCard > 0 || (!current && !open.length));
+  const showSetup = canSet && (setupCard > 0 || (!current && !open.length));
   // a line the Guide wrote, carried here as a draft for this person
   const gd = guideDraft.value;
   const draftMarker = gd && gd.personId === personId && MARKER_BY_KEY[targetKeyOf(gd.marker)] && isTargetable(gd.marker) ? (targetKeyOf(gd.marker) as MarkerKey) : null;
 
-  const nav = open.length || done.length || owner ? (
+  const nav = open.length || done.length || canSet ? (
     <div class="flex flex-wrap gap-2" role="tablist" aria-label="Your horizons">
       {open.map((h) => (
         <button type="button" role="tab" aria-selected={!showSetup && current?.id === h.id} onClick={() => { route.value = h.id; history.replaceState(null, "", `#horizon-${h.id}`); }}
@@ -390,7 +416,7 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
         <button type="button" role="tab" aria-selected={!showSetup && current?.id === h.id} onClick={() => { route.value = h.id; history.replaceState(null, "", `#horizon-${h.id}`); }}
           class={`rounded-full border px-3 py-1 text-[12px] font-medium ${!showSetup && current?.id === h.id ? "border-accent-border bg-accent-fill text-accent-text" : "border-border text-text-3 hover:border-border-strong"}`}>{shortTitle(h.title)} · {dayMonth(h.ends_on)} · done</button>
       ))}
-      {owner && <button type="button" role="tab" aria-selected={showSetup} onClick={() => { route.value = "new"; history.replaceState(null, "", "#horizon-new"); }} class={`rounded-full border px-3 py-1 text-[12px] font-medium ${showSetup ? "border-accent-border bg-accent-fill text-accent-text" : "border-border text-text-2 hover:border-border-strong"}`}>{open.length ? "Set another" : done.length ? "Set the next" : "Set a horizon"}</button>}
+      {canSet && <button type="button" role="tab" aria-selected={showSetup} onClick={() => { route.value = "new"; history.replaceState(null, "", "#horizon-new"); }} class={`rounded-full border px-3 py-1 text-[12px] font-medium ${showSetup ? "border-accent-border bg-accent-fill text-accent-text" : "border-border text-text-2 hover:border-border-strong"}`}>{open.length ? "Set another" : done.length ? "Set the next" : "Set a horizon"}</button>}
     </div>
   ) : null;
 
@@ -399,6 +425,7 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
       {notice && <div class="flex items-start justify-between gap-3 rounded-[10px] border border-border-strong bg-alt px-4 py-3 text-[13px] text-text-2"><span>{notice}</span><button type="button" onClick={() => setNotice("")} class="text-text-3 hover:text-text" aria-label="Dismiss">×</button></div>}
       {loadError && <Quiet>{loadError}</Quiet>}
       {consent && <ConsentBox onAgree={() => void agreeConsent()} busy={busy === "consent"} />}
+      {lastWeek && <p class="m-0 rounded-[10px] border border-border-strong bg-alt px-4 py-3 text-[14px] leading-relaxed text-text-2" data-continuity>{lastWeek}</p>}
       {showSetup && tester && owner && !ownTargets && (open.length > 0 || !done[0] || !!parseProgramme(done[0].programme))
         ? <ProgrammeSetup sb={deps.supabase} person={person} today={today} personId={personId} nav={nav} hasOthers={open.length > 0 || done.length > 0} access={access} guideOn={guideOn} userId={userId}
             after={!open.length && done[0] ? parseProgramme(done[0].programme)?.goal ?? null : null} afterDay={!open.length && !!done[0] && !!dayKindOf(done[0].programme)} key={!open.length && done[0] ? `after-${done[0].id}` : "programme"}
@@ -411,12 +438,12 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
             onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); }}
             onError={onApiError} onCancel={() => { route.value = ""; history.replaceState(null, "", "#horizon"); }} />
         : current && isDone(current)
-          ? <FinalView deps={deps} h={current} person={person} today={today} owner={owner} nav={nav} personId={personId} hasOpen={open.length > 0} access={access} guideOn={guideOn} setNotice={setNotice} reload={load}
+          ? <FinalView deps={deps} h={current} person={person} today={today} owner={owner} canSet={canSet} nav={nav} personId={personId} hasOpen={open.length > 0} access={access} guideOn={guideOn} setNotice={setNotice} reload={load}
               onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); }} onError={onApiError} />
         : current
           ? <View deps={deps} h={current} person={person} today={today} owner={owner} nav={nav} busy={busy} setBusy={setBusy} onError={onApiError} setNotice={setNotice} reload={load} userId={userId} access={access} guideOn={guideOn} tester={tester} watchOn={watchOn}
               page={at.id === current.id ? at.page : "glance"} goPage={(pg) => goPage(current.id, pg)} />
-          : <Card>{nav}<div class="text-[18px] font-semibold text-text">No horizon set.</div><Quiet>{owner ? "A horizon is a date, the markers you want different by then, and the week that gets you there." : "Nothing to see here yet: this person has not set a horizon."}</Quiet></Card>}
+          : <Card>{nav}<div class="text-[18px] font-semibold text-text">No horizon set.</div><Quiet>{canSet ? "A horizon is a date, the markers you want different by then, and the week that gets you there." : owner ? "There is no horizon here to read." : "Nothing to see here yet: this person has not set a horizon."}</Quiet></Card>}
     </div>
   );
 }
@@ -828,7 +855,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
       {on("targets") && fitnessTarget && owner && tester && !closed ? (
         <div class="flex flex-wrap items-center gap-3">
           <Button onClick={() => openFitnessCard({ kinds: fitnessTarget.method ? KINDS_FOR[fitnessTarget.method] : undefined })}>Add a fitness test result</Button>
-          <span class="text-[12px] text-text-3">{fitnessTarget.method ? "Typed here, or taken in the app. The same test as the start." : "Typed here, or taken in the app."} Test account.</span>
+          <span class="text-[12px] text-text-3">{fitnessTarget.method ? "Typed here, or taken in the app. The same test as the start." : "Typed here, or taken in the app."}{isTeam.value ? " Test account." : ""}</span>
         </div>
       ) : null}
       {paged && page === "week" && !closed ? weekDays : null}
@@ -876,7 +903,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
 
       {/* the week with a coach: only where a coach writes or edits the plan, or is the one looking (in the recording it stood on a horizon with no coach) */}
       {on("week") && programme && (programme.writer !== "guide" || !owner)
-        ? <CallCard sb={deps.supabase} h={h} targets={targets} person={person} today={today} owner={owner} closed={closed} tester={tester} programme={programme} planRows={planRows} guideOn={guideOn} userId={userId} setNotice={setNotice}
+        ? <CallCard sb={deps.supabase} h={h} targets={targets} person={person} today={today} owner={owner} closed={closed} tester={tester && isTeam.value} programme={programme} planRows={planRows} guideOn={guideOn} userId={userId} setNotice={setNotice}
             chartLine={chartLast ? chartLast.replace(/^./, (c) => c.toUpperCase()) : null}
             pause={pause} pausing={busy === "pause"} onSetAside={(c) => { if (confirm(`Set last week aside, ${c.words}?\n\n${pauseLines(h, c, pause!).join("\n")}`)) void setAside(c); }} />
         : null}
@@ -996,8 +1023,8 @@ function prefillOf(h: HorizonFull, person: PersonData | null, today: string): Pr
   };
 }
 
-function FinalView({ deps, h, person, today, owner, nav, personId, hasOpen, onStarted, onError, access, guideOn, setNotice, reload }: {
-  deps: HorizonDeps; h: HorizonFull; person: PersonData | null; today: string; owner: boolean; nav: any; personId: string; hasOpen: boolean;
+function FinalView({ deps, h, person, today, owner, canSet, nav, personId, hasOpen, onStarted, onError, access, guideOn, setNotice, reload }: {
+  deps: HorizonDeps; h: HorizonFull; person: PersonData | null; today: string; owner: boolean; /** A new horizon may be set from here (../horizon/access.ts maySetHorizon). */ canSet: boolean; nav: any; personId: string; hasOpen: boolean;
   onStarted: (id: string) => Promise<void>; onError: (e: ApiError, retry: () => void) => boolean;
   access: HorizonAccess | null; guideOn: boolean; setNotice: (s: string) => void; reload: () => Promise<void>;
 }) {
@@ -1025,7 +1052,7 @@ function FinalView({ deps, h, person, today, owner, nav, personId, hasOpen, onSt
         <div class="flex max-w-[680px] flex-col gap-2">
           <Eyebrow>Horizon · set {dayMonthYear(h.starts_on)} · the date</Eyebrow>
           <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-[-0.01em] text-text">{longDate(h.ends_on)}</h1>
-          <p class="m-0 text-[15px] leading-relaxed text-text-2">{owner ? "The whole road, read once. Then the next horizon, prefilled from what moved; the numbers are yours to set." : "The whole road, read once."}</p>
+          <p class="m-0 text-[15px] leading-relaxed text-text-2">{canSet ? "The whole road, read once. Then the next horizon, prefilled from what moved; the numbers are yours to set." : "The whole road, read once."}</p>
           {weeksWords(h) ? <p class="m-0 text-[13px] leading-relaxed text-text-3">{weeksWords(h)}</p> : null}
           <div class="mt-1">{nav}</div>
         </div>
@@ -1079,7 +1106,7 @@ function FinalView({ deps, h, person, today, owner, nav, personId, hasOpen, onSt
         )}
       </Card>
 
-      {owner && prefill && (later
+      {canSet && prefill && (later
         ? <div><Button onClick={() => setLater(false)}>Set the next horizon</Button></div>
         : <Setup deps={deps} person={person} today={today} personId={personId} hasOthers={false} nav={null} prefill={prefill} onStarted={onStarted} onError={onError} onCancel={() => setLater(true)} access={access} guideOn={guideOn} />)}
 

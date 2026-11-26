@@ -502,14 +502,15 @@ export function guidePlan(args: GuidePlanArgs): GuidePlanView {
   if (stepsNow != null) tiles.push({ key: "steps", small: "Steps", big: `${thousands(stepsNow)} a day`, text: stepsPer != null && stepsNow < aims.steps! ? `About ${thousands(stepsPer)} more a day each week. It reaches ${thousands(aims.steps!)} in week ${stepsReach}.` : "Held at your number." });
   tiles.push({ key: "rest", small: "Rest", big: `${plural(off, "day")} with no session`, text: shares ? "Any day. A strength session may share a day with an easy one." : "Any day." });
 
-  // the same plan as FITT-VP
+  // the same plan as FITT-VP: frequency, intensity, time, type, volume, progression (the founder, 26 November 2026:
+  // P reads Progression, as the American College of Sports Medicine writes it). The row says how the plan climbs.
   const fitt = [
     { letter: "F", name: "Frequency", now: `${plural(days, "aerobic session")}, ${strengthDays} strength, ${plural(off, "day")} off`, by: "The same" },
     { letter: "I", name: "Intensity", now: now.harder > 0 ? `Zone 2 for ${now.zone2} of ${now.total} minutes. The rest ${tier >= 2 ? harderName : "harder"}.` : `Zone 2 for all ${now.total} minutes`, by: last.harder > 0 ? `Zone 2 for ${last.zone2} of ${last.total} minutes` : `Zone 2 for all ${last.total} minutes` },
     { letter: "T", name: "Time", now: `${now.lo} to ${now.hi} minutes a session`, by: last.lo === now.lo ? "The same" : `${last.lo} to ${last.hi} minutes a session` },
     { letter: "T", name: "Type", now: types.length ? "What you already log. Any steady activity of the large muscles counts." : "Any steady activity of the large muscles: brisk walking, cycling, swimming.", by: "The same" },
     { letter: "V", name: "Volume", now: `About ${thousands(now.dose)} MET-minutes`, by: `About ${thousands(last.dose)}.${doseShort ? ` Under ${floorWords}.` : aims.doseFloorFrom === "target" ? ` Never under your ${thousands(aims.doseFloor)}.` : ""}` },
-    { letter: "P", name: "Pattern", now: climb.climbs ? `${cap(stepWord)} more minutes of zone 2 each week${climb.eases ? `, ${numberWord(RULES.progression.harderEaseMin)} fewer harder` : ""}` : "The same week, held", by: [climb.climbs && zoneAt && zoneAt < n ? `Held from week ${zoneAt}.` : "", `Fitness tested in week ${testWeeks.join(" and week ")}.`].filter(Boolean).join(" ") },
+    { letter: "P", name: "Progression", now: climb.climbs ? `${cap(stepWord)} more minutes of zone 2 each week${climb.eases ? `, ${numberWord(RULES.progression.harderEaseMin)} fewer harder` : ""}` : "The same week, held", by: [climb.climbs && zoneAt && zoneAt < n ? `Held from week ${zoneAt}.` : "", `Fitness tested in week ${testWeeks.join(" and week ")}.`].filter(Boolean).join(" ") },
   ];
 
   // why this, for this person

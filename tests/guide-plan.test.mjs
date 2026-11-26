@@ -190,6 +190,9 @@ test("the view: the week as tiles, FITT-VP, the reasons, every week, and the lin
   assert.equal(v.tiles[3].big, "2 sessions");
   assert.match(v.tiles[3].text, /Whole body twice, five moves each, one to two sets\./);
   assert.deepEqual(v.fitt.map((r) => r.letter).join(""), "FITTVP");
+  // frequency, intensity, time, type, volume, progression (the founder, 26 November 2026: P is Progression, not Pattern)
+  assert.deepEqual(v.fitt.map((r) => r.name), ["Frequency", "Intensity", "Time", "Type", "Volume", "Progression"]);
+  assert.match(v.fitt[5].now, /more minutes of zone 2 each week/, "the P row says how the plan climbs");
   assert.match(v.fitt[5].by, /Held from week 8\. Fitness tested in week 8 and week 13\./);
   assert.match(v.fitt[4].by, /Never under your 900\./);
   assert.equal(v.why.length, 3);

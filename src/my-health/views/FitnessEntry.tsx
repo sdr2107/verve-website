@@ -20,7 +20,7 @@ import { useEffect, useMemo, useState } from "preact/hooks";
 import { signal } from "@preact/signals";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PersonData } from "../derive/person.ts";
-import { actions, derived, person as personSignal } from "../state.ts";
+import { actions, derived, isTeam, person as personSignal } from "../state.ts";
 import { weightSeries } from "../derive/lenses.ts";
 import { todayStr } from "../derive/format.ts";
 import { methodLabel } from "../derive/markers.ts";
@@ -229,11 +229,13 @@ function Card({ start, deps, onClose }: { start: CardStart; deps: FitnessCardDep
   }
 
   const read = start.read ?? null;
+  // "test account" is our own note: one of Verve's accounts reads it, a founding member does not (state.ts isTeam)
+  const ours = isTeam.value ? " · test account" : "";
   return (
     <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 md:items-center" role="dialog" aria-modal="true" aria-label="A fitness test result">
       <section class="flex w-full max-w-[560px] flex-col gap-4 rounded-[16px] border border-border-strong bg-card p-5">
         <div class="flex flex-col gap-1">
-          <Eyebrow>{read ? `From a report${start.fileName ? ` · ${start.fileName}` : ""} · test account` : "A fitness test · test account"}</Eyebrow>
+          <Eyebrow>{read ? `From a report${start.fileName ? ` · ${start.fileName}` : ""}${ours}` : `A fitness test${ours}`}</Eyebrow>
           <h2 class="m-0 text-[18px] font-semibold text-text">{read ? "What was read, for you to check" : kind === "watch" ? "Type your device's estimate" : "Type the result"}</h2>
           {read ? <p class="m-0 text-[13px] leading-relaxed text-text-2">Read from the printed text. Check each line against the report, and correct any that is wrong.</p> : null}
         </div>
