@@ -117,6 +117,14 @@ export const horizons = signal<HorizonFull[] | null>(null);
  * Set as the page starts: at once from the last visit's answer (known.ts), then from the database's.
  */
 export const isTester = signal(false);
+/**
+ * The signed-in account is one of the team's own (programme_testers), not a founding member. isTester above is true
+ * for both: it is "Horizon as a programme is on for this account". This one opens what is the team's alone: the
+ * panels and the offer (rows only the team's list can read), the team's page, the Plans page, a marker watched with
+ * no number, and a diet chart. A founding member (METTracker supabase/migrations/20261125_founding_members.sql) has
+ * the programme and none of those. Set with isTester, from the same answer (known.ts accessFlags).
+ */
+export const isTeam = signal(false);
 /** Whether that question has an answer yet. A page that only a test account is shown says "Checking" while it has none, never "nothing here". */
 export const testerState = signal<"asking" | "known" | "failed">("asking");
 /**

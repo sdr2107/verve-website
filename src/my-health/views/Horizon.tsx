@@ -34,8 +34,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PersonData } from "../derive/person.ts";
 import { addDays, daysBetween, mondayOf, todayStr } from "../derive/format.ts";
 import { actsByDay } from "../derive/activity.ts";
-import { asOfLine, lastAppSync } from "../derive/asOf.ts";
-import { horizons as horizonsSignal, guideDraft, setGuideDraft, isTester, testerState, doc as docSignal } from "../state.ts";
+// figuresAsOf, not asOfLine: View has a helper of that name for a check-in's own line, and a second one in the
+// same function is read before it exists (the page stopped drawing, 25 to 26 November 2026)
+import { asOfLine as figuresAsOf, lastAppSync } from "../derive/asOf.ts";
+import { horizons as horizonsSignal, guideDraft, setGuideDraft, isTester, isTeam, testerState, doc as docSignal } from "../state.ts";
 import { chartSharedWith } from "../horizon/chart.ts";
 import { arrivalsOf, followable, leftOff, pausedWords } from "../derive/arrivals.ts";
 import {
@@ -48,7 +50,7 @@ import {
 import { movedWords, pauseState, pauseWhyWords, type PauseChoice, type PauseKey, type PauseState, type PauseWhy } from "../horizon/pause.ts";
 import {
   listHorizons, startHorizon, requestCheckin, grantConsent, savePlan, updateHorizon, deleteHorizon, pauseHorizon, addTarget, removeTarget, updateTarget, saveGuidePlan, ERROR_WORDS,
-  fetchAccess, rememberedAccess, guidePlanReady, testerAnswer, loadDayName, watchedReady, listWatched,
+  fetchAccess, rememberedAccess, guidePlanReady, testerAnswer, teamAnswer, loadDayName, watchedReady, listWatched,
   type HorizonFull, type PlanAuthor, type StartTarget, type ApiError, type HorizonAccess,
 } from "../horizon/api.ts";
 import { midweekOf, planRowsNow } from "../horizon/midweek.ts";
@@ -289,10 +291,13 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
       // The two things that decide which page is drawn (the test list, the Guide's plan) are asked beside the horizons
       // and set with them, so the page is drawn once. They used to arrive a moment later, and the page drew itself
       // twice: the plain set-up, then the programme's; the horizon, then its cards (the founder, 17 November 2026).
-      const [hs, asked, guide, watch] = await Promise.all([listHorizons(deps.supabase, personId, true), testerAnswer(deps.supabase, (await userId()) ?? undefined), guidePlanReady(deps.supabase), watchedReady(deps.supabase)]);
+      const uid = (await userId()) ?? undefined;
+      const [hs, asked, guide, watch, askedTeam] = await Promise.all([listHorizons(deps.supabase, personId, true), testerAnswer(deps.supabase, uid), guidePlanReady(deps.supabase), watchedReady(deps.supabase), teamAnswer(deps.supabase, uid)]);
       // an answer sets the flag; "could not be asked" leaves what the page already knows (the last visit's answer)
       const isTest = asked ?? isTester.value;
-      setTester(isTest); if (asked != null) { isTester.value = asked; testerState.value = "known"; } setGuideOn(guide); setWatchOn(watch);
+      // a marker watched with no number is the team's alone (the database refuses anyone else): a founding member is not offered it
+      if (askedTeam != null) isTeam.value = askedTeam;
+      setTester(isTest); if (asked != null) { isTester.value = asked; testerState.value = "known"; } setGuideOn(guide); setWatchOn(watch && (askedTeam ?? isTeam.value));
       loadedFor.current = personId;
       setList(hs); horizonsSignal.value = hs; setLoadError(""); setOff(false); deps.onOff?.(false);
       if (hs.length) setPro("yes");
@@ -447,7 +452,9 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   // share's "Diet chart" tick) is given its rows by the database and reads them; anyone else is given none.
   const [chartState, setChartState] = useState<ChartState | null>(null);
   const loadCharts = async () => { setChartState(await loadChartState(deps.supabase, h.id)); };
-  useEffect(() => { setChartState(null); if (!owner || tester) void loadCharts(); }, [h.id, owner, tester]);
+  // a diet chart is the team's alone for its owner; someone a chart is shared with reads it as before
+  const team = isTeam.value;
+  useEffect(() => { setChartState(null); if (!owner || team) void loadCharts(); }, [h.id, owner, team]);
   const who = owner ? "you" : "they";
   // the markers this horizon watches, with no number on them (board 19): its owner's alone. The database gives anyone
   // else no rows, so the card is asked for only on the owner's own page.
@@ -502,7 +509,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   // the midweek note (board 15): Thursday's, counted, for the owner of a test account; off when they switched it off
   const midweek = useMemo(() => (person && owner && tester && !h.closed_at && h.checkin_midweek !== false ? midweekOf({ horizon: h, person, today, plan: planRowsNow(h, targets, person, today), targets }) : null), [person, h, today, owner, tester]);
   // when the figures below are from: the app's last sync, said under the targets (derive/asOf; 25 November 2026)
-  const asOf = person ? asOfLine(lastAppSync(person.exportRows.weeks), new Date(), owner) : null;
+  const asOf = person ? figuresAsOf(lastAppSync(person.exportRows.weeks), new Date(), owner) : null;
   const chartLine = chartSoFar(chartState, h, today, who);
   const chartLast = chartLastWeek(chartState, h, today, who);
   // the fitness number's own test, for the card that adds a result (board 16)
@@ -708,7 +715,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   return (
     <>
       {paged ? pagedHead : null}
-      {paged && page === "glance" ? <OfferOnHorizon sb={deps.supabase} h={h} today={today} /> : null}
+      {paged && page === "glance" && isTeam.value ? <OfferOnHorizon sb={deps.supabase} h={h} today={today} /> : null}
       {paged && page === "glance" ? glance : null}
       {paged ? null : <header class="flex flex-wrap items-start justify-between gap-6">
         <div class="flex max-w-[680px] flex-col gap-2">
@@ -874,7 +881,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
             pause={pause} pausing={busy === "pause"} onSetAside={(c) => { if (confirm(`Set last week aside, ${c.words}?\n\n${pauseLines(h, c, pause!).join("\n")}`)) void setAside(c); }} />
         : null}
 
-      {owner && tester && chartState && !chartState.off && (!paged || (chartState.charts.length ? page === "week" : page === "notes")) ? <ChartCard sb={deps.supabase} h={h} today={today} state={chartState} closed={closed} userId={userId} reload={loadCharts} sharedWith={chartSharedWith((docSignal.value as { sharing?: { status?: unknown; scopes?: unknown }[] } | null)?.sharing)} /> : null}
+      {owner && team && chartState && !chartState.off && (!paged || (chartState.charts.length ? page === "week" : page === "notes")) ? <ChartCard sb={deps.supabase} h={h} today={today} state={chartState} closed={closed} userId={userId} reload={loadCharts} sharedWith={chartSharedWith((docSignal.value as { sharing?: { status?: unknown; scopes?: unknown }[] } | null)?.sharing)} /> : null}
       {!owner && chartState && chartState.charts.length ? <ChartCard sb={deps.supabase} h={h} today={today} state={chartState} closed={closed} userId={userId} reload={loadCharts} readOnly /> : null}
 
       {on("notes") ? <Card id="horizon-checkin">
@@ -1013,7 +1020,7 @@ function FinalView({ deps, h, person, today, owner, nav, personId, hasOpen, onSt
   return (
     <>
       {/* a horizon that ran to its date, for its owner on a test account: one line saying where what goes with it is read */}
-      {owner && isTester.value ? <OfferOnHorizon sb={deps.supabase} h={h} today={today} /> : null}
+      {owner && isTeam.value ? <OfferOnHorizon sb={deps.supabase} h={h} today={today} /> : null}
       <header class="flex flex-wrap items-start justify-between gap-6">
         <div class="flex max-w-[680px] flex-col gap-2">
           <Eyebrow>Horizon · set {dayMonthYear(h.starts_on)} · the date</Eyebrow>

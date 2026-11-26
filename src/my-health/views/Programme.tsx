@@ -44,7 +44,7 @@ import { DoorTiles, WhereLine } from "./Doors.tsx";
 import { Sheet } from "./Sheet.tsx";
 import { OfferAtSetup } from "./Offer.tsx";
 import { STATE_WORDS, ageWords, doorsFor, stateOf, storeOf as healthStoreOf, syncNote, type Door, type ReadingState, type Who } from "../horizon/doors.ts";
-import { actions, doc as docSignal, person as personSignal } from "../state.ts";
+import { actions, doc as docSignal, isTeam, person as personSignal } from "../state.ts";
 import { SCOPE_LABEL, offeredScopes } from "../derive/scopes.ts";
 import { CHART_SCOPE } from "../horizon/chart.ts";
 import { HELD_WORDS, watchedStart, watchedValue, wayOf, waysFor } from "../horizon/watch.ts";
@@ -231,7 +231,7 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
   const sharing = ((docSignal.value as { sharing?: { status?: unknown; scopes?: unknown }[] } | null)?.sharing ?? []).filter((x) => Array.isArray(x?.scopes) && (x.scopes as unknown[]).includes("activity"));
   const coachWrites = writer !== "guide" || !!g?.writer;
   const lite = personSignal.value;
-  const ticksOffered = offeredScopes({ hasAccount: !!lite?.account_id, tester: true }).filter((k) => COACH_TICKS.includes(k) || k === CHART_SCOPE);
+  const ticksOffered = offeredScopes({ hasAccount: !!lite?.account_id, tester: isTeam.value }).filter((k) => COACH_TICKS.includes(k) || k === CHART_SCOPE);
   const scopesSent = coachScopes.filter((k) => ticksOffered.includes(k));
   const emailIs = emailShape(coachEmail);
   const me = actions.myEmail().trim().toLowerCase();
@@ -573,7 +573,8 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
               </div>
             ) : sharing.length ? <Quiet>{sharing.length === 1 ? "One person already shares" : `${sharing.length} people already share`} this page far enough to see a horizon. Settings changes what each of them sees.</Quiet> : null}
           </div>
-          <div class="flex flex-col gap-3 border-t border-border pt-4">
+          {/* a diet chart is the team's alone for now: a founding member's set-up does not offer one */}
+          <div class={`flex flex-col gap-3 border-t border-border pt-4${isTeam.value ? "" : " hidden"}`}>
             {!chart ? (
               <>
                 <button type="button" onClick={() => void addChart()} disabled={chartReading} class="flex flex-col items-center gap-1 rounded-[12px] border-[1.5px] border-dashed border-border-strong bg-alt px-4 py-4 text-center hover:border-accent-border disabled:opacity-60">

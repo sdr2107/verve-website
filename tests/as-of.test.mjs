@@ -1,6 +1,7 @@
 // When a person's figures are from, and when the page reads them again (25 November 2026). `npm test`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { lastAppSync, asOfWords, asOfLine, rereadDue, REREAD_MIN_MS } from "../src/my-health/derive/asOf.ts";
 
 const NOW = new Date("2026-11-25T17:04:00Z");
@@ -55,4 +56,21 @@ test("never while hidden, signed out, with nothing in hand, or while a field has
   assert.equal(rereadDue({ ...due, signedIn: false }), false);
   assert.equal(rereadDue({ ...due, hasDocument: false }), false);
   assert.equal(rereadDue({ ...due, typing: true }), false);
+});
+
+// The fault of 25 November 2026: the view imported asOfLine and already had a helper of that name inside View,
+// so the call above the helper read a name that did not exist yet and the horizon's page stopped drawing.
+// The build and the other tests passed; only the type check saw it. Every name a view takes from derive/asOf
+// must be one that nothing else in that file declares.
+test("the Horizon view takes the sentence under a name nothing else in the file declares", () => {
+  const src = readFileSync(new URL("../src/my-health/views/Horizon.tsx", import.meta.url), "utf8");
+  const line = src.match(/import \{([^}]+)\} from "\.\.\/derive\/asOf\.ts";/);
+  assert.ok(line, "the view imports from derive/asOf");
+  const names = line[1].split(",").map((part) => part.trim().split(/\s+as\s+/).pop()).filter(Boolean);
+  assert.ok(names.length >= 2);
+  for (const name of names) {
+    const declared = new RegExp(`\\b(?:const|let|var|function)\\s+${name}\\b`).test(src);
+    assert.equal(declared, false, `${name} is imported from derive/asOf and declared again in the view`);
+    assert.ok(new RegExp(`\\b${name}\\(`).test(src), `${name} is imported and never called`);
+  }
 });
