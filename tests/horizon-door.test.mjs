@@ -105,7 +105,7 @@ test("the other doors: a line of the Guide's, Settings, and the weekly email's w
   assert.match(settings, /const withHorizon = HORIZON_PUBLIC \|\| isTester\.value \|\| open\.length > 0;/);
   assert.match(settings, /\{withHorizon \? <div class="border-t border-border py-3">\s*<div class="text-\[15px\] font-medium text-text">Horizon check-ins<\/div>/);
   assert.match(settings, /\{withHorizon \? WEEKLY_CARRIES : WEEKLY_CARRIES_PLAIN\}/);
-  assert.match(WEEKLY_CARRIES, /your horizon's pace/); assert.doesNotMatch(WEEKLY_CARRIES_PLAIN, /horizon/i);
+  assert.match(WEEKLY_CARRIES, /your horizon: what the week reached/); assert.doesNotMatch(WEEKLY_CARRIES_PLAIN, /horizon/i);
   assert.match(settings, /\{horizonSettable\.value \? <> <button type="button" onClick=\{deps\.goHorizon\}/, "'Set one on Horizon' is not a button that is refused");
   // the trial's line names what the trial opens
   assert.match(settings, /"Pro on the website: the Guide's reads and In depth, here\."/);

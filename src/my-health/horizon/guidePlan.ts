@@ -335,7 +335,8 @@ export type WeekReview = {
   gap: { head: string; parts: { head: string; text: string }[] } | null;
   /** "hold": nothing in the aerobic week climbs. "changed": a number the plan follows was changed in the week after. "end": it was the plan's last week. */
   outcome: WeekOutcome | "hold" | "changed" | "end";
-  after: { small: string; head: string; text: string }[];
+  /** The first is the week after. Its `why` is the plan's sentence on what the finished week did to it, without the week's other figures. */
+  after: { small: string; head: string; text: string; why?: string }[];
 };
 /** What the plan does for a target: a line it works on, or a figure it only watches. */
 export type Answer = { marker: string; label: string; text: string };
@@ -623,13 +624,24 @@ export function guidePlan(args: GuidePlanArgs): GuidePlanView {
     const o: WeekOutcome | "hold" | "changed" = r < L ? "changed" : !moving ? "hold" : prog.outcomeOfWeek[r] ?? "on";
     const rest = cap(andList([...(nx.harder > 0 ? [`harder minutes ${nx.harder === row.harder ? "stay at" : "are"} ${nx.harder}`] : []), `strength ${nx.strengthDays === row.strengthDays ? "stays at" : "is"} ${nx.strengthDays}`, ...(nx.steps != null ? [`steps ${row.steps != null && nx.steps > row.steps ? "go on to" : "are"} ${thousands(nx.steps)} a day`] : [])]));
     const wouldBe = steps[Math.min(n - 1, prog.stepOfWeek[r] + 1)].zone2;
-    const first: { small: string; head: string; text: string } =
-      o === "changed" ? { small, head: `The week keeps what it asked: ${nx.zone2} minutes in zone 2`, text: `A number the plan follows was changed in week ${L + 1}. That week keeps its own figures, and the plan goes on from it. ${rest}.` }
-      : o === "hold" ? { small, head: `The same week: ${nx.zone2} minutes in zone 2`, text: `The plan holds the week as it is${gapMin > TOL ? ", so a short week moves nothing in it and nothing is added" : ""}. ${rest}.` }
-      : o === "short" ? { small, head: `Zone 2 is asked again: ${nx.zone2} minutes, not ${wouldBe}`, text: `Zone 2 was more than ${numberWord(TOL)} minutes under its line, so the plan asks for the same zone 2 minutes again. The ${gapMin} minutes are not added to this week. ${rest}.` }
-      : o === "back" ? { small, head: `The plan steps back: ${nx.zone2} minutes in zone 2`, text: `Two weeks in a row were more than ${numberWord(TOL)} minutes under the zone 2 line, so the plan steps back one week. Nothing is added to it. ${rest}.` }
-      : o === "won" ? { small, head: `A week won back: ${nx.zone2} minutes in zone 2`, text: `The week came to ${did.zone2} minutes in zone 2: its own figure and the next week's as well. So that figure is not asked twice${prog.stepOfWeek[r + 1] === r + 1 ? ", and the plan is back on its first line" : ""}. The plan did not ask for it. ${rest}.` }
-      : { small, head: `The plan goes on: ${nx.zone2} minutes in zone 2`, text: `${nx.zone2 > row.zone2 ? `Zone 2 reached its line, so this week adds ${numberWord(nx.zone2 - row.zone2)} minutes.` : nx.zone2 === row.zone2 ? "Zone 2 reached its line, and the plan holds it from here." : "The harder minutes come back this week, and zone 2 gives way to them."} ${rest}.` };
+    // what the week did to the plan, in the plan's own sentence. Kept apart from `rest` (the other figures of the week
+    // after) so Monday's email can say it beside this week's aerobic minutes without saying strength and steps twice
+    // (./lightWeek.ts asksOf; 26 November 2026). `text` is the two together, as it always was.
+    const why =
+      o === "changed" ? `A number the plan follows was changed in week ${L + 1}. That week keeps its own figures, and the plan goes on from it.`
+      : o === "hold" ? `The plan holds the week as it is${gapMin > TOL ? ", so a short week moves nothing in it and nothing is added" : ""}.`
+      : o === "short" ? `Zone 2 was more than ${numberWord(TOL)} minutes under its line, so the plan asks for the same zone 2 minutes again. The ${gapMin} minutes are not added to this week.`
+      : o === "back" ? `Two weeks in a row were more than ${numberWord(TOL)} minutes under the zone 2 line, so the plan steps back one week. Nothing is added to it.`
+      : o === "won" ? `The week came to ${did.zone2} minutes in zone 2: its own figure and the next week's as well. So that figure is not asked twice${prog.stepOfWeek[r + 1] === r + 1 ? ", and the plan is back on its first line" : ""}. The plan did not ask for it.`
+      : nx.zone2 > row.zone2 ? `Zone 2 reached its line, so this week adds ${numberWord(nx.zone2 - row.zone2)} minutes.` : nx.zone2 === row.zone2 ? "Zone 2 reached its line, and the plan holds it from here." : "The harder minutes come back this week, and zone 2 gives way to them.";
+    const head =
+      o === "changed" ? `The week keeps what it asked: ${nx.zone2} minutes in zone 2`
+      : o === "hold" ? `The same week: ${nx.zone2} minutes in zone 2`
+      : o === "short" ? `Zone 2 is asked again: ${nx.zone2} minutes, not ${wouldBe}`
+      : o === "back" ? `The plan steps back: ${nx.zone2} minutes in zone 2`
+      : o === "won" ? `A week won back: ${nx.zone2} minutes in zone 2`
+      : `The plan goes on: ${nx.zone2} minutes in zone 2`;
+    const first: { small: string; head: string; text: string; why?: string } = { small, head, text: `${why} ${rest}.`, why };
     const after = [first];
     if (aims.zone2 != null && climb.climbs) {
       const end = dayMonthLong(horizon.ends_on);
