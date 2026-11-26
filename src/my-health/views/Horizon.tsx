@@ -34,7 +34,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PersonData } from "../derive/person.ts";
 import { addDays, daysBetween, mondayOf, todayStr } from "../derive/format.ts";
 import { actsByDay } from "../derive/activity.ts";
-import { asOfLine, lastAppSync } from "../derive/asOf.ts";
+// figuresAsOf, not asOfLine: View has a helper of that name for a check-in's own line, and a second one in the
+// same function is read before it exists (the page stopped drawing, 25 to 26 November 2026)
+import { asOfLine as figuresAsOf, lastAppSync } from "../derive/asOf.ts";
 import { horizons as horizonsSignal, guideDraft, setGuideDraft, isTester, isTeam, testerState, doc as docSignal } from "../state.ts";
 import { chartSharedWith } from "../horizon/chart.ts";
 import { arrivalsOf, followable, leftOff, pausedWords } from "../derive/arrivals.ts";
@@ -507,7 +509,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   // the midweek note (board 15): Thursday's, counted, for the owner of a test account; off when they switched it off
   const midweek = useMemo(() => (person && owner && tester && !h.closed_at && h.checkin_midweek !== false ? midweekOf({ horizon: h, person, today, plan: planRowsNow(h, targets, person, today), targets }) : null), [person, h, today, owner, tester]);
   // when the figures below are from: the app's last sync, said under the targets (derive/asOf; 25 November 2026)
-  const asOf = person ? asOfLine(lastAppSync(person.exportRows.weeks), new Date(), owner) : null;
+  const asOf = person ? figuresAsOf(lastAppSync(person.exportRows.weeks), new Date(), owner) : null;
   const chartLine = chartSoFar(chartState, h, today, who);
   const chartLast = chartLastWeek(chartState, h, today, who);
   // the fitness number's own test, for the card that adds a result (board 16)
