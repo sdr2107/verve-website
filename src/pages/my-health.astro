@@ -960,6 +960,9 @@ const plansLink = planDoor("See the plans", false);
 
   /* ── the sidebar: three groups of tabs with their sub-links, Settings' own navigation, the account at the foot ── */
   :is(#tabbar, #settingsnav) .mh-tab { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 6px 10px; border-radius: 9px; font-size: 13.5px; font-weight: 500; color: var(--color-text-2); border: 1px solid transparent; white-space: nowrap; text-align: left; transition: color 0.12s, background-color 0.12s; }
+  /* A row that is not for this account. The rule above draws every row, and it won over the `hidden` class: from
+     14 to 26 November 2026 every account saw "Your offer" and "For the team" in Settings. */
+  :is(#tabbar, #settingsnav) .mh-tab.hidden { display: none; }
   :is(#tabbar, #settingsnav) .mh-tab:hover { color: var(--color-text); background: color-mix(in srgb, var(--color-ink) 4%, transparent); }
   /* the lit row: a raised pill on the tinted panel */
   :is(#tabbar, #settingsnav) .mh-tab[aria-current="page"] { color: var(--color-text); font-weight: 600; background: var(--color-card); border-color: var(--color-border); }
@@ -4464,7 +4467,13 @@ const plansLink = planDoor("See the plans", false);
     const view = seenAs.value, line = previewLine(view), el = $("previewline");
     el.classList.toggle("hidden", !line); el.classList.toggle("flex", !!line);
     $("previewtext").textContent = line ?? "";
-    if (view !== viewDrawn) { viewDrawn = view; horizonView.refresh(); if (userId) void settingsView.refresh(); }
+    if (view !== viewDrawn) {
+      viewDrawn = view; horizonView.refresh(); if (userId) void settingsView.refresh();
+      // the control sits on the team's page, which the previewed person does not have: left there, the page read
+      // "There is nothing on it for this account" and looked as if nothing had happened. Plan and billing is where
+      // the change first shows (the plan line, and the sentence of the last week).
+      if (view !== "team" && activeTab === "settings" && (settingsSection === "team" || settingsSection === "offer")) openSettings("plan");
+    }
   });
   // The line under the name is the plan as the server knows it, on this load or from the last visit. Until one
   // of those is in hand it is empty: it used to read "Free" for those seconds, which is a statement about an
