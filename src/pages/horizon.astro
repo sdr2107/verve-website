@@ -6,6 +6,13 @@
  * BEING TRIED, NOT OFFERED: the page is not linked from the bar, the footer or the landing page, and asks search
  * engines to leave it out. It carries no price and no offer.
  *
+ * FOR MEMBERS, from 26 November 2026 (../data/story.ts HORIZON_PUBLIC, off): the five questions are shown to a
+ * signed-in account the programme is on for, one of Verve's own or a founding member (the database's
+ * programme_access(), asked by the script at the foot as /plans asks about its chart). Anyone else reads that
+ * Horizon is not open yet, with the letter's box and the two free ways to begin: a link in an old post still lands
+ * somewhere true. A member reaches this page from their horizon's set-up (views/Programme.tsx), so it must keep
+ * working for them. Hidden, not secret: the questions are in the page's source.
+ *
  * Each question does one job. The first names the thing a person wants, in their words. The second gives before it
  * asks: the six-minute walk on the front page hands them their own number. The third is what gets in the way, and
  * each answer changes one thing on the page that follows (../data/programme.ts BARRIERS). The fourth says what
@@ -24,24 +31,33 @@ import Footer from "../components/Footer.astro";
 import { AIMS, BARRIERS } from "../data/programme.ts";
 import { ACCOUNT_PATH, GET_APP_PATH } from "../data/site.ts";
 import LetterBox from "../components/LetterBox.astro";
+import { HORIZON_PUBLIC } from "../data/story.ts";
 
 const chip = "inline-flex min-h-10 items-center rounded-full border border-border-strong bg-alt px-4 text-[14px] font-medium text-text transition-colors hover:border-accent-border aria-pressed:border-accent-border aria-pressed:bg-accent-fill aria-pressed:text-accent-text";
 const section = "flex flex-col gap-3 border-t border-border pt-7";
 const num = "inline-flex h-7 w-7 items-center justify-center rounded-full border border-accent-border bg-accent-fill font-mono text-[12px] font-semibold text-accent-text";
 ---
 
-<Layout title="Where do you want to be in three months? · Verve" description="Five questions that end in a three-month horizon: your own numbers, a week worked out from them, and a check-in every Monday." cardType="summary" noindex>
+<Layout title={HORIZON_PUBLIC ? "Where do you want to be in three months? · Verve" : "Horizon · Verve"} description={HORIZON_PUBLIC ? "Five questions that end in a three-month horizon: your own numbers, a week worked out from them, and a check-in every Monday." : "Horizon is not open yet."} cardType="summary" noindex>
   <SiteHeader />
   <main class="mx-auto flex w-full max-w-[760px] flex-col gap-7 px-4 pb-24 pt-12 sm:px-6" data-way-in>
-    <header class="flex flex-col gap-3">
+    {!HORIZON_PUBLIC && (
+      <header class="flex flex-col gap-3" data-horizon-closed>
+        <p class="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-text-3">Horizon</p>
+        <h1 class="m-0 text-[32px] font-semibold leading-[1.12] tracking-[-0.02em] text-text sm:text-[38px]">Horizon is not open yet.</h1>
+        <p class="m-0 text-[16px] leading-relaxed text-text-2">The weekly letter is open to everyone, and so is your first fitness number.</p>
+      </header>
+    )}
+    <header class="flex flex-col gap-3" data-horizon-open hidden={!HORIZON_PUBLIC}>
       <p class="font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-text-3">Horizon</p>
       <h1 class="m-0 text-[32px] font-semibold leading-[1.12] tracking-[-0.02em] text-text sm:text-[38px]">Your week says where you are. A horizon says where you want to be.</h1>
       <p class="m-0 text-[16px] leading-relaxed text-text-2">A date, the numbers you want different by then, and the week that gets you there. You set every number. Verve promises no result.</p>
     </header>
 
-    <LetterBox questions="#questions" />
+    <LetterBox questions="#questions" third={HORIZON_PUBLIC} />
     <p class="m-0 -mt-3 text-[13px] leading-relaxed text-text-3">Or start without leaving an address: <a href="/#find-your-number" class="font-semibold text-accent-text hover:text-text">take the walk test</a> · <a href={GET_APP_PATH} target="_blank" rel="noopener" class="font-semibold text-accent-text hover:text-text">get the app</a></p>
 
+    <div class="flex flex-col gap-7" data-horizon-open hidden={!HORIZON_PUBLIC}>
     <div id="questions" class="flex scroll-mt-6 flex-col gap-2 border-t border-border pt-7">
       <h2 class="m-0 text-[24px] font-semibold leading-tight tracking-[-0.01em] text-text">Where do you want to be in three months?</h2>
       <p class="m-0 text-[15px] leading-relaxed text-text-2">Five questions. They end in a horizon: a date, the numbers you want by then, and the week that gets you there.</p>
@@ -102,9 +118,46 @@ const num = "inline-flex h-7 w-7 items-center justify-center rounded-full border
         <span class="text-[13px] text-text-3">Your answers are kept in this browser until you sign in.</span>
       </div>
     </section>
+    </div>
   </main>
   <Footer />
 </Layout>
+
+<script>
+  // While Horizon is not offered to everyone (../data/story.ts HORIZON_PUBLIC), the questions are shown to an account the
+  // programme is on for: one of Verve's own, or a founding member. Signed out, or anyone else: the page stays as it
+  // was served, "Horizon is not open yet." The answer is the database's; what the last visit learned shows at once.
+  import { supabase } from "../lib/supabase";
+  import { accessAnswer } from "../my-health/horizon/api.ts";
+  import { accessFlags, recall, remember } from "../my-health/known.ts";
+  import { readViewAs, seenFlags, viewAsFor } from "../my-health/horizon/preview.ts";
+  const closedParts = [...document.querySelectorAll<HTMLElement>("[data-horizon-closed]")];
+  if (closedParts.length) {
+    const openParts = [...document.querySelectorAll<HTMLElement>("[data-horizon-open]")];
+    const box = document.querySelector<HTMLElement>("[data-letterbox]");
+    const third = document.querySelector<HTMLElement>("[data-letter-third]");
+    const show = (yes: boolean) => {
+      openParts.forEach((el) => { el.hidden = !yes; });
+      closedParts.forEach((el) => { el.hidden = yes; });
+      if (third) third.hidden = !yes;
+      if (box) box.dataset.places = yes ? "Three" : "Two";
+    };
+    // as the page is drawn for this account: one of the team's own in a preview reads what that person would (preview.ts)
+    const on = (flags: { tester: boolean; team: boolean }) => seenFlags(flags, viewAsFor(readViewAs(), flags.team)).tester;
+    (async () => {
+      let uid = "";
+      try { uid = (await supabase.auth.getSession()).data.session?.user.id ?? ""; } catch { /* signed out */ }
+      if (!uid) return;                                   // signed out: the page stays closed
+      const known = recall(uid);
+      if (known.tester === true) show(on({ tester: true, team: known.team === true }));   // what the last visit learned, at once
+      const answer = await accessAnswer(supabase, uid);
+      if (answer == null) return;                         // could not be asked: what is on the screen stays
+      const flags = accessFlags(answer);
+      remember(uid, flags);
+      show(on(flags));
+    })();
+  }
+</script>
 
 <script>
   // The answers stay in this browser. The horizon's set-up reads them after sign-in (views/Programme.tsx readWayIn).

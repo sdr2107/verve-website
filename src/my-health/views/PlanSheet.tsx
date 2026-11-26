@@ -15,7 +15,8 @@ import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { signal } from "@preact/signals";
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "../../lib/supabase.ts";
-import { PLANS_OPEN, YEARLY_MONTHS_FREE, PRO_ON_THE_WEB, planOf, priceText, isPriced, tillsOf, type Currency, type Period, type Till } from "../../data/plans.ts";
+import { PLANS_OPEN, YEARLY_MONTHS_FREE, PRO_ON_THE_WEB, PRO_SHEET_LINE, planOf, priceText, isPriced, tillsOf, type Currency, type Period, type Till } from "../../data/plans.ts";
+import { planDoor } from "../../data/plan-door.ts";
 
 const shown = signal(false);
 export type PlanSheetHandle = { open: () => void; close: () => void };
@@ -31,6 +32,8 @@ function PlanSheet() {
   const open = shown.value;
   const pro = planOf("pro");
   const priced = isPriced(pro);
+  // "See every plan" leads to the Plans page only while that page is public (data/plan-door.ts)
+  const everyPlan = planDoor("See every plan", false);
   const [period, setPeriod] = useState<Period>("yearly");
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState("");
@@ -84,7 +87,7 @@ function PlanSheet() {
           </div>
           <button type="button" id="plansheetclose" onClick={() => { shown.value = false; }} aria-label="Close" class="-mr-1 inline-flex h-9 w-9 items-center justify-center rounded-full text-[20px] leading-none text-text-3 hover:text-text">×</button>
         </div>
-        <p class="m-0 text-[15px] leading-relaxed text-text-2">The Guide every week, the month and the year too; Horizon with its Monday check-ins and the month read. Nothing free is taken away.</p>
+        <p class="m-0 text-[15px] leading-relaxed text-text-2">{PRO_SHEET_LINE}</p>
         <ul class="m-0 flex list-none flex-col gap-2 p-0">
           {PRO_ON_THE_WEB.map((row) => <li class="text-[15px] leading-relaxed text-text-2" key={row.lead}><span class="font-semibold text-text">{row.lead}</span> {row.rest}</li>)}
         </ul>
@@ -112,7 +115,7 @@ function PlanSheet() {
         )}
         {msg && <p class="m-0 text-[13px] text-text-2" role="status">{msg}</p>}
         <p class="m-0 text-[13px] leading-relaxed text-text-3">Already Pro in the app? Nothing to do: it is the same Pro.</p>
-        <div><a href="/plans" class="text-[13px] font-semibold text-accent-text">See every plan</a></div>
+        {everyPlan ? <div><a href={everyPlan.href} class="text-[13px] font-semibold text-accent-text">{everyPlan.label}</a></div> : null}
       </section>
     </div>
   );

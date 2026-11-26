@@ -11,6 +11,10 @@ test("the function's answers, in the page's words", () => {
   assert.equal(mapError(503, { error: "horizon_not_open" }), "not_open");
   assert.equal(mapError(409, {}), "horizon_closed");
   assert.equal(ERROR_WORDS.not_switched_on, "Horizon is not switched on for this account yet.");
+  // a new horizon refused to an account Horizon is not open to (26 November 2026): its own code, read before the status
+  assert.equal(mapError(403, { error: "horizon_members_only" }), "members_only");
+  assert.equal(mapError(403, {}), "forbidden");
+  assert.equal(ERROR_WORDS.members_only, "Horizon is not open to new members at the moment. Nothing was set.");
 });
 
 test("a missing table means the backend is not there yet, not an error", () => {

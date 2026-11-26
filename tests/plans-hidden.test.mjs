@@ -3,10 +3,12 @@
 // the code for it."). Read from the source. `npm test`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { PLANS_OPEN, PLANS_PAGE_PUBLIC, FREE_AND_PRO_PATH, PLANS, FEATURE_ROWS } from "../src/data/plans.ts";
 import { NAV, FOOTER_LINKS } from "../src/data/site.ts";
 import { HELP_DOORS } from "../src/data/help.ts";
+import { planDoor, PRO_IN_THE_APP } from "../src/data/plan-door.ts";
+import { GET_APP_PATH } from "../src/data/site.ts";
 
 const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
 const plans = read("../src/pages/plans.astro");
@@ -44,7 +46,27 @@ test("the chart is shown to a test account only, through the one question My hea
   assert.match(gate, /if \(recall\(uid\)\.team === true\) show\(true\);/, "what the last visit learned, at once");
   assert.match(gate, /const answer = await teamAnswer\(supabase, uid\);\s*if \(answer == null\) return;/, "an ask that failed changes nothing");
   assert.match(gate, /remember\(uid, \{ team: answer \}\);\s*show\(answer\);/, "a no closes it again");
-  assert.match(gate, /const show = \(yes: boolean\) => \{ chart\.hidden = !yes; closed\.hidden = yes; \};/);
+  // 26 November 2026: one of the team's accounts shown the site as a founding member reads what a member reads here
+  assert.match(gate, /const show = \(team: boolean\) => \{ const yes = team && viewAsFor\(readViewAs\(\), team\) === "team"; chart\.hidden = !yes; closed\.hidden = yes; \};/);
+});
+
+test("inside My health no link opens the hidden page: every one asks the one helper where it leads", () => {
+  // the helper: the Plans page once it is public; until then the app where Pro bought there is the next step, else nothing
+  assert.deepEqual(planDoor("See the plans", true, true), { href: "/plans", label: "See the plans" });
+  assert.deepEqual(planDoor("See every plan", false, true), { href: "/plans", label: "See every plan" });
+  assert.deepEqual(planDoor("See the plans", true, false), { href: GET_APP_PATH, label: "Get Pro in the app" });
+  assert.equal(planDoor("See the plans", false, false), null);
+  assert.deepEqual(planDoor("See the plans", true), PLANS_PAGE_PUBLIC ? { href: "/plans", label: "See the plans" } : { href: GET_APP_PATH, label: PRO_IN_THE_APP });
+  // no file of My health writes the address itself any more: turning the switch on is the only way a link returns
+  const dir = new URL("../src/my-health/", import.meta.url);
+  const sources = readdirSync(dir, { recursive: true }).filter((f) => /\.(ts|tsx)$/.test(String(f))).map((f) => String(f));
+  assert.ok(sources.length > 40);
+  for (const f of sources) assert.doesNotMatch(readFileSync(new URL(f, dir), "utf8"), /href=["'`{]+\/plans|["'`]\/plans\/?["'`]/, `${f} links to /plans itself`);
+  const page = read("../src/pages/my-health.astro");
+  assert.doesNotMatch(page, /href="\/plans"/, "my-health.astro links to /plans itself");
+  for (const [file, uses] of [["views/Settings.tsx", 'planDoor("See every plan", false)'], ["views/PlanSheet.tsx", 'planDoor("See every plan", false)'], ["views/Depth.tsx", 'planDoor("See the plans", self)'], ["views/Reads.ts", 'planDoor("The plans", false)'], ["views/Horizon.tsx", 'planDoor("See the plans", false)'], ["views/GuidePlan.tsx", 'planDoor("See the plans", false)']])
+    assert.ok(readFileSync(new URL(file, dir), "utf8").includes(uses), `${file} asks the helper`);
+  assert.ok(page.includes('planDoor("See the plans", false)') && page.includes("planDoor(cta, false)"));
 });
 
 test("nothing was deleted: the chart, its plans and its rows are all still in the page", () => {

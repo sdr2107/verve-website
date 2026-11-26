@@ -42,15 +42,16 @@ test("past letters: one link to Substack, the same address the footer uses", () 
 });
 
 test("the box on this page writes its own door, keeps the word on a post's link, and offers two things to do", () => {
-  assert.match(box, /data-door=\{door\} data-places=\{own \? "Three" : "Two"\}/);
+  // the third place is the Horizon page's, and that page holds it back while Horizon is not offered to everyone (26 Nov 2026)
+  assert.match(box, /data-door=\{door\} data-places=\{own && third \? "Three" : "Two"\}/);
   assert.match(box, /const door = box\.dataset\.door === "newsletter" \? "newsletter" : "horizon";/);
   // 22 Nov 2026: posts link /newsletter?from=<word>, so this door keeps the word as the Horizon page does
   assert.match(box, /source: door, user_id: userId, tag: tagOf\(location\.search\) \}\);/);
   // the heading and the third thing to do belong to the Horizon page only
   assert.match(box, /\{own && <div class="flex flex-col gap-1">\s*<h2 id="letterhead"/);
-  assert.match(box, /\{own && <div class="flex gap-3"><span class=\{step\}>3<\/span>/);
+  assert.match(box, /\{own && <div class="flex gap-3" data-letter-third hidden=\{!third\}><span class=\{step\}>3<\/span>/);
   assert.match(box, /aria-label=\{own \? undefined : "The Verve letter"\}/);
-  assert.match(box, /const begin = `\$\{box\.dataset\.places \?\? "Three"\} places to begin`;/);
+  assert.match(box, /const begin = \(\) => `\$\{box\.dataset\.places \?\? "Three"\} places to begin`;/);
 });
 
 test("the Horizon page's box is as it was: its own heading, the word on the link, three things to do", () => {

@@ -11,6 +11,9 @@ import type { Rng } from "./derive/lenses.ts";
 import { WINDOW_KEYS, DEFAULT_WINDOW, isWindowKey, type WindowKey } from "./derive/timeline.ts";
 import { REPORT_SECTION_KEYS } from "./derive/reportSections.ts";
 import type { HorizonFull } from "./horizon/api.ts";
+import { hasHorizon, isShownHorizon, maySetHorizon } from "./horizon/access.ts";
+import { readViewAs, seenFlags, viewAsFor, writeViewAs, type ViewAs } from "./horizon/preview.ts";
+import { HORIZON_PUBLIC } from "../data/story.ts";
 
 export type PersonLite = { id: string; owner_id: string; account_id: string | null; name: string; born_year: number | null; mine: boolean; self: boolean; scopes: string[];
   /** A page shared with you: the day the share began (the grant's accepted_at), when the page could read it. */
@@ -113,18 +116,52 @@ export const guideAsk = signal<{ window: WindowKey; working: Record<string, unkn
 /** The person's horizons, open and closed, as the Horizon view last read them; null before it has. The Overview's cards and the Guide's doors read it. */
 export const horizons = signal<HorizonFull[] | null>(null);
 /**
- * The signed-in account is on the list of test accounts for Horizon as a programme (horizon/api.ts testerAnswer).
- * Set as the page starts: at once from the last visit's answer (known.ts), then from the database's.
+ * What the server says of the signed-in account (horizon/api.ts accessAnswer; ../known.ts accessFlags): the programme
+ * is on for it (`accountTester`: one of Verve's own, or a founding member), and it is one of Verve's own
+ * (`accountTeam`). Set as the page starts: at once from the last visit's answer, then from the database's. These two
+ * are written; the page reads isTester and isTeam below.
  */
-export const isTester = signal(false);
+export const accountTester = signal(false);
+export const accountTeam = signal(false);
 /**
- * The signed-in account is one of the team's own (programme_testers), not a founding member. isTester above is true
+ * "See the site as" (horizon/preview.ts; Settings › For the team): what this browser holds. It is honoured only
+ * while the server says the account is the team's, so for anyone else `seenAs` is always "team".
+ */
+export const viewAs = signal<ViewAs>(readViewAs());
+export const seenAs = computed<ViewAs>(() => viewAsFor(viewAs.value, accountTeam.value));
+/** Choose a view, and keep it in this browser. */
+export function setViewAs(v: ViewAs) { viewAs.value = v; writeViewAs(v); }
+const seenFlagsNow = computed(() => seenFlags({ tester: accountTester.value, team: accountTeam.value }, seenAs.value));
+/**
+ * Horizon as a programme is on for the account the page is drawn for: a test account or a founding member. It is
+ * the server's answer, or the previewed person's while one of the team's accounts is previewing.
+ */
+export const isTester = computed(() => seenFlagsNow.value.tester);
+/**
+ * The page is drawn for one of the team's own (programme_testers), not a founding member. isTester above is true
  * for both: it is "Horizon as a programme is on for this account". This one opens what is the team's alone: the
  * panels and the offer (rows only the team's list can read), the team's page, the Plans page, a marker watched with
  * no number, and a diet chart. A founding member (METTracker supabase/migrations/20261125_founding_members.sql) has
- * the programme and none of those. Set with isTester, from the same answer (known.ts accessFlags).
+ * the programme and none of those; so does a team account previewing as one.
  */
-export const isTeam = signal(false);
+export const isTeam = computed(() => seenFlagsNow.value.team);
+/**
+ * The account's own person had a horizon to show on the last visit (../known.ts): the door opens on that until this
+ * visit's read lands, so a person who keeps a horizon does not watch the tab appear a moment after the page.
+ */
+export const horizonRemembered = signal(false);
+/**
+ * Whether Horizon is drawn at all for the person on the page (horizon/access.ts hasHorizon): the tab, its sub-links
+ * and every door into it. While Horizon is not offered to everyone, that is an account the programme is on for, or
+ * a person who already has a horizon to show.
+ */
+export const horizonDoor = computed(() => hasHorizon({
+  open: HORIZON_PUBLIC,
+  programme: isTester.value,
+  horizons: horizons.value == null ? (horizonRemembered.value && !!person.value?.self ? 1 : 0) : horizons.value.filter(isShownHorizon).length,
+}));
+/** Whether a new horizon may be set by whoever is on the page (horizon/access.ts maySetHorizon). */
+export const horizonSettable = computed(() => maySetHorizon({ open: HORIZON_PUBLIC, programme: isTester.value, owner: !!person.value && (person.value.self || person.value.mine) }));
 /** Whether that question has an answer yet. A page that only a test account is shown says "Checking" while it has none, never "nothing here". */
 export const testerState = signal<"asking" | "known" | "failed">("asking");
 /**

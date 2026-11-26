@@ -4,7 +4,7 @@
  * tests/horizon-errors.test.mjs can read it without a client.
  */
 export type ApiError = "pro_required" | "consent_required" | "allowance" | "week_limit" | "no_plan" | "forbidden" | "horizon_closed" | "not_open" | "not_switched_on" | "bad_request" | "offline" | "unknown"
-  | "pause_refused" | "pause_not_offered" | "pause_changed";
+  | "pause_refused" | "pause_not_offered" | "pause_changed" | "members_only";
 
 /** What a status and body from the function mean, in the page's words. */
 export function mapError(status: number, out: any): ApiError {
@@ -16,6 +16,9 @@ export function mapError(status: number, out: any): ApiError {
   if (code === "pause_refused") return "pause_refused";
   if (code === "pause_not_offered") return "pause_not_offered";
   if (code === "pause_changed") return "pause_changed";
+  // a new horizon, asked for by an account Horizon is not open to (the function's `start`, 26 November 2026). The page
+  // draws no door to it for such an account, so these words are for an address typed by hand or an old page left open.
+  if (code === "horizon_members_only") return "members_only";
   if (status === 402 || code === "pro_required") return "pro_required";
   if (status === 412 || code === "consent_required") return "consent_required";
   if (status === 429) return "allowance";
@@ -44,6 +47,7 @@ export const ERROR_WORDS: Record<ApiError, string> = {
   pause_refused: "That week cannot be paused.",
   pause_not_offered: "Pausing a horizon is not switched on for this account yet.",
   pause_changed: "The horizon changed while this was being kept. Look again, then try once more.",
+  members_only: "Horizon is not open to new members at the moment. Nothing was set.",
 };
 
 /** A PostgREST answer that says the table is not there: the Horizon SQL has not been run for this project yet. */

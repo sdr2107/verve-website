@@ -32,7 +32,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { effect } from "@preact/signals";
 import { addDays, esc, fmtDay, mondayOf, round0, todayStr } from "../derive/format";
 import { dueLineOf } from "../derive/reads";
-import { derived, guideAsk, horizons, isTester, openOverTime, setGuideDraft } from "../state.ts";
+import { derived, guideAsk, horizons, horizonSettable, isTester, openOverTime, setGuideDraft } from "../state.ts";
 import { midweekOf, planRowsNow } from "../horizon/midweek.ts";
 import { weekFiguresOf } from "../derive/snapshot.ts";
 import { fmtHMin } from "../derive/signals.ts";
@@ -40,6 +40,7 @@ import { restingBPOf } from "../derive/markers.ts";
 import { LANE_FOR, WINDOWS, DEFAULT_WINDOW, isWindowKey, timelineOf, usualSwingForGuide, type WindowKey } from "../derive/timeline.ts";
 import { MARKER_BY_KEY, latestOf, upTo, fmtValue, isTargetable, openTargets, targetKeyOf, type MarkerKey } from "../horizon/derive.ts";
 import { MARKER_KEYS, WILL_NOT, markerOf, standOut, studyOf } from "../derive/guideLines.ts";
+import { planDoor } from "../../data/plan-door.ts";
 
 export type ReadsContext = {
   personId: string;
@@ -186,11 +187,13 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
   }
 
   function premium(): string {
+    // the Plans page when it is public; while it is hidden the trial in the app is the one next step, and takes the first place
+    const plans = planDoor("The plans", false);
     return `<section class="r-card max-w-3xl border border-accent-border bg-card p-6">
       <div class="t-eyebrow text-accent-text">The Guide · Pro</div>
       <h2 class="t-display mt-2 text-text">Your first read was included</h2>
       <p class="t-read mt-3 text-text-2">${ALLOWANCE_LINE} Pro in the Verve app covers the website too, and a read is filed here every time, to compare, share and download.</p>
-      <div class="mt-5 flex flex-wrap gap-2"><a href="/plans" class="r-btn inline-flex min-h-10 items-center bg-accent px-4 text-[13px] font-semibold text-canvas">The plans</a><a href="/start" class="r-btn inline-flex min-h-10 items-center border border-border px-4 text-[13px] font-semibold text-text-2 hover:border-border-strong hover:text-text">Start the trial in the app</a></div>
+      <div class="mt-5 flex flex-wrap gap-2">${plans ? `<a href="${plans.href}" class="r-btn inline-flex min-h-10 items-center bg-accent px-4 text-[13px] font-semibold text-canvas">${plans.label}</a>` : ""}<a href="/start" class="r-btn inline-flex min-h-10 items-center ${plans ? "border border-border px-4 text-[13px] font-semibold text-text-2 hover:border-border-strong hover:text-text" : "bg-accent px-4 text-[13px] font-semibold text-canvas"}">Start the trial in the app</a></div>
       <p class="t-caption mt-4 text-text-3">Only the numbers go to the AI, never your name, reports, notes or messages.</p></section>`;
   }
 
@@ -215,9 +218,12 @@ export function mountReads(band: HTMLElement, tab: HTMLElement, supabase: Supaba
     const door = "min-h-8 font-semibold text-accent-text hover:text-text";
     // a marker that is out of Horizon (blood, pending review) has no target door, and a target already on file for it is not read
     const onHorizon = !!marker && (horizons.value ?? []).some((h) => !h.closed_at && openTargets(h.targets).some((t) => t.marker === targetKeyOf(marker)));
+    // "Make it a target" is drawn where a target can be made: a horizon is open to take it, or a new one may be set
+    // (state.ts horizonSettable). An account that has no Horizon reads the line and its way into time, and no more.
+    const canTarget = horizonSettable.value || (horizons.value ?? []).some((h) => !h.closed_at);
     const over = `<button type="button" data-over="${marker ? esc(LANE_FOR[marker] ?? "") : ""}" data-window="${windowOf(r) ?? DEFAULT_WINDOW}" class="${door}">See it over time &rarr;</button>`;
     const target = !marker || !isTargetable(marker) ? "" : onHorizon ? `<button type="button" data-onhorizon class="${door}">On ${ctx!.self ? "your" : "their"} horizon already &rarr;</button>`
-      : ctx!.owner ? `<button type="button" data-target="${esc(targetKeyOf(marker))}" data-on="${esc(day(r.created_at))}" class="${door}">Make it a target &rarr;</button>` : "";
+      : ctx!.owner && canTarget ? `<button type="button" data-target="${esc(targetKeyOf(marker))}" data-on="${esc(day(r.created_at))}" class="${door}">Make it a target &rarr;</button>` : "";
     return `<div class="t-small mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-border pt-2.5">
       ${l ? `<a href="${l.href}" class="t-caption mr-auto text-text-3 hover:text-text">Study: ${l.label}</a>` : `<span class="mr-auto"></span>`}${over}${target}</div>`;
   }

@@ -17,6 +17,7 @@
  */
 
 import { PLANS_PAGE_PUBLIC, FREE_AND_PRO_PATH } from "./plans.ts";
+import { HORIZON_PUBLIC } from "./story.ts";
 
 /** Where the form's message is read. One address for the whole site (data/site.ts COMPANY.email). */
 export const HELP_EMAIL = "hello@verve-app.health";
@@ -160,9 +161,12 @@ export const HELP_DOORS: HelpDoor[] = [
     blurb: "What Pro adds, where it is managed, turning an email off.",
     questions: [
       // pages/how-it-works.astro ("free shows your numbers, Pro reads them. Nothing free is taken away when a
-      // trial ends", the table of gates); views/Settings.tsx PlanBlock ("the Guide's reads and Horizon")
+      // trial ends", the table of gates); views/Settings.tsx PlanBlock ("the Guide's reads and In depth"). Horizon is
+      // named only once it is offered to everyone (./story.ts HORIZON_PUBLIC): Pro bought today does not open it.
       { q: "What does Pro add?",
-        a: "Free shows your numbers, and Pro reads them: the Guide's written reads, every retest, the longer history and Horizon. Nothing free is taken away when a trial ends.",
+        a: HORIZON_PUBLIC
+          ? "Free shows your numbers, and Pro reads them: the Guide's written reads, every retest, the longer history and Horizon. Nothing free is taken away when a trial ends."
+          : "Free shows your numbers, and Pro reads them: the Guide's written reads, every retest and the longer history. Nothing free is taken away when a trial ends.",
         link: PLANS_PAGE_PUBLIC ? { label: "See every plan", href: "/plans" } : { label: "See what is free and what is Pro", href: FREE_AND_PRO_PATH } },
       // views/Settings.tsx PlanBlock, word for word
       { q: "Where do I manage or cancel it?",
@@ -171,11 +175,15 @@ export const HELP_DOORS: HelpDoor[] = [
       // views/Settings.tsx EmailBlock ("every email turns itself off in one click"; the switches for Your week
       // and a horizon's check-ins)
       { q: "How do I turn an email off?",
-        a: "Every email turns itself off in one click, from the link at its foot. The switches for the weekly email and for a horizon's check-ins are also in Settings, under Email and notifications.",
+        a: HORIZON_PUBLIC
+          ? "Every email turns itself off in one click, from the link at its foot. The switches for the weekly email and for a horizon's check-ins are also in Settings, under Email and notifications."
+          : "Every email turns itself off in one click, from the link at its foot. The switches are also in Settings, under Email and notifications.",
         link: EMAILS },
       // pages/unsubscribe.astro (three links, three switches: the letter, Your week, a horizon's check-ins)
       { q: "I unsubscribed and still got one.",
-        a: "There are three emails, each with its own switch: the weekly letter, Your week on Mondays, and a horizon's check-ins. Turning one off leaves the other two as they were.",
+        a: HORIZON_PUBLIC
+          ? "There are three emails, each with its own switch: the weekly letter, Your week on Mondays, and a horizon's check-ins. Turning one off leaves the other two as they were."
+          : "Each email has its own switch: the weekly letter is one, Your week on Mondays is another. Turning one off leaves the others as they were.",
         link: EMAILS },
     ],
   },

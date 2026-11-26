@@ -12,7 +12,20 @@
  * watches for or warns of anything; that a person will reach a result; that a
  * read is advice. The third part is "what stands out", never "what you did
  * not know": beside blood results, a promise to reveal reads as "detects".
+ *
+ * Horizon is not offered to everyone yet (HORIZON_PUBLIC below, 26 November 2026). While it is off the public
+ * pages tell the story in three questions, and nothing on them says Pro includes Horizon: the fourth part is kept
+ * here, whole, for the day the switch goes on.
  */
+
+/**
+ * Whether Horizon is offered to everyone (off from 26 November 2026). The value itself is kept with the rule it
+ * feeds, in ../my-health/horizon/access.ts, because the horizon function takes that file verbatim: the page and the
+ * server then read one switch and cannot disagree. Everything on the public pages reads it from here.
+ */
+import { HORIZON_PUBLIC } from "../my-health/horizon/access.ts";
+export { HORIZON_PUBLIC };
+
 export interface StoryPart {
   key: "overview" | "depth" | "guide" | "horizon";
   /** The page's name in My health. */
@@ -28,10 +41,8 @@ export interface StoryPart {
   sample: { figure: string; unit: string };
 }
 
-export const STORY_TITLE = "Your health, in four questions";
-export const STORY_LINE = "See where you stand, how you got here, what stands out, and where you are going.";
-
-export const STORY: StoryPart[] = [
+/** All four parts, as My health holds them. The public pages read STORY below. */
+export const STORY_ALL: StoryPart[] = [
   {
     key: "overview", name: "Overview", question: "Where am I today?",
     line: "Your figures, each set against the line clinicians use.",
@@ -49,7 +60,7 @@ export const STORY: StoryPart[] = [
   {
     key: "guide", name: "The Guide", question: "What stands out?",
     line: "A short read of your own figures, with the study behind each line.",
-    more: "At most three things, a sentence or two each, written by an AI model from the numbers on your page and nothing else. Every figure is counted before the Guide sees it, and a sentence with a number that is not on your page is dropped. It describes; it does not advise. Each line leads into time, or onto Horizon as a draft.",
+    more: `At most three things, a sentence or two each, written by an AI model from the numbers on your page and nothing else. Every figure is counted before the Guide sees it, and a sentence with a number that is not on your page is dropped. It describes; it does not advise. ${HORIZON_PUBLIC ? "Each line leads into time, or onto Horizon as a draft." : "Each line leads into time."}`,
     plan: "The first read is free; Pro reads every week, the month and the year",
     sample: { figure: "3", unit: "things" },
   },
@@ -61,3 +72,12 @@ export const STORY: StoryPart[] = [
     sample: { figure: "9 Feb", unit: "" },
   },
 ];
+
+/** The parts the public pages tell: all four once Horizon is offered to everyone, the first three until then. */
+export const STORY: StoryPart[] = HORIZON_PUBLIC ? STORY_ALL : STORY_ALL.filter((part) => part.key !== "horizon");
+/** "three" or "four", for a sentence that counts the parts. */
+export const STORY_COUNT = STORY.length === 4 ? "four" : "three";
+export const STORY_TITLE = `Your health, in ${STORY_COUNT} questions`;
+export const STORY_LINE = HORIZON_PUBLIC
+  ? "See where you stand, how you got here, what stands out, and where you are going."
+  : "See where you stand, how you got here, and what stands out.";

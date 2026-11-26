@@ -1,7 +1,8 @@
 // The Plan sheet's price area (board 07): nothing to pay with until a price exists; then each till with its own price. `npm test`.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { PLANS, planOf, isPriced, tillsOf, priceText, PRO_ON_THE_WEB } from "../src/data/plans.ts";
+import { PLANS, planOf, isPriced, tillsOf, priceText, PRO_ON_THE_WEB, PRO_SHEET_LINE, proOnTheWeb } from "../src/data/plans.ts";
+import { HORIZON_PUBLIC } from "../src/data/story.ts";
 
 test("while Pro's price is not set, the sheet has no price to print and no till to press", () => {
   const pro = planOf("pro");
@@ -22,9 +23,15 @@ test("the day a price is filled in, each till carries its own currency and the y
 });
 
 test("the sheet lists what the website holds behind Pro, and no price lives in its words", () => {
-  assert.equal(PRO_ON_THE_WEB.length, 3);
-  const words = PRO_ON_THE_WEB.map((r) => `${r.lead} ${r.rest}`).join(" ");
-  assert.ok(/Horizon/.test(words) && /Guide/.test(words) && /month/.test(words));
+  // with Horizon offered to everyone the sheet lists it; while it is not (26 November 2026), the sheet names nothing of it
+  const said = (rows) => rows.map((r) => `${r.lead} ${r.rest}`).join(" ");
+  assert.equal(proOnTheWeb(true).length, 3);
+  assert.ok(/Horizon/.test(said(proOnTheWeb(true))) && /Guide/.test(said(proOnTheWeb(true))) && /month/.test(said(proOnTheWeb(true))));
+  assert.ok(/Guide/.test(said(proOnTheWeb(false))) && /In depth/.test(said(proOnTheWeb(false))));
+  assert.doesNotMatch(said(proOnTheWeb(false)), /horizon/i);
+  assert.deepEqual(PRO_ON_THE_WEB, proOnTheWeb(HORIZON_PUBLIC));
+  assert.equal(/horizon/i.test(PRO_SHEET_LINE), HORIZON_PUBLIC);
+  const words = said(proOnTheWeb(true)) + said(proOnTheWeb(false)) + PRO_SHEET_LINE;
   assert.equal(/[$₹]\s?\d/.test(words), false);
   assert.equal(PLANS.filter((p) => p.key === "pro").length, 1);
 });

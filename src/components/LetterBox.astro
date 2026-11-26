@@ -30,14 +30,20 @@ interface Props {
   door?: "horizon" | "newsletter";
   /** Where the third thing to do while waiting leads: the questions further down the page. */
   questions?: string;
+  /**
+   * Whether the third thing to do (the five questions) is offered from the start. The Horizon page passes false while
+   * Horizon is not offered to everyone (../data/story.ts HORIZON_PUBLIC): the step is in the markup, hidden, and that
+   * page shows it to an account that has Horizon. The newsletter page has no third step at all.
+   */
+  third?: boolean;
 }
-const { door = "horizon", questions = "#questions" } = Astro.props;
+const { door = "horizon", questions = "#questions", third = true } = Astro.props;
 const own = door === "horizon";
 const step = "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-accent-border bg-accent-fill font-mono text-[11px] font-semibold text-accent-text";
 const go = "min-h-8 self-start text-[13px] font-semibold text-accent-text hover:text-text";
 ---
 
-<section class="flex flex-col gap-3 rounded-[16px] border border-accent-border bg-accent-fill p-5" data-letterbox data-door={door} data-places={own ? "Three" : "Two"} aria-labelledby={own ? "letterhead" : undefined} aria-label={own ? undefined : "The Verve letter"}>
+<section class="flex flex-col gap-3 rounded-[16px] border border-accent-border bg-accent-fill p-5" data-letterbox data-door={door} data-places={own && third ? "Three" : "Two"} aria-labelledby={own ? "letterhead" : undefined} aria-label={own ? undefined : "The Verve letter"}>
   <form class="flex flex-col gap-3" data-letter-form novalidate>
     {own && <div class="flex flex-col gap-1">
       <h2 id="letterhead" class="m-0 text-[17px] font-semibold text-text">Get the first letter</h2>
@@ -60,7 +66,7 @@ const go = "min-h-8 self-start text-[13px] font-semibold text-accent-text hover:
     <p class="m-0 text-[14px] font-semibold text-text" data-letter-while>While you wait</p>
     <div class="flex gap-3"><span class={step}>1</span><div class="flex flex-col gap-1"><p class="m-0 text-[14px] leading-relaxed text-text">Take the six-minute walk and get your first number.</p><a href={SHEET_PDF} target="_blank" rel="noopener" class={go}>Open the sheet (PDF)</a></div></div>
     <div class="flex gap-3"><span class={step}>2</span><div class="flex flex-col gap-1"><p class="m-0 text-[14px] leading-relaxed text-text">Get the app. It reads your watch or your phone and keeps the week.</p><a href={GET_APP_PATH} target="_blank" rel="noopener" class={go}>Get the app</a></div></div>
-    {own && <div class="flex gap-3"><span class={step}>3</span><div class="flex flex-col gap-1"><p class="m-0 text-[14px] leading-relaxed text-text">Answer five questions, and set a horizon.</p><a href={questions} class={go}>Begin</a></div></div>}
+    {own && <div class="flex gap-3" data-letter-third hidden={!third}><span class={step}>3</span><div class="flex flex-col gap-1"><p class="m-0 text-[14px] leading-relaxed text-text">Answer five questions, and set a horizon.</p><a href={questions} class={go}>Begin</a></div></div>}
   </div>
 </section>
 
@@ -81,7 +87,8 @@ const go = "min-h-8 self-start text-[13px] font-semibold text-accent-text hover:
     const say = (text: string) => { msg.textContent = text; msg.classList.toggle("hidden", !text); };
     // the page the box is on; only the Horizon page keeps the word on a post's link
     const door = box.dataset.door === "newsletter" ? "newsletter" : "horizon";
-    const begin = `${box.dataset.places ?? "Three"} places to begin`;
+    // read when it is said, not when the page loads: the Horizon page opens the third place for an account that has Horizon
+    const begin = () => `${box.dataset.places ?? "Three"} places to begin`;
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -99,13 +106,13 @@ const go = "min-h-8 self-start text-[13px] font-semibold text-accent-text hover:
       const show = (kind: AfterKind, days?: number) => {
         const a = letterAfter(email, kind, days);
         head.textContent = a.head; where.textContent = a.text;
-        waiting.textContent = letterComing(kind) ? "While you wait" : begin;
+        waiting.textContent = letterComing(kind) ? "While you wait" : begin();
       };
       say("");
       form.classList.add("hidden");
       done.classList.remove("hidden"); done.classList.add("flex");
       // a new address: the first letter is asked for now. One on the list already: nothing is promised until the answer.
-      if (returning) { head.textContent = "This address is on the list already."; where.textContent = "Checking what it needs…"; waiting.textContent = begin; }
+      if (returning) { head.textContent = "This address is on the list already."; where.textContent = "Checking what it needs…"; waiting.textContent = begin(); }
       else show("first");
       head.focus();
       // the letter, after the page has already said what to do; never the gate
