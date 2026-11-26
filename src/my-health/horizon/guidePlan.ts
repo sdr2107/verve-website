@@ -386,8 +386,11 @@ export type GuidePlanArgs = {
 
 const setsWords = (base: GuideBase, i: number) => (base.strength >= RULES.strength.minDays || i >= RULES.strength.lowSetsWeeks ? "two to three sets" : "one to two sets");
 const TOL = RULES.progression.zone2StepMin / 2;
-/** What a week did: the sessions, the minutes in zone 2 and above it, strength, and the days' steps. */
-function doneOf(person: Person, monday: string): Done {
+/**
+ * What a week did: the sessions, the minutes in zone 2 and above it, strength, and the days' steps. The one reader:
+ * the plan's week so far, a finished week's review and the week's three amounts (./lightWeek.ts) all ask it.
+ */
+export function doneOf(person: Person, monday: string): Done {
   const f = weekFigures(person, monday);
   const days = person.signals.filter((s) => s?.steps != null && String(s.day).slice(0, 10) >= monday && String(s.day).slice(0, 10) < addDays(monday, 7)).map((s) => Number(s.steps));
   return {

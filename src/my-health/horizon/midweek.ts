@@ -93,8 +93,8 @@ function zone2ByDay(person: Person, from: string, toExclusive: string): Map<stri
 }
 const sessionDays = (person: Person, from: string, toExclusive: string, strength?: boolean): Set<string> =>
   new Set(dedupeSessions(person.acts).filter((a) => { const d = localDay(a.timestamp); return d >= from && d < toExclusive && (strength == null || (a.activity_type === "strength") === strength); }).map((a) => localDay(a.timestamp)));
-/** Whether anything at all has arrived for the week: a session, a day of signals, or the app's own row for the week. */
-function arrived(person: Person, from: string, toExclusive: string): boolean {
+/** Whether anything at all has arrived for the week: a session, a day of signals, or the app's own row for the week. The week's three amounts (./lightWeek.ts) ask it too. */
+export function arrived(person: Person, from: string, toExclusive: string): boolean {
   if (appWeekRows(person.doc).has(from)) return true;
   if ((person.signals ?? []).some((r) => { const d = String(r?.day ?? "").slice(0, 10); return d >= from && d < toExclusive; })) return true;
   return sessionDays(person, from, toExclusive).size > 0;
