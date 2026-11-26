@@ -34,6 +34,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PersonData } from "../derive/person.ts";
 import { addDays, daysBetween, mondayOf, todayStr } from "../derive/format.ts";
 import { actsByDay } from "../derive/activity.ts";
+import { asOfLine, lastAppSync } from "../derive/asOf.ts";
 import { horizons as horizonsSignal, guideDraft, setGuideDraft, isTester, isTeam, testerState, doc as docSignal } from "../state.ts";
 import { chartSharedWith } from "../horizon/chart.ts";
 import { arrivalsOf, followable, leftOff, pausedWords } from "../derive/arrivals.ts";
@@ -505,6 +506,8 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   const planRows = h.plan?.rows ?? [];
   // the midweek note (board 15): Thursday's, counted, for the owner of a test account; off when they switched it off
   const midweek = useMemo(() => (person && owner && tester && !h.closed_at && h.checkin_midweek !== false ? midweekOf({ horizon: h, person, today, plan: planRowsNow(h, targets, person, today), targets }) : null), [person, h, today, owner, tester]);
+  // when the figures below are from: the app's last sync, said under the targets (derive/asOf; 25 November 2026)
+  const asOf = person ? asOfLine(lastAppSync(person.exportRows.weeks), new Date(), owner) : null;
   const chartLine = chartSoFar(chartState, h, today, who);
   const chartLast = chartLastWeek(chartState, h, today, who);
   // the fitness number's own test, for the card that adds a result (board 16)
@@ -737,6 +740,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
           {paged ? <span class="text-[12px] text-text-3">Press a target for how it is read</span> : <span class="text-[12px] text-text-3">Pace = what has moved against what the date needs · the tick on each track is where you should be today</span>}
         </div>
         {!person && <Quiet>Reading your numbers…</Quiet>}
+        {asOf ? <p class="m-0 text-[12px] leading-relaxed text-text-3" data-as-of>{asOf}</p> : null}
         <div class="flex flex-col">
           <div class="hidden grid-cols-[minmax(0,2fr)_minmax(0,1.1fr)_repeat(2,minmax(0,.8fr))_minmax(0,1.5fr)_minmax(0,1.6fr)] gap-3 border-b border-border pb-2 font-mono text-[11px] text-text-3 md:grid">
             <span>Marker</span><span class="text-right">I want, by {dayMonth(h.ends_on)}</span><span class="text-right">Now</span><span class="text-right">On {dayMonth(h.starts_on)}</span><span>Track</span><span>Pace</span>
