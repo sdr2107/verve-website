@@ -563,6 +563,9 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   const stored: GuideStored | null = guideOn && h.plan?.author === "guide" && isGuideStored(h.plan?.guide) ? (h.plan!.guide as GuideStored) : null;
   // Free, and the one free week is over: the plan and its chat are Pro. A coach never meets this.
   const locked = owner && !!access && !access.pro && !access.free.running;
+  // kept, not running: Horizon is not offered to everyone and this account no longer has it (a founding member after
+  // their last day). The page says so once (HORIZON_KEPT), so the lines above it do not say the Guide still checks.
+  const keptOnly = locked && !HORIZON_PUBLIC;
   const guide = guideOn && person ? { sb: deps.supabase, h, person, today, targets, owner, closed, access, userId, reload, setNotice } : null;
   // a line the Guide wrote, carried here: a draft until the person sets its number, and gone when they leave it
   const gd = guideDraft.value;
@@ -646,7 +649,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   // the Guide's plan as it stands today, for the glance: the week so far, and whether there are six letters to show
   const planView = useMemo(() => { try { return paged && stored && person ? guidePlan({ horizon: h, targets, person, today, stored, self: owner }) : null; } catch { return null; } }, [paged, stored, person, today, h, targets.length]);
   const about = [
-    `A horizon is a date, the markers you want different by then, and the week that gets you there. The Guide checks the pace every Monday and reads the month at its end.${h.plan?.author === "coach" ? " Your coach sees all of it and writes the plan." : stored ? " The Guide wrote the plan from your targets. A coach you share your page with sees all of it." : " A coach you share your page with sees all of it and can write the plan."}`,
+    `A horizon is a date, the markers you want different by then, and the week that gets you there.${keptOnly ? "" : ` The Guide checks the pace every Monday and reads the month at its end.${h.plan?.author === "coach" ? " Your coach sees all of it and writes the plan." : stored ? " The Guide wrote the plan from your targets. A coach you share your page with sees all of it." : " A coach you share your page with sees all of it and can write the plan."}`}`,
     dayKind && dayName ? `${dayName}. Shown to you only.` : "", movedWords(h) ?? "", weeksWords(h), pausedWeeksWords(h),
   ].filter(Boolean);
   const daysLeft = thisSpan ? Math.max(0, daysBetween(today, thisSpan.to)) : 0;
@@ -748,7 +751,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
         <div class="flex max-w-[680px] flex-col gap-2">
           <Eyebrow>Horizon · set {dayMonthYear(h.starts_on)}{dayKind ? ` · for ${dayKind.forWords}` : ""} · {weekLine}{closed ? " · stopped" : ""}</Eyebrow>
           <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-[-0.01em] text-text">{h.title}, {longDate(h.ends_on)}</h1>
-          <p class="m-0 text-[15px] leading-relaxed text-text-2">A horizon is a date, the markers you want different by then, and the week that gets you there. The Guide checks the pace every Monday and reads the month at its end.{h.plan?.author === "coach" ? (owner ? " Your coach sees all of it and writes the plan." : " You see all of it and write the plan.") : stored ? (owner ? " The Guide wrote the plan from your targets. A coach you share your page with sees all of it." : " The Guide wrote the plan from their targets.") : owner ? " A coach you share your page with sees all of it and can write the plan." : ""}</p>
+          <p class="m-0 text-[15px] leading-relaxed text-text-2">A horizon is a date, the markers you want different by then, and the week that gets you there.{keptOnly ? null : <> The Guide checks the pace every Monday and reads the month at its end.{h.plan?.author === "coach" ? (owner ? " Your coach sees all of it and writes the plan." : " You see all of it and write the plan.") : stored ? (owner ? " The Guide wrote the plan from your targets. A coach you share your page with sees all of it." : " The Guide wrote the plan from their targets.") : owner ? " A coach you share your page with sees all of it and can write the plan." : ""}</>}</p>
           {dayKind && dayName ? <p class="m-0 text-[13px] leading-relaxed text-text-2">{dayName}. Shown to you only.</p> : null}
           {movedWords(h) ? <p class="m-0 text-[13px] leading-relaxed text-text-2">{movedWords(h)}</p> : null}
           {weeksWords(h) ? <p class="m-0 text-[13px] leading-relaxed text-text-3">{weeksWords(h)}</p> : null}
@@ -989,7 +992,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
           {programme ? <ProgrammeLine programme={programme} /> : null}
         </Card>
       ) : null}
-      {on("notes") ? <div class="flex flex-wrap items-center gap-3 rounded-[16px] border border-accent-border bg-accent-fill px-5 py-4 text-[13px] text-text-2">
+      {on("notes") && HORIZON_PUBLIC ? <div class="flex flex-wrap items-center gap-3 rounded-[16px] border border-accent-border bg-accent-fill px-5 py-4 text-[13px] text-text-2">
         <span class="font-mono text-[11px] font-medium text-accent-text">Pro</span>
         <span>Horizon is part of Pro on the website. Free has one week of it, with the plan and one question about the plan, and keeps the Overview, Body, Reports and the Guide's first read. A horizon can be deleted any time; the readings stay.</span>
       </div> : null}

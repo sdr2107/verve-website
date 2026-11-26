@@ -159,3 +159,27 @@ test("'test account' is our own note: where a founding member also reads the pag
   // writing the coach's side of one's own horizon is a way to try the sheet alone: the team's, not a member's
   assert.match(read(`${dir}Horizon.tsx`), /<CallCard [^>]*tester=\{tester && isTeam\.value\}/);
 });
+
+// ── Found by walking the preview in the founder's own browser, 26 November 2026 ──
+
+test("a row of the side list marked hidden is not drawn: the row's own rule does not win over it", () => {
+  // every row is drawn by one rule that carries an id; a bare .hidden class loses to it, so the rule has a partner.
+  // Without the partner every account saw "Your offer" and "For the team" in Settings (14 to 26 November 2026).
+  assert.match(page, /:is\(#tabbar, #settingsnav\) \.mh-tab \{ display: flex;/);
+  assert.match(page, /:is\(#tabbar, #settingsnav\) \.mh-tab\.hidden \{ display: none; \}/);
+  // the two rows that are the team's start hidden, and the page shows them only for a team account
+  for (const id of ["settingsoffernav", "settingsteamnav"]) assert.match(page, new RegExp('id="' + id + '" class="mh-tab hidden"'));
+  assert.match(page, /\$\("settingsteamnav"\)\.classList\.toggle\("hidden", !isTeamSignal\.value\)/);
+});
+
+test("choosing a preview on the team's page moves to Plan and billing, a page the previewed person has", () => {
+  assert.match(page, /view !== "team" && activeTab === "settings" && \(settingsSection === "team" \|\| settingsSection === "offer"\)\) openSettings\("plan"\)/);
+});
+
+test("a kept horizon does not say the Guide still checks it, and no horizon's page sells Horizon as part of Pro while it is not offered", () => {
+  const view = read("../src/my-health/views/Horizon.tsx");
+  assert.match(view, /const keptOnly = locked && !HORIZON_PUBLIC;/);
+  // the sentence is written in two places below the door's card, and both leave it out for a kept horizon
+  assert.equal((view.match(/keptOnly \? (?:""|null) : /g) ?? []).length, 2);
+  assert.match(view, /on\("notes"\) && HORIZON_PUBLIC \? /);
+});
