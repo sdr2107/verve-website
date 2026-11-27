@@ -680,7 +680,6 @@ const plansLink = planDoor("See the plans", false);
            Pro on the website. The door is here from the first paint; the pages come with the Horizon build. -->
       <div id="tab-horizon" class="mt-6 hidden">
         <div id="horizonroot" class="min-h-40"></div>
-        <div id="fitcardroot"></div>
       </div>
       <div id="tab-reports" class="mt-6 hidden">
         <p class="mb-5 max-w-3xl text-[13.5px] leading-relaxed text-text-secondary"><span class="font-semibold text-text-primary">This page:</span> the paper, and the years. The files every value came from, by year and month, and the history you brought in: the app's exports and workout CSVs. Every row stays on the Overview, however far back it reaches.</p>
@@ -863,6 +862,12 @@ const plansLink = planDoor("See the plans", false);
 
     <p id="loading" class="mt-10 text-sm text-text-tertiary">Checking your session…</p>
   </main>
+
+  <!-- A fitness test: the typed card, and the report card ("Add a fitness test", 27 November 2026). Each is a panel
+       over the page, so it sits outside the tabs: the typed card lived inside the Horizon tab until that day, where
+       it could not be seen from Overview or Reports. -->
+  <div id="fitcardroot"></div>
+  <div id="fittestroot"></div>
 
   <!-- ═══ GIVE ACCESS ═══════════════════════════════════════════════════
        Who can see the open person's page, and the way to let someone new.
@@ -1075,7 +1080,8 @@ const plansLink = planDoor("See the plans", false);
   import { mountBody } from "../my-health/views/Body";
   import { mountDepth } from "../my-health/views/Depth";
   import { mountHorizon } from "../my-health/views/Horizon.tsx";
-  import { mountFitnessCard, openFitnessRead } from "../my-health/views/FitnessEntry.tsx";
+  import { mountFitnessCard } from "../my-health/views/FitnessEntry.tsx";
+  import { mountFitnessTest, openTestCheck } from "../my-health/views/FitnessTestAdd.tsx";
   import { accessAnswer, forgetTester, forgetAccess } from "../my-health/horizon/api.ts";
   import { clearSetup } from "../my-health/horizon/setupCards.ts";
   import { mountMondayList } from "../my-health/views/Programme.tsx";
@@ -3901,15 +3907,18 @@ const plansLink = planDoor("See the plans", false);
 
   /**
    * A treadmill or mask-test report, or a diet chart, that arrived by the page's own drop zone (boards 16 and 17,
-   * 17 November 2026; test accounts only). The file is kept as every file is. A test report opens the fitness card on
-   * what was read, on the person's own page; a diet chart is added from its horizon's page. Returns the line to show.
+   * 17 November 2026). The file is kept as every file is. A test report opens "Check what was read" on the person's
+   * own page, for every account (27 November 2026: until then only the programme's accounts were offered it); a
+   * diet chart is added from its horizon's page, on the team's accounts. Returns the line to show.
    */
   async function afterOtherRead(out: any, path: string, name: string, who: Person): Promise<string> {
-    // a diet chart joins a horizon on the team's accounts only; the fitness card below is the programme's, founding members too
-    const { tester, team } = await seenAccount();
-    if (out.doc_type === "diet_chart") return team ? "Read as a diet chart. It is kept here. Add it to a horizon from that horizon's page." : "Read as a diet chart. It is kept as a file.";
-    if (!tester || !who.self) return "Read as a treadmill or exercise test. It is kept as a file.";
-    return openFitnessRead(out, path, pretty(name)) ? "Read as a treadmill or exercise test. Check what was read in the card that has opened." : "Read as a treadmill or exercise test. Nothing in it could be read as a result, so it is kept as a file.";
+    if (out.doc_type === "diet_chart") {
+      const { team } = await seenAccount();
+      return team ? "Read as a diet chart. It is kept here. Add it to a horizon from that horizon's page." : "Read as a diet chart. It is kept as a file.";
+    }
+    // a fitness test is filed with a person's own readings, so the card opens on their own page only
+    if (!who.self) return "Read as a treadmill or exercise test. It is kept as a file.";
+    return openTestCheck(out, path, pretty(name)) ? "Read as a treadmill or exercise test. Check what was read in the card that has opened." : "Read as a treadmill or exercise test. Nothing in it could be read as a result, so it is kept as a file.";
   }
   /**
    * One file, asked for by a view: chosen, shrunk if it is a photo, kept in the archive and read (actions.readFile).
@@ -4605,6 +4614,7 @@ const plansLink = planDoor("See the plans", false);
   actions.tabCount = setTabCount;
   actions.readFile = readOneFile;
   mountFitnessCard($("fitcardroot"), { supabase: supabase as any, userId: () => userId || null, refresh: () => refresh() });
+  mountFitnessTest($("fittestroot"), { supabase: supabase as any, userId: () => userId || null, refresh: () => refresh() });
   // The Reports view asks; the page, which owns the upload and review flows, does.
   actions.report = async (kind, name, extra) => {
     if (kind === "pick") { pickReport(); return; }   // the Body view's "Add a lab report"

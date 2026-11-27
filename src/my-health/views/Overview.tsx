@@ -42,6 +42,8 @@ import { backgroundOf, dayBars, efficiencyOf, fmtHMin, fmtSigned1, inBedWindow, 
 import { VO2_CAVEAT, metsOfTest, tierIndexFromCategory, tierIndexOf, tierRangeWords, tierRowFor, tierShort, tierWords, vo2OfTest } from "../derive/fitness.ts";
 import { REMNANT_LABEL } from "../derive/lipids.ts";
 import { Pager } from "./Pager.tsx";
+import { detailLine, detailsFor, testLine } from "../fitnessTest.ts";
+import { openTestAdd, testDetailRows } from "./FitnessTestAdd.tsx";
 
 /** The 14-day dots, the week table and the sources strip: off the Overview since 8 Nov 2026; the table goes to In depth in stage 2. */
 export const SHOW_OLD_OVERVIEW = false;
@@ -367,7 +369,31 @@ function Progress({ v }: { v: number | null | undefined }) {
   return <span class="mt-2 block h-[4px] w-full overflow-hidden rounded-full bg-alt"><span class="block h-full rounded-full bg-accent" style={{ width: `${Math.round(v * 100)}%` }}></span></span>;
 }
 
-function CardFace({ c, d, on, onOpen, horizon }: { c: Card; d: NonNullable<typeof derived.value>; on: boolean; onOpen: () => void; /** The one line a card carries when a marker on it is a target. */ horizon?: string }) {
+/**
+ * The Fitness card's own two things (27 November 2026, the treadmill report upload): the latest test said back with
+ * the lines its report prints ("Treadmill test · 14 November", "Bruce · 9 min 20 s · peak 168"), where a report was
+ * read and its lines kept; and, on the person's own page, the one quiet way in, "Add a fitness test".
+ */
+type FitTest = { line: string; detail: string | null };
+function fitTestOf(d: NonNullable<typeof derived.value>, self: boolean): FitTest | null {
+  if (!self) return null;
+  const l = fitnessSummary(d.crf, todayStr()).latest;
+  const details = l ? detailsFor(testDetailRows.value, l) : null;
+  return l && details ? { line: testLine(l.method, String(l.measured_on).slice(0, 10)), detail: detailLine(details) } : null;
+}
+const FitTestLines = ({ t }: { t: FitTest }) => (
+  <span class="mt-2 flex flex-col" data-fit-line="test">
+    <span class="t-small text-text">{t.line}</span>
+    {t.detail ? <span class="t-caption text-text-3" data-fit-line="detail">{t.detail}</span> : null}
+  </span>
+);
+/** Inside a card that is itself a button: the press and the key stay here. */
+const AddFitnessTest = ({ cls }: { cls: string }) => (
+  <button type="button" data-fit-link="add" onClick={(e) => { e.stopPropagation(); openTestAdd(); }} onKeyDown={(e) => e.stopPropagation()} class={cls}>Add a fitness test</button>
+);
+
+function CardFace({ c, d, on, onOpen, horizon, fitTest, canAdd }: { c: Card; d: NonNullable<typeof derived.value>; on: boolean; onOpen: () => void; /** The one line a card carries when a marker on it is a target. */ horizon?: string;
+  /** The Fitness card only: the latest test's report lines, and whether this is the person's own page. */ fitTest?: FitTest | null; canAdd?: boolean }) {
   return (
     <div role="button" tabIndex={0} aria-expanded={on ? "true" : "false"} onClick={onOpen} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
       class={`r-card flex min-h-[236px] cursor-pointer flex-col border bg-card p-5 text-left transition-colors ${on ? "border-border-strong" : "border-border hover:border-border-strong"}`}>
@@ -381,9 +407,11 @@ function CardFace({ c, d, on, onOpen, horizon }: { c: Card; d: NonNullable<typeo
       </span>
       <span class={`t-small mt-1 ${TONE_TEXT[c.band.tone]}`}>{c.band.text}</span>
       {horizon ? <span class="r-btn mt-2 block border border-accent-border bg-accent-fill px-2.5 py-1.5 text-[12px] leading-snug text-accent-text">{horizon}</span> : null}
+      {c.key === "fitness" && fitTest ? <FitTestLines t={fitTest} /> : null}
       {c.key === "fitness" ? <TierStrip d={d} /> : null}
       <Progress v={c.progress} />
       <span class="mt-3 flex flex-col">{c.rows.map((r) => <RowLine key={r.label} r={r} />)}</span>
+      {c.key === "fitness" && canAdd ? <AddFitnessTest cls="t-caption mt-3 min-h-8 self-start font-semibold text-accent-text hover:text-text" /> : null}
       <span class="mt-auto flex items-baseline justify-between gap-3 pt-4">
         <span class="t-caption min-w-0 text-text-3">{c.writer}</span>
         <span class="t-caption shrink-0 whitespace-nowrap font-semibold text-accent-text">Open {c.title} &rarr;</span>
@@ -482,7 +510,7 @@ function StoryDoors() {
 }
 
 /** One section of the Overview, alone on the page. */
-function SectionPage({ c, d, cards, horizon }: { c: Card; d: NonNullable<typeof derived.value>; cards: Card[]; horizon?: string }) {
+function SectionPage({ c, d, cards, horizon, fitTest, canAdd }: { c: Card; d: NonNullable<typeof derived.value>; cards: Card[]; horizon?: string; fitTest?: FitTest | null; canAdd?: boolean }) {
   const today = todayStr();
   const ms = c.key === "body" ? d.markers.filter((m) => m.section === "body" && m.key !== "bp") : c.markers.map((k) => d.markerByKey(k)).filter((m): m is Marker => !!m);
   // every chart is closed until its tile is pressed; pressing the open one closes it
@@ -512,6 +540,8 @@ function SectionPage({ c, d, cards, horizon }: { c: Card; d: NonNullable<typeof 
             {c.key === "movement" ? <><WeekBars d={d} /><p class="t-caption mt-2 text-text-3">Logged sessions only, moderate or vigorous, whole-session MET × minutes. One writer per session. The same rule the app uses.</p></> : null}
             {c.key === "fitness" ? <><TierStrip d={d} />{fitUnit.value === "vo2" ? <p class="t-caption mt-2 text-text-3">{VO2_CAVEAT}</p> : null}</> : null}
             <div class={`flex flex-col ${c.key === "movement" || c.key === "fitness" ? "mt-4" : ""}`}>{rows.filter(Boolean).map((r) => <RowLine key={r.label} r={r} />)}</div>
+            {c.key === "fitness" && fitTest ? <FitTestLines t={fitTest} /> : null}
+            {c.key === "fitness" && canAdd ? <AddFitnessTest cls="t-small mt-3 min-h-9 font-semibold text-accent-text hover:text-text" /> : null}
             <p class="t-caption mt-3 text-text-3">{c.writer}{readAt ? ` · read ${readAt === today ? "today" : fmtDay(readAt)}` : ""}. A row with nothing to show reads a dash and the reason, never a zero.</p>
           </div>
           <div class="min-w-0">
@@ -552,9 +582,11 @@ export function Glance() {
   const { cards } = cardsOf(d, self, fitUnit.value);
   const hz = horizonLines(d, self);
   const openCard = cards.find((c) => c.key === section.value) ?? null;
-  if (openCard) return <SectionPage c={openCard} d={d} cards={cards} horizon={hz[openCard.key]} />;
+  // the Fitness card's own: the latest test's report lines, and the way in, on the person's own page only
+  const fitTest = fitTestOf(d, self);
+  if (openCard) return <SectionPage c={openCard} d={d} cards={cards} horizon={hz[openCard.key]} fitTest={fitTest} canAdd={self} />;
   return <>
-    {cards.map((c) => <CardFace key={c.key} c={c} d={d} on={false} onOpen={() => setSection(c.key)} horizon={hz[c.key]} />)}
+    {cards.map((c) => <CardFace key={c.key} c={c} d={d} on={false} onOpen={() => setSection(c.key)} horizon={hz[c.key]} fitTest={fitTest} canAdd={self} />)}
     <LeftOffLine d={d} self={self} />
     {self && !latestRead.value ? <StoryDoors /> : null}
   </>;
