@@ -60,7 +60,7 @@ import {
   type HorizonFull, type PlanAuthor, type StartTarget, type ApiError, type HorizonAccess,
 } from "../horizon/api.ts";
 import { midweekOf, planRowsNow } from "../horizon/midweek.ts";
-import { chosenOf, ideasFor, lightWeekOf, loggedLines } from "../horizon/lightWeek.ts";
+import { NOTHING_ARRIVED, chosenOf, ideasFor, lightWeekOf, loggedLines } from "../horizon/lightWeek.ts";
 import { LightWeekCard, LoggedCard, MyActivities } from "./LightWeek.tsx";
 import type { ActivityKey } from "../../data/activities.ts";
 import { dayKindOf } from "../horizon/programme.ts";
@@ -76,7 +76,9 @@ import { WhereLine } from "./Doors.tsx";
 import { doorsFor, storeOf, type Who } from "../horizon/doors.ts";
 import type { WatchedRow } from "../horizon/watch.ts";
 import { cardOfRoute, routeOfCard } from "../horizon/setupCards.ts";
-import { HORIZON_PAGES, horizonRoute, routeOfPage, type HorizonPage } from "../horizon/pages.ts";
+import { HORIZON_PAGES, horizonRoute, isTab, routeOfPage, type HorizonPage } from "../horizon/pages.ts";
+import { firstWeekLine, fitnessLine, headLine, pastWeeks, sessionRows, thisWeek } from "../horizon/simple.ts";
+import { SimpleHorizon } from "./SimpleHorizon.tsx";
 
 export type HorizonDeps = {
   supabase: SupabaseClient;
@@ -425,6 +427,17 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
     </div>
   ) : null;
 
+  // the simple page (27 November 2026) shows these chips only where there is more than one horizon to choose from;
+  // "Set another" is one of its small links
+  const navMany = open.length + done.length > 1 ? (
+    <div class="flex flex-wrap gap-2" role="tablist" aria-label="Your horizons">
+      {[...open, ...done].map((x) => (
+        <button type="button" role="tab" aria-selected={current?.id === x.id} key={x.id} onClick={() => { route.value = x.id; history.replaceState(null, "", `#horizon-${x.id}`); }}
+          class={`rounded-full border px-3 py-1 text-[12px] font-medium ${current?.id === x.id ? "border-accent-border bg-accent-fill text-accent-text" : "border-border text-text-2 hover:border-border-strong"}`}>{shortTitle(x.title)} · {dayMonth(x.ends_on)}{x.closed_at ? " · done" : ""}</button>
+      ))}
+    </div>
+  ) : null;
+
   return (
     <div class="flex flex-col gap-5">
       {notice && <div class="flex items-start justify-between gap-3 rounded-[10px] border border-border-strong bg-alt px-4 py-3 text-[13px] text-text-2"><span>{notice}</span><button type="button" onClick={() => setNotice("")} class="text-text-3 hover:text-text" aria-label="Dismiss">×</button></div>}
@@ -447,7 +460,8 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
               onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); }} onError={onApiError} />
         : current
           ? <View deps={deps} h={current} person={person} today={today} owner={owner} nav={nav} busy={busy} setBusy={setBusy} onError={onApiError} setNotice={setNotice} reload={load} userId={userId} access={access} guideOn={guideOn} tester={tester} watchOn={watchOn}
-              page={at.id === current.id ? at.page : "glance"} goPage={(pg) => goPage(current.id, pg)} />
+              page={at.id === current.id ? at.page : "now"} goPage={(pg) => goPage(current.id, pg)}
+              navMany={navMany} onSetAnother={canSet ? () => { route.value = "new"; history.replaceState(null, "", "#horizon-new"); } : undefined} />
           : <Card>{nav}<div class="text-[18px] font-semibold text-text">No horizon set.</div><Quiet>{canSet ? "A horizon is a date, the markers you want different by then, and the week that gets you there." : owner ? "There is no horizon here to read." : "Nothing to see here yet: this person has not set a horizon."}</Quiet></Card>}
     </div>
   );
@@ -455,16 +469,18 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
 
 // ── board 14: the horizon in view ──
 
-function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setNotice, reload, userId, access, guideOn, tester, watchOn, page, goPage }: {
+function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setNotice, reload, userId, access, guideOn, tester, watchOn, page, goPage, navMany, onSetAnother }: {
   deps: HorizonDeps; h: HorizonFull; person: PersonData | null; today: string; owner: boolean; nav: any; busy: string; setBusy: (s: string) => void;
   onError: (e: ApiError, retry: () => void) => boolean; setNotice: (s: string) => void; reload: () => Promise<void>; userId: () => Promise<string | null>;
   access: HorizonAccess | null; guideOn: boolean;
   /** A test account for Horizon as a programme (api.ts programmeTester). */ tester: boolean;
   /** Watched markers can be kept for this project (api.ts watchedReady). */ watchOn: boolean;
-  /** The small page in view (board 22), and the way to another. */ page: HorizonPage; goPage: (p: HorizonPage) => void;
+  /** The page in view, and the way to another: one of the two tabs (27 November 2026), or a page behind "How the numbers are set" (board 22). */ page: HorizonPage; goPage: (p: HorizonPage) => void;
+  /** The person's horizons as chips, when they have more than one; and the way to set another, where one may be set. For the two tabs. */ navMany?: any; onSetAnother?: () => void;
 }) {
   const [editingPlan, setEditingPlan] = useState(false);
-  // the horizon in small pages: for its owner on a test account first (board 22). Anyone else is shown the one page, as before.
+  // Behind "How the numbers are set": the horizon in small pages, for its owner on a programme account (board 22).
+  // Any other owner is shown the one long page there, as before; and so is someone the page is shared with, who has no tabs.
   const paged = owner && tester;
   const on = (k: HorizonPage) => !paged || page === k;
   /** The target whose detail is open on the Targets page: one line a target, the rest behind it. */
@@ -571,6 +587,8 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   // kept, not running: Horizon is not offered to everyone and this account no longer has it (a founding member after
   // their last day). The page says so once (HORIZON_KEPT), so the lines above it do not say the Guide still checks.
   const keptOnly = locked && !HORIZON_PUBLIC;
+  // a kept horizon is drawn no read that will not be written: the road stops at today and at its date
+  const roadShown = keptOnly ? road.filter((x) => x.state !== "future") : road;
   // `mine`: the reader is the person the plan is for, not only the horizon's owner (an owner may keep a horizon for someone they look after)
   const guide = guideOn && person ? { sb: deps.supabase, h, person, today, targets, owner, closed, access, userId, reload, setNotice, mine: owner && !!deps.isSelf?.() } : null;
   // the week, kept light (board 08 of "Verve, the plan you follow", 26 November 2026): three amounts first, a few ideas
@@ -670,6 +688,12 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   // ── the horizon in small pages (board 22) ──
   // the Guide's plan as it stands today, for the glance: the week so far, and whether there are six letters to show
   const planView = useMemo(() => { try { return paged && stored && person ? guidePlan({ horizon: h, targets, person, today, stored, self: owner }) : null; } catch { return null; } }, [paged, stored, person, today, h, targets.length]);
+  // the same plan for the two tabs (27 November 2026): this week's lines, and the line it kept for each week behind.
+  // Asked as the light week asks it (midweek.ts planRowsNow): whenever the plan on file is the Guide's.
+  const simpleGuide = useMemo(() => {
+    if (!owner || !person || !isTab(page) || h.plan?.author !== "guide" || !isGuideStored(h.plan?.guide)) return null;
+    try { return guidePlan({ horizon: h, targets, person, today, stored: h.plan.guide as GuideStored, self: true }); } catch { return null; }
+  }, [owner, person, today, h, targets.length, isTab(page)]);
   // the light week is shown once the week is one the plan asks for: a Guide's plan kept midweek begins on the next
   // Monday, and until then the page says when it starts and shows no amounts
   const lightNow = planView && !planView.started ? null : light;
@@ -775,8 +799,30 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
     );
   })();
 
+  // ── the horizon, made simple (the founder, 27 November 2026: "Too many screens - too complex to follow") ──
+  // Its owner opens on two tabs and nothing else: this week, and past weeks (views/SimpleHorizon.tsx, horizon/simple.ts).
+  // Everything below this is what the page showed until then, kept one link away, each page with a way back.
+  if (owner && isTab(page)) {
+    // what a week is asked: nothing on a horizon that is kept or has stopped, nor before a Guide's plan has begun
+    const asksNow = !closed && !keptOnly && (!simpleGuide || simpleGuide.started);
+    const nowWeek = person ? thisWeek({ horizon: h, person, today, rows: simpleGuide ? simpleGuide.rows : planRows, targets, asks: asksNow, startsOn: simpleGuide && !simpleGuide.started ? simpleGuide.firstMonday : null }) : null;
+    const upto = nowWeek ? addDays(today < nowWeek.to ? today : nowWeek.to, 1) : today;
+    return (
+      <SimpleHorizon title={h.title} head={`${headLine(h, today)}${closed ? " · stopped" : ""}`} tab={page} goTab={(t) => goPage(t)}
+        now={nowWeek} sessions={person && nowWeek ? sessionRows(person, nowWeek.from, upto) : []}
+        past={person ? pastWeeks({ horizon: h, person, today, rows: planRows, targets, climb: simpleGuide ? simpleGuide.climb : null, asks: !keptOnly }) : []}
+        firstWeek={firstWeekLine(h, today)} fitness={person ? fitnessLine({ horizon: h, person, today, targets, asks: asksNow }) : ""}
+        kept={keptOnly ? HORIZON_KEPT : null} nothing={NOTHING_ARRIVED} nav={navMany}
+        onMore={() => goPage("glance")}
+        onSettings={() => { goPage("notes"); if (!paged) setTimeout(() => { try { document.getElementById("horizon-checkin")?.scrollIntoView({ block: "start" }); } catch { /* the page stays where it is */ } }, 0); }}
+        onSetAnother={onSetAnother} />
+    );
+  }
+  const backToNow = owner ? <div><button type="button" onClick={() => goPage("now")} class="min-h-9 text-[13px] font-semibold text-accent-text hover:text-text" data-simple-back>← This week</button></div> : null;
+
   return (
     <>
+      {backToNow}
       {paged ? pagedHead : null}
       {paged && page === "glance" ? lightCard(true) : null}
       {paged && page === "glance" && isTeam.value ? <OfferOnHorizon sb={deps.supabase} h={h} today={today} /> : null}
@@ -953,7 +999,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
       {on("notes") ? <Card id="horizon-checkin">
         <div class="flex flex-wrap items-baseline justify-between gap-3">
           <H2>The Guide's check-in{latest ? ` · ${weekdayDayMonth(latest.for_date)}` : ""}</H2>
-          {!closed && <span class="text-[12px] text-text-3">Next: Monday {dayMonthLong(next.nextMonday)}{next.monthReview ? ` · month review ${dayMonthLong(next.monthReview)}` : ""}</span>}
+          {!closed && !keptOnly && <span class="text-[12px] text-text-3">Next: Monday {dayMonthLong(next.nextMonday)}{next.monthReview ? ` · month review ${dayMonthLong(next.monthReview)}` : ""}</span>}
         </div>
         {/* a report filed since the last check-in: what it said, above the words that mention it (board 04) */}
         {(latest?.pace?.landed ?? []).filter((l) => isTargetable(l.marker)).map((l) => (
@@ -961,9 +1007,9 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
         ))}
         {latest
           ? <CheckinText text={latest.text} />
-          : <p class="m-0 text-[15px] text-text-2">{owner ? "No check-in yet. The first one arrives on the Monday morning after the horizon is set, once the app has synced the week." : "No check-in yet."}</p>}
+          : <p class="m-0 text-[15px] text-text-2">{keptOnly ? "No check-in was written." : owner ? "No check-in yet. The first one arrives on the Monday morning after the horizon is set, once the app has synced the week." : "No check-in yet."}</p>}
         {latest && asOfLine(latest) && <Quiet>{asOfLine(latest)}</Quiet>}
-        {((missingWeek && pastMondayNine) || missingMonth || finalDue) && (
+        {!keptOnly && ((missingWeek && pastMondayNine) || missingMonth || finalDue) && (
           <div class="flex flex-col gap-2">
             <div class="flex flex-wrap gap-2">
               {missingWeek && pastMondayNine && <Button primary disabled={busy === "checkin"} onClick={() => void writeCheckin("week", thisMonday)}>{busy === "checkin" ? "Writing…" : "Write it now"}</Button>}
@@ -982,21 +1028,21 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
           </details>
         )}
         <div class="flex flex-wrap items-end gap-1 overflow-x-auto pt-2" aria-label={`The road to ${dayMonth(h.ends_on)}`}>
-          {road.map((s, i) => (
+          {roadShown.map((s, i) => (
             <div class="flex min-w-[64px] flex-1 flex-col items-start gap-1" key={`${s.date}-${i}`}>
-              <div class="flex w-full items-center"><span class={`h-2.5 w-2.5 rounded-full ${s.state === "now" ? "bg-accent" : s.state === "past" ? "bg-accent-border" : s.state === "end" ? "bg-text" : "border border-border-strong"}`} />{i < road.length - 1 && <span class={`h-px flex-1 ${s.state === "past" || s.state === "now" ? "bg-accent-border" : "bg-border"}`} />}</div>
+              <div class="flex w-full items-center"><span class={`h-2.5 w-2.5 rounded-full ${s.state === "now" ? "bg-accent" : s.state === "past" ? "bg-accent-border" : s.state === "end" ? "bg-text" : "border border-border-strong"}`} />{i < roadShown.length - 1 && <span class={`h-px flex-1 ${s.state === "past" || s.state === "now" ? "bg-accent-border" : "bg-border"}`} />}</div>
               <span class={`font-mono text-[11px] ${s.state === "now" ? "text-accent-text" : "text-text-2"}`}>{s.label}</span>
               <span class="text-[11px] text-text-3">{s.sub}</span>
             </div>
           ))}
         </div>
-        <Quiet>Every Monday morning, once the app has synced the week: a short check-in against the targets{h.send_to_coach ? ", also sent to your coach in Messages" : ""}. Each month's first day: a Guide read of the month on the horizon. On the date: a read of the whole road, and the choice to set the next horizon.</Quiet>
+        {keptOnly ? null : <Quiet>Every Monday morning, once the app has synced the week: a short check-in against the targets{h.send_to_coach ? ", also sent to your coach in Messages" : ""}. Each month's first day: a Guide read of the month on the horizon. On the date: a read of the whole road, and the choice to set the next horizon.</Quiet>}
       </Card> : null}
 
       {on("notes") && owner && (
         <Card>
-          <H2>Check-ins and who sees them</H2>
-          <div class="flex flex-col">
+          <H2>{keptOnly ? "This horizon" : "Check-ins and who sees them"}</H2>
+          {keptOnly ? null : <div class="flex flex-col">
             {([["checkin_monday", "Monday morning check-in against the targets"], ["checkin_month", "A Guide read at each month's end"], ["send_to_coach", "Send each check-in to my coach"],
               // the email switch appears once the horizon's row carries it (the column arrives with the function that sends the email)
               ...("email_checkin" in h ? [["email_checkin", "Email me each check-in"] as const] : []),
@@ -1007,8 +1053,8 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
                 <input type="checkbox" checked={key === "checkin_midweek" ? h.checkin_midweek !== false : !!h[key]} disabled={closed} onChange={(e) => void toggle(key, (e.currentTarget as HTMLInputElement).checked)} class="h-5 w-5 accent-accent" />
               </label>
             ))}
-          </div>
-          {"email_checkin" in h && <Quiet>The email carries the check-in's words and your figures. One click in any email turns it off.</Quiet>}
+          </div>}
+          {"email_checkin" in h && !keptOnly && <Quiet>The email carries the check-in's words and your figures. One click in any email turns it off.</Quiet>}
           {pause && pauseAsk ? <PauseAsk h={h} state={pause} pick={pauseAsk} setPick={setPauseAsk} busy={busy === "pause"} onPause={(c) => void setAside(c)} onCancel={() => setPauseAsk(null)} /> : null}
           <div class="flex flex-wrap items-center gap-3">
             {pause && !pauseAsk && pause.left > 0 ? <Button disabled={!pause.open} onClick={() => setPauseAsk((pause.choices.find((c) => c.key === "this" && c.ok) ?? pause.choices.find((c) => c.ok))!.key)}>Pause for a week</Button> : null}
@@ -1016,7 +1062,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
             <Button disabled={busy === "delete"} onClick={() => void remove()}>Delete this horizon</Button>
           </div>
           {pause && pause.left > 0 && !pause.open ? <Quiet>{pauseWhyWords(pause.choices.find((c) => c.key === "this")?.why)}</Quiet> : null}
-          <Quiet>{pause ? `${pause.words} ` : ""}Deleting removes the horizon for good and keeps your readings. Check-ins describe pace. They do not change the plan; your coach does, or you do.</Quiet>
+          <Quiet>{pause ? `${pause.words} ` : ""}Deleting removes the horizon for good and keeps your readings.{keptOnly ? "" : " Check-ins describe pace. They do not change the plan; your coach does, or you do."}</Quiet>
         </Card>
       )}
 
