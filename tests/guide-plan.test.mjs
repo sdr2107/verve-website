@@ -362,6 +362,9 @@ test("a finished week stays on the page: each line against what it was asked, wh
   assert.equal(r.outcome, "short");
   assert.equal(r.after[0].small, "This week · week 3");
   assert.equal(r.after[0].head, "Zone 2 is asked again: 60 minutes, not 70");
+  // the plan's sentence stands alone too, for Monday's email: the same words, without the week's other figures
+  assert.equal(r.after[0].why, "Zone 2 was more than five minutes under its line, so the plan asks for the same zone 2 minutes again. The 30 minutes are not added to this week.");
+  assert.ok(r.after[0].text.startsWith(`${r.after[0].why} `) && !/strength|steps|harder/i.test(r.after[0].why));
   assert.match(r.after[0].text, /^Zone 2 was more than five minutes under its line, so the plan asks for the same zone 2 minutes again\. The 30 minutes are not added to this week\. Harder minutes stay at 115, strength stays at 2, and steps go on to [\d,]+ a day\.$/);
   // the minutes were there, at a higher effort: 40 in zone 2 and 140 harder against 60 and 115
   const hard = atWeek("2026-11-18", [[50, 120], [40, 140]]).review;

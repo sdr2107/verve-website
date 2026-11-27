@@ -25,6 +25,9 @@
  *
  * A week that is not judged (short at either end of the horizon, or set aside) has no amounts: lightWeekOf is null.
  *
+ * MONDAY'S EMAIL READS THE SAME AMOUNTS (board 09; the horizon function takes this file verbatim): the week that ended
+ * is finishedWeekOf, the week that begins is asksOf, and the opening line names the week's sessions with sessionKinds.
+ *
  * Pure, no DOM, no fetch; tests/light-week.test.mjs runs it under node.
  */
 import { addDays, localDay } from "../derive/format.ts";
@@ -210,4 +213,117 @@ export function loggedLines(person: Person, from: string, toExclusive: string): 
     else out.push({ day, logged, filled: `A session${min > 0 ? ` and ${min} ${min === 1 ? "minute" : "minutes"}` : ""}. No heart rate came with it, so it adds no aerobic time.`, kind: "no_heart_rate" });
   }
   return out;
+}
+
+// ── Monday's email: the week that ended, and the week that begins (board 09, 26 November 2026) ──
+//
+// The founder, 25 November 2026: one email on Monday in two parts. Part B is the horizon: "what out of the three
+// targets i achieved and where i was behind - and how i can achieve that for this week". Both halves are read here,
+// from the same amounts the page shows, so the email and the page cannot disagree: the week that ended is this file's
+// own week asked on its Sunday, and the week that begins is this file's own week asked on its Monday.
+//
+// Every sentence is a rule; no model writes one. For aerobic time the sentence is the plan's own (./guidePlan.ts, the
+// `why` of a finished week's review): it is handed in, never rewritten here. For strength and steps the plan has no
+// such rule yet, so the line says only what is true today: one way to fill what was short, from the person's own
+// activities, and for steps that the plan's figure went up.
+
+export type FinishedAmount = {
+  key: AmountKey; label: string; done: number | null; of: number;
+  /** "85 of 110 min", "1 of 2 sessions", "6,900 of 6,800 a day"; "110 min asked" when nothing arrived to count. */ figure: string;
+  /** "Reached", "25 short", "Within 5 min", "Nothing arrived". */ word: string;
+  state: "reached" | "short" | "none";
+};
+export type FinishedWeek = { from: string; to: string; week: number | null; amounts: FinishedAmount[] };
+export const NOTHING_WORD = "Nothing arrived";
+
+/**
+ * The week that began on `monday`, whole: each amount as done of asked, and one word for it. Null where lightWeekOf
+ * is null (a week that is not judged, a horizon that asks for none of the three).
+ *
+ * `within` is the plan's own allowance on aerobic minutes. The Guide's plan counts a week within five minutes of its
+ * line as reached and moves on (./guidePlan.ts progressOf): where the email says "This week adds ten minutes", the
+ * line above it must not say the week was short. Without a plan of the Guide's there is no allowance.
+ */
+export function finishedWeekOf(a: { horizon: HorizonLike; person: Person; monday: string; rows: PlanRow[]; targets: { marker: string; target_value: number }[]; within?: number | null }): FinishedWeek | null {
+  const w = lightWeekOf({ horizon: a.horizon, person: a.person, today: addDays(a.monday, 6), rows: a.rows, targets: a.targets });
+  if (!w || w.from !== a.monday) return null;
+  const within = a.within != null && a.within > 0 ? a.within : 0;
+  const amounts = w.amounts.map((x): FinishedAmount => {
+    const figure = `${x.figure} ${x.unit}`;
+    if (x.done == null) return { key: x.key, label: x.label, done: null, of: x.of, figure, word: NOTHING_WORD, state: "none" };
+    if (x.done >= x.of) return { key: x.key, label: x.label, done: x.done, of: x.of, figure, word: REACHED, state: "reached" };
+    if (x.key === "aerobic" && within && x.done >= x.of - within) return { key: x.key, label: x.label, done: x.done, of: x.of, figure, word: `Within ${within} min`, state: "reached" };
+    return { key: x.key, label: x.label, done: x.done, of: x.of, figure, word: `${thousands(x.of - x.done)} short`, state: "short" };
+  });
+  return { from: w.from, to: w.to, week: w.week, amounts };
+}
+
+export type Ask = {
+  key: AmountKey; label: string;
+  /** "110 min", "2 sessions", "6,930 a day". */ ask: string;
+  /** One plain sentence, by rule; null when there is nothing true to add. */ line: string | null;
+};
+export type WeekAsks = { from: string; to: string; week: number | null; asks: Ask[] };
+const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+
+/**
+ * What the week that begins on `today` asks, each amount with at most one sentence.
+ *   aerobic   the plan's own sentence on what last week did to it (`why`), when the plan is the Guide's. Otherwise,
+ *             where last week was short, one way to fill it from the person's activities.
+ *   strength  where last week was short, one way: "Five moves at home counts as one."
+ *   steps     that the figure went up from last week's, when it did; where last week was short, one way.
+ * Null where lightWeekOf is null: a short last week, a week set aside, a horizon that asks for none of the three.
+ */
+export function asksOf(a: { horizon: HorizonLike; person: Person; today: string; rows: PlanRow[]; targets: { marker: string; target_value: number }[];
+  /** The week before, as finishedWeekOf read it; null when it was not judged. */ finished?: FinishedWeek | null;
+  /** The person's activities (chosenOf); null and no idea is offered. */ chosen?: Chosen | null;
+  /** The plan's sentence on what the finished week did to this week's aerobic minutes; null when the plan is not the Guide's. */ why?: string | null }): WeekAsks | null {
+  const w = lightWeekOf({ horizon: a.horizon, person: a.person, today: a.today, rows: a.rows, targets: a.targets });
+  if (!w) return null;
+  const before = (key: AmountKey) => a.finished?.amounts.find((x) => x.key === key) ?? null;
+  const short = (key: AmountKey) => before(key)?.state === "short";
+  // one way to fill an amount, from the person's activities: the first idea the page itself would offer for it
+  const way = (x: Amount): string | null => {
+    if (!a.chosen) return null;
+    const ideas = ideasFor([{ ...x, done: 0, reached: false }], a.chosen);
+    return ideas.state === "ideas" ? ideas.ideas[0]?.text ?? null : null;
+  };
+  const asks = w.amounts.map((x): Ask => {
+    if (x.key === "aerobic") {
+      const idea = !a.why && short("aerobic") ? way(x) : null;
+      return { key: x.key, label: x.label, ask: `${x.of} min`, line: a.why ? a.why : idea ? `One way: ${lowerFirst(idea)}.` : null };
+    }
+    if (x.key === "strength") {
+      const idea = short("strength") ? way(x) : null;
+      return { key: x.key, label: x.label, ask: `${x.of} ${x.of === 1 ? "session" : "sessions"}`, line: idea ? `${idea} counts as one.` : null };
+    }
+    const was = before("steps");
+    const more = was && x.of > was.of ? `${thousands(x.of - was.of)} more a day than last week asked` : null;
+    const idea = short("steps") ? way(x) : null;
+    return { key: x.key, label: x.label, ask: `${thousands(x.of)} a day`, line: more && idea ? `${more}; one way is ${lowerFirst(idea)}.` : more ? `${more}.` : idea ? `One way: ${lowerFirst(idea)}.` : null };
+  });
+  return { from: w.from, to: w.to, week: w.week, asks };
+}
+
+/**
+ * A stretch of days as the opening line of Monday's email names it: how many sessions, and each kind once with its
+ * count, most often first. A session is named by the list (./data/activities.ts) where its name is on it, "strength"
+ * where it was logged as strength, and otherwise by its own first words.
+ */
+export type SessionKinds = { sessions: number; minutes: number; kinds: { name: string; n: number }[] };
+export function sessionKinds(person: Person, from: string, toExclusive: string): SessionKinds {
+  const count = new Map<string, number>();
+  let sessions = 0, minutes = 0;
+  for (const s of dedupeSessions(person.acts)) {
+    const day = localDay(s.timestamp);
+    if (day < from || day >= toExclusive) continue;
+    sessions++;
+    minutes += Math.max(0, Math.round(Number(s.duration_minutes) || 0));
+    const name = nameOf(s), key = s.activity_type === "strength" ? null : activityOfName(name);
+    const kind = s.activity_type === "strength" ? "strength" : key ? ACTIVITY_BY_KEY[key].label.toLowerCase() : name && !NOT_A_NAME.test(name) ? name : "other";
+    count.set(kind, (count.get(kind) ?? 0) + 1);
+  }
+  // most often first; "other" last; ties in the order they were first logged
+  const kinds = [...count.entries()].map(([name, n], i) => ({ name, n, i })).sort((x, y) => Number(x.name === "other") - Number(y.name === "other") || y.n - x.n || x.i - y.i).map(({ name, n }) => ({ name, n }));
+  return { sessions, minutes, kinds };
 }

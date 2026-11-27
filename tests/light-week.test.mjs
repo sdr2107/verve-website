@@ -9,7 +9,7 @@ import { doneOf } from "../src/my-health/horizon/guidePlan.ts";
 import { parseProgramme } from "../src/my-health/horizon/programme.ts";
 import { ACTIVITIES, ACTIVITY_BY_KEY, IDEAS_AT_MOST, OWN_AT_MOST, OWN_LENGTH } from "../src/data/activities.ts";
 import {
-  lightWeekOf, chosenOf, ideasFor, loggedLines, cleanOwn, cleanKeys, activityOfName,
+  lightWeekOf, chosenOf, ideasFor, loggedLines, cleanOwn, cleanKeys, activityOfName, finishedWeekOf, asksOf, sessionKinds,
   AEROBIC_NOTE, STEPS_NOTE, IDEAS_LEAD, IDEAS_NONE, COUNTS_NOTE, CHOSEN_LEAD, NOTHING_ARRIVED,
 } from "../src/my-health/horizon/lightWeek.ts";
 
@@ -260,4 +260,90 @@ test("every block carries a hook, so the page can be checked signed in", () => {
   for (const hook of ['data-light="week"', 'data-light="amounts"', "data-amount={a.key}", 'data-light="ideas"', 'data-light="activities"', 'data-light="counts"', 'data-light="nothing"', "data-idea={i.key}", "data-activity={a.key}", "data-logged={l.kind}"]) assert.ok(card.includes(hook), hook);
   // figures use the site's one figure style
   assert.match(card, /<span class="t-figure text-text">\{a\.figure\}<\/span>/);
+});
+
+// ── Monday's email reads the same amounts (board 09; 26 November 2026) ──
+
+const NEXT_MON = "2026-12-07";
+const NEXT_PLAN = [{ kind: "sessions_week", label: "Five sessions", n: 5 }, { kind: "zone2_min", label: "Zone 2", n: 110 }, { kind: "harder_min", label: "Harder", n: 20 }, { kind: "strength_week", label: "Strength", n: 2 }, { kind: "steps_day", label: "Steps", n: 6930 }];
+const whole = (o = {}) => person({ signalDays: 7, upTo: NEXT_MON, ...o });
+const finished = (o = {}, extra = {}) => finishedWeekOf({ horizon: H, person: whole(o), monday: MON, rows: PLAN, targets: TARGETS, ...extra });
+const WHY = "Zone 2 was more than five minutes under its line, so the plan asks for the same zone 2 minutes again. The 68 minutes are not added to this week.";
+
+test("the week that ended is the page's own week, asked on its Sunday: done of asked, and one word each", () => {
+  const f = finished();
+  assert.deepEqual([f.from, f.to, f.week], ["2026-11-30", "2026-12-06", 2]);
+  assert.deepEqual(f.amounts.map((a) => `${a.label} · ${a.figure} · ${a.word}`), ["Aerobic time · 42 of 110 min · 68 short", "Strength · 1 of 2 sessions · 1 short", "Steps · 6,900 of 6,800 a day · Reached"]);
+  assert.deepEqual(f.amounts.map((a) => a.state), ["short", "short", "reached"]);
+  // the same figures the page showed on the week's last day
+  const page = lightWeekOf({ horizon: H, person: whole(), today: "2026-12-06", rows: PLAN, targets: TARGETS });
+  assert.deepEqual(f.amounts.map((a) => [a.done, a.of]), page.amounts.map((a) => [a.done, a.of]));
+  // steps short are written with their thousands
+  assert.equal(finished({ steps: 5600 }).amounts.find((a) => a.key === "steps").word, "1,200 short");
+});
+
+test("the plan's own allowance: a week within five minutes of its aerobic line is not called short", () => {
+  const near = { sessions: [[0, "Badminton", "aerobic", 60, 56], [1, "Swim", "aerobic", 60, 50], [2, "Strength", "strength", 25, null], [4, "Strength", "strength", 25, null]] };
+  assert.equal(finished(near).amounts[0].word, "4 short");                       // with no plan of the Guide's there is no allowance
+  const a = finished(near, { within: 5 }).amounts[0];
+  assert.deepEqual([a.figure, a.word, a.state], ["106 of 110 min", "Within 5 min", "reached"]);
+  assert.equal(finished({ sessions: [[0, "Badminton", "aerobic", 60, 50]] }, { within: 5 }).amounts[0].word, "60 short");
+  // the allowance is on aerobic time alone
+  assert.equal(finished(near, { within: 5 }).amounts[1].word, "Reached");
+});
+
+test("a week nothing arrived for says what was asked and never a nought; a week that is not judged has no part B", () => {
+  const none = finishedWeekOf({ horizon: H, person: person({ sessions: [], signalDays: 0, upTo: NEXT_MON }), monday: MON, rows: PLAN, targets: TARGETS });
+  assert.deepEqual(none.amounts.map((a) => `${a.figure} · ${a.word}`), ["110 min asked · Nothing arrived", "2 sessions asked · Nothing arrived", "6,800 a day asked · Nothing arrived"]);
+  assert.ok(none.amounts.every((a) => a.state === "none" && a.done === null));
+  // the horizon's first days (Tuesday to Sunday) are not a week from Monday
+  assert.equal(finishedWeekOf({ horizon: H, person: whole(), monday: "2026-11-16", rows: PLAN, targets: TARGETS }), null);
+  assert.equal(finishedWeekOf({ horizon: { ...H, pauses: [MON] }, person: whole(), monday: MON, rows: PLAN, targets: TARGETS }), null);
+});
+
+test("the week that begins: each ask, and at most one sentence written by rule", () => {
+  const chosen = { keys: ["walking", "swimming", "strength_home"], own: [], from: "chosen" };
+  const w = asksOf({ horizon: H, person: whole(), today: NEXT_MON, rows: NEXT_PLAN, targets: TARGETS, finished: finished(), chosen, why: WHY });
+  assert.deepEqual([w.from, w.week], [NEXT_MON, 3]);
+  assert.deepEqual(w.asks.map((a) => `${a.label} · ${a.ask}`), ["Aerobic time · 110 min", "Strength · 2 sessions", "Steps · 6,930 a day"]);
+  // aerobic time: the plan's own sentence, as it is handed in; no idea is added to it
+  assert.equal(w.asks[0].line, WHY);
+  // strength was one short: one way, from the person's activities
+  assert.equal(w.asks[1].line, "Five moves at home counts as one.");
+  // steps were reached: only that the plan's figure went up
+  assert.equal(w.asks[2].line, "130 more a day than last week asked.");
+});
+
+test("where last week was short, one way to fill it comes from the ticked activities and from nowhere else", () => {
+  const short = finished({ steps: 5600 });
+  const base = { horizon: H, person: whole(), today: NEXT_MON, rows: NEXT_PLAN, targets: TARGETS, finished: short };
+  const line = (chosen, key, extra = {}) => asksOf({ ...base, chosen, ...extra }).asks.find((a) => a.key === key).line;
+  const mine = { keys: ["walking", "swimming", "gym"], own: [], from: "chosen" };
+  // no plan of the Guide's: aerobic time gets one way, a swim before the walk (the page's own order)
+  assert.equal(line(mine, "aerobic"), "One way: a swim, 30 minutes.");
+  assert.equal(line(mine, "strength"), "A session at the gym counts as one.");
+  assert.equal(line(mine, "steps"), "130 more a day than last week asked; one way is a brisk walk after dinner, 20 minutes.");
+  // the figure did not go up: the way alone
+  assert.equal(line(mine, "steps", { rows: PLAN }), "One way: a brisk walk after dinner, 20 minutes.");
+  // cycling is off the list and nothing mentions a bike; with nothing ticked that fits, nothing is said
+  const none = { keys: ["yoga"], own: [], from: "chosen" };
+  assert.deepEqual(["aerobic", "strength", "steps"].map((k) => line(none, k, { rows: PLAN })), [null, null, null]);
+  // no activities handed in (a horizon with no programme): the asks, and no way
+  assert.deepEqual(asksOf({ ...base, rows: PLAN, chosen: null }).asks.map((a) => a.line), [null, null, null]);
+  // a week that reached everything is given no way at all
+  const all = finished({ sessions: [[0, "Badminton", "aerobic", 60, 60], [1, "Swim", "aerobic", 60, 55], [2, "Strength", "strength", 25, null], [4, "Strength", "strength", 25, null]] });
+  assert.deepEqual(asksOf({ ...base, finished: all, rows: PLAN, chosen: mine }).asks.map((a) => a.line), [null, null, null]);
+});
+
+test("the week that begins has no asks where the page has no light week: the horizon's short last days", () => {
+  const last = "2027-02-08";   // Monday of the days that end on Saturday 13 February
+  assert.equal(asksOf({ horizon: H, person: whole(), today: last, rows: NEXT_PLAN, targets: TARGETS, finished: null, chosen: null }), null);
+});
+
+test("the opening line's sessions: how many, their minutes, and each kind once with its count, named by the list", () => {
+  const p = whole({ sessions: [[0, "Outdoor Walk (watch)", "aerobic", 30, 18], [1, "Badminton", "aerobic", 45, 24], [2, "Walking", "aerobic", 20, 12], [3, "Pool Swim", "aerobic", 30, 26], [4, "Strength", "strength", 30, null], [5, "Other", "aerobic", 15, 5], [5, "Rowing, indoor", "aerobic", 10, 4]] });
+  const k = sessionKinds(p, MON, NEXT_MON);
+  assert.deepEqual([k.sessions, k.minutes], [7, 180]);
+  assert.deepEqual(k.kinds, [{ name: "walking", n: 2 }, { name: "badminton", n: 1 }, { name: "swimming", n: 1 }, { name: "strength", n: 1 }, { name: "rowing", n: 1 }, { name: "other", n: 1 }]);
+  assert.deepEqual(sessionKinds(p, NEXT_MON, addDays(NEXT_MON, 7)), { sessions: 0, minutes: 0, kinds: [] });
 });

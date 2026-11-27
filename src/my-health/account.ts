@@ -239,9 +239,9 @@ export const weeklyNote = (w: WeeklyState, today = new Date()): string =>
  * then its own email. One already written when Your week goes travels inside it.
  */
 export const MONDAY_EMAILS = "With both on, Your week arrives on Monday morning. A check-in the Guide has already written travels inside it, whichever way the horizon's own switch is set. One written later, once the app has synced the week, follows in its own email when that switch is on.";
-export const WEEKLY_CARRIES = "The week's dose, six figures against the week before, and your horizon's pace when one is open. One click in any email turns it off.";
+export const WEEKLY_CARRIES = "How your week was, in figures set against the week before. Then your horizon: what the week reached, what fell short, and what this week asks. One click in any email turns it off.";
 /** The same line for an account that has no Horizon (horizon/access.ts hasHorizon): it names nothing the account cannot have. */
-export const WEEKLY_CARRIES_PLAIN = "The week's dose, and six figures against the week before. One click in any email turns it off.";
+export const WEEKLY_CARRIES_PLAIN = "How your week was: your time, your dose and the week's other figures, each against the week before. One click in any email turns it off.";
 
 /** The browser's zone, the one the email's Monday is read in; null when the browser will not say. */
 export function browserZone(): string | null {
