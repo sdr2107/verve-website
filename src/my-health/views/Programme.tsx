@@ -319,8 +319,8 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
   /** The Guide's first week, worked out from the draft before anything is kept. */
   const firstWeek = useMemo(() => {
     if (!preview || !person || !guideWrites || !guideOn || !outcome || outcome === "none" || !endsOn || endsOn <= today) return null;
-    try { return guidePlan({ horizon: { starts_on: today, ends_on: endsOn }, targets: draftTargets.map((t) => ({ marker: t.marker, target_value: t.target_value })), person, today, mode: outcome, choices: planChoices }); } catch { return null; }
-  }, [preview, person, endsOn, outcome, JSON.stringify(draftTargets.map((t) => [t.marker, t.target_value]))]);
+    try { return guidePlan({ horizon: { starts_on: today, ends_on: endsOn }, targets: draftTargets.map((t) => ({ marker: t.marker, target_value: t.target_value, method: t.hold?.method ?? null })), person, today, mode: outcome, choices: planChoices }); } catch { return null; }
+  }, [preview, person, endsOn, outcome, JSON.stringify(draftTargets.map((t) => [t.marker, t.target_value, t.hold?.method ?? null]))]);
 
   /** What stands between the draft and a horizon: the words, and the card that holds the answer. Null when nothing does. */
   function check(): { why: string; card: number } | null {
@@ -366,7 +366,8 @@ export function ProgrammeSetup({ sb, person, today, personId, nav, hasOthers, ac
         writes.push(saveScreen(sb, id, uid, screen as ScreenAnswers));
         const oc = screenOutcome(screen as ScreenAnswers);
         if (oc !== "none" && person) {
-          const v = guidePlan({ horizon: { starts_on: today, ends_on: endsOn }, targets: targets.map((t) => ({ marker: t.marker, target_value: t.target_value })), person, today, mode: oc, choices: planChoices });
+          // the plan is worked out from the test the horizon will keep, as it will be read once the horizon is set
+          const v = guidePlan({ horizon: { starts_on: today, ends_on: endsOn }, targets: targets.map((t) => ({ marker: t.marker, target_value: t.target_value, method: t.hold?.method ?? null })), person, today, mode: oc, choices: planChoices });
           writes.push(saveGuidePlan(sb, id, rowsWith(v, []), storeOf(v, today), uid));
         }
       }

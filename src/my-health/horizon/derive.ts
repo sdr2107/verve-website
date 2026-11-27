@@ -449,6 +449,22 @@ export function fitnessBy(person: Person, family: string | null | undefined): Do
   return all[all.length - 1] ?? null;
 }
 
+/**
+ * The fitness figure a horizon reads (rule C; the founder, 27 November 2026, of a test taken in the middle of a
+ * horizon: "my fitness tier changed - that should recalibrate"). It is the latest reading by the method the horizon's
+ * fitness target is kept to. A horizon whose target keeps no method, or one with none of that method left on file,
+ * reads the newest reading of any kind, as every horizon did until that day.
+ *
+ * One reader: the plan's tier (./guidePlan.ts aimsOf), "Your fitness" and the simple page's fitness row all ask it.
+ * Until then the tier read the newest reading of any method, a watch's daily estimate among them, so a tier could move
+ * with no word on the page while the fitness row beside it stayed on the first method. A test by another method now
+ * moves nothing until the person says so (./newTest.ts).
+ */
+export function horizonFitness(person: Person, targets: { marker: string; method?: string | null }[], today: string): Reading | null {
+  const method = targets.find((t) => t.marker === "mets")?.method ?? null;
+  return (method ? fitnessBy(person, method) : null) ?? latestOf("mets", person, today);
+}
+
 /** Where a marker stands now: the value, the day it is from, its unit, who wrote it. Null when the person has no reading. */
 export function latestOf(key: MarkerKey, person: Person, today: string): Reading | null {
   const def = MARKER_BY_KEY[key];

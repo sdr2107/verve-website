@@ -121,7 +121,7 @@ export function QuickSetup({ sb, person, today, personId, guideOn, hasOthers, us
         writes.push(saveScreen(sb, id, uid, screen as ScreenAnswers));
         const oc = screenOutcome(screen as ScreenAnswers);
         if (oc !== "none" && person) {
-          const v = guidePlan({ horizon: { starts_on: today, ends_on: endsOn }, targets: targets.map((t) => ({ marker: t.marker, target_value: t.target_value })), person, today, mode: oc, choices: planChoices });
+          const v = guidePlan({ horizon: { starts_on: today, ends_on: endsOn }, targets: targets.map((t) => ({ marker: t.marker, target_value: t.target_value, method: t.marker === "mets" ? method : null })), person, today, mode: oc, choices: planChoices });
           writes.push(saveGuidePlan(sb, id, rowsWith(v, []), storeOf(v, today), uid));
         }
       }

@@ -92,7 +92,7 @@ test("a goal's draft keeps a marker nothing is sending, marked, and leaves out n
 
 test("a stored programme is read back whole, and anything else is not a programme", () => {
   assert.deepEqual(parseProgramme({ v: 1, goal: "hold", aims: ["Play a full game with friends", 7, ""], barriers: ["time"], days: [4, 0, 0, 9], place: "home", writer: "both" }),
-    { v: 1, goal: "hold", aims: ["Play a full game with friends"], barriers: ["time"], days: [0, 4], place: "home", writer: "both", day: null, activities: null, own: [] });
+    { v: 1, goal: "hold", aims: ["Play a full game with friends"], barriers: ["time"], days: [0, 4], place: "home", writer: "both", day: null, activities: null, own: [], tests: [] });
   assert.equal(parseProgramme(null), null);
   assert.equal(parseProgramme({ goal: "get rich" }), null);
   assert.equal(parseProgramme({ goal: "own" }).writer, "guide");

@@ -12,6 +12,8 @@
  *
  * And Settings, one link away: three lines and nothing else (the Monday email, a pause, delete).
  *
+ * One card can stand above "Where you are": a fitness test taken since the horizon was set (../horizon/newTest.ts).
+ *
  * Words are in one face and two colours; figures are the site's row figure (t-figure-row). A row that reached its
  * line is the success colour, and nothing else is coloured. No paragraph stands on any tab. What the page showed
  * before 27 November 2026 is hidden, not deleted (../horizon/pages.ts HORIZON_OLD_PAGES): while it is hidden the foot
@@ -26,6 +28,7 @@ import { HORIZON_TABS, type HorizonTab } from "../horizon/pages.ts";
 import type { YourPlan } from "../horizon/yourPlan.ts";
 import type { WeeklyState } from "../account.ts";
 import { NO_SESSIONS, type NowRow, type NowWeek, type PastWeek, type SessionRow } from "../horizon/simple.ts";
+import type { TestCard } from "../horizon/newTest.ts";
 
 const linkClass = "min-h-9 text-[13px] font-semibold text-accent-text hover:text-text";
 const small = "m-0 text-[13px] font-medium text-text-2";
@@ -128,7 +131,55 @@ function Plan({ plan }: { plan: YourPlan | null }) {
   );
 }
 
-export function SimpleHorizon({ title, head, tab, goTab, now, sessions, past, firstWeek, fitness, kept, nothing, nav, plan, onMore, onSettings, onSetAnother }: {
+/**
+ * A fitness test taken since the horizon was set (../horizon/newTest.ts; the founder, 27 November 2026: "can the
+ * horizon sense that a new fitness test has been uploaded ... and continue the horizon with a recalibrated target").
+ * One card above "Where you are": the test, the tier it gives, what changes and what stays, a new aim to set when the
+ * old one is reached, and the answer. Every word is handed in; the only thing kept here is what is typed in the field.
+ */
+export type NewTest = { card: TestCard; busy: boolean; /** One plain line when an answer could not be kept. */ problem: string | null; onPrimary: (aim: string) => void; onSecondary: () => void };
+function NewTestCard({ t }: { t: NewTest }) {
+  const c = t.card;
+  const [aim, setAim] = useState<string | null>(null);
+  const typed = aim ?? (c.aim?.suggest != null ? String(c.aim.suggest) : "");
+  const pill = "whitespace-nowrap rounded-[9px] border px-3 py-1 text-[13px]";
+  const press = "inline-flex min-h-10 items-center justify-center rounded-[10px] px-4 text-[14px] font-semibold disabled:opacity-50";
+  return (
+    <div class="flex flex-col gap-3 rounded-[16px] border-2 border-accent-border bg-card p-5" data-simple="new-test" data-test-kind={c.kind} data-test-key={c.key}>
+      <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5">
+        <h2 class="m-0 text-[15px] font-semibold text-text">{c.head}</h2>
+        <span class="text-[13px] text-text-2" data-test="which">{c.test}</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-2" data-test="figure">
+        <span class="flex items-baseline gap-1.5"><span class="t-figure text-text">{c.figure}</span><span class="text-[13px] text-text-2">{c.unit}</span></span>
+        {c.tier.from ? <><span class={`${pill} border-border text-text-2`} data-test="tier-from">{c.tier.from}</span><span class="text-[14px] text-text-3" aria-hidden="true">→</span><span class="sr-only">to</span></> : null}
+        <span class={`${pill} ${c.tier.from ? "border-accent-border bg-accent-fill font-semibold text-accent-text" : "border-border text-text-2"}`} data-test="tier-to">{c.tier.to}</span>
+      </div>
+      <div class="grid grid-cols-[76px_minmax(0,1fr)] gap-x-3 gap-y-2 text-[14px] leading-snug" data-test="rows">
+        {c.rows.map((r) => (
+          <div class="contents" key={r.key} data-test-row={r.key}>
+            <span class="text-text-2">{r.label}</span>
+            <span class="min-w-0 text-text">
+              {r.key === "aim"
+                ? <span class="flex flex-wrap items-center gap-x-2 gap-y-1.5"><label for={`aim-${c.key}`}>{r.text}</label>
+                    <input id={`aim-${c.key}`} type="number" inputMode="decimal" step="0.1" min="0" value={typed} disabled={t.busy} onInput={(e) => setAim((e.currentTarget as HTMLInputElement).value)}
+                      class="t-figure-row min-h-9 w-[84px] rounded-[10px] border border-border bg-alt px-2.5 text-right text-text outline-none focus:border-accent-border disabled:opacity-50" data-test="aim" /></span>
+                : r.text}
+            </span>
+          </div>
+        ))}
+      </div>
+      {c.line ? <p class="m-0 text-[13px] leading-snug text-text-2" data-test="line">{c.line}</p> : null}
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <button type="button" disabled={t.busy} onClick={() => t.onPrimary(typed)} class={`${press} bg-accent text-canvas`} data-test="primary">{c.primary}</button>
+        {c.secondary ? <button type="button" disabled={t.busy} onClick={t.onSecondary} class={`${press} border border-border-strong bg-card text-text hover:border-text-3`} data-test="secondary">{c.secondary}</button> : null}
+        {t.problem ? <span class="text-[13px] text-text" data-test="problem">{t.problem}</span> : null}
+      </div>
+    </div>
+  );
+}
+
+export function SimpleHorizon({ title, head, tab, goTab, now, sessions, past, firstWeek, fitness, kept, nothing, nav, plan, test, onMore, onSettings, onSetAnother }: {
   title: string; /** "Week 3 of 12 · to 22 February" */ head: string;
   tab: HorizonTab; goTab: (t: HorizonTab) => void;
   now: NowWeek | null; sessions: SessionRow[];
@@ -137,6 +188,7 @@ export function SimpleHorizon({ title, head, tab, goTab, now, sessions, past, fi
   /** The sentence for a week nothing has arrived for yet. */ nothing: string;
   /** The person's horizons as chips, when they have more than one. */ nav: any;
   /** "Your plan", worked out by ../horizon/yourPlan.ts; null while it is being read. */ plan: YourPlan | null;
+  /** A fitness test taken since the horizon was set, for its owner on "This week"; absent for anyone else and when there is none. */ test?: NewTest | null;
   /** The way to the hidden pages: handed in only while they are switched back on (pages.ts HORIZON_OLD_PAGES). */ onMore?: () => void;
   /** Settings are the owner's: absent for someone the page is shared with. */ onSettings?: () => void; onSetAnother?: () => void;
 }) {
@@ -157,6 +209,7 @@ export function SimpleHorizon({ title, head, tab, goTab, now, sessions, past, fi
         </div>
       </header>
 
+      {tab === "now" && test ? <NewTestCard t={test} key={test.card.key} /> : null}
       {tab === "now" ? (
         <div class="flex flex-col gap-5 rounded-[16px] border border-border bg-card p-5" data-simple="now" role="tabpanel">
           <div class="flex flex-col gap-1">
