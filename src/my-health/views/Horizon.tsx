@@ -79,6 +79,8 @@ import { cardOfRoute, routeOfCard } from "../horizon/setupCards.ts";
 import { HORIZON_PAGES, horizonRoute, isTab, routeOfPage, type HorizonPage } from "../horizon/pages.ts";
 import { firstWeekLine, fitnessLine, headLine, pastWeeks, sessionRows, thisWeek } from "../horizon/simple.ts";
 import { SimpleHorizon } from "./SimpleHorizon.tsx";
+import { QuickSetup } from "./QuickSetup.tsx";
+import { loadSetup } from "../horizon/setupCards.ts";
 
 export type HorizonDeps = {
   supabase: SupabaseClient;
@@ -293,6 +295,10 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
   // Horizon as a programme is built for test accounts only (api.ts programmeTester); "My own targets" opens the set-up as it was
   const [tester, setTester] = useState(() => isTester.value);
   const [ownTargets, setOwnTargets] = useState(false);
+  // The set-up opens short (27 November 2026: five numbers already filled in, the three questions, Start). The set-up
+  // with every choice is behind "More choices"; a person part-way through that one (its answers are kept for the tab)
+  // comes back to it.
+  const [fullSetup, setFullSetup] = useState(() => { const id = deps.personId(); return !!id && !!loadSetup(id); });
   // watched markers can be kept for this project (board 19; api.ts watchedReady)
   const [watchOn, setWatchOn] = useState(false);
 
@@ -444,12 +450,16 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
       {loadError && <Quiet>{loadError}</Quiet>}
       {consent && <ConsentBox onAgree={() => void agreeConsent()} busy={busy === "consent"} />}
       {lastWeek && <p class="m-0 rounded-[10px] border border-border-strong bg-alt px-4 py-3 text-[14px] leading-relaxed text-text-2" data-continuity>{lastWeek}</p>}
-      {showSetup && tester && owner && !ownTargets && (open.length > 0 || !done[0] || !!parseProgramme(done[0].programme))
+      {showSetup && tester && owner && !ownTargets && !fullSetup && setupCard <= 1 && (open.length > 0 || !done[0])
+        ? <QuickSetup sb={deps.supabase} person={person} today={today} personId={personId} guideOn={guideOn} hasOthers={open.length > 0 || done.length > 0} userId={userId} onNote={setNotice}
+            onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); try { window.scrollTo({ top: 0 }); } catch { /* the page stays where it is */ } }}
+            onError={onApiError} onCancel={() => { route.value = ""; history.replaceState(null, "", "#horizon"); }} onMore={() => setFullSetup(true)} />
+        : showSetup && tester && owner && !ownTargets && (open.length > 0 || !done[0] || !!parseProgramme(done[0].programme))
         ? <ProgrammeSetup sb={deps.supabase} person={person} today={today} personId={personId} nav={nav} hasOthers={open.length > 0 || done.length > 0} access={access} guideOn={guideOn} userId={userId}
             after={!open.length && done[0] ? parseProgramme(done[0].programme)?.goal ?? null : null} afterDay={!open.length && !!done[0] && !!dayKindOf(done[0].programme)} key={!open.length && done[0] ? `after-${done[0].id}` : "programme"}
             card={setupCard || 1} goCard={goCard} watchOn={watchOn} onNote={setNotice}
-            onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); try { window.scrollTo({ top: 0 }); } catch { /* the page stays where it is */ } }}
-            onError={onApiError} onCancel={() => { route.value = ""; history.replaceState(null, "", "#horizon"); }} onOwn={() => setOwnTargets(true)} />
+            onStarted={async (id) => { setPro("yes"); setFullSetup(false); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); try { window.scrollTo({ top: 0 }); } catch { /* the page stays where it is */ } }}
+            onError={onApiError} onCancel={() => { setFullSetup(false); route.value = ""; history.replaceState(null, "", "#horizon"); }} onOwn={() => setOwnTargets(true)} />
         : showSetup
         ? <Setup deps={deps} person={person} today={today} personId={personId} hasOthers={open.length > 0 || done.length > 0} nav={nav} draftMarker={draftMarker} access={access} guideOn={guideOn}
             prefill={!open.length && done[0] ? prefillOf(done[0], person, today) : undefined} key={!open.length && done[0] ? `next-${done[0].id}` : "new"}
