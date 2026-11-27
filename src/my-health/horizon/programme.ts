@@ -44,6 +44,11 @@ export type Programme = {
   activities?: ActivityKey[] | null;
   /** Activities in the person's own words: a few, and short. */
   own?: string[];
+  /**
+   * The fitness tests the person has answered the page about (./newTest.ts, 27 November 2026): each as its day and its
+   * method's family, "2026-11-26|treadmill". A test that is here is not asked about again. The newest few are kept.
+   */
+  tests?: string[];
 };
 const GOAL_KEYS = new Set<string>(["lose_weight", "build_fitness", "hold", "marathon", "own"]);
 const strings = (x: unknown, max: number): string[] => (Array.isArray(x) ? x.filter((s): s is string => typeof s === "string" && s.trim() !== "").map((s) => s.trim().slice(0, 80)).slice(0, max) : []);
@@ -59,8 +64,15 @@ export function parseProgramme(x: unknown): Programme | null {
     day: dayOf(r),
     // absent on a horizon set before 26 November 2026, and until the person ticks anything
     activities: Array.isArray(r.activities) ? ACTIVITIES.filter((a) => (r.activities as unknown[]).includes(a.key)).map((a) => a.key) : null,
-    own: strings(r.own, OWN_AT_MOST).map((s) => s.slice(0, OWN_LENGTH)) };
+    own: strings(r.own, OWN_AT_MOST).map((s) => s.slice(0, OWN_LENGTH)),
+    // absent on a horizon no test has been answered for; a key that is not a day and a method is dropped
+    tests: testKeys(r.tests) };
 }
+/** How many answered tests a horizon keeps: the newest. */
+export const TESTS_KEPT = 24;
+const TEST_KEY = /^\d{4}-\d{2}-\d{2}\|[a-z0-9][a-z0-9.\-]{0,39}$/;
+/** Answered tests made safe to keep: each a day and a method's family, once, the newest few, oldest first. */
+export const testKeys = (x: unknown): string[] => [...new Set(strings(x, 200).filter((k) => TEST_KEY.test(k)))].sort().slice(-TESTS_KEPT);
 /** The day a stored programme was set for; null when it was set for a length of time. */
 function dayOf(r: Record<string, unknown>): { kind: DayKey } | null {
   const d = r.day && typeof r.day === "object" ? (r.day as Record<string, unknown>).kind : null;

@@ -56,7 +56,7 @@ import {
 import { movedWords, pauseState, pauseWhyWords, type PauseChoice, type PauseKey, type PauseState, type PauseWhy } from "../horizon/pause.ts";
 import {
   listHorizons, startHorizon, requestCheckin, grantConsent, savePlan, updateHorizon, deleteHorizon, pauseHorizon, addTarget, removeTarget, updateTarget, saveGuidePlan, ERROR_WORDS,
-  fetchAccess, rememberedAccess, guidePlanReady, testerAnswer, teamAnswer, loadDayName, watchedReady, listWatched, saveProgramme, loadHeartProfile,
+  fetchAccess, rememberedAccess, guidePlanReady, testerAnswer, teamAnswer, loadDayName, watchedReady, listWatched, saveProgramme, loadHeartProfile, moveFitnessTarget,
   type HorizonFull, type PlanAuthor, type StartTarget, type ApiError, type HorizonAccess,
 } from "../horizon/api.ts";
 import { midweekOf, planRowsNow } from "../horizon/midweek.ts";
@@ -80,6 +80,8 @@ import { HORIZON_OLD_PAGES, HORIZON_PAGES, horizonRoute, isTab, routeOfPage, sho
 import { firstWeekLine, fitnessLine, headLine, pastWeeks, sessionRows, thisWeek } from "../horizon/simple.ts";
 import { SimpleHorizon, SimpleSettings } from "./SimpleHorizon.tsx";
 import { yourPlanOf } from "../horizon/yourPlan.ts";
+import { aimTyped, newTestCard, pendingTest, planMoves, withoutReading, type Pending, type PlanMoves, type TestCard } from "../horizon/newTest.ts";
+import { testKeys } from "../horizon/programme.ts";
 import { heartOf, type Heart } from "../horizon/heartBand.ts";
 import { loadWeekly, saveWeekly } from "../accountApi.ts";
 import type { WeeklyState } from "../account.ts";
@@ -542,7 +544,13 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   // "Your plan": the app's own zone 2 band, from the person's own profile row, for the Intensity line. Asked only
   // for the person the plan is for, as the old plan card asks it (GuidePlan.tsx useHeart).
   const [heart, setHeart] = useState<Heart | null>(null);
-  const wantsHeart = simpleOn && selfPlan && seen === "plan";
+  // a fitness test taken since the horizon was set (horizon/newTest.ts): asked about on "This week", by its owner,
+  // while the plan runs and the horizon has somewhere to remember the answer
+  const testWaits = useMemo(() => {
+    if (!simpleOn || !owner || !!h.closed_at || !programme || !person) return null;
+    try { return pendingTest({ horizon: h, person, today, targets: openTargets(h.targets).map(toTarget), answered: programme.tests ?? [] }); } catch { return null; }
+  }, [simpleOn, owner, h, today, person]);
+  const wantsHeart = simpleOn && selfPlan && (seen === "plan" || (seen === "now" && !!testWaits));
   useEffect(() => {
     if (!wantsHeart) return;
     let live = true;
@@ -747,6 +755,52 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
     if (!simpleOn || !person || seen !== "plan" || simpleGuide) return null;
     try { return guidePlan({ horizon: h, targets, person, today, self: selfPlan }); } catch { return null; }
   }, [simpleOn, person, today, h, targets.length, seen, selfPlan, simpleGuide]);
+  // ── a fitness test taken since the horizon was set (horizon/newTest.ts; the founder, 27 November 2026) ──
+  // One card on "This week": what the test is, the tier it gives, what changes and what stays, and the answer.
+  const [testProblem, setTestProblem] = useState<string | null>(null);
+  /** What the plan asks differently from this week on with the test than without it: the plan worked out both ways. */
+  const testMoves = (p: Pending): PlanMoves | null => {
+    if (!simpleGuide || !stored || !person) return null;
+    try {
+      // the horizon's own method: the plan already reads the test, so "before" is the plan without that reading
+      if (p.kind === "same") return planMoves(guidePlan({ horizon: h, targets, person: withoutReading(person, p.reading), today, stored, self: selfPlan }), simpleGuide);
+      // another method: "after" is the plan as "Use this test" would leave it (the fitness target moved, this week kept)
+      const moved = targets.map((t) => (t.marker === "mets" ? { ...t, method: p.reading.family, start_value: p.reading.value, start_on: p.reading.on } : t));
+      return planMoves(simpleGuide, guidePlan({ horizon: h, targets: moved, person, today, stored: freezeOf(simpleGuide, stored, true), self: selfPlan }));
+    } catch { return null; }
+  };
+  const testCard: TestCard | null = useMemo(() => {
+    if (!testWaits || !person || !programme || keptOnly || seen !== "now") return null;
+    try {
+      return newTestCard({ horizon: h, person, today, targets, answered: programme.tests ?? [], harder: simpleGuide?.climb.find((w) => w.state === "now")?.harder ?? null,
+        heart: selfPlan ? heart : null, movesFor: testMoves });
+    } catch { return null; }
+  }, [testWaits, person, today, h, targets.length, keptOnly, seen, simpleGuide, heart, selfPlan]);
+  /**
+   * The person answers the card. "Use this test" moves the fitness target to that test (its method, where it starts,
+   * the day, and a new aim when one was typed); the weeks behind keep what they asked and this week keeps its lines
+   * (guidePlan.ts freezeOf), and the plan goes on from here. "Set my new aim" changes the aim alone. Every answer is
+   * remembered with the horizon, so the card does not come back for that test.
+   */
+  async function answerTest(card: TestCard, primary: boolean, aimText: string) {
+    const uid = await userId();
+    const t = targets.find((x) => x.marker === "mets");
+    if (!uid || !t?.id || !programme) { setTestProblem("Sign in again to continue."); return; }
+    const aim = primary && card.aim ? aimTyped(aimText) : null;
+    if (primary && card.kind === "same" && card.aim && aim == null) { setTestProblem("Type your new aim, in METs."); return; }
+    setBusy("test"); setTestProblem(null);
+    let err: string | null = null;
+    if (primary && card.use) {
+      if (stored && person) { const frozen = freezeOf(guidePlan({ horizon: h, targets, person, today, stored }), stored, true); if (frozen !== stored) err = await saveGuidePlan(deps.supabase, h.id, planRows, frozen, uid); }
+      err = err ?? await moveFitnessTarget(deps.supabase, t.id, { ...card.use, ...(aim != null ? { target_value: aim } : {}) });
+    } else if (primary && aim != null) {
+      err = await updateTarget(deps.supabase, t.id, aim);
+    }
+    err = err ?? await saveProgramme(deps.supabase, h.id, { ...programme, tests: testKeys([...(programme.tests ?? []), card.key]) });
+    setBusy("");
+    if (err) { setTestProblem(`That was not kept: ${err}`); return; }
+    await reload();
+  }
   // the light week is shown once the week is one the plan asks for: a Guide's plan kept midweek begins on the next
   // Monday, and until then the page says when it starts and shows no amounts
   const lightNow = planView && !planView.started ? null : light;
@@ -878,6 +932,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
         firstWeek={firstWeekLine(h, today)} fitness={person ? fitnessLine({ horizon: h, person, today, targets, asks: asksNow }) : ""}
         kept={keptOnly ? HORIZON_KEPT : null} nothing={NOTHING_ARRIVED} nav={navMany}
         plan={seen === "plan" && person ? yourPlanOf({ view: simpleGuide ?? planDraft, inUse: !!simpleGuide, running: !closed && !keptOnly, self: selfPlan, heart: selfPlan ? heart : null }) : null}
+        test={testCard ? { card: testCard, busy: busy === "test", problem: testProblem, onPrimary: (aim) => void answerTest(testCard, true, aim), onSecondary: () => void answerTest(testCard, false, "") } : null}
         onMore={HORIZON_OLD_PAGES && owner ? () => goPage("glance") : undefined}
         onSettings={owner ? () => goPage("settings") : undefined}
         onSetAnother={owner ? onSetAnother : undefined} />

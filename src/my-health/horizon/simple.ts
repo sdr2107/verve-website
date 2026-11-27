@@ -26,13 +26,13 @@
  */
 import { addDays, localDay } from "../derive/format.ts";
 import RULES from "../../data/plan-rules.ts";
-import { countedFigures, dayMonthLong, daysWords, dedupeSessions, horizonSpans, latestOf, round, spanOf, weekOf, weekWords, weekdayDayMonth, type HorizonLike, type Person, type PlanRow, type Span } from "./derive.ts";
+import { countedFigures, dayMonthLong, daysWords, dedupeSessions, horizonFitness, horizonSpans, round, spanOf, weekOf, weekWords, weekdayDayMonth, type HorizonLike, type Person, type PlanRow, type Span } from "./derive.ts";
 import { doneOf, testWeeksOf, type ClimbRow } from "./guidePlan.ts";
 import { finishedWeekOf, lightWeekOf } from "./lightWeek.ts";
 import { arrived, askedOf } from "./midweek.ts";
 
 /** A target as these pages read one: its marker, its number, and where the marker stood when the horizon was set. */
-export type TargetLite = { marker: string; target_value: number; start_value?: number | null };
+export type TargetLite = { marker: string; target_value: number; start_value?: number | null; /** The method a fitness number is kept to. */ method?: string | null };
 
 const num = (x: unknown): number | null => (x != null && Number.isFinite(Number(x)) ? Number(x) : null);
 const thousands = (n: number) => Math.round(n).toLocaleString("en-GB");
@@ -124,7 +124,8 @@ function row(key: RowKey, done: number | null, of: number | null, unit: string, 
 
 /** The fitness row: the latest figure, and in the bar's place where it started, its goal and the next test's week. */
 function fitnessRow(a: { horizon: HorizonLike; person: Person; today: string; targets: TargetLite[]; asks: boolean }): NowRow {
-  const now = latestOf("mets", a.person, a.today);
+  // the test the horizon keeps: the reading the plan's tier reads (derive.ts horizonFitness)
+  const now = horizonFitness(a.person, a.targets, a.today);
   const t = a.targets.find((x) => x.marker === "mets") ?? null;
   const goal = t ? num(t.target_value) : null, start = t ? num(t.start_value) : null;
   const next = t && a.asks ? nextTestWeek(a.horizon, a.today) : null;
@@ -242,7 +243,8 @@ export function firstWeekLine(h: HorizonLike, today: string): string | null {
  * next test's week. "Fitness: 8.4 METs at the start · 8.9 METs on 6 January · next test in week 12."
  */
 export function fitnessLine(a: { horizon: HorizonLike; person: Person; today: string; targets: TargetLite[]; asks: boolean }): string {
-  const now = latestOf("mets", a.person, a.today);
+  // the test the horizon keeps: the reading the plan's tier reads (derive.ts horizonFitness)
+  const now = horizonFitness(a.person, a.targets, a.today);
   const t = a.targets.find((x) => x.marker === "mets") ?? null;
   const start = t ? num(t.start_value) : null;
   const next = t && a.asks ? nextTestWeek(a.horizon, a.today) : null;

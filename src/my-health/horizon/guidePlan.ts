@@ -36,7 +36,7 @@ import { methodLabel, restingBPOf } from "../derive/markers.ts";
 import { EFFORT_WHERE, HARDER_FEEL, STEADY_FEEL, beatsWords, heartSource, type Heart } from "./heartBand.ts";
 import RULES from "../../data/plan-rules.ts";
 import {
-  MARKER_BY_KEY, dayMonthLong, daysWords, dedupeSessions, horizonMondays, horizonSpans, lastCompleteMonday, latestOf, numberWord, pausedRunOn, pausesOf, round, typicalWeek, weekFigures,
+  MARKER_BY_KEY, dayMonthLong, daysWords, dedupeSessions, horizonFitness, horizonMondays, horizonSpans, lastCompleteMonday, latestOf, numberWord, pausedRunOn, pausesOf, round, typicalWeek, weekFigures,
   type HorizonLike, type Person, type PlanRow, type Target,
 } from "./derive.ts";
 
@@ -129,20 +129,26 @@ export function baseOf(person: Person, today: string): GuideBase {
 
 // ── what the plan answers to: the person's targets, read live ──
 
+/** A target as the plan reads it: its number, and for fitness the method the horizon keeps it to. */
+export type PlanTarget = Pick<Target, "marker" | "target_value"> & { method?: string | null };
 export type Aims = {
   zone2: number | null; strength: number | null; steps: number | null;
   /** The dose the week should not fall under: the person's dose target, else the app's weekly goal, else the guideline's low figure. */
   doseFloor: number; doseFloorFrom: "target" | "goal" | "guideline";
   mets: number | null; metsTarget: number | null;
 };
-export function aimsOf(targets: Pick<Target, "marker" | "target_value">[], person: Person, today: string): Aims {
+/**
+ * The plan's fitness figure is the test the horizon keeps (derive.ts horizonFitness): the method on its fitness target
+ * when there is one, else the newest reading of any kind. Everything that hangs on the tier follows from it.
+ */
+export function aimsOf(targets: PlanTarget[], person: Person, today: string): Aims {
   const of = (k: string) => { const t = targets.find((x) => x.marker === k); return t && Number.isFinite(Number(t.target_value)) ? Number(t.target_value) : null; };
   const dose = of("dose");
   const goal = weekFigures(person, lastCompleteMonday(today)).goal;
   return {
     zone2: of("zone2_week"), strength: of("strength_week"), steps: of("steps"),
     doseFloor: dose ?? (goal && goal > 0 ? goal : RULES.dose.lowMetMin), doseFloorFrom: dose != null ? "target" : goal && goal > 0 ? "goal" : "guideline",
-    mets: latestOf("mets", person, today)?.value ?? null, metsTarget: of("mets"),
+    mets: horizonFitness(person, targets, today)?.value ?? null, metsTarget: of("mets"),
   };
 }
 
@@ -448,7 +454,7 @@ export type GuidePlanView = {
 };
 
 export type GuidePlanArgs = {
-  horizon: HorizonLike; targets: Pick<Target, "marker" | "target_value">[]; person: Person; today: string;
+  horizon: HorizonLike; targets: PlanTarget[]; person: Person; today: string;
   /** The plan in use; absent for a draft, which is worked out from today. */
   stored?: GuideStored | null;
   /** A draft's mode, from the three answers; ignored when a plan is in use. */
@@ -621,7 +627,9 @@ export function guidePlan(args: GuidePlanArgs): GuidePlanView {
 
   // where the fitness figure puts the person (board 03): the figure and its test, the tier, their own aim, the three tiers
   const T = RULES.tiers;
-  const fit = latestOf("mets", person, args.today);
+  const fit = horizonFitness(person, args.targets, args.today);
+  const keptMethod = !!args.targets.find((t) => t.marker === "mets")?.method;
+  const readFrom = keptMethod ? "The tier is read from the latest test by the method this horizon keeps." : "The tier is read from the latest fitness test on file.";
   const nextTest = testWeeks.find((w) => w >= (started ? wk + 1 : 1)) ?? null;
   const place: GuidePlanView["place"] = {
     fitness: fit ? { big: `${one(fit.value)} METs`, small: `${fit.writer ? `${cap(methodLabel(fit.writer))} · ` : ""}${dayMonthLong(fit.on)}` } : { big: "No test on file", small: "A fitness test places you in a tier." },
@@ -638,10 +646,10 @@ export function guidePlan(args: GuidePlanArgs): GuidePlanView {
     // What a test does, as the arithmetic above does it: the tier is read from the latest reading on file. In the
     // second tier the harder minutes are named by their share of the reserve and are no longer eased (climbOf); the
     // second and third tiers ask the same minutes.
-    note: aims.mets == null ? "The tier is read from the latest fitness test on file. With none, the plan starts as tier 1."
-      : tier === 1 ? `The tier is read from the latest fitness test on file. At ${T.secondFromMets.toFixed(1)} METs or more it is tier 2: the harder minutes are then at ${T.secondHrrLowPct} to ${T.secondHrrHighPct}% of heart-rate reserve${climb.eases ? ", and the plan stops easing them" : ""}.`
-      : tier === 2 ? `The tier is read from the latest fitness test on file. At ${T.thirdFromMets.toFixed(1)} METs or more it is tier 3. The plan asks the same minutes in both.`
-      : "The tier is read from the latest fitness test on file. This is the highest tier.",
+    note: aims.mets == null ? `${readFrom} With none, the plan starts as tier 1.`
+      : tier === 1 ? `${readFrom} At ${T.secondFromMets.toFixed(1)} METs or more it is tier 2: the harder minutes are then at ${T.secondHrrLowPct} to ${T.secondHrrHighPct}% of heart-rate reserve${climb.eases ? ", and the plan stops easing them" : ""}.`
+      : tier === 2 ? `${readFrom} At ${T.thirdFromMets.toFixed(1)} METs or more it is tier 3. The plan asks the same minutes in both.`
+      : `${readFrom} This is the highest tier.`,
   };
 
   // the same plan as FITT-VP: frequency, intensity, time, type, volume, progression (the founder, 26 November 2026:

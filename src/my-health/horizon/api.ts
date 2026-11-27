@@ -422,6 +422,15 @@ export async function setTargetHold(sb: SupabaseClient, horizonId: string, marke
   const { error } = await sb.from("horizon_targets").update(patch).eq("horizon_id", horizonId).eq("marker", marker);
   return error ? error.message : null;
 }
+/**
+ * The fitness target moves to another test (horizon/newTest.ts, "Use this test"): the method it is kept to, where it
+ * starts and the day, and the aim when a new one was set, in one write to the owner's own row. The same table and the
+ * same right as setTargetHold and updateTarget above; nothing else on the row changes.
+ */
+export async function moveFitnessTarget(sb: SupabaseClient, targetId: string, patch: { method: string; start_value: number; start_on: string; target_value?: number }): Promise<string | null> {
+  const { error } = await sb.from("horizon_targets").update(patch).eq("id", targetId).eq("marker", "mets");
+  return error ? error.message : null;
+}
 /** The weeks a horizon has kept notes for: the person's answer, the call and its three lines. Empty when the table is not there. */
 export async function listWeekNotes(sb: SupabaseClient, horizonId: string): Promise<WeekNote[]> {
   const { data, error } = await sb.from("horizon_weeks").select("horizon_id, week_start, way, away, call_at, call_kept, lines, lines_by, updated_at").eq("horizon_id", horizonId).order("week_start", { ascending: true });
