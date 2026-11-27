@@ -101,7 +101,8 @@ test("the set-up opens short, and the set-up with every choice is one link away,
   const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
   const view = read("../src/my-health/views/Horizon.tsx"), quick = read("../src/my-health/views/QuickSetup.tsx");
   // short first for an account that may set one; never in place of the set-up that follows a horizon read to its date
-  assert.match(view, /!ownTargets && !fullSetup && setupCard <= 1 && \(open\.length > 0 \|\| !done\[0\]\)\n\s+\? <QuickSetup /);
+  // (a founding member always meets the short one: tests/member.test.mjs)
+  assert.match(view, /\(isFounding\.value \|\| \(!ownTargets && !fullSetup && setupCard <= 1 && \(open\.length > 0 \|\| !done\[0\]\)\)\)\n\s+\? <QuickSetup /);
   assert.match(view, /onMore=\{\(\) => setFullSetup\(true\)\}/);
   assert.match(view, /: showSetup && tester && owner && !ownTargets && \(open\.length > 0 \|\| !done\[0\] \|\| !!parseProgramme\(done\[0\]\.programme\)\)\n\s+\? <ProgrammeSetup /);
   // an existing programme, so the function needs no change; the three questions stay; and it is kept by the full set-up's own calls

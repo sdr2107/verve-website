@@ -37,7 +37,7 @@ import { actsByDay } from "../derive/activity.ts";
 // figuresAsOf, not asOfLine: View has a helper of that name for a check-in's own line, and a second one in the
 // same function is read before it exists (the page stopped drawing, 25 to 26 November 2026)
 import { asOfLine as figuresAsOf, lastAppSync } from "../derive/asOf.ts";
-import { horizons as horizonsSignal, guideDraft, setGuideDraft, isTester, isTeam, testerState, doc as docSignal, accountTester, accountTeam, horizonDoor, seenAs } from "../state.ts";
+import { horizons as horizonsSignal, guideDraft, setGuideDraft, isTester, isTeam, isFounding, testerState, doc as docSignal, accountTester, accountTeam, horizonDoor, seenAs } from "../state.ts";
 import { HORIZON_PUBLIC } from "../../data/story.ts";
 import { HORIZON_KEPT, maySetHorizon } from "../horizon/access.ts";
 import { continuityLine } from "../horizon/founding.ts";
@@ -56,7 +56,7 @@ import {
 import { movedWords, pauseState, pauseWhyWords, type PauseChoice, type PauseKey, type PauseState, type PauseWhy } from "../horizon/pause.ts";
 import {
   listHorizons, startHorizon, requestCheckin, grantConsent, savePlan, updateHorizon, deleteHorizon, pauseHorizon, addTarget, removeTarget, updateTarget, saveGuidePlan, ERROR_WORDS,
-  fetchAccess, rememberedAccess, guidePlanReady, testerAnswer, teamAnswer, loadDayName, watchedReady, listWatched, saveProgramme,
+  fetchAccess, rememberedAccess, guidePlanReady, testerAnswer, teamAnswer, loadDayName, watchedReady, listWatched, saveProgramme, loadHeartProfile,
   type HorizonFull, type PlanAuthor, type StartTarget, type ApiError, type HorizonAccess,
 } from "../horizon/api.ts";
 import { midweekOf, planRowsNow } from "../horizon/midweek.ts";
@@ -76,9 +76,13 @@ import { WhereLine } from "./Doors.tsx";
 import { doorsFor, storeOf, type Who } from "../horizon/doors.ts";
 import type { WatchedRow } from "../horizon/watch.ts";
 import { cardOfRoute, routeOfCard } from "../horizon/setupCards.ts";
-import { HORIZON_PAGES, horizonRoute, isTab, routeOfPage, type HorizonPage } from "../horizon/pages.ts";
+import { HORIZON_OLD_PAGES, HORIZON_PAGES, horizonRoute, isTab, routeOfPage, shownPage, type HorizonPage } from "../horizon/pages.ts";
 import { firstWeekLine, fitnessLine, headLine, pastWeeks, sessionRows, thisWeek } from "../horizon/simple.ts";
-import { SimpleHorizon } from "./SimpleHorizon.tsx";
+import { SimpleHorizon, SimpleSettings } from "./SimpleHorizon.tsx";
+import { yourPlanOf } from "../horizon/yourPlan.ts";
+import { heartOf, type Heart } from "../horizon/heartBand.ts";
+import { loadWeekly, saveWeekly } from "../accountApi.ts";
+import type { WeeklyState } from "../account.ts";
 import { QuickSetup } from "./QuickSetup.tsx";
 import { loadSetup } from "../horizon/setupCards.ts";
 
@@ -450,8 +454,9 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
       {loadError && <Quiet>{loadError}</Quiet>}
       {consent && <ConsentBox onAgree={() => void agreeConsent()} busy={busy === "consent"} />}
       {lastWeek && <p class="m-0 rounded-[10px] border border-border-strong bg-alt px-4 py-3 text-[14px] leading-relaxed text-text-2" data-continuity>{lastWeek}</p>}
-      {showSetup && tester && owner && !ownTargets && !fullSetup && setupCard <= 1 && (open.length > 0 || !done[0])
-        ? <QuickSetup sb={deps.supabase} person={person} today={today} personId={personId} guideOn={guideOn} hasOthers={open.length > 0 || done.length > 0} userId={userId} onNote={setNotice}
+      {/* a founding member's set-up is always the short one: the seven-card set-up and "My own targets" are the team's (27 November 2026) */}
+      {showSetup && tester && owner && (isFounding.value || (!ownTargets && !fullSetup && setupCard <= 1 && (open.length > 0 || !done[0])))
+        ? <QuickSetup sb={deps.supabase} person={person} today={today} personId={personId} guideOn={guideOn} hasOthers={open.length > 0 || done.length > 0} userId={userId} onNote={setNotice} founding={isFounding.value}
             onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); try { window.scrollTo({ top: 0 }); } catch { /* the page stays where it is */ } }}
             onError={onApiError} onCancel={() => { route.value = ""; history.replaceState(null, "", "#horizon"); }} onMore={() => setFullSetup(true)} />
         : showSetup && tester && owner && !ownTargets && (open.length > 0 || !done[0] || !!parseProgramme(done[0].programme))
@@ -485,7 +490,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   access: HorizonAccess | null; guideOn: boolean;
   /** A test account for Horizon as a programme (api.ts programmeTester). */ tester: boolean;
   /** Watched markers can be kept for this project (api.ts watchedReady). */ watchOn: boolean;
-  /** The page in view, and the way to another: one of the two tabs (27 November 2026), or a page behind "How the numbers are set" (board 22). */ page: HorizonPage; goPage: (p: HorizonPage) => void;
+  /** The page in view, and the way to another: one of the three tabs or Settings (27 November 2026), or one of the hidden pages of board 22 (pages.ts HORIZON_OLD_PAGES). */ page: HorizonPage; goPage: (p: HorizonPage) => void;
   /** The person's horizons as chips, when they have more than one; and the way to set another, where one may be set. For the two tabs. */ navMany?: any; onSetAnother?: () => void;
 }) {
   const [editingPlan, setEditingPlan] = useState(false);
@@ -528,6 +533,39 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   // a pause (board 13): offered to test accounts until the lawyers have answered; the function checks the same list
   const pause = useMemo(() => (owner && tester && !h.closed_at ? pauseState(h, today) : null), [h, today, owner, tester]);
   const [pauseAsk, setPauseAsk] = useState<PauseKey | null>(null);
+  // The three tabs (27 November 2026) are what anyone is shown while the pages of 18 November are hidden; when those
+  // are switched back on (pages.ts HORIZON_OLD_PAGES) the tabs are the owner's and a shared page is the long one again.
+  const simpleOn = owner || !HORIZON_OLD_PAGES;
+  const seen = shownPage(page, owner);
+  /** The reader is the person the plan is for, not only the horizon's owner. */
+  const selfPlan = owner && !!deps.isSelf?.();
+  // "Your plan": the app's own zone 2 band, from the person's own profile row, for the Intensity line. Asked only
+  // for the person the plan is for, as the old plan card asks it (GuidePlan.tsx useHeart).
+  const [heart, setHeart] = useState<Heart | null>(null);
+  const wantsHeart = simpleOn && selfPlan && seen === "plan";
+  useEffect(() => {
+    if (!wantsHeart) return;
+    let live = true;
+    void userId().then((uid) => (uid ? loadHeartProfile(deps.supabase, uid) : null)).then((row) => { if (live) setHeart(heartOf(row, today)); }).catch(() => { /* the line goes by effort */ });
+    return () => { live = false; };
+  }, [wantsHeart, h.id, today]);
+  // Settings: the account's own Monday email ("Your week"), read when the page is opened
+  const [weekly, setWeekly] = useState<WeeklyState | null>(null);
+  const [weeklyBusy, setWeeklyBusy] = useState(false);
+  const wantsWeekly = simpleOn && seen === "settings";
+  useEffect(() => {
+    if (!wantsWeekly) return;
+    let live = true;
+    void userId().then((uid) => (uid ? loadWeekly(deps.supabase, uid) : null)).then((w) => { if (live) setWeekly(w); }).catch(() => { /* the line stays as it is */ });
+    return () => { live = false; };
+  }, [wantsWeekly]);
+  async function setWeeklyEmail(on: boolean) {
+    const uid = await userId();
+    if (!uid || !weekly || weekly.state === "unavailable") return;
+    setWeeklyBusy(true);
+    setWeekly(await saveWeekly(deps.supabase, uid, on, browserZone()));
+    setWeeklyBusy(false);
+  }
   const togo = daysToGo(h, today);
   const targets = openTargets(h.targets).map(toTarget);
   const paces = useMemo(() => (person ? pacesOf(targets, h, person, today) : []), [person, h, today]);
@@ -698,12 +736,17 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   // ── the horizon in small pages (board 22) ──
   // the Guide's plan as it stands today, for the glance: the week so far, and whether there are six letters to show
   const planView = useMemo(() => { try { return paged && stored && person ? guidePlan({ horizon: h, targets, person, today, stored, self: owner }) : null; } catch { return null; } }, [paged, stored, person, today, h, targets.length]);
-  // the same plan for the two tabs (27 November 2026): this week's lines, and the line it kept for each week behind.
-  // Asked as the light week asks it (midweek.ts planRowsNow): whenever the plan on file is the Guide's.
+  // the same plan for the three tabs (27 November 2026): this week's lines, the line it kept for each week behind, and
+  // "Your plan". Asked as the light week asks it (midweek.ts planRowsNow): whenever the plan on file is the Guide's.
   const simpleGuide = useMemo(() => {
-    if (!owner || !person || !isTab(page) || h.plan?.author !== "guide" || !isGuideStored(h.plan?.guide)) return null;
-    try { return guidePlan({ horizon: h, targets, person, today, stored: h.plan.guide as GuideStored, self: true }); } catch { return null; }
-  }, [owner, person, today, h, targets.length, isTab(page)]);
+    if (!simpleOn || !person || !isTab(seen) || h.plan?.author !== "guide" || !isGuideStored(h.plan?.guide)) return null;
+    try { return guidePlan({ horizon: h, targets, person, today, stored: h.plan.guide as GuideStored, self: selfPlan, heart: selfPlan ? heart : null }); } catch { return null; }
+  }, [simpleOn, person, today, h, targets.length, isTab(seen), selfPlan, heart]);
+  // a horizon with no Guide's plan in use still has three cards to show on "Your plan": a draft worked out today, read for its cards alone
+  const planDraft = useMemo(() => {
+    if (!simpleOn || !person || seen !== "plan" || simpleGuide) return null;
+    try { return guidePlan({ horizon: h, targets, person, today, self: selfPlan }); } catch { return null; }
+  }, [simpleOn, person, today, h, targets.length, seen, selfPlan, simpleGuide]);
   // the light week is shown once the week is one the plan asks for: a Guide's plan kept midweek begins on the next
   // Monday, and until then the page says when it starts and shows no amounts
   const lightNow = planView && !planView.started ? null : light;
@@ -810,22 +853,34 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   })();
 
   // ── the horizon, made simple (the founder, 27 November 2026: "Too many screens - too complex to follow") ──
-  // Its owner opens on two tabs and nothing else: this week, and past weeks (views/SimpleHorizon.tsx, horizon/simple.ts).
-  // Everything below this is what the page showed until then, kept one link away, each page with a way back.
-  if (owner && isTab(page)) {
+  // It opens on three tabs and nothing else: this week, past weeks, your plan (views/SimpleHorizon.tsx, horizon/simple.ts,
+  // horizon/yourPlan.ts); Settings is three lines, one link away. Everything below this is what the page showed until
+  // then. It is kept, and nothing leads to it while pages.ts HORIZON_OLD_PAGES is off.
+  if (simpleOn && seen === "settings") {
+    return (
+      <SimpleSettings title={h.title} head={`${headLine(h, today)}${closed ? " · stopped" : ""}`} onBack={() => goPage("now")}
+        weekly={weekly} weeklyBusy={weeklyBusy} onWeekly={(on) => void setWeeklyEmail(on)}
+        pause={pause ? { open: pause.left > 0 && pause.open, note: pause.left > 0 && !pause.open ? pauseWhyWords(pause.choices.find((c) => c.key === "this")?.why) || pause.words : pause.words } : null}
+        pauseAsk={pause && pauseAsk ? <PauseAsk h={h} state={pause} pick={pauseAsk} setPick={setPauseAsk} busy={busy === "pause"} onPause={(c) => void setAside(c)} onCancel={() => setPauseAsk(null)} /> : null}
+        onPause={() => { const c = pause ? pause.choices.find((x) => x.key === "this" && x.ok) ?? pause.choices.find((x) => x.ok) : null; if (c) setPauseAsk(c.key); }}
+        onDelete={() => void remove()} deleting={busy === "delete"} />
+    );
+  }
+  if (simpleOn && isTab(seen)) {
     // what a week is asked: nothing on a horizon that is kept or has stopped, nor before a Guide's plan has begun
     const asksNow = !closed && !keptOnly && (!simpleGuide || simpleGuide.started);
     const nowWeek = person ? thisWeek({ horizon: h, person, today, rows: simpleGuide ? simpleGuide.rows : planRows, targets, asks: asksNow, startsOn: simpleGuide && !simpleGuide.started ? simpleGuide.firstMonday : null }) : null;
     const upto = nowWeek ? addDays(today < nowWeek.to ? today : nowWeek.to, 1) : today;
     return (
-      <SimpleHorizon title={h.title} head={`${headLine(h, today)}${closed ? " · stopped" : ""}`} tab={page} goTab={(t) => goPage(t)}
+      <SimpleHorizon title={h.title} head={`${headLine(h, today)}${closed ? " · stopped" : ""}`} tab={seen} goTab={(t) => goPage(t)}
         now={nowWeek} sessions={person && nowWeek ? sessionRows(person, nowWeek.from, upto) : []}
         past={person ? pastWeeks({ horizon: h, person, today, rows: planRows, targets, climb: simpleGuide ? simpleGuide.climb : null, asks: !keptOnly }) : []}
         firstWeek={firstWeekLine(h, today)} fitness={person ? fitnessLine({ horizon: h, person, today, targets, asks: asksNow }) : ""}
         kept={keptOnly ? HORIZON_KEPT : null} nothing={NOTHING_ARRIVED} nav={navMany}
-        onMore={() => goPage("glance")}
-        onSettings={() => { goPage("notes"); if (!paged) setTimeout(() => { try { document.getElementById("horizon-checkin")?.scrollIntoView({ block: "start" }); } catch { /* the page stays where it is */ } }, 0); }}
-        onSetAnother={onSetAnother} />
+        plan={seen === "plan" && person ? yourPlanOf({ view: simpleGuide ?? planDraft, inUse: !!simpleGuide, running: !closed && !keptOnly, self: selfPlan, heart: selfPlan ? heart : null }) : null}
+        onMore={HORIZON_OLD_PAGES && owner ? () => goPage("glance") : undefined}
+        onSettings={owner ? () => goPage("settings") : undefined}
+        onSetAnother={owner ? onSetAnother : undefined} />
     );
   }
   const backToNow = owner ? <div><button type="button" onClick={() => goPage("now")} class="min-h-9 text-[13px] font-semibold text-accent-text hover:text-text" data-simple-back>← This week</button></div> : null;

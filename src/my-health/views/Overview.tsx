@@ -27,7 +27,7 @@
  * after load; a section arriving slides once, 160 ms.
  */
 import { render } from "preact";
-import { derived, person, section, setSection, openMarkerKey, openRange, openYear, focusTile, fitUnit, setFitUnit, latestRead, horizons, openOverTime, actions, CARD_KEYS, type CardKey } from "../state.ts";
+import { derived, person, section, setSection, openMarkerKey, openRange, openYear, focusTile, fitUnit, setFitUnit, latestRead, horizons, openOverTime, actions, guideShown, CARD_KEYS, type CardKey } from "../state.ts";
 import { horizonLinesByCard, toTarget } from "../horizon/derive.ts";
 import { arrivalsOf, dropUnsent, leftOff, ROW_READING } from "../derive/arrivals.ts";
 import { LANE_FOR } from "../derive/timeline.ts";
@@ -299,6 +299,8 @@ export function GlanceLine() {
 
 /** The Guide's one line on the Overview: fixed height, filled from the latest read; a link to its tab. */
 export function GuidePointer() {
+  // not drawn for a founding member, who has the Guide in the app (state.ts guideShown)
+  if (!guideShown.value) return null;
   const r = latestRead.value;
   const go = () => actions.goTab("guide");
   return (
