@@ -5,8 +5,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
-  VIEW_AS, VIEW_AS_HEAD, VIEW_AS_KEY, VIEW_AS_NOTE, PREVIEW_BACK,
-  parseViewAs, previewLine, readViewAs, sampleUntil, seenAccess, seenFlags, seenPlan, viewAsFor, writeViewAs,
+  VIEW_AS, VIEW_AS_HEAD, VIEW_AS_KEY, VIEW_AS_NOTE, PREVIEW_BACK, DEFAULT_VIEW, MEMBER_VIEW, TEAM_VIEW, SEE_TEAM, SEE_MEMBER,
+  parseViewAs, previewLine, readViewAs, sampleUntil, seenAccess, seenFlags, seenPlan, viewAsFor, viewStrip, writeViewAs,
 } from "../src/my-health/horizon/preview.ts";
 import { continuityLine } from "../src/my-health/horizon/founding.ts";
 import { hasHorizon, maySetHorizon } from "../src/my-health/horizon/access.ts";
@@ -53,7 +53,7 @@ test("Founding member: the programme, nothing that is the team's, and a last day
   assert.equal(s.lastWeek, null, "not in the last week: no sentence");
   assert.match(planRows(s.plan, NOW).renews.note, /Given by Verve to its founding members, until 21 January 2027\./);
   assert.equal(s.access.pro, true);
-  assert.equal(previewLine("founding"), "Previewing as a founding member");
+  assert.equal(previewLine("founding"), "You are seeing what a member sees");
 });
 
 test("Founding member, last week: the same person inside the last seven days, reading the one sentence", () => {
@@ -96,19 +96,40 @@ test("an account that is not the team's is never affected, whatever its browser 
   }
   // the team's own account is the only one a stored choice reaches
   assert.equal(viewAsFor("after", true), "after");
-  assert.equal(viewAsFor("nonsense", true), "team");
+  // 27 November 2026: with nothing kept, or nothing it knows, the team's account is shown what a member sees
+  assert.equal(DEFAULT_VIEW, "founding");
+  for (const nothing of ["nonsense", "", null, undefined, 1, {}]) assert.equal(viewAsFor(nothing, true), "founding", String(nothing));
+  assert.equal(viewAsFor("team", true), "team", "the team's view is a choice that is honoured");
 });
 
-test("the choice is kept in this browser only, and a browser that keeps nothing shows the team's view", () => {
+test("the choice is kept in this browser only, and a browser that keeps nothing shows what a member sees", () => {
   const s = store();
-  assert.equal(readViewAs(s), "team");
+  assert.equal(readViewAs(s), "founding", "nothing kept: the member's view");
   writeViewAs("founding_last_week", s);
   assert.equal(s.getItem(VIEW_AS_KEY), "founding_last_week"); assert.equal(readViewAs(s), "founding_last_week");
+  // the team's view is a choice like the others now: it is written, and read back
   writeViewAs("team", s);
-  assert.equal(s.size(), 0, "the team's view is kept as nothing at all");
-  assert.equal(readViewAs(null), "team"); writeViewAs("after", null);
-  assert.equal(readViewAs({ getItem: () => { throw new Error("blocked"); }, setItem: () => {}, removeItem: () => {} }), "team", "storage that throws is not an error");
-  assert.equal(readViewAs(store({ [VIEW_AS_KEY]: "owner" })), "team"); assert.equal(parseViewAs("after"), "after");
+  assert.equal(s.getItem(VIEW_AS_KEY), "team"); assert.equal(readViewAs(s), "team");
+  writeViewAs("founding", s);
+  assert.equal(s.getItem(VIEW_AS_KEY), "founding"); assert.equal(readViewAs(s), "founding");
+  assert.equal(readViewAs(null), "founding"); writeViewAs("after", null);
+  assert.equal(readViewAs({ getItem: () => { throw new Error("blocked"); }, setItem: () => {}, removeItem: () => {} }), "founding", "storage that throws is not an error");
+  assert.equal(readViewAs(store({ [VIEW_AS_KEY]: "owner" })), "founding"); assert.equal(parseViewAs("after"), "after"); assert.equal(parseViewAs("team"), "team");
+});
+
+test("the strip: only for the team's account, it says which view is on and leads to the other in one press", () => {
+  // a real member, an ordinary account: no strip, whatever view were forced
+  for (const view of ["team", "founding", "founding_last_week", "after"]) assert.equal(viewStrip(view, false), null, view);
+  assert.deepEqual(viewStrip("founding", true), { text: "You are seeing what a member sees", action: "See the team's view", to: "team" });
+  assert.deepEqual(viewStrip("team", true), { text: "You are seeing the team's view", action: "See what a member sees", to: "founding" });
+  // the two rarer previews keep their own line and lead to the team's view, where their control is
+  assert.deepEqual(viewStrip("founding_last_week", true), { text: "Previewing as a founding member in the last week", action: PREVIEW_BACK, to: "team" });
+  assert.deepEqual(viewStrip("after", true), { text: "Previewing as a member after the 12 weeks", action: PREVIEW_BACK, to: "team" });
+  assert.deepEqual([MEMBER_VIEW, TEAM_VIEW, SEE_TEAM, SEE_MEMBER], ["You are seeing what a member sees", "You are seeing the team's view", "See the team's view", "See what a member sees"]);
+  // pressing it twice comes back to where it started
+  assert.equal(viewStrip(viewStrip("founding", true).to, true).to, "founding");
+  // the default view draws the page as a founding member's: the programme on, nothing that is the team's
+  assert.deepEqual(seenFlags(TEAM, viewAsFor(null, true)), { tester: true, team: false });
 });
 
 test("a preview has no access the server did not give, and the functions it leans on are the real ones", () => {
@@ -130,7 +151,8 @@ test("the page: the signals are the server's answer or the previewed person's, a
   // the control lives on the team's own page, and the way back on every tab
   assert.match(team, /function SeeAs\(\)/); assert.match(team, /VIEW_AS\.map\(/); assert.match(team, /<Quiet>\{VIEW_AS_NOTE\}<\/Quiet>/);
   assert.match(page, /<p id="previewline" class="[^"]*hidden[^"]*" role="status">/);
-  assert.match(page, /\$\("previewback"\)\.addEventListener\("click", \(\) => setViewAs\("team"\)\);/);
+  assert.match(page, /\$\("previewback"\)\.addEventListener\("click", \(\) => setViewAs\(stripTo\)\);/);
+  assert.match(page, /const view = seenAs\.value, strip = viewStrip\(view, accountTeam\.value\), el = \$\("previewline"\);/, "the strip is asked with the server's own answer, never the previewed one");
   const at = page.indexOf('id="previewline"');
   assert.ok(at > page.indexOf("THE PAGE: one person") && at < page.indexOf('id="pagehead"'), "above every tab's page, not inside one tab");
   // the plan line, the last week's sentence and the Horizon pane read the previewed person through the same three functions

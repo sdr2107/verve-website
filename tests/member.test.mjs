@@ -55,11 +55,11 @@ test("the set-up draws the lock, the one line, and no \"More choices\" for a fou
   const quick = read("../src/my-health/views/QuickSetup.tsx"), view = read("../src/my-health/views/Horizon.tsx");
   assert.match(quick, /lengthLocked\(m, founding\)\n\s+\? <button type="button" role="radio" aria-checked=\{false\} aria-disabled="true" disabled key=\{m\} data-quick-length=\{m\} data-quick-locked="yes"/);
   assert.match(quick, /\{founding \? <p [^>]*data-quick="locked-line">\{LENGTH_LOCKED_LINE\}<\/p> : null\}/);
-  assert.match(quick, /\{founding \? null : <button type="button" onClick=\{onMore\} [^>]*data-quick-link="more">More choices<\/button>\}/);
+  assert.match(quick, /\{founding \|\| !SETUP_MORE_CHOICES \? null : <button type="button" onClick=\{onMore\} [^>]*data-quick-link="more">More choices<\/button>\}/);
   // whatever was pressed, the length kept is one the account may have
   assert.match(quick, /const length: Length = lengthLocked\(picked, founding\) \? 3 : picked;/);
   // the page hands in who it is drawn for, and a founding member never meets the seven-card set-up
-  assert.match(view, /showSetup && tester && owner && \(isFounding\.value \|\| \(!ownTargets && !fullSetup && setupCard <= 1 && \(open\.length > 0 \|\| !done\[0\]\)\)\)\n\s+\? <QuickSetup [^\n]*founding=\{isFounding\.value\}/);
+  assert.match(view, /showSetup && tester && owner && \(isFounding\.value \|\| !SETUP_MORE_CHOICES \|\| \(!ownTargets && !fullSetup && setupCard <= 1 && \(open\.length > 0 \|\| !done\[0\]\)\)\)\n\s+\? <QuickSetup [^\n]*founding=\{isFounding\.value\}/);
 });
 
 test("the function's refusal of a longer horizon has plain words on the page", () => {
@@ -68,3 +68,16 @@ test("the function's refusal of a longer horizon has plain words on the page", (
   // and the older refusal still reads as itself
   assert.equal(mapError(403, { error: "horizon_members_only" }), "members_only");
 });
+
+test("\"More choices\" is hidden for everyone, the team too, behind one switch; nothing of the old set-up is deleted", async () => {
+  const { SETUP_MORE_CHOICES } = await import("../src/my-health/horizon/member.ts");
+  assert.equal(SETUP_MORE_CHOICES, false);
+  const quick = read("../src/my-health/views/QuickSetup.tsx"), view = read("../src/my-health/views/Horizon.tsx"), programme = read("../src/my-health/views/Programme.tsx");
+  // with no link and no other horizon to cancel back to, the row of small links is not drawn at all
+  assert.match(quick, /\{\(founding \|\| !SETUP_MORE_CHOICES\) && !hasOthers \? null : \(/);
+  // the seven-card set-up, "My own targets" and the prefilled next horizon are all still in the code
+  assert.match(programme, /export function ProgrammeSetup\(/);
+  assert.match(view, /\? <ProgrammeSetup /); assert.match(view, /\? <Setup deps=\{deps\}/);
+  assert.match(view, /: <Setup deps=\{deps\} person=\{person\} today=\{today\} personId=\{personId\} hasOthers=\{false\} nav=\{null\} prefill=\{prefill\}/);
+});
+

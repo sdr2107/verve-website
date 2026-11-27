@@ -179,7 +179,8 @@ function NewTestCard({ t }: { t: NewTest }) {
   );
 }
 
-export function SimpleHorizon({ title, head, tab, goTab, now, sessions, past, firstWeek, fitness, kept, nothing, nav, plan, test, onMore, onSettings, onSetAnother }: {
+export function SimpleHorizon({ title, head, tab, goTab, now, sessions, past, firstWeek, fitness, kept, nothing, nav, plan, test, onMore, onSettings, onSetAnother, waiting = false }: {
+  /** The page is still on the copy this browser kept today (horizon/kept.ts) and the server has not answered yet: a hook for whoever checks the page, nothing drawn. */ waiting?: boolean;
   title: string; /** "Week 3 of 12 · to 22 February" */ head: string;
   tab: HorizonTab; goTab: (t: HorizonTab) => void;
   now: NowWeek | null; sessions: SessionRow[];
@@ -194,7 +195,7 @@ export function SimpleHorizon({ title, head, tab, goTab, now, sessions, past, fi
 }) {
   const [openWeek, setOpenWeek] = useState<number | null>(null);
   return (
-    <section class="flex flex-col gap-5" data-simple="horizon" data-tab={tab}>
+    <section class="flex flex-col gap-5" data-simple="horizon" data-tab={tab} data-waiting={waiting ? "yes" : "no"}>
       <header class="flex flex-col gap-3">
         <div class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
           <h1 class="m-0 text-[24px] font-semibold leading-tight tracking-[-0.01em] text-text">{title}</h1>
@@ -263,13 +264,14 @@ export function SimpleHorizon({ title, head, tab, goTab, now, sessions, past, fi
  * accountApi.ts). A pause and delete are the horizon's existing controls: pressing "Pause" opens the existing ask,
  * handed in as `pauseAsk`. The horizon's older switches are not shown here; what they are set to is left as it is.
  */
-export function SimpleSettings({ title, head, onBack, weekly, weeklyBusy, onWeekly, pause, pauseAsk, onPause, onDelete, deleting }: {
+export function SimpleSettings({ title, head, onBack, weekly, weeklyBusy, onWeekly, pause, pauseAsk, onPause, onDelete, deleting, waiting = false }: {
   title: string; head: string; onBack: () => void;
   /** The Monday email's switch; null while it is being read. */ weekly: WeeklyState | null; weeklyBusy: boolean; onWeekly: (on: boolean) => void;
   /** A pause, where the horizon can still be paused: whether one can be asked for today, and one small line (what is left, or why not). Null where no pause is offered. */
   pause: { open: boolean; note: string } | null;
   /** The existing ask, drawn under the line once "Pause" is pressed. */ pauseAsk: ComponentChildren; onPause: () => void;
   onDelete: () => void; deleting: boolean;
+  /** The page is still on the copy this browser kept today (horizon/kept.ts): the three controls wait for the server's own answer, and one line says so. */ waiting?: boolean;
 }) {
   const row = "flex items-center justify-between gap-4 py-3.5";
   const press = "inline-flex min-h-10 shrink-0 items-center justify-center rounded-[10px] border border-border-strong bg-card px-4 text-[14px] font-semibold text-text hover:border-text-3 disabled:opacity-50";
@@ -280,14 +282,14 @@ export function SimpleSettings({ title, head, onBack, weekly, weeklyBusy, onWeek
         <h1 class="m-0 text-[24px] font-semibold leading-tight tracking-[-0.01em] text-text">Settings</h1>
         <span class="text-[14px] text-text-2">{title} · {head}</span>
       </header>
-      <div class="flex flex-col divide-y divide-border rounded-[16px] border border-border bg-card px-5" data-settings="lines">
+      <div class="flex flex-col divide-y divide-border rounded-[16px] border border-border bg-card px-5" data-settings="lines" data-waiting={waiting ? "yes" : "no"}>
         <label class={`${row} ${weekly?.state === "unavailable" ? "" : "cursor-pointer"}`} data-setting="email" data-state={weekly?.state ?? "reading"}>
           <span class="flex min-w-0 flex-col">
             <span class="text-[15px] font-medium text-text">Email me my week on Mondays</span>
             {weekly?.state === "unavailable" ? <span class="text-[13px] text-text-2">Not switched on for this account yet.</span> : null}
           </span>
           {weekly?.state === "unavailable" ? null
-            : <input type="checkbox" checked={weekly?.state === "on"} disabled={!weekly || weeklyBusy} onChange={(e) => onWeekly((e.currentTarget as HTMLInputElement).checked)} class="h-5 w-5 shrink-0 accent-accent" />}
+            : <input type="checkbox" checked={weekly?.state === "on"} disabled={!weekly || weeklyBusy || waiting} onChange={(e) => onWeekly((e.currentTarget as HTMLInputElement).checked)} class="h-5 w-5 shrink-0 accent-accent" />}
         </label>
         {pause ? (
           <div class="flex flex-col" data-setting="pause">
@@ -296,7 +298,7 @@ export function SimpleSettings({ title, head, onBack, weekly, weeklyBusy, onWeek
                 <span class="text-[15px] font-medium text-text">Pause a week</span>
                 {pause.note ? <span class="text-[13px] leading-snug text-text-2">{pause.note}</span> : null}
               </span>
-              {pauseAsk ? null : <button type="button" disabled={!pause.open} onClick={onPause} class={press}>Pause</button>}
+              {pauseAsk ? null : <button type="button" disabled={!pause.open || waiting} onClick={onPause} class={press}>Pause</button>}
             </div>
             {pauseAsk ? <div class="pb-4">{pauseAsk}</div> : null}
           </div>
@@ -306,9 +308,10 @@ export function SimpleSettings({ title, head, onBack, weekly, weeklyBusy, onWeek
             <span class="text-[15px] font-medium text-text">Delete this horizon</span>
             <span class="text-[13px] leading-snug text-text-2">Your readings stay.</span>
           </span>
-          <button type="button" disabled={deleting} onClick={onDelete} class={press}>Delete</button>
+          <button type="button" disabled={deleting || waiting} onClick={onDelete} class={press}>Delete</button>
         </div>
       </div>
+      {waiting ? <p class="m-0 text-[13px] text-text-2" data-settings="waiting">Checking for changes…</p> : null}
     </section>
   );
 }

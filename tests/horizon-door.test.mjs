@@ -95,7 +95,10 @@ test("the pane itself holds nothing for an account without Horizon, and offers a
   assert.match(view, /const canSet = maySetHorizon\(\{ open: HORIZON_PUBLIC, programme: tester, owner \}\);/);
   assert.match(view, /const showSetup = canSet && \(/);
   assert.match(view, /\{canSet && <button type="button" role="tab" aria-selected=\{showSetup\}/);
-  assert.match(view, /\{canSet && prefill && \(later/, "a horizon read to its date offers the next one only then");
+  // a horizon read to its date offers the next one only where one may be set: the short set-up while "More choices"
+  // is hidden (27 November 2026), and the prefilled form of 10 November behind the same switch
+  assert.match(view, /\{canSet && !SETUP_MORE_CHOICES\n\s+\? <div><Button onClick=\{\(\) => \{ route\.value = "new"; history\.pushState\(null, "", "#horizon-new"\);/);
+  assert.match(view, /\{SETUP_MORE_CHOICES && canSet && prefill && \(later/);
 });
 
 test("the other doors: a line of the Guide's, Settings, and the weekly email's words", () => {

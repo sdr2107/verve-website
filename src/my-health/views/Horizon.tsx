@@ -76,7 +76,9 @@ import { WhereLine } from "./Doors.tsx";
 import { doorsFor, storeOf, type Who } from "../horizon/doors.ts";
 import type { WatchedRow } from "../horizon/watch.ts";
 import { cardOfRoute, routeOfCard } from "../horizon/setupCards.ts";
-import { HORIZON_OLD_PAGES, HORIZON_PAGES, horizonRoute, isTab, routeOfPage, shownPage, type HorizonPage } from "../horizon/pages.ts";
+import { HORIZON_OLD_PAGES, HORIZON_PAGES, horizonRoute, isOldPage, isTab, routeOfPage, shownPage, type HorizonPage } from "../horizon/pages.ts";
+import { readKept, writeKept } from "../horizon/kept.ts";
+import { SETUP_MORE_CHOICES } from "../horizon/member.ts";
 import { firstWeekLine, fitnessLine, headLine, pastWeeks, sessionRows, thisWeek } from "../horizon/simple.ts";
 import { SimpleHorizon, SimpleSettings } from "./SimpleHorizon.tsx";
 import { yourPlanOf } from "../horizon/yourPlan.ts";
@@ -307,6 +309,12 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
   const [fullSetup, setFullSetup] = useState(() => { const id = deps.personId(); return !!id && !!loadSetup(id); });
   // watched markers can be kept for this project (board 19; api.ts watchedReady)
   const [watchOn, setWatchOn] = useState(false);
+  // Horizon draws at once (27 November 2026; ../horizon/kept.ts): the page opens on the copy this browser kept today
+  // for this account and person, and the server's answer replaces it when it lands. `waiting` is true while that copy
+  // is all the page has: it may be read, and nothing that writes may be pressed on it.
+  const [waiting, setWaiting] = useState(false);
+  const keptShown = useRef(false);
+  const tellHorizons = (hs: HorizonFull[]) => deps.onHorizons?.([...hs.filter((h) => !h.closed_at), ...doneOf(hs)].map((h) => ({ id: h.id, title: h.title, ends_on: h.ends_on, done: !!h.closed_at })));
 
   const userId = async () => deps.userId?.() ?? (await deps.supabase.auth.getSession()).data.session?.user.id ?? null;
 
@@ -318,7 +326,15 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
     if (!personId) { loadedFor.current = null; setList(null); horizonsSignal.value = []; return; }
     // another person's page: nothing of the last person's is left on the signal while theirs is read, so no door, card or
     // line of this page is drawn from someone else's horizons for those seconds
-    if (loadedFor.current !== personId) { setList(null); if (loadedFor.current != null) horizonsSignal.value = null; }
+    if (loadedFor.current !== personId) {
+      // the copy kept today for this account and this person, read in the same turn: no wait before the page is drawn
+      const kept = readKept(deps.userId?.() || null, personId, today);
+      if (kept) {
+        keptShown.current = true; setWaiting(true);
+        setList(kept.horizons); setGuideOn(kept.guide); horizonsSignal.value = kept.horizons; if (kept.horizons.length) setPro("yes");
+        tellHorizons(kept.horizons);
+      } else { keptShown.current = false; setWaiting(false); setList(null); if (loadedFor.current != null) horizonsSignal.value = null; }
+    }
     try {
       // the closed ones come too: a horizon read to its date stays reachable, with the next one prefilled under it.
       // The two things that decide which page is drawn (the test list, the Guide's plan) are asked beside the horizons
@@ -335,15 +351,20 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
       setTester(isTester.value); setGuideOn(guide); setWatchOn(watch && isTeam.value);
       loadedFor.current = personId;
       setList(hs); horizonsSignal.value = hs; setLoadError(""); setOff(false); deps.onOff?.(false);
+      // the server has answered: its answer is the page now, it is kept for the next visit today, and the page may be written on
+      keptShown.current = false; setWaiting(false);
+      writeKept(uid ?? null, personId, today, { horizons: hs, guide });
       if (hs.length) setPro("yes");
-      deps.onHorizons?.([...hs.filter((h) => !h.closed_at), ...doneOf(hs)].map((h) => ({ id: h.id, title: h.title, ends_on: h.ends_on, done: !!h.closed_at })));
+      tellHorizons(hs);
     } catch (e: any) {
-      if (e?.name === "HorizonOff") { horizonsSignal.value = []; loadedFor.current = personId; setOff(true); setList([]); setLoadError(""); deps.onOff?.(true); deps.onHorizons?.([]); return; }
+      if (e?.name === "HorizonOff") { keptShown.current = false; setWaiting(false); horizonsSignal.value = []; loadedFor.current = personId; setOff(true); setList([]); setLoadError(""); deps.onOff?.(true); deps.onHorizons?.([]); return; }
       // a read that failed says nothing new: what the page already knew of this person's horizons stands, and with it
       // the door to them (state.ts horizonDoor). Only a person nothing is known of yet reads as having none.
       if (horizonsSignal.value == null) horizonsSignal.value = [];
       loadedFor.current = personId;
-      setLoadError(e?.message ?? "Could not read the horizons."); setList([]);
+      setLoadError(e?.message ?? "Could not read the horizons.");
+      // a copy kept today stays on the page, still not to be written on: a read that failed says nothing new
+      if (!keptShown.current) setList([]);
     }
   }
   useEffect(() => { void load(); }, [personId, _tick]);
@@ -394,7 +415,10 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
   }
 
   if (!personId) return <Quiet>Choose a person first.</Quiet>;
-  if (list == null) return <div class="h-40 rounded-[16px] border border-border bg-card" aria-busy="true" />;
+  const calm = <div class="h-40 rounded-[16px] border border-border bg-card" aria-busy="true" />;
+  if (list == null) return calm;
+  // a kept copy is drawn only with the person's figures beside it: the horizons alone would draw rows with nothing in them
+  if (waiting && !person) return calm;
   if (off) return <OffCard />;
   // Horizon is drawn for an account that has it (state.ts horizonDoor): the page shows no tab to anyone else, and this
   // pane holds nothing for them either
@@ -418,7 +442,10 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
     const to = routeOfPage(id, pg);
     history.pushState(null, "", `#horizon-${to}`);
     route.value = to;
-    try { document.getElementById("horizonroot")?.scrollIntoView({ block: "start" }); } catch { /* the page stays where it is */ }
+    // The three tabs and Settings change in place: the page stays exactly where it is (the founder, 27 November 2026:
+    // "When i click from this week to past weeks - the screen moves up and thats not good to see. Same happens when i
+    // click on settings"). Only one of the hidden pages of 18 November, each a screen of its own, opens at its top.
+    if (HORIZON_OLD_PAGES && isOldPage(pg)) { try { document.getElementById("horizonroot")?.scrollIntoView({ block: "start" }); } catch { /* the page stays where it is */ } }
   };
   const showSetup = canSet && (setupCard > 0 || (!current && !open.length));
   // a line the Guide wrote, carried here as a draft for this person
@@ -456,11 +483,14 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
       {loadError && <Quiet>{loadError}</Quiet>}
       {consent && <ConsentBox onAgree={() => void agreeConsent()} busy={busy === "consent"} />}
       {lastWeek && <p class="m-0 rounded-[10px] border border-border-strong bg-alt px-4 py-3 text-[14px] leading-relaxed text-text-2" data-continuity>{lastWeek}</p>}
-      {/* a founding member's set-up is always the short one: the seven-card set-up and "My own targets" are the team's (27 November 2026) */}
-      {showSetup && tester && owner && (isFounding.value || (!ownTargets && !fullSetup && setupCard <= 1 && (open.length > 0 || !done[0])))
-        ? <QuickSetup sb={deps.supabase} person={person} today={today} personId={personId} guideOn={guideOn} hasOthers={open.length > 0 || done.length > 0} userId={userId} onNote={setNotice} founding={isFounding.value}
+      {/* the set-up is the short one for everyone while "More choices" is hidden (../horizon/member.ts SETUP_MORE_CHOICES, 27 November 2026),
+          the set-up after a horizon read to its date among them; with it back, a founding member's is still always the short one */}
+      {showSetup && tester && owner && (isFounding.value || !SETUP_MORE_CHOICES || (!ownTargets && !fullSetup && setupCard <= 1 && (open.length > 0 || !done[0])))
+        ? <QuickSetup sb={deps.supabase} person={person} today={today} personId={personId} guideOn={guideOn} hasOthers={open.length > 0 || done.length > 0} userId={userId} onNote={setNotice} founding={isFounding.value} waiting={waiting}
             onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); try { window.scrollTo({ top: 0 }); } catch { /* the page stays where it is */ } }}
             onError={onApiError} onCancel={() => { route.value = ""; history.replaceState(null, "", "#horizon"); }} onMore={() => setFullSetup(true)} />
+        : waiting && (showSetup || (!!current && isDone(current)))
+        ? calm   /* the older set-ups and a horizon read to its date write from many places: they wait for the server's own answer */
         : showSetup && tester && owner && !ownTargets && (open.length > 0 || !done[0] || !!parseProgramme(done[0].programme))
         ? <ProgrammeSetup sb={deps.supabase} person={person} today={today} personId={personId} nav={nav} hasOthers={open.length > 0 || done.length > 0} access={access} guideOn={guideOn} userId={userId}
             after={!open.length && done[0] ? parseProgramme(done[0].programme)?.goal ?? null : null} afterDay={!open.length && !!done[0] && !!dayKindOf(done[0].programme)} key={!open.length && done[0] ? `after-${done[0].id}` : "programme"}
@@ -477,7 +507,7 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
               onStarted={async (id) => { setPro("yes"); await load(); route.value = id; history.replaceState(null, "", `#horizon-${id}`); }} onError={onApiError} />
         : current
           ? <View deps={deps} h={current} person={person} today={today} owner={owner} nav={nav} busy={busy} setBusy={setBusy} onError={onApiError} setNotice={setNotice} reload={load} userId={userId} access={access} guideOn={guideOn} tester={tester} watchOn={watchOn}
-              page={at.id === current.id ? at.page : "now"} goPage={(pg) => goPage(current.id, pg)}
+              waiting={waiting} page={at.id === current.id ? at.page : "now"} goPage={(pg) => goPage(current.id, pg)}
               navMany={navMany} onSetAnother={canSet ? () => { route.value = "new"; history.replaceState(null, "", "#horizon-new"); } : undefined} />
           : <Card>{nav}<div class="text-[18px] font-semibold text-text">No horizon set.</div><Quiet>{canSet ? "A horizon is a date, the markers you want different by then, and the week that gets you there." : owner ? "There is no horizon here to read." : "Nothing to see here yet: this person has not set a horizon."}</Quiet></Card>}
     </div>
@@ -486,7 +516,8 @@ function HorizonApp({ deps }: { deps: HorizonDeps }) {
 
 // ── board 14: the horizon in view ──
 
-function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setNotice, reload, userId, access, guideOn, tester, watchOn, page, goPage, navMany, onSetAnother }: {
+function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setNotice, reload, userId, access, guideOn, tester, watchOn, page, goPage, navMany, onSetAnother, waiting = false }: {
+  /** The page is still on the copy this browser kept today (../horizon/kept.ts): nothing that writes is offered until the server has answered. */ waiting?: boolean;
   deps: HorizonDeps; h: HorizonFull; person: PersonData | null; today: string; owner: boolean; nav: any; busy: string; setBusy: (s: string) => void;
   onError: (e: ApiError, retry: () => void) => boolean; setNotice: (s: string) => void; reload: () => Promise<void>; userId: () => Promise<string | null>;
   access: HorizonAccess | null; guideOn: boolean;
@@ -547,9 +578,9 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   // a fitness test taken since the horizon was set (horizon/newTest.ts): asked about on "This week", by its owner,
   // while the plan runs and the horizon has somewhere to remember the answer
   const testWaits = useMemo(() => {
-    if (!simpleOn || !owner || !!h.closed_at || !programme || !person) return null;
+    if (!simpleOn || !owner || !!h.closed_at || !programme || !person || waiting) return null;
     try { return pendingTest({ horizon: h, person, today, targets: openTargets(h.targets).map(toTarget), answered: programme.tests ?? [] }); } catch { return null; }
-  }, [simpleOn, owner, h, today, person]);
+  }, [simpleOn, owner, h, today, person, waiting]);
   const wantsHeart = simpleOn && selfPlan && (seen === "plan" || (seen === "now" && !!testWaits));
   useEffect(() => {
     if (!wantsHeart) return;
@@ -670,10 +701,10 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
 
   // the horizon set before the zone column existed learns its zone on the owner's visit; the scheduled check-in needs it
   useEffect(() => {
-    if (!owner || closed || h.timezone) return;
+    if (!owner || closed || h.timezone || waiting) return;
     const tz = browserZone();
     if (tz) void updateHorizon(deps.supabase, h.id, { timezone: tz }).then(() => { /* a column not there yet is not an error worth a line */ });
-  }, [h.id, h.timezone, owner, closed]);
+  }, [h.id, h.timezone, owner, closed, waiting]);
 
   async function writeCheckin(kind: "week" | "month" | "final", forDate: string) {
     const go = async () => {
@@ -917,7 +948,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
         pause={pause ? { open: pause.left > 0 && pause.open, note: pause.left > 0 && !pause.open ? pauseWhyWords(pause.choices.find((c) => c.key === "this")?.why) || pause.words : pause.words } : null}
         pauseAsk={pause && pauseAsk ? <PauseAsk h={h} state={pause} pick={pauseAsk} setPick={setPauseAsk} busy={busy === "pause"} onPause={(c) => void setAside(c)} onCancel={() => setPauseAsk(null)} /> : null}
         onPause={() => { const c = pause ? pause.choices.find((x) => x.key === "this" && x.ok) ?? pause.choices.find((x) => x.ok) : null; if (c) setPauseAsk(c.key); }}
-        onDelete={() => void remove()} deleting={busy === "delete"} />
+        onDelete={() => void remove()} deleting={busy === "delete"} waiting={waiting} />
     );
   }
   if (simpleOn && isTab(seen)) {
@@ -934,6 +965,7 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
         plan={seen === "plan" && person ? yourPlanOf({ view: simpleGuide ?? planDraft, inUse: !!simpleGuide, running: !closed && !keptOnly, self: selfPlan, heart: selfPlan ? heart : null }) : null}
         test={testCard ? { card: testCard, busy: busy === "test", problem: testProblem, onPrimary: (aim) => void answerTest(testCard, true, aim), onSecondary: () => void answerTest(testCard, false, "") } : null}
         onMore={HORIZON_OLD_PAGES && owner ? () => goPage("glance") : undefined}
+        waiting={waiting}
         onSettings={owner ? () => goPage("settings") : undefined}
         onSetAnother={owner ? onSetAnother : undefined} />
     );
@@ -1257,7 +1289,7 @@ function FinalView({ deps, h, person, today, owner, canSet, nav, personId, hasOp
         <div class="flex max-w-[680px] flex-col gap-2">
           <Eyebrow>Horizon · set {dayMonthYear(h.starts_on)} · the date</Eyebrow>
           <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-[-0.01em] text-text">{longDate(h.ends_on)}</h1>
-          <p class="m-0 text-[15px] leading-relaxed text-text-2">{canSet ? "The whole road, read once. Then the next horizon, prefilled from what moved; the numbers are yours to set." : "The whole road, read once."}</p>
+          <p class="m-0 text-[15px] leading-relaxed text-text-2">{canSet && SETUP_MORE_CHOICES ? "The whole road, read once. Then the next horizon, prefilled from what moved; the numbers are yours to set." : "The whole road, read once."}</p>
           {weeksWords(h) ? <p class="m-0 text-[13px] leading-relaxed text-text-3">{weeksWords(h)}</p> : null}
           <div class="mt-1">{nav}</div>
         </div>
@@ -1311,7 +1343,11 @@ function FinalView({ deps, h, person, today, owner, canSet, nav, personId, hasOp
         )}
       </Card>
 
-      {canSet && prefill && (later
+      {/* the next horizon: the short set-up while "More choices" is hidden (../horizon/member.ts SETUP_MORE_CHOICES); the prefilled form of 10 November is kept behind it */}
+      {canSet && !SETUP_MORE_CHOICES
+        ? <div><Button onClick={() => { route.value = "new"; history.pushState(null, "", "#horizon-new"); try { window.scrollTo({ top: 0 }); } catch { /* the page stays where it is */ } }}>Set the next horizon</Button></div>
+        : null}
+      {SETUP_MORE_CHOICES && canSet && prefill && (later
         ? <div><Button onClick={() => setLater(false)}>Set the next horizon</Button></div>
         : <Setup deps={deps} person={person} today={today} personId={personId} hasOthers={false} nav={null} prefill={prefill} onStarted={onStarted} onError={onError} onCancel={() => setLater(true)} access={access} guideOn={guideOn} />)}
 
