@@ -22,11 +22,18 @@
  * kept with the plan (GuideStored.past), and a change to a number the plan
  * follows starts from the week it is made in (GuideStored.leg).
  *
+ * 27 November 2026 (canvas "Verve, the plan you follow", boards 03 and 04): the plan in the person's own numbers.
+ * The fitness test moves to week twelve (testWeeksOf). The page says the tier a fitness figure puts the person in,
+ * and zone 2 in beats for their own heart when it is handed the app's band (./heartBand.ts). And steps a day and the
+ * strength sets answer their own week as zone 2 always did: a week under its line is asked the same again, two in a
+ * row go one step back, nothing is added on (lineProgress). Weeks that began before that rule are not judged by it.
+ *
  * Pure, no DOM, no fetch; tests/guide-plan.test.mjs runs it under node, and
  * the horizon edge function copies this file for the chat's inputs.
  */
 import { addDays, localDay, mondayOf } from "../derive/format.ts";
-import { restingBPOf } from "../derive/markers.ts";
+import { methodLabel, restingBPOf } from "../derive/markers.ts";
+import { EFFORT_WHERE, HARDER_FEEL, STEADY_FEEL, beatsWords, heartSource, type Heart } from "./heartBand.ts";
 import RULES from "../../data/plan-rules.ts";
 import {
   MARKER_BY_KEY, dayMonthLong, daysWords, dedupeSessions, horizonMondays, horizonSpans, lastCompleteMonday, latestOf, numberWord, pausedRunOn, pausesOf, round, typicalWeek, weekFigures,
@@ -141,6 +148,20 @@ export function aimsOf(targets: Pick<Target, "marker" | "target_value">[], perso
 
 /** The intensity tier a fitness figure puts a person in; no test on file reads as the first: volume before intensity. */
 export const tierOf = (mets: number | null): 1 | 2 | 3 => (mets == null || mets < RULES.tiers.secondFromMets ? 1 : mets < RULES.tiers.thirdFromMets ? 2 : 3);
+
+/**
+ * The weeks of a plan in which fitness is tested again (the founder, 25 November 2026: "retest is at week 12 not week
+ * 8"). Every twelfth week inside the plan. A plan shorter than twelve weeks tests once, in its last week. A longer
+ * plan's last week is a test week too only when it is at least six weeks after the test before it, so a thirteenth
+ * week is not a second test. 12 gives [12]; 13 gives [12]; 20 gives [12, 20]; 26 gives [12, 24]; 8 gives [8].
+ */
+export function testWeeksOf(n: number): number[] {
+  const every = RULES.retest.weeks, out: number[] = [];
+  for (let w = every; w <= n; w += every) out.push(w);
+  if (!out.length) return n >= 1 ? [n] : [];
+  if (n - out[out.length - 1] >= RULES.retest.lastAfterWeeks) out.push(n);
+  return out;
+}
 
 /** What a planned minute adds to the dose, in METs: from the person's fitness, else the guideline's own equivalence. */
 export function metPerMinute(mets: number | null): { zone2: number; harder: number; from: "fitness" | "guideline" } {
@@ -294,6 +315,49 @@ export function progressOf(climb: Climb | Step[], mondays: string[], person: Per
   return { week, step, repeated: week < 0 ? 0 : Math.max(0, Math.min(week, n - 1) - step), steppedBack: steppedBack && week >= 0, stepOfWeek, outcomeOfWeek };
 }
 
+// ── steps a day and the strength sets answer their own week (board 04) ──
+
+/**
+ * The first Monday the two lines below are judged from. Until 27 November 2026 steps a day went up a rung every week
+ * whatever the week did, and the strength sets rose in the plan's fifth week whatever was lifted. A week behind the
+ * person is never rewritten: weeks that began before this Monday are read as they were asked, a rung each, and the
+ * rule judges from this week on. (A plan that starts later is judged from its first week.)
+ */
+export const LINES_JUDGED_FROM = "2026-11-30";
+/** What a finished week did to a line: it went on, it is asked again, the line stepped back, or nothing arrived to judge it by. */
+export type LineOutcome = "on" | "short" | "back" | "unread";
+export type LineProgress = {
+  /** The rung each week of the plan carries: what was asked in the weeks behind, what will be asked in those ahead. */ rungOfWeek: number[];
+  /** What each finished, judged week did; null for a week not finished or not judged. */ outcomeOfWeek: (LineOutcome | null)[];
+};
+/**
+ * A line that climbs a rung a week, read against the weeks as zone 2 is (progressOf), without the week won back:
+ *   reached   the next week takes the next rung;
+ *   short     the same rung is asked again; two short weeks in a row go one rung back, never under the first;
+ *   none      nothing arrived to judge the week by: the same rung is asked again, and it does not count as short.
+ * The week today is in and the weeks ahead take a rung each from where the line stands. Nothing is ever added on.
+ *   first  the lowest rung, and the first week that is this line's own (weeks before it carry their own number);
+ *   from   the first week that is judged (LINES_JUDGED_FROM); the weeks before it went on a rung each;
+ *   top    the highest rung.
+ */
+export function lineProgress(a: { weeks: number; /** The week today is in, from 0; -1 before the plan's first. */ week: number; first: number; from: number; top: number;
+  verdict: (week: number, rung: number) => "reached" | "short" | "none" }): LineProgress {
+  const rungOfWeek: number[] = [], outcomeOfWeek: (LineOutcome | null)[] = [];
+  let s = Math.max(0, a.first), misses = 0;
+  for (let i = 0; i < a.weeks; i++) {
+    if (i < a.first) { rungOfWeek.push(i); outcomeOfWeek.push(null); continue; }
+    const rung = Math.min(s, a.top);
+    rungOfWeek.push(rung);
+    if (i >= a.week || i < a.from) { outcomeOfWeek.push(null); s = Math.min(a.top, rung + 1); continue; }
+    const v = a.verdict(i, rung);
+    if (v === "none") { outcomeOfWeek.push("unread"); s = rung; continue; }
+    if (v === "reached") { outcomeOfWeek.push("on"); s = Math.min(a.top, rung + 1); misses = 0; continue; }
+    if (++misses >= 2) { outcomeOfWeek.push("back"); s = Math.max(a.first, rung - 1); misses = 0; }
+    else { outcomeOfWeek.push("short"); s = rung; }
+  }
+  return { rungOfWeek, outcomeOfWeek };
+}
+
 // ── strength ──
 
 export const LAYOUT_WORDS: Record<Layout, { name: string; each: string }> = {
@@ -336,7 +400,8 @@ export type WeekReview = {
   /** "hold": nothing in the aerobic week climbs. "changed": a number the plan follows was changed in the week after. "end": it was the plan's last week. */
   outcome: WeekOutcome | "hold" | "changed" | "end";
   /** The first is the week after. Its `why` is the plan's sentence on what the finished week did to it, without the week's other figures. */
-  after: { small: string; head: string; text: string; why?: string }[];
+  after: { small: string; head: string; text: string; why?: string;
+    /** The plan's sentence on what the week did to steps a day, and to the strength sets, when the week was judged on them. */ why_steps?: string; why_strength?: string }[];
 };
 /** What the plan does for a target: a line it works on, or a figure it only watches. */
 export type Answer = { marker: string; label: string; text: string };
@@ -350,7 +415,16 @@ export type GuidePlanView = {
    */
   paused: { from: string; to: string; resumes: string } | null;
   status: string; lead: string; tiles: Tile[];
-  fitt: { letter: string; name: string; now: string; by: string }[];
+  fitt: { letter: string; name: string; now: string; by: string; /** One quiet line under the card: what the effort feels like, and where a range in beats comes from. */ note?: string | null }[];
+  /** Where the person's fitness puts them (board 03): the figure and its test, the tier, their own aim, and the three tiers with theirs marked. */
+  place: {
+    fitness: { big: string; small: string }; tier: { n: 1 | 2 | 3; big: string; small: string }; aim: { big: string; small: string } | null;
+    tiers: { n: 1 | 2 | 3; head: string; text: string; here: boolean }[]; note: string;
+  };
+  /** For the plan's owner whose intensity goes by heart rate: where the app keeps the answer that switches it to effort. Null for anyone else. */
+  effortWhere: string | null;
+  /** How the Intensity card speaks: in beats, by effort, in words because the profile cannot give a range, or null when no profile was handed in. */
+  heartKind: Heart["kind"] | null;
   why: { head: string; text: string }[];
   /** Whether anything in the aerobic week changes from here to the date. When nothing does, the page shows the weeks, not a climb. */
   climbs: boolean;
@@ -383,9 +457,15 @@ export type GuidePlanArgs = {
   choices?: GuideChoices | null;
   /** The reader is the person whose plan it is: only they are told why a plan is in zone 2 only. */
   self?: boolean;
+  /**
+   * The person's zone 2 in beats, from their own profile row (./heartBand.ts heartOf): handed in only when the reader is
+   * the person the plan is for. Absent, the Intensity card says what the effort feels like and prints no beats.
+   */
+  heart?: Heart | null;
 };
 
-const setsWords = (base: GuideBase, i: number) => (base.strength >= RULES.strength.minDays || i >= RULES.strength.lowSetsWeeks ? "two to three sets" : "one to two sets");
+/** The sets a week asks, from the rung the strength line stands on: the weeks counted towards the higher sets (lineProgress). */
+const setsWords = (base: GuideBase, rung: number) => (base.strength >= RULES.strength.minDays || rung >= RULES.strength.lowSetsWeeks ? "two to three sets" : "one to two sets");
 const TOL = RULES.progression.zone2StepMin / 2;
 /**
  * What a week did: the sessions, the minutes in zone 2 and above it, strength, and the days' steps. The one reader:
@@ -458,10 +538,23 @@ export function guidePlan(args: GuidePlanArgs): GuidePlanView {
   const doseShort = last.dose < aims.doseFloor - 2.5;
   const harderEnd = Math.min(...climb.steps.map((x) => x.harder));
   const harderFloorAt = climb.eases ? weekOfStep((s) => s.harder <= harderEnd) : null;
-  const testWeeks = [...new Set([RULES.retest.weeks, n].filter((w) => w >= 1 && w <= n))].sort((x, y) => x - y);
+  const testWeeks = testWeeksOf(n);
   // the steps a day run on as first drawn unless the week the plan was changed in asked something else: then they run from that week
   const stepsFrom = leg && leg.steps !== stepsAt(base, aims, L, n) ? { week: L, steps: leg.steps } : null;
-  const stepsFor = (i: number) => (i < L ? pastBy.get(mondays[i])?.steps ?? null : stepsAt(base, aims, i, n, stepsFrom));
+  const sessionsFor = (i: number) => pastBy.get(mondays[i])?.sessions ?? days + strengthDays;
+  const strengthFor = (i: number) => pastBy.get(mondays[i])?.strength ?? strengthDays;
+  // Steps a day and the strength sets answer their own week (lineProgress): the weeks from LINES_JUDGED_FROM are judged.
+  const judgedFrom = (() => { const i = mondays.findIndex((m) => m >= LINES_JUDGED_FROM); return i < 0 ? n : i; })();
+  /** The ladder steps a day climb, as first drawn: the figure of a rung. */
+  const stepsRung = (k: number) => stepsAt(base, aims, Math.max(L, Math.min(n - 1, k)), n, stepsFrom);
+  const stepsProg = lineProgress({ weeks: n, week: prog.week, first: L, from: Math.max(L, judgedFrom), top: n - 1,
+    verdict: (i, rung) => { const want = stepsRung(rung), did = doneOf(person, mondays[i]).steps; return want == null || did == null ? "none" : did >= want ? "reached" : "short"; } });
+  const stepsFor = (i: number) => (i < L ? pastBy.get(mondays[i])?.steps ?? null : stepsRung(stepsProg.rungOfWeek[i]));
+  /** The sets climb only for someone who lifted less than twice a week before the plan: a rung for each week in which the strength asked was done. */
+  const setsLadder = base.strength < RULES.strength.minDays;
+  const setsProg = lineProgress({ weeks: n, week: prog.week, first: 0, from: judgedFrom, top: RULES.strength.lowSetsWeeks,
+    verdict: (i) => (doneOf(person, mondays[i]).strength >= strengthFor(i) ? "reached" : "short") });
+  const setsFor = (i: number) => setsWords(base, setsProg.rungOfWeek[Math.max(0, Math.min(n - 1, i))]);
   const stepsNow = stepsFor(wk);
   const stepsBegin = stepsFor(L);
   const stepsClimb = aims.steps != null && stepsBegin != null && aims.steps > stepsBegin && n - 2 - L > 0;
@@ -470,7 +563,7 @@ export function guidePlan(args: GuidePlanArgs): GuidePlanView {
   const off = Math.max(1, 7 - days - strengthDays);
   const shares = days + strengthDays > 6;
   const floorWords = aims.doseFloorFrom === "target" ? `your floor of ${thousands(aims.doseFloor)}` : aims.doseFloorFrom === "goal" ? `your weekly goal of ${thousands(aims.doseFloor)}` : `the guideline's ${thousands(aims.doseFloor)}`;
-  const sets = setsWords(base, wk);
+  const sets = setsFor(wk);
   const typeLine = types.length ? `${cap(orList(types))}: the types you already log.` : "Brisk walking, cycling or swimming: any steady activity of the large muscles.";
   const harderName = tier >= 2 ? `at ${RULES.tiers.secondHrrLowPct} to ${RULES.tiers.secondHrrHighPct}% of heart-rate reserve` : "above zone 2";
   const stepWord = numberWord(RULES.progression.zone2StepMin);
@@ -506,11 +599,56 @@ export function guidePlan(args: GuidePlanArgs): GuidePlanView {
   if (stepsNow != null) tiles.push({ key: "steps", small: "Steps", big: `${thousands(stepsNow)} a day`, text: stepsPer != null && stepsNow < aims.steps! ? `About ${thousands(stepsPer)} more a day each week. It reaches ${thousands(aims.steps!)} in week ${stepsReach}.` : "Held at your number." });
   tiles.push({ key: "rest", small: "Rest", big: `${plural(off, "day")} with no session`, text: shares ? "Any day. A strength session may share a day with an easy one." : "Any day." });
 
+  // Intensity in the person's own figures (board 03). The range in beats is the app's own band (./heartBand.ts), handed
+  // in only for the person the plan is for. When the app was told heart rate is not a guide, the card goes by effort.
+  // For anyone else it says what the effort feels like and prints no beats.
+  const heart = self ? args.heart ?? null : null;
+  const beats = heart?.kind === "beats" ? beatsWords(heart.band) : null;
+  const zoneOf = (x: Step) => (x.harder > 0 ? `${x.zone2} of ${x.total} minutes` : `all ${x.total} minutes`);
+  const restWords = now.harder > 0 ? ` The rest ${tier >= 2 ? harderName : "harder"}.` : "";
+  const lower = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
+  const feel = `Steady: ${lower(STEADY_FEEL)}${now.harder > 0 ? ` Harder: ${lower(HARDER_FEEL)}` : ""}`;
+  const intensity = {
+    letter: "I", name: "Intensity",
+    now: beats ? `Zone 2 is ${beats} for you, for ${zoneOf(now)}.${restWords}`
+      : heart?.kind === "effort" ? `A steady effort for ${zoneOf(now)}.${restWords}`
+      : now.harder > 0 ? `Zone 2 for ${now.zone2} of ${now.total} minutes.${restWords}` : `Zone 2 for all ${now.total} minutes`,
+    by: beats ? `The same range, for ${zoneOf(last)}` : heart?.kind === "effort" ? `The same effort, for ${zoneOf(last)}`
+      : last.harder > 0 ? `Zone 2 for ${last.zone2} of ${last.total} minutes` : `Zone 2 for all ${last.total} minutes`,
+    note: [feel, heart ? heartSource(heart) : null].filter(Boolean).join(" "),
+  };
+  const effortWhere = heart && heart.kind !== "effort" ? EFFORT_WHERE : null;
+
+  // where the fitness figure puts the person (board 03): the figure and its test, the tier, their own aim, the three tiers
+  const T = RULES.tiers;
+  const fit = latestOf("mets", person, args.today);
+  const nextTest = testWeeks.find((w) => w >= (started ? wk + 1 : 1)) ?? null;
+  const place: GuidePlanView["place"] = {
+    fitness: fit ? { big: `${one(fit.value)} METs`, small: `${fit.writer ? `${cap(methodLabel(fit.writer))} · ` : ""}${dayMonthLong(fit.on)}` } : { big: "No test on file", small: "A fitness test places you in a tier." },
+    tier: { n: tier, big: `Tier ${tier} of 3`, small: aims.mets == null ? "With no test on file the plan starts as tier 1: minutes at a steady effort first."
+      : tier === 1 ? `Under ${T.secondFromMets} METs: build minutes at a steady effort first.`
+      : tier === 2 ? `From ${T.secondFromMets} to ${T.thirdFromMets} METs: harder work at ${T.secondHrrLowPct} to ${T.secondHrrHighPct}% of heart-rate reserve.`
+      : `${T.thirdFromMets} METs or more: the rule allows harder work than the plan writes.` },
+    aim: aims.metsTarget != null ? { big: `${one(aims.metsTarget)} METs`, small: `${self ? "Your" : "Their"} own target${nextTest ? ` · tested again in week ${nextTest}` : ""}` } : null,
+    tiers: [
+      { n: 1, head: `Tier 1 · under ${T.secondFromMets} METs`, text: `A steady effort, about ${T.firstHrrPct}% of heart-rate reserve. Minutes before intensity.`, here: tier === 1 },
+      { n: 2, head: `Tier 2 · ${T.secondFromMets} to ${T.thirdFromMets} METs`, text: `Harder work at ${T.secondHrrLowPct} to ${T.secondHrrHighPct}% of heart-rate reserve.`, here: tier === 2 },
+      { n: 3, head: `Tier 3 · ${T.thirdFromMets} METs and over`, text: "The rule allows harder work than the plan writes. The plan keeps the harder minutes already done and adds none.", here: tier === 3 },
+    ],
+    // What a test does, as the arithmetic above does it: the tier is read from the latest reading on file. In the
+    // second tier the harder minutes are named by their share of the reserve and are no longer eased (climbOf); the
+    // second and third tiers ask the same minutes.
+    note: aims.mets == null ? "The tier is read from the latest fitness test on file. With none, the plan starts as tier 1."
+      : tier === 1 ? `The tier is read from the latest fitness test on file. At ${T.secondFromMets.toFixed(1)} METs or more it is tier 2: the harder minutes are then at ${T.secondHrrLowPct} to ${T.secondHrrHighPct}% of heart-rate reserve${climb.eases ? ", and the plan stops easing them" : ""}.`
+      : tier === 2 ? `The tier is read from the latest fitness test on file. At ${T.thirdFromMets.toFixed(1)} METs or more it is tier 3. The plan asks the same minutes in both.`
+      : "The tier is read from the latest fitness test on file. This is the highest tier.",
+  };
+
   // the same plan as FITT-VP: frequency, intensity, time, type, volume, progression (the founder, 26 November 2026:
   // P reads Progression, as the American College of Sports Medicine writes it). The row says how the plan climbs.
   const fitt = [
     { letter: "F", name: "Frequency", now: `${plural(days, "aerobic session")}, ${strengthDays} strength, ${plural(off, "day")} off`, by: "The same" },
-    { letter: "I", name: "Intensity", now: now.harder > 0 ? `Zone 2 for ${now.zone2} of ${now.total} minutes. The rest ${tier >= 2 ? harderName : "harder"}.` : `Zone 2 for all ${now.total} minutes`, by: last.harder > 0 ? `Zone 2 for ${last.zone2} of ${last.total} minutes` : `Zone 2 for all ${last.total} minutes` },
+    intensity,
     { letter: "T", name: "Time", now: `${now.lo} to ${now.hi} minutes a session`, by: last.lo === now.lo ? "The same" : `${last.lo} to ${last.hi} minutes a session` },
     { letter: "T", name: "Type", now: types.length ? "What you already log. Any steady activity of the large muscles counts." : "Any steady activity of the large muscles: brisk walking, cycling, swimming.", by: "The same" },
     { letter: "V", name: "Volume", now: `About ${thousands(now.dose)} MET-minutes`, by: `About ${thousands(last.dose)}.${doseShort ? ` Under ${floorWords}.` : aims.doseFloorFrom === "target" ? ` Never under your ${thousands(aims.doseFloor)}.` : ""}` },
@@ -533,8 +671,6 @@ export function guidePlan(args: GuidePlanArgs): GuidePlanView {
 
   // every week of the plan: what it asks, and for a finished one what it did
   const finished = (i: number) => started && today >= addDays(mondays[i], 7);
-  const sessionsFor = (i: number) => pastBy.get(mondays[i])?.sessions ?? days + strengthDays;
-  const strengthFor = (i: number) => pastBy.get(mondays[i])?.strength ?? strengthDays;
   const shortOf = (i: number, d: Done) => {
     const s = steps[prog.stepOfWeek[i]], st = stepsFor(i), out: string[] = [];
     if (d.zone2 < s.zone2 - TOL) out.push("zone2");
@@ -546,7 +682,7 @@ export function guidePlan(args: GuidePlanArgs): GuidePlanView {
   const climbRows: ClimbRow[] = mondays.map((monday, i) => {
     const s = steps[prog.stepOfWeek[i]];
     const done = finished(i) ? doneOf(person, monday) : null;
-    return { week: i + 1, monday, zone2: s.zone2, harder: s.harder, total: s.total, dose: s.dose, sets: setsWords(base, i), steps: stepsFor(i), test: testWeeks.includes(i + 1),
+    return { week: i + 1, monday, zone2: s.zone2, harder: s.harder, total: s.total, dose: s.dose, sets: setsFor(i), steps: stepsFor(i), test: testWeeks.includes(i + 1),
       state: !started ? "future" : i < wk ? "past" : i === wk ? "now" : "future", repeats: i > 0 && prog.stepOfWeek[i] === prog.stepOfWeek[i - 1] && steps[Math.min(n - 1, prog.stepOfWeek[i] + 1)].zone2 > s.zone2,
       sessions: sessionsFor(i), strengthDays: strengthFor(i), done, short: done ? shortOf(i, done) : [], outcome: prog.outcomeOfWeek[i] };
   });
@@ -557,7 +693,11 @@ export function guidePlan(args: GuidePlanArgs): GuidePlanView {
   // How the plan moves. The words name zone 2 minutes, never "the step" alone: steps a day are a line of their own and
   // go on by the week (the chat once read "repeats its step" as the steps a day holding still, 14 November 2026).
   const testMove = tier === 1 && aims.mets != null ? [{ head: `The week ${testWeeks[0]} test`, text: `At ${RULES.tiers.secondFromMets.toFixed(1)} METs or more, the harder minutes move to ${RULES.tiers.secondHrrLowPct} to ${RULES.tiers.secondHrrHighPct}% of heart-rate reserve. Under ${RULES.tiers.secondFromMets.toFixed(1)}, they stay as they are.` }] : [];
-  const others = `Strength${stepsNow != null ? " and steps a day go" : " goes"} on by the week whatever zone 2 did.`;
+  // steps a day and the strength sets have their own line and answer their own week; zone 2 never moves them
+  const ownLine = stepsClimb && setsLadder ? "Steps a day and the strength sets answer" : stepsClimb ? "Steps a day answer" : setsLadder ? "The strength sets answer" : null;
+  const others = ownLine
+    ? `${ownLine} their own week: under the line, the same is asked again; two weeks in a row, one step back. Nothing is added on.${stepsClimb ? " A week with no steps on file is not judged." : ""}`
+    : `Strength${stepsNow != null ? " and steps a day stay" : " stays"} at your own number whatever zone 2 did.`;
   const moves = climb.climbs ? [
     { head: "A short week", text: `A week more than ${numberWord(TOL)} minutes under its zone 2 figure is asked for the same zone 2 minutes again. The missed minutes are never added to a later week. ${others}` },
     { head: "A week won back", text: `If a week comes to the next week's zone 2 figure as well as its own, that figure is not asked twice, and the plan is back on its first line. The plan never asks for this and never goes past that line.` },
@@ -622,7 +762,21 @@ export function guidePlan(args: GuidePlanArgs): GuidePlanView {
     const nx = climbRows[r + 1];
     const small = paused ? `Week ${r + 2} · from ${dayMonthLong(paused.resumes)}` : r + 1 === wk ? `This week · week ${r + 2}` : `Week ${r + 2}`;
     const o: WeekOutcome | "hold" | "changed" = r < L ? "changed" : !moving ? "hold" : prog.outcomeOfWeek[r] ?? "on";
-    const rest = cap(andList([...(nx.harder > 0 ? [`harder minutes ${nx.harder === row.harder ? "stay at" : "are"} ${nx.harder}`] : []), `strength ${nx.strengthDays === row.strengthDays ? "stays at" : "is"} ${nx.strengthDays}`, ...(nx.steps != null ? [`steps ${row.steps != null && nx.steps > row.steps ? "go on to" : "are"} ${thousands(nx.steps)} a day`] : [])]));
+    // Steps a day and the strength sets answer their own week (lineProgress): one sentence each, when the week was
+    // judged on them. A week the plan was changed after keeps what it asked and is not read this way.
+    const so = o === "changed" || row.steps == null || nx.steps == null ? null : stepsProg.outcomeOfWeek[r];
+    const whySteps = so == null ? null
+      : so === "unread" ? `No day of steps arrived, so the plan asks for the same ${thousands(nx.steps!)} a day again.`
+      : so === "on" ? (nx.steps! > row.steps! ? `Steps reached their line, so this week asks ${thousands(nx.steps! - row.steps!)} more a day.` : "Steps reached their line, and the plan holds it from here.")
+      : so === "back" && nx.steps! < row.steps! ? `Steps were under their line two weeks in a row, so the plan steps back to ${thousands(nx.steps!)} a day.`
+      : `Steps were under their line, so the plan asks for the same ${thousands(nx.steps!)} a day again.`;
+    const ss = setsLadder && o !== "changed" ? setsProg.outcomeOfWeek[r] : null;
+    const setsWere = setsFor(r), setsAre = setsFor(r + 1), bare = (w: string) => w.replace(/ sets$/, "");
+    const whyStrength = ss == null ? null
+      : ss === "on" ? (setsAre !== setsWere ? `Strength reached its line, so this week moves to ${setsAre}.` : null)
+      : ss === "back" && setsAre !== setsWere ? `Strength was under its line two weeks in a row, so the sets go back to ${bare(setsAre)}.`
+      : setsProg.rungOfWeek[r] === RULES.strength.lowSetsWeeks - 1 ? `Strength was under its line, so the sets stay at ${bare(setsAre)} for now.` : null;
+    const rest = cap(andList([...(nx.harder > 0 ? [`harder minutes ${nx.harder === row.harder ? "stay at" : "are"} ${nx.harder}`] : []), `strength ${nx.strengthDays === row.strengthDays ? "stays at" : "is"} ${nx.strengthDays}`, ...(nx.steps != null && !whySteps ? [`steps ${row.steps != null && nx.steps > row.steps ? "go on to" : "are"} ${thousands(nx.steps)} a day`] : [])]));
     const wouldBe = steps[Math.min(n - 1, prog.stepOfWeek[r] + 1)].zone2;
     // what the week did to the plan, in the plan's own sentence. Kept apart from `rest` (the other figures of the week
     // after) so Monday's email can say it beside this week's aerobic minutes without saying strength and steps twice
@@ -641,7 +795,7 @@ export function guidePlan(args: GuidePlanArgs): GuidePlanView {
       : o === "back" ? `The plan steps back: ${nx.zone2} minutes in zone 2`
       : o === "won" ? `A week won back: ${nx.zone2} minutes in zone 2`
       : `The plan goes on: ${nx.zone2} minutes in zone 2`;
-    const first: { small: string; head: string; text: string; why?: string } = { small, head, text: `${why} ${rest}.`, why };
+    const first: WeekReview["after"][number] = { small, head, text: `${[why, whySteps, whyStrength].filter(Boolean).join(" ")} ${rest}.`, why, ...(whySteps ? { why_steps: whySteps } : {}), ...(whyStrength ? { why_strength: whyStrength } : {}) };
     const after = [first];
     if (aims.zone2 != null && climb.climbs) {
       const end = dayMonthLong(horizon.ends_on);
@@ -738,10 +892,10 @@ export function guidePlan(args: GuidePlanArgs): GuidePlanView {
     status: paused && started ? `Paused this week · week ${wk + 1} of ${n} starts Monday ${dayMonthLong(paused.resumes)}`
       : started ? `Week ${wk + 1} of ${n}${prog.repeated > 0 ? " · zone 2 asked again" : ""}` : `Starts Monday · ${plural(n, "week")}`,
     // a paused week has no "so far": nothing is asked of it
-    lead: lead.join(" "), tiles, fitt, why, climbs: moving, climb: climbRows, climbNote, moves, soFar: paused ? [] : soFar, review, answers, changing, testWeeks,
+    lead: lead.join(" "), tiles, fitt, place, effortWhere, heartKind: heart?.kind ?? null, why, climbs: moving, climb: climbRows, climbNote, moves, soFar: paused ? [] : soFar, review, answers, changing, testWeeks,
     strength: { days: strengthDays, layout, layoutLine: layoutLine(strengthDays, layout), each: eachGroup(strengthDays, layout), sets,
       hard: [
-        ["Sets", base.strength >= RULES.strength.minDays ? "Two to three." : `One to two in the plan's first ${numberWord(RULES.strength.lowSetsWeeks)} weeks. Two to three after.`],
+        ["Sets", base.strength >= RULES.strength.minDays ? "Two to three." : `One to two until the strength sessions asked have been done in ${numberWord(RULES.strength.lowSetsWeeks)} weeks of the plan. Two to three after. A week under the line is not counted, and two in a row go one back.`],
         ["Reps", `${RULES.strength.repsLow} to ${RULES.strength.repsHigh} in a set. ${RULES.strength.easyRepsLow} to ${RULES.strength.easyRepsHigh} if you are older or out of training.`],
         ["Load", "Start light: a load you could lift 15 times or more. Over the weeks, move towards one you could lift 10 to 12 times."],
         ["Effort", "Stop with about two good reps left."],

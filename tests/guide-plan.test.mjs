@@ -5,9 +5,10 @@ import { derivePerson } from "../src/my-health/derive/person.ts";
 import { addDays } from "../src/my-health/derive/format.ts";
 import { adherenceOf, typicalWeek } from "../src/my-health/horizon/derive.ts";
 import RULES from "../src/data/plan-rules.ts";
+import { heartOf } from "../src/my-health/horizon/heartBand.ts";
 import {
   screenOutcome, SCREEN_QUESTIONS, SCREEN_WORDS, baseOf, aimsOf, tierOf, metPerMinute, climbOf, stepsAt, progressOf, guidePlan, applyOption, storeOf, rowsWith,
-  isGuideStored, askInputs, isRedFlag, FIXED_SYMPTOM_ANSWER, RULE_LINES, loggedTypes, freezeOf, PLAN_MARKERS,
+  isGuideStored, askInputs, isRedFlag, FIXED_SYMPTOM_ANSWER, RULE_LINES, loggedTypes, freezeOf, PLAN_MARKERS, testWeeksOf, lineProgress, LINES_JUDGED_FROM,
 } from "../src/my-health/horizon/guidePlan.ts";
 
 // Every figure here is invented, and so is the person: no one's weeks, fitness, steps or targets. Keep it so; this repo is public.
@@ -19,9 +20,9 @@ const TARGETS = [
 ];
 
 /** A synced person: eight like weeks before the plan (40 min in zone 2, 120 harder, a dose of 1,060, four aerobic sessions and one of strength), 6,480 steps a day, a fitness of 8.4 METs. */
-function document({ today = TODAY, mets = 8.4, zone2 = 40, zone3 = 120, dose = 1060, strength = 1, planWeeks = [], steps = 6480, pressure = null, noWeeks = false } = {}) {
+function document({ today = TODAY, mets = 8.4, zone2 = 40, zone3 = 120, dose = 1060, strength = 1, planWeeks = [], steps = 6480, pressure = null, noWeeks = false, first = "2026-11-02" } = {}) {
   const activities = [], weeks = [], signals = [];
-  const firstPlanMonday = "2026-11-02";
+  const firstPlanMonday = first;
   if (!noWeeks) for (let i = 8; i >= 1; i--) {
     const monday = addDays(firstPlanMonday, -7 * i);
     const s = (day, name, type, cat, mins) => activities.push({ timestamp: `${addDays(monday, day)}T07:00:00`, activity_name: name, activity_type: type, intensity_category: cat, duration_minutes: mins, met_minutes: 200 });
@@ -30,8 +31,12 @@ function document({ today = TODAY, mets = 8.4, zone2 = 40, zone3 = 120, dose = 1
     weeks.push({ week_start: monday, source: "sync", synced_at: `${addDays(monday, 7)}T06:00:00Z`, workouts: 4 + strength, dose_met_min: dose, dose_goal_met_min: 900, zone1_min: 60, zone2_min: zone2, zone3_min: zone3, strength_sessions: strength });
   }
   // the plan's own weeks, as the app wrote them: [zone 2 minutes, harder minutes]
-  planWeeks.forEach(([z2, z3], i) => weeks.push({ week_start: addDays(firstPlanMonday, 7 * i), source: "sync", synced_at: `${addDays(firstPlanMonday, 7 * i + 7)}T06:00:00Z`, workouts: 5, dose_met_min: 1000, dose_goal_met_min: 900, zone1_min: 50, zone2_min: z2, zone3_min: z3, strength_sessions: 2 }));
-  for (let d = 13; d >= 0; d--) signals.push({ day: addDays(today, -d), steps: steps == null ? null : steps });
+  // (a third figure is the week's strength sessions, two when it is not given; a fourth its steps a day, or null for a week no day of steps arrived in)
+  planWeeks.forEach(([z2, z3, st = 2], i) => weeks.push({ week_start: addDays(firstPlanMonday, 7 * i), source: "sync", synced_at: `${addDays(firstPlanMonday, 7 * i + 7)}T06:00:00Z`, workouts: 5, dose_met_min: 1000, dose_goal_met_min: 900, zone1_min: 50, zone2_min: z2, zone3_min: z3, strength_sessions: st }));
+  const byDay = new Map();
+  for (let d = 13; d >= 0; d--) byDay.set(addDays(today, -d), steps == null ? null : steps);
+  planWeeks.forEach((w, i) => { if (w.length > 3) for (let d = 0; d < 7; d++) { const day = addDays(firstPlanMonday, 7 * i + d); if (day <= today) byDay.set(day, w[3]); } });
+  for (const [day, v] of [...byDay].sort((x, y) => x[0].localeCompare(y[0]))) signals.push({ day, steps: v });
   const app_labs = pressure ? [{ measured_at: `${addDays(today, -3)}T08:00:00`, sbp: pressure[0], dbp: pressure[1], source: "bp" }] : [];
   return {
     generated_at: today, me: { id: "u1", email: "x@y", profile: null, role: null }, people: [], grants_to_me: [],
@@ -193,13 +198,13 @@ test("the view: the week as tiles, FITT-VP, the reasons, every week, and the lin
   // frequency, intensity, time, type, volume, progression (the founder, 26 November 2026: P is Progression, not Pattern)
   assert.deepEqual(v.fitt.map((r) => r.name), ["Frequency", "Intensity", "Time", "Type", "Volume", "Progression"]);
   assert.match(v.fitt[5].now, /more minutes of zone 2 each week/, "the P row says how the plan climbs");
-  assert.match(v.fitt[5].by, /Held from week 8\. Fitness tested in week 8 and week 13\./);
+  assert.match(v.fitt[5].by, /Held from week 8\. Fitness tested in week 12\./);
   assert.match(v.fitt[4].by, /Never under your 900\./);
   assert.equal(v.why.length, 3);
   assert.match(v.why[0].head, /Your fitness is 8\.4 METs\./);
   assert.match(v.why[1].text, /reaches 120 in week 8 and leaves 5 weeks to hold it/);
   assert.equal(v.climb.length, 13);
-  assert.deepEqual(v.climb.filter((w) => w.test).map((w) => w.week), [8, 13]);
+  assert.deepEqual(v.climb.filter((w) => w.test).map((w) => w.week), [12]);
   assert.equal(v.climb[0].sets, "one to two sets"); assert.equal(v.climb[4].sets, "two to three sets");
   assert.deepEqual(v.rows.map((r) => [r.kind, r.n]), [["sessions_week", 6], ["zone2_min", 50], ["harder_min", 120], ["strength_week", 2], ["steps_day", 6500]]);
   // a bedtime or a line of the person's own is kept beside the plan's lines; an old exercise line is replaced
@@ -398,26 +403,30 @@ test("the plan says what it does for every target, and says so when it leaves a 
     ["Steps a day", `About ${v.tiles.find((t) => t.key === "steps").text.match(/About ([\d,]+) more/)[1]} more a day each week, 8,000 in week 12`],
   ]);
   assert.equal(v.answers.watchesHead, "It watches 1 and has no line for it");
-  assert.deepEqual(v.answers.watches.map((a) => [a.label, a.text]), [["Fitness", "Tested in weeks 8 and 13"]]);
+  assert.deepEqual(v.answers.watches.map((a) => [a.label, a.text]), [["Fitness", "Tested in week 12"]]);
   assert.equal(v.answers.note, null, "the plan climbs, so nothing is left untouched");
   assert.ok(v.climbs);
   // a zone 2 number under the typical week, as in the recording: nothing climbs, and the plan says what that means for fitness
   const flat = guidePlan({ horizon: H, targets: [{ marker: "mets", target_value: 9.0 }, { marker: "zone2_week", target_value: 30 }, { marker: "weight", target_value: 70 }, { marker: "waist", target_value: 90 }], person: person(), today: TODAY });
   assert.equal(flat.climbs, false);
   assert.equal(flat.answers.works.find((a) => a.marker === "zone2_week").text, "Nothing to add: your 30 is under your typical 40");
-  assert.deepEqual(flat.answers.watches.map((a) => [a.label, a.text]), [["Fitness", "Tested in weeks 8 and 13"], ["Weight", "Read every Monday"], ["Waist", "Read at each month's end"]]);
+  assert.deepEqual(flat.answers.watches.map((a) => [a.label, a.text]), [["Fitness", "Tested in week 12"], ["Weight", "Read every Monday"], ["Waist", "Read at each month's end"]]);
   assert.equal(flat.answers.note, 'You asked for fitness to move from 8.4 to 9.0 METs. Nothing in this plan changes your aerobic week. The plan builds only towards a zone 2 number above your typical week of 40, and yours is 30. The number is yours to change, under "Change it".');
   assert.match(flat.lead, /The plan holds your aerobic week as it is\.$/);
   // steps or strength asked for, and nothing aerobic: the lead does not say the whole week is held
   assert.match(guidePlan({ horizon: H, targets: TARGETS.map((t) => (t.marker === "zone2_week" ? { ...t, target_value: 30 } : t)), person: person(), today: TODAY }).lead, /What your targets ask for is a different mix: a second strength session and more steps\. The plan holds your aerobic week as it is\.$/);
-  assert.deepEqual(flat.moves.map((m) => m.head), ["A short week", "To make it build", "The week 8 test"]);
+  assert.deepEqual(flat.moves.map((m) => m.head), ["A short week", "To make it build", "The week 12 test"]);
   assert.match(flat.moves[1].text, /only towards a zone 2 number above your typical week of 40\. Yours is 30\./);
   // no zone 2 number at all
   const none = guidePlan({ horizon: H, targets: [{ marker: "mets", target_value: 9.0 }], person: person(), today: TODAY });
   assert.match(none.answers.note, /and you have set none\./);
   // how the plan moves names zone 2 minutes, never "its step": steps a day are a line of their own
   for (const view of [v, flat]) assert.doesNotMatch(view.moves.map((m) => m.text).join(" "), /repeats (that week's|its) step/);
-  assert.match(v.moves[0].text, /Strength and steps a day go on by the week whatever zone 2 did\./);
+  // steps a day and the strength sets answer their own week, and the plan says so where it says what a short week does
+  assert.match(v.moves[0].text, /Steps a day and the strength sets answer their own week: under the line, the same is asked again; two weeks in a row, one step back\. Nothing is added on\. A week with no steps on file is not judged\.$/);
+  // no steps number: the strength sets alone have a line of their own; and someone who already lifts twice a week has none
+  assert.match(flat.moves[0].text, /The strength sets answer their own week: under the line, the same is asked again; two weeks in a row, one step back\. Nothing is added on\.$/);
+  assert.match(guidePlan({ horizon: H, targets: [{ marker: "mets", target_value: 9.0 }], person: person({ strength: 2 }), today: TODAY }).moves[0].text, /Strength stays at your own number whatever zone 2 did\.$/);
   assert.deepEqual(askInputs(v, TARGETS).changing_the_numbers, v.changing);
   assert.match(v.changing[0], /^The plan's minutes in zone 2 follow your zone 2 number, now 120\. You change it under "Change it" on the plan\./);
 });
@@ -542,3 +551,224 @@ test("a number changed in a week that is then set aside is carried to the week t
   assert.equal(zone2Of(v), zone2Of(before), "the week it picks up in asks what the paused one asked");
   assert.ok(v.notes.some((n) => /A number the plan follows was changed in week 3/.test(n)));
 });
+
+// ── 27 November 2026: the plan in the person's own numbers (canvas "Verve, the plan you follow", boards 03 and 04) ──
+
+test("fitness is tested again in week twelve: every twelfth week, the last week of a shorter plan, and a last week six or more after", () => {
+  assert.deepEqual([RULES.retest.weeks, RULES.retest.lastAfterWeeks], [12, 6]);
+  const cases = [[12, [12]], [13, [12]], [17, [12]], [18, [12, 18]], [20, [12, 20]], [24, [12, 24]], [26, [12, 24]], [30, [12, 24, 30]], [52, [12, 24, 36, 48]], [8, [8]], [1, [1]], [0, []]];
+  for (const [n, want] of cases) assert.deepEqual(testWeeksOf(n), want, `${n} weeks`);
+  const v = plan();
+  assert.deepEqual(v.testWeeks, [12]);
+  assert.deepEqual(v.climb.filter((w) => w.test).map((w) => w.week), [12]);
+  assert.match(v.fitt[5].by, /Fitness tested in week 12\.$/);
+  assert.equal(v.moves.find((m) => /test$/.test(m.head)).head, "The week 12 test");
+  assert.deepEqual(askInputs(v, TARGETS).weeks.filter((w) => w.fitness_test).map((w) => w.week), [12]);
+  // a plan of six weeks tests once, at its end
+  const six = guidePlan({ horizon: { starts_on: "2026-11-02", ends_on: "2026-12-14", title: "Six weeks" }, targets: TARGETS, person: person(), today: TODAY });
+  assert.deepEqual([six.weeks, six.testWeeks], [6, [6]]);
+  // the rule says whose choice it is, and that the app's reminder is another thing
+  assert.match(RULES.retest.source, /The plan's own choice/);
+  assert.match(RULES.retest.checked, /stays at eight weeks on purpose/);
+  assert.doesNotMatch(RULE_LINES.find((r) => r.id === "retest").label, /eight/);
+});
+
+test("a line that climbs a rung a week: reached goes on, short is asked again, two in a row go one back, nothing arrived is not judged", () => {
+  const run = (verdicts, o = {}) => lineProgress({ weeks: 8, week: verdicts.length, first: 0, from: 0, top: 7, verdict: (i) => verdicts[i], ...o });
+  assert.deepEqual(run(["reached", "reached"]).rungOfWeek, [0, 1, 2, 3, 4, 5, 6, 7]);
+  assert.deepEqual(run(["reached", "short"]), { rungOfWeek: [0, 1, 1, 2, 3, 4, 5, 6], outcomeOfWeek: ["on", "short", null, null, null, null, null, null] });
+  assert.deepEqual(run(["reached", "short", "short"]).rungOfWeek.slice(0, 5), [0, 1, 1, 0, 1], "two short in a row: one rung back, then a rung a week again");
+  assert.deepEqual(run(["reached", "short", "short"]).outcomeOfWeek.slice(0, 3), ["on", "short", "back"]);
+  // never under the first rung; a reached week between two short ones starts the count again
+  assert.deepEqual(run(["short", "short", "short", "short"]).rungOfWeek.slice(0, 5), [0, 0, 0, 0, 0]);
+  assert.deepEqual(run(["reached", "short", "reached", "short"]).rungOfWeek.slice(0, 5), [0, 1, 1, 2, 2]);
+  // nothing arrived: the same rung again, and it is not a miss. It does not come between two short weeks either: short, nothing, short is two in a row
+  assert.deepEqual(run(["reached", "short", "none", "short"]).outcomeOfWeek.slice(0, 4), ["on", "short", "unread", "back"]);
+  assert.deepEqual(run(["reached", "none", "reached"]), { rungOfWeek: [0, 1, 1, 2, 3, 4, 5, 6], outcomeOfWeek: ["on", "unread", "on", null, null, null, null, null] });
+  assert.deepEqual(run(["none", "none", "none"]).rungOfWeek.slice(0, 4), [0, 0, 0, 0]);
+  // weeks before the rule are read as they were asked, a rung each, and are not judged
+  assert.deepEqual(run(["short", "short", "short"], { from: 2 }), { rungOfWeek: [0, 1, 2, 2, 3, 4, 5, 6], outcomeOfWeek: [null, null, "short", null, null, null, null, null] });
+  // the top is never passed; the weeks before `first` carry their own number
+  assert.deepEqual(run(["reached", "reached", "reached", "reached", "reached", "reached"], { top: 4 }).rungOfWeek, [0, 1, 2, 3, 4, 4, 4, 4]);
+  assert.deepEqual(run(["reached", "reached", "reached", "short"], { first: 2 }).rungOfWeek.slice(0, 5), [0, 1, 2, 3, 3]);
+  // a plan that has not begun: a rung a week
+  assert.deepEqual(lineProgress({ weeks: 4, week: -1, first: 0, from: 0, top: 3, verdict: () => "short" }).rungOfWeek, [0, 1, 2, 3]);
+});
+
+// The plan of the fixture: steps a day climb 6,500, 6,650, 6,750, 6,900, 7,050, 7,200, 7,300 … to 8,000. Its fifth week
+// begins on Monday 30 November 2026, the first week the rule judges.
+const STEPS_LADDER = [6500, 6650, 6750, 6900, 7050, 7200, 7300];
+const ON = [50, 120, 2];   // a week that reached zone 2 and strength
+const stepsOf = (v) => v.rows.find((r) => r.kind === "steps_day").n;
+
+test("steps a day answer their own week: reached moves up, short is asked again, two in a row step back, no day on file is not judged", () => {
+  assert.equal(LINES_JUDGED_FROM, "2026-11-30");
+  assert.deepEqual(plan().climb.slice(0, 7).map((w) => w.steps), STEPS_LADDER, "the ladder as first drawn");
+  // the weeks before the rule are read as they were asked, whatever they did: a rung each, to the week that begins on 30 November
+  const before = atWeek("2026-12-02", [[...ON, 3000], [...ON, 3000], [...ON, 3000], [...ON, 3000]]);
+  assert.equal(stepsOf(before), 7050);
+  assert.deepEqual(before.climb.slice(0, 5).map((w) => w.steps), STEPS_LADDER.slice(0, 5));
+  assert.equal(before.review.after[0].why_steps, undefined, "the week of 23 November is not judged on steps");
+  assert.match(before.review.after[0].text, /steps go on to 7,050 a day\.$/);
+  // week 5 reached its 7,050: week 6 asks the next rung
+  const reached = atWeek("2026-12-09", [ON, ON, ON, ON, [...ON, 7100]]);
+  assert.equal(stepsOf(reached), 7200);
+  assert.equal(reached.review.after[0].why_steps, "Steps reached their line, so this week asks 150 more a day.");
+  // the sentence stands beside zone 2's own, and the steps are not said a second time among the week's other figures
+  assert.match(reached.review.after[0].text, /^Zone 2 .+ Steps reached their line, so this week asks 150 more a day\. Harder minutes (stay at|are) \d+ and strength stays at 2\.$/);
+  assert.doesNotMatch(reached.review.after[0].text, /go on to/);
+  // week 5 came to 6,900 of 7,050: week 6 asks 7,050 again, and the 150 are not added
+  const short = atWeek("2026-12-09", [ON, ON, ON, ON, [...ON, 6900]]);
+  assert.equal(stepsOf(short), 7050);
+  assert.equal(short.review.after[0].why_steps, "Steps were under their line, so the plan asks for the same 7,050 a day again.");
+  assert.equal(short.review.lines.find((l) => l.key === "steps").word, "150 a day short");
+  assert.equal(short.climb[5].steps, 7050); assert.equal(short.climb[6].steps, 7200, "the weeks ahead take a rung each from where the line stands");
+  // two short in a row: week 7 steps back one rung, to 6,900
+  const back = atWeek("2026-12-16", [ON, ON, ON, ON, [...ON, 6900], [...ON, 6800]]);
+  assert.equal(stepsOf(back), 6900);
+  assert.equal(back.review.after[0].why_steps, "Steps were under their line two weeks in a row, so the plan steps back to 6,900 a day.");
+  assert.deepEqual(back.climb.slice(4, 7).map((w) => w.steps), [7050, 7050, 6900], "the weeks behind keep what they asked");
+  // a week no day of steps arrived in is asked again, and is not a miss: the short week after it is the first of two
+  const unread = atWeek("2026-12-09", [ON, ON, ON, ON, [...ON, null]]);
+  assert.equal(stepsOf(unread), 7050);
+  assert.equal(unread.review.after[0].why_steps, "No day of steps arrived, so the plan asks for the same 7,050 a day again.");
+  assert.equal(stepsOf(atWeek("2026-12-16", [ON, ON, ON, ON, [...ON, null], [...ON, 6800]])), 7050);
+  // zone 2 does not move the steps, and steps do not move zone 2
+  const z2short = atWeek("2026-12-09", [ON, ON, ON, ON, [10, 100, 2, 7100]]);
+  assert.equal(stepsOf(z2short), 7200);
+  assert.equal(zone2Of(short), zone2Of(reached));
+  // never above the person's own number, and a steps number already reached is held, not climbed
+  const top = atWeek("2027-01-27", Array.from({ length: 12 }, () => [...ON, 9000]));
+  assert.equal(stepsOf(top), 8000);
+  const held = guidePlan({ horizon: H, targets: TARGETS.map((t) => (t.marker === "steps" ? { ...t, target_value: 6000 } : t)), person: person({ today: "2026-12-09", planWeeks: [ON, ON, ON, ON, [...ON, 6100]] }), today: "2026-12-09", stored: storedPlan() });
+  assert.equal(held.review.after[0].why_steps, "Steps reached their line, and the plan holds it from here.");
+  // the chat is given the same weeks
+  assert.equal(askInputs(short, TARGETS).weeks[5].steps_a_day, 7050);
+});
+
+test("the strength sets answer their own week: a rung for each week the strength asked was done", () => {
+  // a plan that begins on 30 November 2026, so every week of it is judged; the person lifted once a week before it
+  const H2 = { starts_on: "2026-11-30", ends_on: "2027-03-01", title: "From the rule" };
+  const first = "2026-11-30";
+  const p0 = person({ today: "2026-11-27", first });
+  const stored = storeOf(guidePlan({ horizon: H2, targets: TARGETS, person: p0, today: "2026-11-27" }), "2026-11-27");
+  assert.equal(stored.first_monday, first);
+  const at = (today, planWeeks) => guidePlan({ horizon: H2, targets: TARGETS, person: person({ today, planWeeks, first }), today, stored });
+  const setsNow = (v) => v.strength.sets;
+  // four weeks with both sessions done: week 5 moves to the higher sets, and says so
+  const up = at("2026-12-30", [ON, ON, ON, ON]);
+  assert.equal(setsNow(up), "two to three sets");
+  assert.equal(up.review.after[0].why_strength, "Strength reached its line, so this week moves to two to three sets.");
+  assert.deepEqual(up.climb.slice(0, 6).map((w) => w.sets), ["one to two sets", "one to two sets", "one to two sets", "one to two sets", "two to three sets", "two to three sets"]);
+  // the fourth week was one session short: the sets stay, and the week is not counted
+  const stay = at("2026-12-30", [ON, ON, ON, [50, 120, 1]]);
+  assert.equal(setsNow(stay), "one to two sets");
+  assert.equal(stay.review.after[0].why_strength, "Strength was under its line, so the sets stay at one to two for now.");
+  assert.equal(stay.climb[5].sets, "two to three sets", "a reached week is all it takes");
+  // an early short week is counted against nothing yet: no sentence, and the higher sets come a week later
+  const early = at("2026-12-16", [ON, [50, 120, 1]]);
+  assert.equal(early.review.after[0].why_strength, undefined);
+  assert.deepEqual(early.climb.slice(0, 6).map((w) => w.sets), ["one to two sets", "one to two sets", "one to two sets", "one to two sets", "one to two sets", "two to three sets"]);
+  // at the higher sets, two short weeks in a row go back to the lower
+  const back = at("2027-01-13", [ON, ON, ON, ON, [50, 120, 1], [50, 120, 0]]);
+  assert.equal(setsNow(back), "one to two sets");
+  assert.equal(back.review.after[0].why_strength, "Strength was under its line two weeks in a row, so the sets go back to one to two.");
+  assert.equal(at("2027-01-06", [ON, ON, ON, ON, [50, 120, 1]]).strength.sets, "two to three sets", "one short week at the higher sets changes nothing");
+  // someone who already lifted twice a week has no ladder: two to three from the first week, whatever a week did
+  const lifter = guidePlan({ horizon: H2, targets: TARGETS, person: person({ today: "2026-12-16", strength: 2, planWeeks: [ON, [50, 120, 0]], first }), today: "2026-12-16", stored: { ...stored, base: { ...stored.base, strength: 2 } } });
+  assert.equal(lifter.strength.sets, "two to three sets");
+  assert.equal(lifter.review.after[0].why_strength, undefined);
+  assert.match(lifter.moves[0].text, /Steps a day answer their own week: under the line/);
+  // the page's own words on sets say the rule
+  assert.match(up.strength.hard.find(([k]) => k === "Sets")[1], /One to two until the strength sessions asked have been done in four weeks of the plan\. Two to three after\./);
+  // the fixture's first plan began before the rule: its first four weeks count as asked, so week 5 is at the higher sets as it always was
+  assert.equal(atWeek("2026-12-02", [ON, [50, 120, 0], [50, 120, 0], [50, 120, 0]]).strength.sets, "two to three sets");
+});
+
+test("a plan changed midway keeps what its weeks asked, and the lines go on from the week of the change", () => {
+  // week 5 was short on steps, so week 6 (the week of 7 December) asks 7,050 again; in it the person changes their zone 2 number
+  const weeks = [ON, ON, ON, ON, [...ON, 6900]];
+  const today = "2026-12-09";
+  const v = atWeek(today, weeks);
+  assert.equal(stepsOf(v), 7050);
+  const frozen = freezeOf(v, storedPlan(), true);
+  assert.deepEqual(frozen.past.map((w) => w.steps), [6500, 6650, 6750, 6900, 7050], "the finished weeks are written down as they were asked");
+  assert.deepEqual([frozen.leg.monday, frozen.leg.steps], ["2026-12-07", 7050], "the week of the change keeps the figure it was asked");
+  const after = guidePlan({ horizon: H, targets: TARGETS.map((t) => (t.marker === "zone2_week" ? { ...t, target_value: 150 } : t)), person: person({ today, planWeeks: weeks }), today, stored: frozen });
+  assert.deepEqual(after.climb.slice(0, 6).map((w) => w.steps), [6500, 6650, 6750, 6900, 7050, 7050]);
+  assert.equal(after.review.after[0].why_steps, undefined, "the week before a change is not read against the new line");
+  // the climb goes on from the week of the change: a rung a week from 7,050, reached moves up, short is asked again
+  const next = (w6) => guidePlan({ horizon: H, targets: TARGETS.map((t) => (t.marker === "zone2_week" ? { ...t, target_value: 150 } : t)), person: person({ today: "2026-12-16", planWeeks: [...weeks, w6] }), today: "2026-12-16", stored: frozen });
+  const moved = next([...ON, 7100]), again = next([...ON, 7000]);
+  assert.ok(stepsOf(moved) > 7050 && stepsOf(moved) <= 8000);
+  assert.equal(stepsOf(again), 7050);
+  assert.equal(again.review.after[0].why_steps, "Steps were under their line, so the plan asks for the same 7,050 a day again.");
+  assert.deepEqual(moved.climb.slice(0, 5).map((w) => w.steps), [6500, 6650, 6750, 6900, 7050], "nothing behind the change is rewritten");
+});
+
+test("where the fitness figure puts the person: the figure and its test, the tier, their own aim, and the three tiers with theirs marked", () => {
+  const v = plan();
+  assert.deepEqual(v.place.fitness, { big: "8.4 METs", small: "Field test · 20 October" });
+  assert.deepEqual(v.place.tier, { n: 1, big: "Tier 1 of 3", small: "Under 9 METs: build minutes at a steady effort first." });
+  assert.deepEqual(v.place.aim, { big: "9.0 METs", small: "Your own target · tested again in week 12" });
+  assert.deepEqual(v.place.tiers.map((t) => [t.head, t.here]), [["Tier 1 · under 9 METs", true], ["Tier 2 · 9 to 14 METs", false], ["Tier 3 · 14 METs and over", false]]);
+  assert.equal(v.place.tiers.filter((t) => t.here).length, 1);
+  // what a test does, as the plan does it: in the second tier the harder minutes are no longer eased
+  assert.equal(v.place.note, "The tier is read from the latest fitness test on file. At 9.0 METs or more it is tier 2: the harder minutes are then at 65 to 85% of heart-rate reserve, and the plan stops easing them.");
+  const two = plan({ mets: 10.2 });
+  assert.deepEqual([two.place.tier.big, two.place.tiers.find((t) => t.here).n], ["Tier 2 of 3", 2]);
+  assert.match(two.place.note, /At 14\.0 METs or more it is tier 3\. The plan asks the same minutes in both\.$/);
+  assert.ok(plan().climb.some((w) => w.harder < plan().climb[0].harder) && two.climb.every((w) => w.harder === two.climb[0].harder), "the note is true of the climb: eased in tier 1, held in tier 2");
+  const three = plan({ mets: 14.5 });
+  assert.deepEqual(three.climb.map((w) => [w.zone2, w.harder]), plan({ mets: 13.9 }).climb.map((w) => [w.zone2, w.harder]), "tiers 2 and 3 ask the same minutes");
+  assert.match(three.place.note, /This is the highest tier\.$/);
+  // no test on file: the first tier, and the page says a test would place them
+  const none = plan({ mets: null });
+  assert.deepEqual(none.place.fitness, { big: "No test on file", small: "A fitness test places you in a tier." });
+  assert.equal(none.place.tier.small, "With no test on file the plan starts as tier 1: minutes at a steady effort first.");
+  // no fitness target: no aim is drawn; a viewer reads "their"
+  assert.equal(guidePlan({ horizon: H, targets: TARGETS.filter((t) => t.marker !== "mets"), person: person(), today: TODAY }).place.aim, null);
+  assert.match(plan({}, { self: false }).place.aim.small, /^Their own target/);
+});
+
+test("the Intensity card: beats for the person's own heart when the app's band is handed in, effort when the app was told so, and never a beat for anyone else", () => {
+  const plain = plan();
+  const I = (v) => v.fitt.find((r) => r.name === "Intensity");
+  // nothing handed in (a coach, a viewer, the function's chat): the card as it was, and what the effort feels like
+  assert.equal(I(plain).now, "Zone 2 for 50 of 170 minutes. The rest harder.");
+  assert.equal(I(plain).note, "Steady: you can talk in full sentences. Harder: talking is broken into phrases.");
+  assert.equal(plain.effortWhere, null);
+  assert.doesNotMatch(JSON.stringify(plain.fitt), /beats|bpm/);
+  // the band of someone aged 44 with a resting rate of 62: 108 to 131, from a maximum of 177
+  const heart = heartOf({ age: 44, resting_hr: 62 }, TODAY);
+  const mine = plan({}, { heart });
+  assert.equal(I(mine).now, "Zone 2 is 108 to 131 beats a minute for you, for 50 of 170 minutes. The rest harder.");
+  assert.match(I(mine).by, /^The same range, for \d+ of \d+ minutes$/);
+  assert.match(I(mine).note, /^Steady: you can talk in full sentences\. Harder: talking is broken into phrases\. 40 to 60% of your heart-rate reserve: a maximum of 177 for your age, less 62 at rest\. The app counts your zone 2 minutes against the same range\./);
+  assert.match(mine.effortWhere, /Settings, then Profile, then "Heart-rate medication"/);
+  // only the card and its line change: every figure of the plan is the same
+  assert.deepEqual({ ...mine, fitt: null, effortWhere: null, heartKind: null }, { ...plain, fitt: null, effortWhere: null, heartKind: null });
+  assert.deepEqual([plain.heartKind, mine.heartKind], [null, "beats"]);
+  assert.deepEqual(mine.fitt.filter((r) => r.name !== "Intensity"), plain.fitt.filter((r) => r.name !== "Intensity"));
+  // the app was told heart rate is not a guide: effort, no beats, and no medicine is named
+  const effort = plan({}, { heart: heartOf({ age: 44, resting_hr: 62, on_beta_blockers: true }, TODAY) });
+  assert.equal(I(effort).now, "A steady effort for 50 of 170 minutes. The rest harder.");
+  assert.match(I(effort).note, /Guided by effort, not by heart rate, as you set in the app\./);
+  assert.doesNotMatch(JSON.stringify(effort.fitt), /beats a minute|beta|medic/i);
+  assert.equal(effort.effortWhere, null);
+  // no age on the profile: no beats, and the card says why
+  const noAge = plan({}, { heart: heartOf({ resting_hr: 62 }, TODAY) });
+  assert.equal(I(noAge).now, I(plain).now);
+  assert.match(I(noAge).note, /Your age is not on your profile, so the range in beats cannot be worked out\./);
+  // a reader who is not the person is never shown beats, whatever is handed in
+  const viewer = plan({}, { heart, self: false });
+  assert.doesNotMatch(JSON.stringify(viewer.fitt), /beats/);
+  assert.equal(viewer.effortWhere, null);
+  // zone 2 only: the card has no "harder" to describe
+  const easy = guidePlan({ horizon: H, targets: TARGETS, person: person(), today: TODAY, mode: "easy", heart });
+  assert.match(I(easy).now, /^Zone 2 is 108 to 131 beats a minute for you, for all \d+ minutes\.$/);
+  assert.equal(I(easy).note.includes("Harder:"), false);
+  // the chat is given the card's two cells, as before
+  assert.equal(askInputs(mine, TARGETS).fitt[1].this_week, I(mine).now);
+});
+

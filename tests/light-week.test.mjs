@@ -335,6 +335,29 @@ test("where last week was short, one way to fill it comes from the ticked activi
   assert.deepEqual(asksOf({ ...base, finished: all, rows: PLAN, chosen: mine }).asks.map((a) => a.line), [null, null, null]);
 });
 
+test("where the plan judged last week on steps or on the strength sets, its own sentence is said, and the way follows it", () => {
+  const chosen = { keys: ["walking", "swimming", "strength_home"], own: [], from: "chosen" };
+  const base = { horizon: H, person: whole(), today: NEXT_MON, rows: NEXT_PLAN, targets: TARGETS, chosen, why: WHY };
+  const line = (o, key) => asksOf({ ...base, ...o }).asks.find((a) => a.key === key).line;
+  // steps reached, and the plan moved them up: the plan's sentence in place of "more than last week asked"
+  const up = "Steps reached their line, so this week asks 130 more a day.";
+  assert.equal(line({ finished: finished(), whySteps: up }, "steps"), up);
+  // steps short: the plan's sentence, then one way from the person's activities
+  const again = "Steps were under their line, so the plan asks for the same 6,800 a day again.";
+  assert.equal(line({ finished: finished({ steps: 5600 }), rows: PLAN, whySteps: again }, "steps"), `${again} One way: a brisk walk after dinner, 20 minutes.`);
+  // strength: the plan's sentence on the sets, then the way when the week was short
+  const stay = "Strength was under its line, so the sets stay at one to two for now.";
+  assert.equal(line({ finished: finished(), whyStrength: stay }, "strength"), `${stay} Five moves at home counts as one.`);
+  const moved = "Strength reached its line, so this week moves to two to three sets.";
+  const all = finished({ sessions: [[0, "Badminton", "aerobic", 60, 60], [1, "Swim", "aerobic", 60, 55], [2, "Strength", "strength", 25, null], [4, "Strength", "strength", 25, null]] });
+  assert.equal(line({ finished: all, whyStrength: moved }, "strength"), moved);
+  // nothing handed in: the lines are the ones they were
+  assert.equal(line({ finished: finished() }, "steps"), "130 more a day than last week asked.");
+  assert.equal(line({ finished: finished(), whySteps: null, whyStrength: null }, "strength"), "Five moves at home counts as one.");
+  // aerobic time is not touched by either
+  assert.equal(line({ finished: finished(), whySteps: up, whyStrength: stay }, "aerobic"), WHY);
+});
+
 test("the week that begins has no asks where the page has no light week: the horizon's short last days", () => {
   const last = "2027-02-08";   // Monday of the days that end on Saturday 13 February
   assert.equal(asksOf({ horizon: H, person: whole(), today: last, rows: NEXT_PLAN, targets: TARGETS, finished: null, chosen: null }), null);

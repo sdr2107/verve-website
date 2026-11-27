@@ -118,7 +118,7 @@ export const GOALS: Goal[] = [
       { text: "Two tests of one person differ by about 5% with nothing changed. A smaller move is not a change.", cites: ["Katch 1982", "Edgett 2018"] },
       { text: "Resting heart rate fell by about 3 beats a minute with training, on average.", cites: ["Reimers 2018"] },
     ],
-    plan: "The Guide's plan as it is today: zone 2 minutes a step a week, the harder minutes eased, strength held or raised. Fitness is tested in week 8 and at the end, by the method it started on.",
+    plan: "The Guide's plan as it is today: zone 2 minutes a step a week, the harder minutes eased, strength held or raised. Fitness is tested again every twelve weeks, or in the last week of a shorter plan, by the method it started on.",
   },
   {
     key: "hold", title: "Hold what I have", lead: "Floors, not climbs. The least that keeps you where you are.",

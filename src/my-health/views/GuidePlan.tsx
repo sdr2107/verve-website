@@ -28,9 +28,10 @@ import {
   type ClimbRow, type GuidePlanView, type GuideStored, type GuideChoices, type Layout, type ScreenAnswers,
 } from "../horizon/guidePlan.ts";
 import {
-  addTarget, askGuide, clearAsks, grantConsent, listAsks, loadScreen, removeScreen, saveGuidePlan, saveScreen, updateTarget, ERROR_WORDS,
+  addTarget, askGuide, clearAsks, grantConsent, listAsks, loadHeartProfile, loadScreen, removeScreen, saveGuidePlan, saveScreen, updateTarget, ERROR_WORDS,
   type AskRow, type HorizonAccess, type HorizonFull, type ScreenRow,
 } from "../horizon/api.ts";
+import { heartOf, type Heart } from "../horizon/heartBand.ts";
 import { HORIZON_PUBLIC } from "../../data/story.ts";
 import { HORIZON_KEPT } from "../horizon/access.ts";
 import { planDoor } from "../../data/plan-door.ts";
@@ -38,6 +39,8 @@ import { planDoor } from "../../data/plan-door.ts";
 export type GuideCommon = {
   sb: SupabaseClient; h: HorizonFull; person: PersonData; today: string; targets: Target[];
   owner: boolean; closed: boolean;
+  /** The reader is the person the plan is for: only they are shown their zone 2 in beats (the Intensity card). */
+  mine?: boolean;
   /** What the account may do; null when the function could not say. */
   access: HorizonAccess | null;
   userId: () => Promise<string | null>; reload: () => Promise<void>; setNotice: (s: string) => void;
@@ -70,6 +73,60 @@ export function GuideLocked({ access }: { access: HorizonAccess }) {
       <div class="text-[15px] font-semibold text-text">The Guide's plan is part of Pro.</div>
       <p class="m-0 text-[13px] leading-relaxed text-text-2">{recentlyEnded(access.free.until) ? `Your free week of Horizon ended on ${dayMonthLong(access.free.until!.slice(0, 10))}. ` : ""}The plan, the Monday check-in and the questions about the plan are part of Pro. Your horizon, its targets and your readings stay here.</p>
       {plans ? <div><a href={plans.href} class="inline-flex min-h-11 items-center rounded-[10px] bg-accent px-4 text-[13px] font-semibold text-canvas">{plans.label}</a></div> : null}
+    </div>
+  );
+}
+
+// ── the person's own heart, for the Intensity card (board 03, 27 November 2026) ──
+
+/**
+ * The person's zone 2 in beats, from their own profile row, by the app's own rule (../horizon/heartBand.ts). Read
+ * once, and only when the reader is the person the plan is for. Null while it is being read, for anyone else, and
+ * when the row cannot be read: the card then says what the effort feels like and prints no beats.
+ */
+function useHeart(p: GuideCommon): Heart | null {
+  const [heart, setHeart] = useState<Heart | null>(null);
+  useEffect(() => {
+    if (!p.mine) { setHeart(null); return; }
+    let live = true;
+    void p.userId().then(async (uid) => {
+      if (!uid) return;
+      const row = await loadHeartProfile(p.sb, uid);
+      if (live) setHeart(heartOf(row, p.today));
+    });
+    return () => { live = false; };
+  }, [p.mine, p.h.id, p.today]);
+  return heart;
+}
+
+/** Where the fitness figure puts the person (board 03): three figures, then the three tiers with theirs marked. */
+function Place({ v }: { v: GuidePlanView }) {
+  const pl = v.place;
+  const card = (key: string, small: string, big: string, text: string) => (
+    <div class="flex min-w-0 flex-col gap-1 rounded-[12px] border border-border bg-canvas p-3" data-place={key} key={key}>
+      <span class="font-mono text-[10px] font-medium uppercase tracking-[0.04em] text-text-3">{small}</span>
+      <span class="t-figure text-text">{big}</span>
+      <span class="text-[13px] leading-relaxed text-text-2">{text}</span>
+    </div>
+  );
+  return (
+    <div class="flex flex-col gap-2" data-plan="place">
+      <Kicker>Where your fitness puts you</Kicker>
+      <div class={`grid grid-cols-1 gap-2 ${pl.aim ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+        {card("fitness", "Your fitness", pl.fitness.big, pl.fitness.small)}
+        {card("tier", "Your tier", pl.tier.big, pl.tier.small)}
+        {pl.aim ? card("aim", "Your aim", pl.aim.big, pl.aim.small) : null}
+      </div>
+      <div class="overflow-hidden rounded-[12px] border border-border" role="list" aria-label="The three tiers">
+        {pl.tiers.map((t) => (
+          <div class={`grid grid-cols-1 gap-x-3 gap-y-0.5 border-t border-border p-3 text-[13px] leading-relaxed first:border-t-0 sm:grid-cols-[190px_minmax(0,1fr)_auto] sm:items-baseline ${t.here ? "bg-accent-fill" : "bg-card"}`} role="listitem" data-tier={t.n} data-here={t.here ? "true" : "false"} key={t.n}>
+            <b class="font-semibold text-text">{t.head}</b>
+            <span class="text-text-2">{t.text}</span>
+            {t.here ? <span class="font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-accent-text">You are here</span> : null}
+          </div>
+        ))}
+      </div>
+      <Quiet>{pl.note}</Quiet>
     </div>
   );
 }
@@ -218,6 +275,7 @@ function Week({ v, part }: { v: GuidePlanView; part?: PlanPart }) {
         </div>
       </div>}
 
+      {part ? null : <Place v={v} />}
       {part ? null : <div class="flex flex-col gap-2">
         <Kicker>The same plan, letter by letter</Kicker>
         <div class="overflow-hidden rounded-[12px] border border-border" role="table" aria-label="The plan as FITT-VP">
@@ -230,10 +288,13 @@ function Week({ v, part }: { v: GuidePlanView; part?: PlanPart }) {
               <span class="font-semibold text-text sm:p-2">{r.name}</span>
               <span class="sm:p-2">{r.now}</span>
               <span class="sm:p-2"><span class="text-text-3 sm:hidden">By the date: </span>{r.by}</span>
+              {r.note ? <span class="col-start-2 text-[12px] leading-relaxed text-text-3 sm:col-span-2 sm:col-start-3 sm:px-2 sm:pb-2" data-plan="intensity-note" data-intensity={v.heartKind ?? "words"}>{r.note}</span> : null}
             </div>
           ))}
         </div>
+        {v.effortWhere ? <p class="m-0 text-[12px] leading-relaxed text-text-3" data-plan="effort-where">{v.effortWhere}</p> : null}
       </div>}
+      {part === "science" ? <Place v={v} /> : null}
       {part === "science" ? <Letters v={v} /> : null}
 
       {part === "week" ? null : <div class="flex flex-col gap-2">
@@ -278,8 +339,10 @@ function Letters({ v }: { v: GuidePlanView }) {
           <span class="text-[14px] font-semibold text-text">{r.name}</span>
           <span class="text-[13px] leading-relaxed text-text">{r.now}</span>
           <span class="text-[12px] leading-relaxed text-text-3">By the date: {r.by.replace(/^./, (c) => c.toLowerCase())}</span>
+          {r.note ? <span class="col-start-2 text-[12px] leading-relaxed text-text-3" data-plan="intensity-note" data-intensity={v.heartKind ?? "words"}>{r.note}</span> : null}
         </div>
       ))}
+      {v.effortWhere ? <p class="m-0 text-[12px] leading-relaxed text-text-3 sm:col-span-2 lg:col-span-3" data-plan="effort-where">{v.effortWhere}</p> : null}
     </div>
   );
 }
@@ -485,6 +548,7 @@ function Questions({ onDone, busy, onCancel }: { onDone: (a: ScreenAnswers) => v
 
 /** The offer above the plan's own lines: the questions, then the draft, then "Use this plan". For the person whose horizon it is. */
 export function GuideOffer(p: GuideCommon) {
+  const heart = useHeart(p);
   const [screen, setScreen] = useState<ScreenRow | null | undefined>(undefined);
   const [answering, setAnswering] = useState(false);
   const [busy, setBusy] = useState("");
@@ -545,8 +609,8 @@ export function GuideOffer(p: GuideCommon) {
     );
   }
 
-  const base = guidePlan({ horizon: p.h, targets: p.targets, person: p.person, today: p.today, mode: outcome });
-  const v = choices ? guidePlan({ horizon: p.h, targets: p.targets, person: p.person, today: p.today, mode: outcome, choices }) : base;
+  const base = guidePlan({ horizon: p.h, targets: p.targets, person: p.person, today: p.today, mode: outcome, heart });
+  const v = choices ? guidePlan({ horizon: p.h, targets: p.targets, person: p.person, today: p.today, mode: outcome, choices, heart }) : base;
   async function use() {
     const uid = await p.userId();
     if (!uid) { p.setNotice("Sign in again to continue."); return; }
@@ -644,7 +708,8 @@ function Changer({ v, busy, onSave, onCancel, saveLabel, preview }: { v: GuidePl
 
 export function GuidePlanCard(p: GuideCommon & { stored: GuideStored; /** The person leaves the Guide's plan for lines of their own. */ onOwnLines: () => void; /** A coach opens the plan's lines to write them. */ onCoachEdit: () => void;
   /** One of the plan's two small pages (board 22); absent, the whole card. */ part?: PlanPart }) {
-  const v = guidePlan({ horizon: p.h, targets: p.targets, person: p.person, today: p.today, stored: p.stored, self: p.owner });
+  const heart = useHeart(p);
+  const v = guidePlan({ horizon: p.h, targets: p.targets, person: p.person, today: p.today, stored: p.stored, self: p.owner, heart });
   const part = p.part;
   const [tab, setTab] = useState<Tab>(() => firstTab(v, p.today));
   const [changing, setChanging] = useState(false);

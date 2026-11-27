@@ -180,6 +180,22 @@ test("a kept horizon does not say the Guide still checks it, and no horizon's pa
   const view = read("../src/my-health/views/Horizon.tsx");
   assert.match(view, /const keptOnly = locked && !HORIZON_PUBLIC;/);
   // the sentence is written in two places below the door's card, and both leave it out for a kept horizon
-  assert.equal((view.match(/keptOnly \? (?:""|null) : /g) ?? []).length, 2);
+  assert.match(view, /keptOnly \? "" : ` The Guide checks the pace every Monday/);
+  assert.match(view, /keptOnly \? null : <> The Guide checks the pace every Monday/);
   assert.match(view, /on\("notes"\) && HORIZON_PUBLIC \? /);
+});
+
+test("a kept horizon promises no check-in the server will not write (the founder's recording, 27 November 2026)", () => {
+  // after a member's 12 weeks the round writes nothing for their horizon (the function's due: pro_required), so the
+  // page shows no next check-in, no schedule, no switch for one, no button to write one, and no read still to come
+  const view = read("../src/my-health/views/Horizon.tsx");
+  assert.match(view, /\{!closed && !keptOnly && <span[^>]*>Next: Monday/);
+  assert.match(view, /\{keptOnly \? null : <Quiet>Every Monday morning, once the app has synced the week/);
+  assert.match(view, /\{keptOnly \? null : <div class="flex flex-col">/);
+  assert.match(view, /"email_checkin" in h && !keptOnly && <Quiet>/);
+  assert.match(view, /\{!keptOnly && \(\(missingWeek && pastMondayNine\) \|\| missingMonth \|\| finalDue\)/);
+  assert.match(view, /const roadShown = keptOnly \? road\.filter\(\(x\) => x\.state !== "future"\) : road;/);
+  assert.match(view, /keptOnly \? "No check-in was written\." : owner \?/);
+  // deleting it stays within reach
+  assert.match(view, /<H2>\{keptOnly \? "This horizon" : "Check-ins and who sees them"\}<\/H2>/);
 });

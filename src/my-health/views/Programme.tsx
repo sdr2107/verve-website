@@ -91,7 +91,7 @@ export function readWayIn(): { aims: string[]; barriers: string[] } {
     return { aims: list(x?.aims), barriers: list(x?.barriers) };
   } catch { return { aims: [], barriers: [] }; }
 }
-const clearWayIn = () => { try { localStorage.removeItem(WAY_IN_KEY); } catch { /* a private window: nothing was kept */ } };
+export const clearWayIn = () => { try { localStorage.removeItem(WAY_IN_KEY); } catch { /* a private window: nothing was kept */ } };
 
 // ── the set-up (boards 04 and 05; one card at a time from board 18, with markers added from board 19) ──
 

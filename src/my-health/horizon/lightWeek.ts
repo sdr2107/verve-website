@@ -226,6 +226,10 @@ export function loggedLines(person: Person, from: string, toExclusive: string): 
 // `why` of a finished week's review): it is handed in, never rewritten here. For strength and steps the plan has no
 // such rule yet, so the line says only what is true today: one way to fill what was short, from the person's own
 // activities, and for steps that the plan's figure went up.
+//
+// 27 November 2026: the plan now has that rule (./guidePlan.ts lineProgress). Where the Guide's plan judged the
+// finished week on steps or on the strength sets, its own sentence is handed in (`whySteps`, `whyStrength`) and is
+// said as it is; the way to fill what was short follows it. Without one, the lines are as they were.
 
 export type FinishedAmount = {
   key: AmountKey; label: string; done: number | null; of: number;
@@ -270,14 +274,17 @@ const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
  * What the week that begins on `today` asks, each amount with at most one sentence.
  *   aerobic   the plan's own sentence on what last week did to it (`why`), when the plan is the Guide's. Otherwise,
  *             where last week was short, one way to fill it from the person's activities.
- *   strength  where last week was short, one way: "Five moves at home counts as one."
- *   steps     that the figure went up from last week's, when it did; where last week was short, one way.
+ *   strength  the plan's sentence on the sets, when last week moved or held them (`whyStrength`); where last week was
+ *             short, one way: "Five moves at home counts as one."
+ *   steps     the plan's sentence on what last week did to the figure (`whySteps`): reached and it moves up, short and
+ *             the same is asked again. Without one, that the figure went up when it did. Where last week was short, one way.
  * Null where lightWeekOf is null: a short last week, a week set aside, a horizon that asks for none of the three.
  */
 export function asksOf(a: { horizon: HorizonLike; person: Person; today: string; rows: PlanRow[]; targets: { marker: string; target_value: number }[];
   /** The week before, as finishedWeekOf read it; null when it was not judged. */ finished?: FinishedWeek | null;
   /** The person's activities (chosenOf); null and no idea is offered. */ chosen?: Chosen | null;
-  /** The plan's sentence on what the finished week did to this week's aerobic minutes; null when the plan is not the Guide's. */ why?: string | null }): WeekAsks | null {
+  /** The plan's sentence on what the finished week did to this week's aerobic minutes; null when the plan is not the Guide's. */ why?: string | null;
+  /** The plan's sentences on what the finished week did to steps a day and to the strength sets; null where the week was not judged on them. */ whySteps?: string | null; whyStrength?: string | null }): WeekAsks | null {
   const w = lightWeekOf({ horizon: a.horizon, person: a.person, today: a.today, rows: a.rows, targets: a.targets });
   if (!w) return null;
   const before = (key: AmountKey) => a.finished?.amounts.find((x) => x.key === key) ?? null;
@@ -295,11 +302,14 @@ export function asksOf(a: { horizon: HorizonLike; person: Person; today: string;
     }
     if (x.key === "strength") {
       const idea = short("strength") ? way(x) : null;
-      return { key: x.key, label: x.label, ask: `${x.of} ${x.of === 1 ? "session" : "sessions"}`, line: idea ? `${idea} counts as one.` : null };
+      const said = [a.whyStrength ?? null, idea ? `${idea} counts as one.` : null].filter(Boolean).join(" ");
+      return { key: x.key, label: x.label, ask: `${x.of} ${x.of === 1 ? "session" : "sessions"}`, line: said || null };
     }
     const was = before("steps");
     const more = was && x.of > was.of ? `${thousands(x.of - was.of)} more a day than last week asked` : null;
     const idea = short("steps") ? way(x) : null;
+    // the plan's own sentence, when it judged the week: it says what the figure did, so "more than last week asked" is not said beside it
+    if (a.whySteps) return { key: x.key, label: x.label, ask: `${thousands(x.of)} a day`, line: idea ? `${a.whySteps} One way: ${lowerFirst(idea)}.` : a.whySteps };
     return { key: x.key, label: x.label, ask: `${thousands(x.of)} a day`, line: more && idea ? `${more}; one way is ${lowerFirst(idea)}.` : more ? `${more}.` : idea ? `One way: ${lowerFirst(idea)}.` : null };
   });
   return { from: w.from, to: w.to, week: w.week, asks };
