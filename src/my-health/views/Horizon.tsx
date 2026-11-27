@@ -86,6 +86,8 @@ export type HorizonDeps = {
   userId?: () => string | null;
   derived: () => PersonData | null;
   isOwner: () => boolean;
+  /** The page open is the signed-in person's own, not one they look after: only then is their own profile read for the plan's Intensity card. */
+  isSelf?: () => boolean;
   goTab: (t: string) => void;
   /** The open horizons and the ones read to their date ("done"), for the sidebar's sub-links; called after every load. */
   onHorizons?: (list: { id: string; title: string; ends_on: string; done?: boolean }[]) => void;
@@ -569,7 +571,8 @@ function View({ deps, h, person, today, owner, nav, busy, setBusy, onError, setN
   // kept, not running: Horizon is not offered to everyone and this account no longer has it (a founding member after
   // their last day). The page says so once (HORIZON_KEPT), so the lines above it do not say the Guide still checks.
   const keptOnly = locked && !HORIZON_PUBLIC;
-  const guide = guideOn && person ? { sb: deps.supabase, h, person, today, targets, owner, closed, access, userId, reload, setNotice } : null;
+  // `mine`: the reader is the person the plan is for, not only the horizon's owner (an owner may keep a horizon for someone they look after)
+  const guide = guideOn && person ? { sb: deps.supabase, h, person, today, targets, owner, closed, access, userId, reload, setNotice, mine: owner && !!deps.isSelf?.() } : null;
   // the week, kept light (board 08 of "Verve, the plan you follow", 26 November 2026): three amounts first, a few ideas
   // and what each session filled, for the owner of a programme account. Null in a week that is not judged, on a
   // horizon that has stopped, and when the week asks for none of the three: the page is then as it was.

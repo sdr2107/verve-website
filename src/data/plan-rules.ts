@@ -12,8 +12,10 @@
  *
  * A module so Node's test runner, the Astro build and the horizon edge
  * function (which copies this file) read it alike. The figures that the app
- * also holds (zone 2, the dose, the retest, the screening, the pressure)
- * are copies of METTracker data/met-thresholds.json; change them there first.
+ * also holds (zone 2, the dose, the screening, the pressure) are copies of
+ * METTracker data/met-thresholds.json; change them there first. The week of
+ * the plan's fitness test is the plan's own (see `retest`): the app's
+ * reminder stays at eight weeks.
  */
 export default {
   tiers: {
@@ -88,10 +90,13 @@ export default {
     checked: "Second-hand: a newer edition exists. To be read in the original.",
   },
   retest: {
-    weeks: 8,
-    label: "Test fitness again after eight weeks",
-    source: "Hickson RC et al, 1981: fitness adapts over six to nine weeks. The same rule as the Verve app.",
-    checked: "In the app's thresholds (data/met-thresholds.json#crfRetestCadence).",
+    /** Fitness is tested again in every twelfth week of the plan. */
+    weeks: 12,
+    /** The plan's last week is a test week too when it falls at least this many weeks after the test before it. */
+    lastAfterWeeks: 6,
+    label: "Fitness is tested again in week twelve",
+    source: "The plan's own choice: one test at the end of twelve weeks, by the method the horizon started on. Fitness adapts over six to nine weeks (Hickson RC et al, 1981), so the plan does not test before that.",
+    checked: "The twelve weeks are the plan's, set by the founder on 25 November 2026, and are not a published figure. Hickson 1981 is the source of the app's own reminder (METTracker data/met-thresholds.json#crfRetestCadence), which stays at eight weeks on purpose: the app reminds, the plan tests at its end. A plan shorter than twelve weeks tests in its last week; a longer one in every twelfth week, and in its last week when that is six weeks or more after the test before it (guidePlan.ts testWeeksOf).",
   },
   screening: {
     activeDays: 3,

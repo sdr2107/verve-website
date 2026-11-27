@@ -4385,6 +4385,7 @@ const plansLink = planDoor("See the plans", false);
     userId: () => userId || null,
     derived: () => derivedSignal.value,
     isOwner: horizonOwner,
+    isSelf: () => !!person?.self,
     goTab: (t) => setTab(t),
     onHorizons: (list) => {
       // on the account's own page, whether there is a horizon to show is kept for the next visit's first paint (known.ts)

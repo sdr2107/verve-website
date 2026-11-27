@@ -18,6 +18,7 @@
  * sends its zone so day boundaries are the person's; it sends figures only as
  * a fallback for a function that cannot read the document.
  */
+import type { HeartProfile } from "./heartBand.ts";
 import { accessFlags, accessOf, type ProgrammeAccess } from "../known.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../../lib/supabase.ts";
@@ -262,6 +263,16 @@ export async function guidePlanReady(sb: SupabaseClient): Promise<boolean> {
 export async function saveGuidePlan(sb: SupabaseClient, horizonId: string, rows: PlanRow[], guide: GuideStored | null, updatedBy: string): Promise<string | null> {
   const { error } = await sb.from("horizon_plans").upsert({ horizon_id: horizonId, rows, author: guide ? "guide" : "user", guide, updated_by: updatedBy, updated_at: new Date().toISOString() }, { onConflict: "horizon_id" });
   return error ? error.message : null;
+}
+
+/**
+ * The answers the plan's Intensity card is made from (./heartBand.ts): the signed-in person's OWN row of `profiles`, as
+ * the app wrote it. Asked only for the person the plan is for, by their own id, and read with their own session; a
+ * coach's page never asks. Null when the row cannot be read: the card then prints no beats.
+ */
+export async function loadHeartProfile(sb: SupabaseClient, userId: string): Promise<HeartProfile | null> {
+  const { data, error } = await sb.from("profiles").select("age, date_of_birth, resting_hr, on_beta_blockers, zone2_low_hr, zone2_high_hr").eq("user_id", userId).maybeSingle();
+  return error || !data ? null : (data as HeartProfile);
 }
 
 /** The three answers that come before the first plan. The person's alone: no share reads this table. */
