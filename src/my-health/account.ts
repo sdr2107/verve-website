@@ -234,11 +234,15 @@ export const weeklyNote = (w: WeeklyState, today = new Date()): string =>
   : w.state === "on" ? (longDay(w.since ?? null, today) ? `On since ${longDay(w.since ?? null, today)}. ${WEEKLY_WHEN}` : `On. ${WEEKLY_WHEN}`)
   : "Off unless you turn it on.";
 /**
- * How the two Monday emails meet, said once under the two switches. The Guide's check-in still waits for the
- * app to sync the whole week (the function's due.ts), so it is often written after Your week has gone: it is
- * then its own email. One already written when Your week goes travels inside it.
+ * How the two Monday switches meet, said once under them. The founder, 27 November 2026: "One email per week per
+ * person", then "yes horizon emails only on monday" (the function's week.ts goesAlone). Whoever takes Your week has
+ * that as their Monday email; whoever does not gets the horizon's Monday check-in, when its switch is on. The
+ * Guide's check-in still waits for the app to sync the whole week (the function's due.ts), so it is sometimes
+ * written after Your week has gone: it is then kept on the page, and Your week names it the Monday after
+ * (week.ts sinceLines), with a month's read and a horizon that reached its date. Until that day each of those had
+ * an email of its own.
  */
-export const MONDAY_EMAILS = "With both on, Your week arrives on Monday morning. A check-in the Guide has already written travels inside it, whichever way the horizon's own switch is set. One written later, once the app has synced the week, follows in its own email when that switch is on.";
+export const MONDAY_EMAILS = "Horizon emails once a week, on Monday. With Your week on, that is the email, and a check-in the Guide has already written travels inside it. With Your week off, a horizon's own switch sends its Monday check-in instead. A check-in written later, a month's read and the read of the whole road are kept on your page; Your week names them the Monday after.";
 export const WEEKLY_CARRIES = "How your week was, in figures set against the week before. Then your horizon: what the week reached, what fell short, and what this week asks. One click in any email turns it off.";
 /** The same line for an account that has no Horizon (horizon/access.ts hasHorizon): it names nothing the account cannot have. */
 export const WEEKLY_CARRIES_PLAIN = "How your week was: your time, your dose and the week's other figures, each against the week before. One click in any email turns it off.";

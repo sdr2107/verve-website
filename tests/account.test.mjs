@@ -101,8 +101,12 @@ test("the weekly email's switch has three states; it goes every Monday whether o
   assert.equal(weeklyNote({ state: "on", timezone: "Asia/Dubai", since: "2026-11-11T05:00:00Z" }, TODAY), "On since 11 November. Every Monday morning, with the figures from the app's last sync.");
   assert.equal(weeklyNote({ state: "on", timezone: null }, TODAY), "On. Every Monday morning, with the figures from the app's last sync.");
   assert.equal(/once the app has synced the week\.$/.test(weeklyNote({ state: "on", timezone: null }, TODAY)), false, "Your week no longer waits for the app");
-  assert.match(MONDAY_EMAILS, /Your week arrives on Monday morning/);
-  assert.match(MONDAY_EMAILS, /follows in its own email/, "the check-in still waits for the app, and then goes alone");
+  // one email a week, on Monday (27 November 2026): nothing is promised a second email
+  assert.match(MONDAY_EMAILS, /^Horizon emails once a week, on Monday\./);
+  assert.match(MONDAY_EMAILS, /With Your week on, that is the email/);
+  assert.match(MONDAY_EMAILS, /With Your week off, a horizon's own switch sends its Monday check-in instead/);
+  assert.match(MONDAY_EMAILS, /are kept on your page; Your week names them the Monday after\.$/);
+  assert.equal(/its own email|follows/.test(MONDAY_EMAILS), false, "a late check-in, a month's read and the whole road no longer have an email of their own");
 });
 
 test("Settings has six sections and knows its own links", () => {
