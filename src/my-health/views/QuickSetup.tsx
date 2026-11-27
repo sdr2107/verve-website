@@ -12,8 +12,13 @@
  * the same order: the horizon and its targets (the function's `start`), then the programme, the method the fitness
  * number is kept to, the three answers and the Guide's plan. The three questions stay: they decide whether a plan is
  * offered at all and whether it carries harder minutes (the ACSM's screening of 2015; guidePlan.ts).
+ *
+ * ONE MORE LINE, the same day (the founder: "Yes, ticked"): "Email me my week on Mondays", ticked. The set-up left
+ * both email switches off, so a new member who set a horizon had no Monday email at all. The line is shown only to
+ * someone whose "Your week" is off; ticked at Start it turns that one switch on (accountApi.ts saveWeekly, the same
+ * call Settings makes), with the browser's zone. It is their own tick to take off, and every email has a way out.
  */
-import { useMemo, useState } from "preact/hooks";
+import { useEffect, useMemo, useState } from "preact/hooks";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PersonData } from "../derive/person.ts";
 import { arrivalsOf, followable, leftOff } from "../derive/arrivals.ts";
@@ -26,6 +31,8 @@ import { startingMethod, type Programme } from "../horizon/programme.ts";
 import { clearSetup } from "../horizon/setupCards.ts";
 import { startHorizon, saveProgramme, setTargetHold, saveScreen, saveGuidePlan, forgetAccess, ERROR_WORDS, type ApiError, type StartTarget } from "../horizon/api.ts";
 import { clearWayIn, readWayIn } from "./Programme.tsx";
+import { loadWeekly, saveWeekly } from "../accountApi.ts";
+import type { WeeklyState } from "../account.ts";
 
 const GOAL = "build_fitness" as const;
 const LENGTHS = [3, 6, 12] as const;
@@ -63,6 +70,11 @@ export function QuickSetup({ sb, person, today, personId, guideOn, hasOthers, us
   const outcome = answered ? screenOutcome(screen as ScreenAnswers) : null;
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
+  // "Your week", the Monday email: offered here only while it is off, and ticked until the person unticks it
+  const [weekly, setWeekly] = useState<WeeklyState | null>(null);
+  const [emailMe, setEmailMe] = useState(true);
+  useEffect(() => { let live = true; void userId().then((uid) => (uid ? loadWeekly(sb, uid) : null)).then((w) => { if (live) setWeekly(w); }); return () => { live = false; }; }, []);
+  const offersEmail = weekly?.state === "off";
 
   const nowOf = (k: MarkerKey): Reading | null => (!person ? null : k === "mets" ? fitness : latestOf(k, person, today));
   const chosen = (): StartTarget[] => rows.flatMap((r): StartTarget[] => {
@@ -103,6 +115,8 @@ export function QuickSetup({ sb, person, today, personId, guideOn, hasOthers, us
           writes.push(saveGuidePlan(sb, id, rowsWith(v, []), storeOf(v, today), uid));
         }
       }
+      // the Monday email, when the line was shown and left ticked: the one switch Settings has, turned on
+      if (uid && offersEmail && emailMe) writes.push(saveWeekly(sb, uid, true, browserZone()).then((w) => (w.state === "on" ? null : "the Monday email was not switched on. Settings has the switch.")));
       const problems = (await Promise.all(writes)).filter((e): e is string => !!e);
       // a horizon set changes what the account may do: the kept answer is asked again
       forgetAccess(); clearWayIn(); clearSetup();
@@ -170,6 +184,16 @@ export function QuickSetup({ sb, person, today, personId, guideOn, hasOthers, us
             </ul>
             {outcome ? <p class="m-0 text-[13px] text-text-2" data-quick="outcome">{SCREEN_WORDS[outcome]}</p> : null}
           </div>
+        ) : null}
+
+        {offersEmail ? (
+          <label class="flex cursor-pointer items-start gap-3 border-t border-border pt-4" data-quick="email">
+            <input type="checkbox" checked={emailMe} onChange={(e) => setEmailMe((e.currentTarget as HTMLInputElement).checked)} class="mt-0.5 h-5 w-5 shrink-0 accent-accent" />
+            <span class="flex min-w-0 flex-col">
+              <span class="text-[15px] font-medium text-text">Email me my week on Mondays</span>
+              <span class="text-[12px] leading-snug text-text-2">One email a week. One click in any email turns it off.</span>
+            </span>
+          </label>
         ) : null}
 
         <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-4">

@@ -110,4 +110,10 @@ test("the set-up opens short, and the set-up with every choice is one link away,
   assert.match(quick, /if \(guideOn && !answered\) \{ setProblem\("Answer the three questions about your health\."\); return; \}/);
   // nothing is ticked on for them: the check-in's own email stays off, as in the full set-up
   assert.match(quick, /email_checkin: false/);
+  // the Monday email (27 November 2026, "Yes, ticked"): offered only while "Your week" is off, ticked, and switched on at Start by Settings' own call
+  assert.match(quick, /const \[emailMe, setEmailMe\] = useState\(true\);/);
+  assert.match(quick, /const offersEmail = weekly\?\.state === "off";/);
+  assert.match(quick, /if \(uid && offersEmail && emailMe\) writes\.push\(saveWeekly\(sb, uid, true, browserZone\(\)\)/);
+  assert.match(quick, /\{offersEmail \? \(\n\s+<label [^>]*data-quick="email">/);
+  assert.ok(quick.includes("Email me my week on Mondays") && quick.includes("One email a week. One click in any email turns it off."));
 });
