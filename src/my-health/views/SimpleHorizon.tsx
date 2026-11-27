@@ -69,7 +69,7 @@ function Week({ w, open, onToggle }: { w: PastWeek; open: boolean; onToggle: () 
           <span class="text-[15px] font-medium text-text">Week {w.week}</span>
           <span class="text-[12px] text-text-2">{w.dates}</span>
         </span>
-        <span class="order-3 col-span-2 grid grid-cols-2 gap-x-4 gap-y-2 sm:order-none sm:col-span-1 lg:grid-cols-4">
+        <span class="order-3 col-span-2 grid grid-cols-2 gap-x-4 gap-y-2 sm:order-none sm:col-span-1 lg:grid-cols-[1fr_0.75fr_1.35fr_1.25fr]">
           {w.cells.map((c) => (
             <span key={c.key} data-cell={c.key} data-reached={c.reached ? "yes" : "no"} class="flex min-w-0 flex-col">
               <span class="text-[12px] text-text-2 lg:hidden">{c.label}</span>
@@ -131,7 +131,7 @@ export function SimpleHorizon({ title, head, tab, goTab, now, sessions, past, fi
             <>
               <div class="hidden grid-cols-[150px_minmax(0,1fr)_112px] gap-x-4 lg:grid" aria-hidden="true">
                 <span />
-                <span class="grid grid-cols-4 gap-x-4">{past[0].cells.map((c) => <span key={c.key} class="text-[12px] text-text-2">{c.label}</span>)}</span>
+                <span class="grid grid-cols-[1fr_0.75fr_1.35fr_1.25fr] gap-x-4">{past[0].cells.map((c) => <span key={c.key} class="text-[12px] text-text-2">{c.label}</span>)}</span>
                 <span />
               </div>
               <ul class="m-0 flex list-none flex-col p-0" data-simple="weeks">

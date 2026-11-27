@@ -143,7 +143,7 @@ export function QuickSetup({ sb, person, today, personId, guideOn, hasOthers, us
                 <span class="flex items-center gap-2 sm:justify-end">
                   <input id={`quick-${r.marker}`} type="number" inputMode="decimal" step={10 ** -(MARKER_BY_KEY[r.marker]?.decimals ?? 0)} min="0" value={valueOf(r)} disabled={!usable(r)}
                     onInput={(e) => { setTyped((t) => ({ ...t, [r.marker]: (e.currentTarget as HTMLInputElement).value })); setProblem(""); }} class={inputClass} />
-                  <span class="text-[12px] leading-snug text-text-2 sm:w-[92px]">{r.unit}</span>
+                  <span class="whitespace-nowrap text-[12px] leading-snug text-text-2 sm:w-[112px]">{r.unit}</span>
                 </span>
                 <span class="text-[12px] leading-snug text-text-2 sm:col-span-2" data-quick-from>{followable(off, r.marker) ? r.from : "Your device does not send this, so it takes no number."}</span>
               </li>

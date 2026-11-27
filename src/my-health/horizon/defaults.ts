@@ -42,7 +42,7 @@ export type DefaultRow = {
 /** The order the set-up and the horizon's page show them in. */
 export const DEFAULT_ORDER: DefaultKey[] = ["zone2_week", "strength_week", "steps", "dose", "mets"];
 export const DEFAULT_LABEL: Record<DefaultKey, string> = { zone2_week: "Zone 2", strength_week: "Strength", steps: "Steps", dose: "Weekly dose", mets: "Fitness" };
-export const DEFAULT_UNIT: Record<DefaultKey, string> = { zone2_week: "min a week", strength_week: "sessions a week", steps: "a day", dose: "MET-min a week, at least", mets: "METs" };
+export const DEFAULT_UNIT: Record<DefaultKey, string> = { zone2_week: "min a week", strength_week: "sessions a week", steps: "a day", dose: "MET-min a week", mets: "METs" };
 /** The average gain in fitness across trials of about twelve weeks (data/programme.ts, build_fitness: Lin 2015). */
 export const FITNESS_GAIN_METS = 1.1;
 /** "About twelve weeks": the lengths, in full weeks, the published gain is offered for. */
