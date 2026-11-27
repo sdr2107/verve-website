@@ -13,6 +13,7 @@
  * Pure but for the storage it is handed; tests/known.test.mjs.
  */
 import { type PlanInfo, parsePlan } from "./account.ts";
+import { forgetKept, type KeptStore } from "./horizon/kept.ts";
 
 export type Known = { tester?: boolean; team?: boolean; plan?: PlanInfo;
   /** The account's own person had a horizon to show (state.ts horizonRemembered): the tab is drawn at once on the next visit. */
@@ -61,10 +62,14 @@ export function remember(uid: string, patch: Known, store: KnownStore | null = b
   catch { /* private mode, or the store is full: the page asks again next time */ }
 }
 
-/** Signing out, or deleting the account: nothing about it stays in this browser. */
+/**
+ * Signing out, or deleting the account: nothing about it stays in this browser. The horizons kept for a quick first
+ * draw (horizon/kept.ts) go here too, so the page's two sign-out paths need no second call.
+ */
 export function forget(uid: string, store: KnownStore | null = browserStore()): void {
   if (!uid || !store) return;
   try { store.removeItem(keyOf(uid)); } catch { /* fine */ }
+  forgetKept(uid, store as KeptStore);
 }
 
 /** The words a test account's page shows in place of its content, while the question is open or after it failed. */

@@ -38,7 +38,7 @@ import { clearSetup } from "../horizon/setupCards.ts";
 import { startHorizon, saveProgramme, setTargetHold, saveScreen, saveGuidePlan, forgetAccess, ERROR_WORDS, type ApiError, type StartTarget } from "../horizon/api.ts";
 import { clearWayIn, readWayIn } from "./Programme.tsx";
 import { loadWeekly, saveWeekly } from "../accountApi.ts";
-import { LENGTH_LOCKED_LINE, lengthLocked } from "../horizon/member.ts";
+import { LENGTH_LOCKED_LINE, SETUP_MORE_CHOICES, lengthLocked } from "../horizon/member.ts";
 import type { WeeklyState } from "../account.ts";
 
 const GOAL = "build_fitness" as const;
@@ -50,7 +50,7 @@ const small = "m-0 text-[13px] font-medium text-text-2";
 const linkClass = "min-h-9 text-[13px] font-semibold text-accent-text hover:text-text";
 const inputClass = "t-figure-row min-h-10 w-[104px] rounded-[10px] border border-border bg-alt px-3 text-right text-text outline-none focus:border-accent-border disabled:opacity-50";
 
-export function QuickSetup({ sb, person, today, personId, guideOn, hasOthers, userId, onStarted, onError, onCancel, onMore, onNote, founding = false }: {
+export function QuickSetup({ sb, person, today, personId, guideOn, hasOthers, userId, onStarted, onError, onCancel, onMore, onNote, founding = false, waiting = false }: {
   sb: SupabaseClient; person: PersonData | null; today: string; personId: string;
   /** The Guide's plan can be kept for this project (api.ts guidePlanReady): only then are its three questions asked. */ guideOn: boolean;
   hasOthers: boolean; userId: () => Promise<string | null>;
@@ -58,6 +58,7 @@ export function QuickSetup({ sb, person, today, personId, guideOn, hasOthers, us
   /** The set-up with every choice, as it was. */ onMore: () => void;
   onNote?: (words: string) => void;
   /** The page is drawn for a founding member (state.ts isFounding): three months only, and no "More choices". */ founding?: boolean;
+  /** The page is still on the copy this browser kept (horizon/kept.ts): Start waits for the server's own answer. */ waiting?: boolean;
 }) {
   const wayIn = useMemo(readWayIn, []);
   const [picked, setLength] = useState<Length>(3);
@@ -214,14 +215,15 @@ export function QuickSetup({ sb, person, today, personId, guideOn, hasOthers, us
         ) : null}
 
         <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-border pt-4">
-          <button type="submit" disabled={busy} data-quick="start" class="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-accent px-6 text-[15px] font-semibold text-canvas disabled:opacity-50">{busy ? "Starting…" : "Start"}</button>
+          <button type="submit" disabled={busy || waiting} data-quick="start" data-waiting={waiting ? "yes" : "no"} class="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-accent px-6 text-[15px] font-semibold text-canvas disabled:opacity-50">{busy ? "Starting…" : "Start"}</button>
+          {waiting && !problem ? <span class="text-[13px] text-text-2" data-quick="waiting">Checking your horizons…</span> : null}
           {problem ? <span class="text-[13px] text-text" data-quick="problem">{problem}</span> : null}
         </div>
       </div>
 
-      {founding && !hasOthers ? null : (
+      {(founding || !SETUP_MORE_CHOICES) && !hasOthers ? null : (
         <div class="flex flex-wrap items-center gap-x-5 gap-y-1" data-quick="links">
-          {founding ? null : <button type="button" onClick={onMore} class={linkClass} data-quick-link="more">More choices</button>}
+          {founding || !SETUP_MORE_CHOICES ? null : <button type="button" onClick={onMore} class={linkClass} data-quick-link="more">More choices</button>}
           {hasOthers ? <button type="button" onClick={() => { clearSetup(); onCancel(); }} class="min-h-9 text-[13px] font-medium text-text-2 hover:text-text" data-quick-link="cancel">Cancel</button> : null}
         </div>
       )}

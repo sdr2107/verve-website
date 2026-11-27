@@ -97,12 +97,12 @@ test("fitness is offered only from a test on file, and only for about twelve wee
   assert.deepEqual(say(rows({}, 26)[4]), ["Fitness", "8.4 at your last test", null, "No published gain for this length. The number is yours to set."]);
 });
 
-test("the set-up opens short, and the set-up with every choice is one link away, as it was", () => {
+test("the set-up opens short; the set-up with every choice is kept in the code behind one switch", () => {
   const read = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
   const view = read("../src/my-health/views/Horizon.tsx"), quick = read("../src/my-health/views/QuickSetup.tsx");
-  // short first for an account that may set one; never in place of the set-up that follows a horizon read to its date
-  // (a founding member always meets the short one: tests/member.test.mjs)
-  assert.match(view, /\(isFounding\.value \|\| \(!ownTargets && !fullSetup && setupCard <= 1 && \(open\.length > 0 \|\| !done\[0\]\)\)\)\n\s+\? <QuickSetup /);
+  // 27 November 2026: "More choices" is hidden for everyone (member.ts SETUP_MORE_CHOICES), so the short set-up is the
+  // only one that opens, the one after a horizon read to its date among them. The older condition stands behind the switch.
+  assert.match(view, /\(isFounding\.value \|\| !SETUP_MORE_CHOICES \|\| \(!ownTargets && !fullSetup && setupCard <= 1 && \(open\.length > 0 \|\| !done\[0\]\)\)\)\n\s+\? <QuickSetup /);
   assert.match(view, /onMore=\{\(\) => setFullSetup\(true\)\}/);
   assert.match(view, /: showSetup && tester && owner && !ownTargets && \(open\.length > 0 \|\| !done\[0\] \|\| !!parseProgramme\(done\[0\]\.programme\)\)\n\s+\? <ProgrammeSetup /);
   // an existing programme, so the function needs no change; the three questions stay; and it is kept by the full set-up's own calls

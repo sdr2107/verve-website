@@ -29,6 +29,17 @@ export const GUIDE_FOR_FOUNDING: boolean = false;
 /** Whether the Guide's page, its tab and every way into it are drawn for an account. */
 export const guidePageShown = (f: AccountFlags): boolean => GUIDE_FOR_FOUNDING || !isFoundingMember(f);
 
+/**
+ * Whether the set-up offers "More choices": the seven-card set-up of 18 November 2026 (views/Programme.tsx
+ * ProgrammeSetup) and, from it, "My own targets". Hidden for EVERYONE on 27 November 2026, the team too. The founder
+ * pressed it and met "the old page with 7 steps"; asked what a member needs of it, the answer was what the short
+ * set-up already holds: how long, the five numbers, the three questions about health, and the Monday email. The day
+ * to be ready for, the other goals, who writes the plan (a coach among them), what the page reads, and a diet chart
+ * or a watched marker are not asked. His words: "dont delete anything from the codebase - see what we need and hide
+ * the rest". All of that code is still here; set this to true to bring the link and the old set-up back.
+ */
+export const SETUP_MORE_CHOICES: boolean = false;
+
 /** The longest horizon a founding member sets, in months. The horizon function holds the same figure (length.ts). */
 export const FOUNDING_LONGEST_MONTHS = 3;
 /** Whether a length is drawn with a lock for this account. */

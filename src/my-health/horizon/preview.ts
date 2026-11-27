@@ -14,6 +14,13 @@
  * It is honoured only when the server has said this is one of the team's accounts: for any other account whatever
  * the browser holds is ignored. The choice is kept in this browser and nowhere else.
  *
+ * 27 November 2026: THE MEMBER'S VIEW IS THE DEFAULT. The founder tests on his own account, which is the team's,
+ * and kept meeting what a member never sees ("the guide page is still visible", "the 6 months and 12 months
+ * horizons are open and not locked"). So one of the team's accounts with no choice kept is shown the site as a
+ * founding member, and the team's own view is the choice that is remembered. A strip on every tab says which of
+ * the two is on and offers the other in one press (viewStrip). Until that day the team's view was the default
+ * and was kept as nothing at all; a browser that holds nothing therefore opens on the member's view.
+ *
  * Pure but for the storage it is handed; tests/preview.test.mjs.
  */
 import type { PlanInfo } from "../account.ts";
@@ -33,9 +40,17 @@ export const VIEW_AS_HEAD = "See the site as";
 export const VIEW_AS_NOTE = "A preview of what the page shows. Your account stays the team's.";
 /** The way back, on every tab while a preview is on: Settings › For the team is hidden in a preview, as it is for a member. */
 export const PREVIEW_BACK = "Back to the team's view";
+/** The strip's words on the two everyday views, and the press that leads to the other. */
+export const MEMBER_VIEW = "You are seeing what a member sees";
+export const TEAM_VIEW = "You are seeing the team's view";
+export const SEE_TEAM = "See the team's view";
+export const SEE_MEMBER = "See what a member sees";
 export const VIEW_AS_KEY = "mh-view-as";
 
-export const parseViewAs = (x: unknown): ViewAs => (x === "founding" || x === "founding_last_week" || x === "after" ? x : "team");
+/** What one of the team's accounts is shown when it has chosen nothing: the site as a founding member sees it. */
+export const DEFAULT_VIEW: ViewAs = "founding";
+/** What is kept, read back. Nothing kept, or anything that is not one of the four, is the default. */
+export const parseViewAs = (x: unknown): ViewAs => (x === "team" || x === "founding" || x === "founding_last_week" || x === "after" ? x : DEFAULT_VIEW);
 /** The view in force. Anything but a team account sees the page as itself, whatever is stored. */
 export const viewAsFor = (stored: unknown, team: boolean): ViewAs => (team ? parseViewAs(stored) : "team");
 
@@ -43,23 +58,37 @@ export type ViewStore = { getItem(key: string): string | null; setItem(key: stri
 function browserStore(): ViewStore | null {
   try { return typeof localStorage === "undefined" ? null : localStorage; } catch { return null; }
 }
-/** What this browser holds. A private window, or none: the team's view. */
+/** What this browser holds. A private window, or nothing kept: the default, the member's view. */
 export function readViewAs(store: ViewStore | null = browserStore()): ViewAs {
-  if (!store) return "team";
-  try { return parseViewAs(store.getItem(VIEW_AS_KEY)); } catch { return "team"; }
+  if (!store) return DEFAULT_VIEW;
+  try { return parseViewAs(store.getItem(VIEW_AS_KEY)); } catch { return DEFAULT_VIEW; }
 }
-/** Keep the choice; the team's view is kept as nothing at all. */
+/** Keep the choice. Every choice is written, the team's view too: it is no longer what an empty browser means. */
 export function writeViewAs(view: ViewAs, store: ViewStore | null = browserStore()): void {
   if (!store) return;
-  try { if (view === "team") store.removeItem(VIEW_AS_KEY); else store.setItem(VIEW_AS_KEY, view); } catch { /* the page stays on the team's view */ }
+  try { store.setItem(VIEW_AS_KEY, view); } catch { /* the choice lasts for this visit only */ }
 }
 
 /** The line that stays on the page while a preview is on; null on the team's view. */
 export function previewLine(view: ViewAs): string | null {
-  if (view === "founding") return "Previewing as a founding member";
+  if (view === "founding") return MEMBER_VIEW;
   if (view === "founding_last_week") return "Previewing as a founding member in the last week";
   if (view === "after") return "Previewing as a member after the 12 weeks";
   return null;
+}
+
+/**
+ * The strip at the top of every tab, for one of the team's accounts only: which view is on, and the one press to the
+ * other. On the member's view it leads to the team's; on the team's view it leads back to the member's; on one of
+ * the two rarer previews (the last week, after the 12 weeks: chosen under Settings › For the team) it leads to the
+ * team's view, where that control is. Null for any other account: nothing is drawn for a real member.
+ */
+export type ViewStrip = { text: string; action: string; to: ViewAs };
+export function viewStrip(view: ViewAs, team: boolean): ViewStrip | null {
+  if (!team) return null;
+  if (view === "team") return { text: TEAM_VIEW, action: SEE_MEMBER, to: "founding" };
+  if (view === "founding") return { text: MEMBER_VIEW, action: SEE_TEAM, to: "team" };
+  return { text: previewLine(view) ?? "", action: PREVIEW_BACK, to: "team" };
 }
 
 /**

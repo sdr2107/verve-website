@@ -1067,7 +1067,7 @@ const plansLink = planDoor("See the plans", false);
   import { mountTeamPage } from "../my-health/views/TesterPanel.tsx";
   import { mountOfferPage, loadOffer, forgetOffer } from "../my-health/views/Offer.tsx";
   import { isTeam as isTeamSignal, testerState, accountTester, accountTeam, horizonDoor, horizonSettable, horizonRemembered, seenAs, setViewAs, guideShown } from "../my-health/state";
-  import { PREVIEW_BACK, previewLine, readViewAs, seenFlags, viewAsFor } from "../my-health/horizon/preview.ts";
+  import { readViewAs, seenFlags, viewAsFor, viewStrip, type ViewAs } from "../my-health/horizon/preview.ts";
   import { planDoor } from "../data/plan-door.ts";
   import { recall, remember, forget as forgetKnown, accessFlags } from "../my-health/known";
   import { derived as derivedSignal, doc as docSignal, person as personSignal, people as peopleSignal, firstName as firstNameSignal, myRole as myRoleSignal, section as sectionSignal, setSection as setSectionState, sectionFor, latestRead as latestReadSignal, readOf, activeTab as activeTabSignal, searchQuery as searchQuerySignal, depthLocked as depthLockedSignal, depthWorking as depthWorkingSignal, actions, openLabs, space as spaceSignal, isClient } from "../my-health/state";
@@ -4472,13 +4472,18 @@ const plansLink = planDoor("See the plans", false);
   });
   // "See the site as" (Settings › For the team): the line that stays on every tab while a preview is on, and its way back.
   // A change of view is a change of who the page is drawn for: the two panes that read the account once read it again.
-  $("previewback").textContent = PREVIEW_BACK;
-  $("previewback").addEventListener("click", () => setViewAs("team"));
+  // 27 November 2026: one of the team's accounts opens on what a member sees, and the strip is always there for it,
+  // saying which view is on and offering the other in one press (preview.ts viewStrip). No other account has one.
+  let stripTo: ViewAs = "team";
+  $("previewback").addEventListener("click", () => setViewAs(stripTo));
   let viewDrawn = seenAs.value;
   effect(() => {
-    const view = seenAs.value, line = previewLine(view), el = $("previewline");
-    el.classList.toggle("hidden", !line); el.classList.toggle("flex", !!line);
-    $("previewtext").textContent = line ?? "";
+    const view = seenAs.value, strip = viewStrip(view, accountTeam.value), el = $("previewline");
+    el.classList.toggle("hidden", !strip); el.classList.toggle("flex", !!strip);
+    el.dataset.view = strip ? view : "";
+    $("previewtext").textContent = strip?.text ?? "";
+    $("previewback").textContent = strip?.action ?? "";
+    stripTo = strip?.to ?? "team";
     if (view !== viewDrawn) {
       viewDrawn = view; horizonView.refresh(); if (userId) void settingsView.refresh();
       // the control sits on the team's page, which the previewed person does not have: left there, the page read
