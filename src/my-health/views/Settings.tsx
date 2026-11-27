@@ -198,7 +198,7 @@ function EmailBlock({ deps, refreshEmail }: { deps: SettingsDeps; refreshEmail: 
                 <div class="flex items-center justify-between gap-4 py-2" key={h.id}>
                   <div class="min-w-0">
                     <div class="truncate text-[14px] text-text-2">{h.title}</div>
-                    <div class="text-[12.5px] text-text-3">{"email_checkin" in h ? (h.email_checkin ? "Each check-in by email." : "Off unless you turn it on.") : "Not switched on for this account yet."}</div>
+                    <div class="text-[12.5px] text-text-3">{"email_checkin" in h ? (h.email_checkin ? "Monday's check-in by email." : "Off unless you turn it on.") : "Not switched on for this account yet."}</div>
                   </div>
                   <Switch label={`Email me each check-in of ${h.title}`} on={!!h.email_checkin} disabled={!("email_checkin" in h) || busy === h.id} onChange={(v) => void setCheckin(h, v)} />
                 </div>
