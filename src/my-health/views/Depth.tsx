@@ -27,7 +27,7 @@
  */
 import { render } from "preact";
 import { useEffect, useMemo, useState } from "preact/hooks";
-import { derived, person, depthLocked, depthWorking, depthLane, guideAsk, actions, section, setSection, sectionFor, DEPTH_KEYS } from "../state.ts";
+import { derived, person, depthLocked, depthWorking, depthLane, guideAsk, guideShown, actions, section, setSection, sectionFor, DEPTH_KEYS } from "../state.ts";
 import { depthEmpty, depthEmptyText, depthOf } from "../derive/depth.ts";
 import { addDays, fmtDay, todayStr } from "../derive/format.ts";
 import { WINDOWS, timelineOf, windowWorking, dayMonthYear, type Card, type Fig, type Spot, type Timeline, type WindowKey, type XY } from "../derive/timeline.ts";
@@ -282,7 +282,7 @@ export function Depth() {
     <div class="flex flex-col gap-5">
       {!p.self ? <p class="t-caption text-text-3">Viewing {p.name || "this person"} · read-only · synced {synced ? fmtDay(synced) : "—"} · the athlete's own words appear only in Messages</p> : null}
       <div id={`depth-${cur}`}>
-        <WindowView t={t} self={p.self} lit={lit} pick={(k) => setSection(k)} ask={depth ? askGuide : null}
+        <WindowView t={t} self={p.self} lit={lit} pick={(k) => setSection(k)} ask={depth && guideShown.value ? askGuide : null}
           startAfterGap={() => { if (t.gap) setAfter({ ...after, [cur]: addDays(t.gap.to, 1) }); }}
           showWhole={() => { const next = { ...after }; delete next[cur]; setAfter(next); }} />
       </div>

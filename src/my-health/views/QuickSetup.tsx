@@ -17,6 +17,12 @@
  * both email switches off, so a new member who set a horizon had no Monday email at all. The line is shown only to
  * someone whose "Your week" is off; ticked at Start it turns that one switch on (accountApi.ts saveWeekly, the same
  * call Settings makes), with the browser's zone. It is their own tick to take off, and every email has a way out.
+ *
+ * AND THE LOCKS (the founder, the same day: "6 months and 12 months should be locked with a lock sign for skool
+ * founders - that opens up after the 12 weeks and once they pay monthly subscription"). For a founding member three
+ * months is the choice: the two longer lengths are drawn with a lock, cannot be chosen, and one line under them says
+ * when they open (../horizon/member.ts). No price and no link: there is no way to pay yet. "More choices" is not
+ * drawn for them either: it leads to the set-up of 18 November. The horizon function refuses a longer one as well.
  */
 import { useEffect, useMemo, useState } from "preact/hooks";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -32,6 +38,7 @@ import { clearSetup } from "../horizon/setupCards.ts";
 import { startHorizon, saveProgramme, setTargetHold, saveScreen, saveGuidePlan, forgetAccess, ERROR_WORDS, type ApiError, type StartTarget } from "../horizon/api.ts";
 import { clearWayIn, readWayIn } from "./Programme.tsx";
 import { loadWeekly, saveWeekly } from "../accountApi.ts";
+import { LENGTH_LOCKED_LINE, lengthLocked } from "../horizon/member.ts";
 import type { WeeklyState } from "../account.ts";
 
 const GOAL = "build_fitness" as const;
@@ -43,16 +50,19 @@ const small = "m-0 text-[13px] font-medium text-text-2";
 const linkClass = "min-h-9 text-[13px] font-semibold text-accent-text hover:text-text";
 const inputClass = "t-figure-row min-h-10 w-[104px] rounded-[10px] border border-border bg-alt px-3 text-right text-text outline-none focus:border-accent-border disabled:opacity-50";
 
-export function QuickSetup({ sb, person, today, personId, guideOn, hasOthers, userId, onStarted, onError, onCancel, onMore, onNote }: {
+export function QuickSetup({ sb, person, today, personId, guideOn, hasOthers, userId, onStarted, onError, onCancel, onMore, onNote, founding = false }: {
   sb: SupabaseClient; person: PersonData | null; today: string; personId: string;
   /** The Guide's plan can be kept for this project (api.ts guidePlanReady): only then are its three questions asked. */ guideOn: boolean;
   hasOthers: boolean; userId: () => Promise<string | null>;
   onStarted: (id: string) => Promise<void>; onError: (e: ApiError, retry: () => void) => boolean; onCancel: () => void;
   /** The set-up with every choice, as it was. */ onMore: () => void;
   onNote?: (words: string) => void;
+  /** The page is drawn for a founding member (state.ts isFounding): three months only, and no "More choices". */ founding?: boolean;
 }) {
   const wayIn = useMemo(readWayIn, []);
-  const [length, setLength] = useState<Length>(3);
+  const [picked, setLength] = useState<Length>(3);
+  // a founding member's horizon is three months, whatever was pressed before the page knew who it is drawn for
+  const length: Length = lengthLocked(picked, founding) ? 3 : picked;
   const endsOn = addMonths(today, length);
   const weeks = Math.max(1, Math.floor(daysBetween(today, endsOn) / 7));
   // the method a fitness number is kept to, and the reading it starts from (the set-up's own choice: programme.ts)
@@ -139,10 +149,17 @@ export function QuickSetup({ sb, person, today, personId, guideOn, hasOthers, us
           <h2 class={small}>How long</h2>
           <div class="grid w-full grid-cols-3 gap-1 rounded-[12px] border border-border bg-alt p-1 sm:w-auto sm:self-start" role="radiogroup" aria-label="How long">
             {LENGTHS.map((m) => (
-              <button type="button" role="radio" aria-checked={length === m} key={m} data-quick-length={m} onClick={() => setLength(m)}
-                class={`min-h-10 whitespace-nowrap rounded-[9px] px-4 text-[14px] ${length === m ? "border border-border bg-card font-semibold text-text" : "border border-transparent font-medium text-text-2 hover:text-text"}`}>{m} months</button>
+              lengthLocked(m, founding)
+                ? <button type="button" role="radio" aria-checked={false} aria-disabled="true" disabled key={m} data-quick-length={m} data-quick-locked="yes"
+                    class="inline-flex min-h-10 cursor-not-allowed items-center justify-center gap-1 whitespace-nowrap rounded-[9px] border border-transparent px-1 text-[13px] font-medium text-text-3 sm:gap-1.5 sm:px-4 sm:text-[14px]">
+                    <svg class="shrink-0" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+                    <span>{m} months</span><span class="sr-only">, locked</span>
+                  </button>
+                : <button type="button" role="radio" aria-checked={length === m} key={m} data-quick-length={m} onClick={() => setLength(m)}
+                class={`min-h-10 whitespace-nowrap rounded-[9px] px-1 text-[13px] sm:px-4 sm:text-[14px] ${length === m ? "border border-border bg-card font-semibold text-text" : "border border-transparent font-medium text-text-2 hover:text-text"}`}>{m} months</button>
             ))}
           </div>
+          {founding ? <p class="m-0 text-[13px] text-text-2" data-quick="locked-line">{LENGTH_LOCKED_LINE}</p> : null}
         </div>
 
         <div class="flex flex-col gap-1 border-t border-border pt-4">
@@ -202,10 +219,12 @@ export function QuickSetup({ sb, person, today, personId, guideOn, hasOthers, us
         </div>
       </div>
 
-      <div class="flex flex-wrap items-center gap-x-5 gap-y-1" data-quick="links">
-        <button type="button" onClick={onMore} class={linkClass} data-quick-link="more">More choices</button>
-        {hasOthers ? <button type="button" onClick={() => { clearSetup(); onCancel(); }} class="min-h-9 text-[13px] font-medium text-text-2 hover:text-text" data-quick-link="cancel">Cancel</button> : null}
-      </div>
+      {founding && !hasOthers ? null : (
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-1" data-quick="links">
+          {founding ? null : <button type="button" onClick={onMore} class={linkClass} data-quick-link="more">More choices</button>}
+          {hasOthers ? <button type="button" onClick={() => { clearSetup(); onCancel(); }} class="min-h-9 text-[13px] font-medium text-text-2 hover:text-text" data-quick-link="cancel">Cancel</button> : null}
+        </div>
+      )}
     </form>
   );
 }

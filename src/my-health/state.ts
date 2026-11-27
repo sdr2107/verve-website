@@ -13,6 +13,7 @@ import { REPORT_SECTION_KEYS } from "./derive/reportSections.ts";
 import type { HorizonFull } from "./horizon/api.ts";
 import { hasHorizon, isShownHorizon, maySetHorizon } from "./horizon/access.ts";
 import { readViewAs, seenFlags, viewAsFor, writeViewAs, type ViewAs } from "./horizon/preview.ts";
+import { guidePageShown, isFoundingMember } from "./horizon/member.ts";
 import { HORIZON_PUBLIC } from "../data/story.ts";
 
 export type PersonLite = { id: string; owner_id: string; account_id: string | null; name: string; born_year: number | null; mine: boolean; self: boolean; scopes: string[];
@@ -145,6 +146,14 @@ export const isTester = computed(() => seenFlagsNow.value.tester);
  * the programme and none of those; so does a team account previewing as one.
  */
 export const isTeam = computed(() => seenFlagsNow.value.team);
+/**
+ * The page is drawn for a founding member of the community: the programme is on, and the account is not the team's
+ * (horizon/member.ts). True as well for one of the team's accounts previewing as one. What it changes: the Guide's
+ * page is not drawn (guideShown below), and a new horizon is three months at most.
+ */
+export const isFounding = computed(() => isFoundingMember(seenFlagsNow.value));
+/** Whether the Guide's page, its tab and every way into it are drawn for the account (horizon/member.ts guidePageShown). */
+export const guideShown = computed(() => guidePageShown(seenFlagsNow.value));
 /**
  * The account's own person had a horizon to show on the last visit (../known.ts): the door opens on that until this
  * visit's read lands, so a person who keeps a horizon does not watch the tab appear a moment after the page.

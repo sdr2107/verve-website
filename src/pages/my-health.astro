@@ -1066,7 +1066,7 @@ const plansLink = planDoor("See the plans", false);
   import { effect } from "@preact/signals";
   import { mountTeamPage } from "../my-health/views/TesterPanel.tsx";
   import { mountOfferPage, loadOffer, forgetOffer } from "../my-health/views/Offer.tsx";
-  import { isTeam as isTeamSignal, testerState, accountTester, accountTeam, horizonDoor, horizonSettable, horizonRemembered, seenAs, setViewAs } from "../my-health/state";
+  import { isTeam as isTeamSignal, testerState, accountTester, accountTeam, horizonDoor, horizonSettable, horizonRemembered, seenAs, setViewAs, guideShown } from "../my-health/state";
   import { PREVIEW_BACK, previewLine, readViewAs, seenFlags, viewAsFor } from "../my-health/horizon/preview.ts";
   import { planDoor } from "../data/plan-door.ts";
   import { recall, remember, forget as forgetKnown, accessFlags } from "../my-health/known";
@@ -2648,6 +2648,8 @@ const plansLink = planDoor("See the plans", false);
     if (!TABS.includes(t)) t = "overview";
     // Horizon is drawn only for an account that has it (state.ts horizonDoor): any other way in lands on the Overview
     if (t === "horizon" && !horizonDoor.value) t = "overview";
+    // The Guide's page is not drawn for a founding member (state.ts guideShown; horizon/member.ts): any way in lands on the Overview
+    if (t === "guide" && !guideShown.value) t = "overview";
     // Everyone is a view of the account, not of a person: the greeting and
     // the person's own rows step aside, and no person is lit in the sidebar
     const switching = activeTab !== t;
@@ -4445,6 +4447,15 @@ const plansLink = planDoor("See the plans", false);
   // Settings › For the team: our own notes, for the named test accounts; its door is drawn only for them
   mountTeamPage($("setteamroot"), { supabase: supabase as any });
   effect(() => { $("settingsteamnav").classList.toggle("hidden", !isTeamSignal.value); });
+  // The Guide's page, for everyone but a founding member of the community (27 November 2026: "for skool we can hide the
+  // guide page from the website - we have it in the app for skool users"): its tab, its strip on the Overview, and the
+  // page itself when it is the one in view. One switch brings it back for them (horizon/member.ts GUIDE_FOR_FOUNDING).
+  effect(() => {
+    const on = guideShown.value;
+    $("readtab").classList.toggle("hidden", !on);
+    $("guidepointer").classList.toggle("hidden", !on);
+    if (!on && activeTab === "guide") quietly(() => setTab("overview"));
+  });
   // Settings › Your offer: what goes with a horizon, for a test account, and only once the database has words for it
   mountOfferPage($("setofferroot"), { supabase: supabase as any });
   effect(() => {
