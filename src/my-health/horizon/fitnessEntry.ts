@@ -153,6 +153,11 @@ export type TestRead = {
   date: string | null; protocol: string | null; seconds: number | null; mets: number | null; peakVo2: number | null; peakHr: number | null; peakHrPercent: number | null;
   stopped: string | null;
   /** The report's own conclusion, word for word. Shown as the report's; used by nothing. */ conclusion: string | null;
+  /**
+   * The reader could not settle the day: the report prints its date in more than one way and they cannot all be one
+   * day, or two days fit (the function's report-parser/exerciseTest.ts). The date is then empty, for the person to type.
+   */
+  dateUnsure?: boolean;
 };
 const numOr = (x: unknown, lo: number, hi: number): number | null => (x != null && x !== "" && Number.isFinite(Number(x)) && Number(x) >= lo && Number(x) <= hi ? Number(x) : null);
 const text = (x: unknown, max: number): string | null => (typeof x === "string" && x.trim() ? x.replace(/\s+/g, " ").trim().slice(0, max) : null);
@@ -166,6 +171,7 @@ export function parseTestRead(out: unknown): TestRead | null {
   return {
     mask: t.mask === true && peakVo2 != null, date, protocol: text(t.protocol, 60), seconds: numOr(t.duration_seconds, 30, 3600), mets: numOr(t.mets, 1, 25), peakVo2,
     peakHr: numOr(t.peak_hr, 40, 240), peakHrPercent: numOr(t.peak_hr_percent, 20, 130), stopped: text(t.stopped_because, 200), conclusion: text(o.impression, 2000),
+    ...(o.date_unsure === true && !date ? { dateUnsure: true } : {}),
   };
 }
 /** The card a report opens on, and the fields it fills: a mask test when oxygen was measured, else a treadmill test. */
