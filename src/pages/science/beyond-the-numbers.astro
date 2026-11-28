@@ -4,7 +4,7 @@
  *
  * The four subjects are the numbers Verve shows, each threshold with its
  * source. This page is the rest of the section (21 Nov 2026): plaque, heart
- * scans, risk and family history, the athlete's heart, everyday habits.
+ * scans, risk and family history, the athlete's heart, everyday habits, stroke.
  * It has no thresholds and no topic pages; each theme is its videos, and,
  * where a video was made from one of the founder's posts, the post to read.
  * The themes and which video sits under which are in data/videos.ts, the
@@ -13,7 +13,7 @@
  * The videos are the silent website cuts: nothing plays until it is
  * pressed, and nothing comes from a third party.
  *
- * It carries the section's sidebar, its own row unfolded to the five
+ * It carries the section's sidebar, its own row unfolded to the six
  * themes, so the four subjects are one step away, as this page is from them.
  */
 import Layout from "../../layouts/Layout.astro";
@@ -28,7 +28,7 @@ const all = videosInGroup("wider-picture");
 
 <Layout
   title={`${BEYOND.label} · Science · Verve`}
-  description="Health questions the app does not measure, one study at a time: arteries and plaque, heart scans, risk and family history, the athlete's heart, everyday habits."
+  description="Health questions the app does not measure, one study at a time: arteries and plaque, heart scans, risk and family history, the athlete's heart, everyday habits, stroke."
   router
 >
   <SiteHeader

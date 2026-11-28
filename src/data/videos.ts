@@ -19,7 +19,7 @@
  * group. The order here is the order on the page.
  *
  * Beyond the numbers (21 Nov 2026) is the group for what the app does not
- * measure: plaque, heart scans, risk, the athlete's heart, everyday habits.
+ * measure: plaque, heart scans, risk, the athlete's heart, everyday habits, stroke.
  * It has no topic pages, so each of its videos names a `theme` instead and
  * plays on /science/beyond-the-numbers under that theme. The group's key is
  * still "wider-picture", its first name, so /videos#wider-picture holds.
@@ -27,7 +27,7 @@
 
 export type VideoGroup = "how-verve-works" | "fitness" | "movement" | "sleep-heart" | "body" | "wider-picture";
 
-export type BeyondTheme = "arteries-plaque" | "heart-scans" | "risk-family" | "athletes-heart" | "everyday-habits";
+export type BeyondTheme = "arteries-plaque" | "heart-scans" | "risk-family" | "athletes-heart" | "everyday-habits" | "stroke";
 
 export interface Video {
   slug: string;
@@ -69,6 +69,7 @@ export const THEMES: { key: BeyondTheme; label: string; sub: string }[] = [
   { key: "risk-family", label: "Risk and family history", sub: "How much each risk factor weighs, and what a family history leaves in your hands" },
   { key: "athletes-heart", label: "The athlete’s heart", sub: "What endurance training does to the heart, and the risk on race day" },
   { key: "everyday-habits", label: "Everyday habits", sub: "Water, coffee, meal timing and smoking: what the studies support" },
+  { key: "stroke", label: "Stroke", sub: "The signs to know, and what to do until help arrives" },
 ];
 
 export const VIDEOS: Video[] = [
@@ -145,6 +146,7 @@ export const VIDEOS: Video[] = [
   { slug: "arc-hydration-urine", title: "Your urine color: the simplest hydration test you have", seconds: 179, group: "wider-picture", theme: "everyday-habits", youtube: "hUf1tPZ4Tcs", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-391355233", x: "https://x.com/RoplekarSudeep/status/2123319688876953857" } },
   { slug: "arc-coffee-last-cup", title: "Your last coffee: regular or decaf?", seconds: 179, group: "wider-picture", theme: "everyday-habits", youtube: "mYuxcdeObZU", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-393419714", x: "https://x.com/RoplekarSudeep/status/2124199740711813531" } },
   { slug: "arc-dinner-early", title: "Does eating dinner early make a difference?", seconds: 177, group: "wider-picture", theme: "everyday-habits", youtube: "ZEFiIPYkhIg", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-394895680", x: "https://x.com/RoplekarSudeep/status/2124882471137493239" } },
+  { slug: "arc-stroke-be-fast", title: "BE FAST: the signs of a brain stroke", seconds: 178, group: "wider-picture", theme: "stroke", youtube: "WA306v-Y2xI", posts: { substack: "https://substack.com/@roplekarsudeep/note/c-396340562", x: "https://x.com/RoplekarSudeep/status/2125460603737370963" } },
 ];
 
 export const videoSrc = (v: Video) => `/video/${v.slug}/${v.slug}.mp4`;
