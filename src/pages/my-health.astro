@@ -807,6 +807,8 @@ const plansLink = planDoor("See the plans", false);
                   <div class="text-[13px] text-text-3" id="whoamikind">Signed in</div>
                   <div class="min-w-0 break-all text-[14px] leading-snug text-text-2" id="whoamiaddr"></div>
                 </div>
+                <!-- the doors this account has, and adding one (views/SignInMethods) -->
+                <div id="setsigninroot"></div>
               </div>
               <p class="m-0 mt-1 text-[12.5px] leading-relaxed text-text-3">The same sign-in as the app. The name is the one the app greets you with.</p>
             </section>
@@ -1087,6 +1089,8 @@ const plansLink = planDoor("See the plans", false);
   import { mountMondayList } from "../my-health/views/Programme.tsx";
   import { mountPlanSheet } from "../my-health/views/PlanSheet.tsx";
   import { mountSettings, planInfoSignal, planInfoReal, planAnswered } from "../my-health/views/Settings.tsx";
+  import { mountSignInMethods, linkBack } from "../my-health/views/SignInMethods.tsx";
+  import { PENDING_LINK, readLinkBack } from "../my-health/signInMethods.ts";
   import { KEEP_KEY, SETTINGS_SECTIONS, alreadyKept, browserZone, isSettingsSection, keepCard, keepLine, keepRow, parseKeep, planLine, trialOffered, type Keep, type KeepOutcome, type SettingsSection } from "../my-health/account";
   import { insertFirstNumber, saveWeekly, startWebTrial, websiteNumbers } from "../my-health/accountApi";
   import { mountReports } from "../my-health/views/Reports";
@@ -2773,6 +2777,13 @@ const plansLink = planDoor("See the plans", false);
     // the coach's and the clinician's doors both land on the group
     if (door === "coach" || door === "clinician") { try { localStorage.setItem(COACH_DOOR, door); } catch { /* private mode */ } }
     if (url.searchParams.has("code") || oauthError || door || start) history.replaceState(null, "", location.pathname + location.hash);
+    // Back from Apple's or Google's page with a door being added to this account (Settings › Profile › Sign-in
+    // methods). The note is read once and thrown away; what came back is the block's to say, and the page opens
+    // on the card it was left from. A plain visit with an old note in the browser is nothing (readLinkBack).
+    let linkNote: string | null = null;
+    try { linkNote = localStorage.getItem(PENDING_LINK); if (linkNote) localStorage.removeItem(PENDING_LINK); } catch { /* private mode */ }
+    const cameBack = readLinkBack(url.href, linkNote, Date.now());
+    if (cameBack) { linkBack.value = cameBack; history.replaceState(null, "", location.pathname + "#settings-profile"); }
     const stored = storedSession();
     const live = supabase.auth.getSession().then((r) => r.data.session ?? null);
     const session = stored ?? (await live);
@@ -2819,6 +2830,7 @@ const plansLink = planDoor("See the plans", false);
       });
       askTester(true);
       showWhoAmI(session.user);
+      signInView.show(session.user);
       askForNewsletter(session.user);
       appLink?.classList.add("hidden"); signinLink?.classList.add("hidden");
       showIf("signout", true); show("home", true); show("auth", false);
@@ -2875,6 +2887,7 @@ const plansLink = planDoor("See the plans", false);
     } else {
       firstName = "";
       people = []; person = null;
+      signInView.show(null);
       // nobody is signed in: nothing is known, and the last account's answers do not carry over
       planInfoReal.value = null; planAnswered.value = false; accountTester.value = false; accountTeam.value = false; horizonRemembered.value = false; testerState.value = "asking"; forgetTester();
       dim("peoplewrap", true);
@@ -4478,6 +4491,13 @@ const plansLink = planDoor("See the plans", false);
     ownPersonId: () => people.find((p) => p.self)?.id || null,
     openPlanSheet: () => planSheet.open(),
     goHorizon: () => openHorizon("#horizon-new"),
+  });
+  // Settings › Profile › Sign-in methods: the doors this account has, and adding one (views/SignInMethods).
+  const signInView = mountSignInMethods($("setsigninroot"), {
+    supabase: supabase as any,
+    origin: () => location.origin,
+    plan: () => planInfoReal.value,
+    onChange: (u) => showWhoAmI(u),
   });
   // "See the site as" (Settings › For the team): the line that stays on every tab while a preview is on, and its way back.
   // A change of view is a change of who the page is drawn for: the two panes that read the account once read it again.
